@@ -33,6 +33,9 @@ services:
       context: ../apps/workers/masscan-worker
     image: hacknation/masscan-worker:local
     restart: "no"
+    # masscan sends raw packets and reads replies off the NIC itself; behind Docker NAT it would
+    # scan from the container's address. Linux hosts only (Docker Desktop has no real host network).
+    network_mode: host
     environment:
       # Logs go to stderr, the result JSON to stdout. See the worker's README.
       MASSCAN_WORKER_LOG_LEVEL: ${MASSCAN_WORKER_LOG_LEVEL:-info}

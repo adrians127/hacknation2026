@@ -137,7 +137,9 @@ Progress comes from masscan's own status line, so `% done` covers masscan's full
 
 The image is built and runs on `ubuntu:26.04`, with the distribution's `masscan` and `nlohmann-json3-dev`. The image build compiles with the strict warning flags and runs the unit tests (`ctest`), so `pnpm workers:build` fails if a test fails. CI builds the same image.
 
-masscan has `setcap cap_net_raw,cap_net_admin`, so the worker runs as the non-root `worker` user. The container needs `NET_RAW` / `NET_ADMIN`, which compose grants. On the default bridge network, masscan's traffic goes through Docker NAT. For real LAN sweeps, use `network_mode: host` on a Linux host.
+masscan has `setcap cap_net_raw,cap_net_admin`, so the worker runs as the non-root `worker` user. The container needs `NET_RAW` / `NET_ADMIN`, which compose grants. Compose also runs it with `network_mode: host`, so masscan uses the host's network card, IP address and router, as if it ran directly on the host. This needs a Linux host; Docker Desktop (macOS/Windows) has no real host network.
+
+masscan cannot scan the IP address of the machine it runs on: it bypasses the kernel, so the host's own services never answer it. Scan the host from another machine.
 
 ## Source layout
 
