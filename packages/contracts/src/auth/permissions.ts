@@ -1,8 +1,9 @@
 import { z } from "zod";
 
 /** Rows and columns of the admin panel's role matrix. A new module appends its resource (and any new action). */
-export const PERMISSION_RESOURCES = ["users", "roles"] as const;
-export const PERMISSION_ACTIONS = ["read", "create", "update", "delete"] as const;
+export const PERMISSION_RESOURCES = ["users", "roles", "targets", "scans"] as const;
+// `run` starts, stops and schedules scans.
+export const PERMISSION_ACTIONS = ["read", "create", "update", "delete", "run"] as const;
 
 export type PermissionResource = (typeof PERMISSION_RESOURCES)[number];
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
@@ -21,6 +22,12 @@ export const PERMISSIONS = [
   "roles:create",
   "roles:update",
   "roles:delete",
+  "targets:read",
+  "targets:create",
+  "targets:update",
+  "targets:delete",
+  "scans:read",
+  "scans:run",
 ] as const satisfies readonly `${PermissionResource}:${PermissionAction}`[];
 
 export const PermissionSchema = z.enum(PERMISSIONS);
@@ -36,10 +43,12 @@ export const SYSTEM_ROLE_KEYS = ["admin", "editor", "analyst", "viewer"] as cons
 export const SystemRoleKeySchema = z.enum(SYSTEM_ROLE_KEYS);
 export type SystemRoleKey = z.infer<typeof SystemRoleKeySchema>;
 
-// Only users/roles exist so far, and managing them is admin-only.
+const READ = ["targets:read", "scans:read"] as const satisfies readonly Permission[];
+
+// Mapping rules: apps/backend/README.md ("Adding a permission"). Users and roles stay admin-only.
 export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRoleKey, readonly Permission[]> = {
   admin: PERMISSIONS,
-  editor: [],
-  analyst: [],
-  viewer: [],
+  editor: [...READ, "targets:create", "targets:update", "targets:delete", "scans:run"],
+  analyst: [...READ, "targets:update"],
+  viewer: READ,
 };
