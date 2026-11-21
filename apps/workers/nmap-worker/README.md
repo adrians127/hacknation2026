@@ -4,13 +4,26 @@ A C++23 worker for TCP service and version detection on IP/port hits supplied by
 
 ## Build
 
-From the repository root:
+From the repository root, build the Docker image. The image build runs both the
+fake-Nmap integration tests and a real scan against a temporary local HTTP server:
 
 ```bash
-docker compose -f docker/docker-compose.workers.yml --profile nmap build
+pnpm workers:nmap:build
 ```
 
-The Docker image uses Ubuntu for both build and runtime. It installs Nmap, libcurl, pugixml, and nlohmann/json from system packages. The worker runs as a non-root user. Compose grants raw network capabilities and selects SYN scanning; local builds default to TCP connect scanning.
+Then smoke test the non-root runtime image with a loopback port inside the container:
+
+```bash
+pnpm workers:nmap < apps/workers/nmap-worker/examples/job-local.json > result.json
+```
+
+Port 1 is normally closed, so expect `scan.status: "completed"`, one `up` host and
+`openPorts: 0`. The build-time real-scan test checks an open port while running
+Nmap service detection. `pnpm workers:nmap` accepts the same `--input`, `--output` and
+`--pretty` flags as the local binary. The Docker image uses Ubuntu for both
+build and runtime. The worker runs as a non-root user. Compose grants raw
+network capabilities and sets `NMAP_PRIVILEGED=1` for SYN scanning; local
+builds default to TCP connect scanning.
 
 For a local build on macOS:
 
@@ -23,40 +36,50 @@ ctest --test-dir apps/workers/nmap-worker/build/debug --output-on-failure
 
 ## JSON job mode
 
-`--job-file` runs one job without a backend. It prints one JSON result to stdout and diagnostics to stderr. The exit code is zero only if all hosts were scanned.
+Like `masscan-worker`, the default mode reads one job from stdin and writes one result to stdout. `--input` and `--output` select files; `--job-file` remains an alias for `--input`. Output files are written atomically. Logs and errors go to stderr. A JSON result is also written for invalid input.
 
 ```bash
-apps/workers/nmap-worker/build/debug/nmap-worker --job-file job.json
+apps/workers/nmap-worker/build/debug/nmap-worker < job.json > result.json
+apps/workers/nmap-worker/build/debug/nmap-worker --input job.json --output result.json --pretty
 ```
+
+Exit codes: `0` for `completed` or `partial`, `1` for a failed scan or output error, `2` for invalid input.
 
 Example `job.json`:
 
 ```json
 {
-  "job_id": "job-123",
+  "job_id": "0193a1aa-6c1e-7b3f-9d2a-4e5f60718293",
   "lease_id": "lease-456",
+  "scan_id": "0193a0f2-1b2c-7d3e-8f40-516273849506",
   "subnet": "192.0.2.0/24",
   "deadline": "2099-01-01T00:00:00Z",
   "limits": {
     "max_parallel": 2,
     "max_rate_per_process": 50,
-    "host_timeout_ms": 120000
+    "host_timeout_ms": 120000,
+    "http_timeout_ms": 10000,
+    "max_body_bytes": 524288,
+    "max_redirects": 5
   },
+  "probe_paths": ["/admin"],
   "targets": [
-    { "ip": "192.0.2.10", "domain": null, "tcp_ports": [22, 443] }
+    { "ip": "192.0.2.10", "domains": ["example.org"], "tcp_ports": [22, 443] }
   ]
 }
 ```
 
-The worker validates that every target is an IPv4 address within `subnet` and that each port is in `1..65535`. Duplicate IPs are rejected; duplicate ports are removed. Job limits may lower the worker's configured maxima but cannot raise them. `domain` is metadata retained in the result; Nmap receives only the numeric IP.
+The worker validates that every target is an IPv4 address within `subnet` and that each port is in `1..65535`. Duplicate IPs are rejected; duplicate ports and domains are removed. Job limits may lower the worker's configured maxima but cannot raise them. The legacy single `domain` field is accepted; `domains` takes precedence. Nmap receives only numeric IPs and assigned TCP ports.
 
-The output described below is the current implementation. The target format is [`docs/worker-result-format.md`](../../../docs/worker-result-format.md) (locked source of truth); the worker should move towards it.
+The result follows [`docs/worker-result-format.md`](../../../docs/worker-result-format.md): `scan` and `hosts`, camelCase keys, every field present, unknowns as `null` and empty lists as `[]`. `scan.params.ports` is the union of assigned ports across the job; each Nmap invocation scans only its target's ports. `scan.params.nmapArgs` lists arguments shared by all invocations.
 
-Results contain `job_id`, `lease_id`, `status`, `duration_ms`, and one record per target. Each host has `status` (`scanned`, `pending`, `failed`, `timeout`, or `cancelled`), its reported ports, service name/product/version/CPE when available, scripts, and an optional error. A requested port absent from explicit Nmap XML port entries is marked `not_reported` rather than assumed closed. A job is `partial` if any host is not `scanned`.
+Every target appears once with `up`, `down`, `timeout`, `cancelled`, or `failed`. Only open ports appear. Service name, product, version, extra info, CPE, method, confidence, port reason, TTL and NSE script output come from Nmap XML when available. An incomplete job is `partial`. A scanner startup failure is `failed`.
+
+HTTP requests and TLS fingerprinting are not implemented yet. The worker accepts `probe_paths` and the HTTP limits for the shared job format, but does not request those paths; `http[]` and HTTP counters remain empty or zero.
 
 ## HTTP pull mode
 
-With no arguments, the process polls the backend. `WORKER_TOKEN` is required and sent as a bearer token. These JSON endpoints are defined in `packages/contracts`:
+With `--http`, the process polls the backend. `WORKER_TOKEN` is required and sent as a bearer token. These JSON endpoints are defined in `packages/contracts`:
 
 | Method | Path | Behavior |
 |---|---|---|
@@ -80,9 +103,9 @@ The backend handlers are not implemented yet. The worker retries failed result d
 | `WORKER_POLL_INTERVAL_MS` | `3000` | Delay before the next lease request |
 | `WORKER_HEARTBEAT_INTERVAL_MS` | `5000` | Time between heartbeats |
 
-The scan uses `-n -Pn -sV` and only the target's supplied TCP ports. NSE scripts and OS fingerprinting are not enabled. Nmap's `--max-rate` does not cap every version-detection probe, and each process has its own limit. The backend must also limit concurrent jobs and global traffic. Scan only authorized ranges and ports.
+The scan uses `-n -Pn -sV --version-light` and only the target's supplied TCP ports. NSE scripts and OS fingerprinting are not enabled. Nmap's `--max-rate` does not cap every version-detection probe, and each process has its own limit. The backend must also limit concurrent jobs and global traffic. Scan only authorized ranges and ports.
 
-Nmap XML and stderr are written to temporary files and removed after each host. An expired deadline stops launching hosts and terminates active Nmap processes; unfinished hosts remain `pending` or receive a timeout/cancellation status.
+Nmap XML and stderr are written to temporary files and removed after each host. An expired deadline stops launching hosts and terminates active Nmap processes; unfinished hosts are `cancelled`. A per-host timeout is `timeout`.
 
 ## Docker Desktop on macOS
 

@@ -5,7 +5,7 @@
 - **Workers** work towards producing exactly this structure.
 - **The backend** treats it as the only input for everything built on scan data: storing observations, diffs between scans, the dashboard, signatures and detections, JSON/CSV export and import, and DefectDojo.
 
-Change this file first, with the team's agreement, and only then the code. When the code and this document disagree, the document wins. See [Gap to the current implementation](#gap-to-the-current-implementation).
+Change this file first, with the team's agreement, and only then the code. When the code and this document disagree, the document wins. See [Current nmap-worker coverage](#current-nmap-worker-coverage).
 
 ## Scope
 
@@ -258,7 +258,7 @@ One entry per `(scheme, vhost)`: once by bare IP (`vhost: null`) and once for ea
 
 ## What the job must provide
 
-This format depends on inputs the current `NmapJob` does not have yet:
+This format depends on the following `NmapJob` inputs:
 
 - **Domains per IP:** one IP with a list of domains (`vhost`s), instead of one `domain` per target. This settles the open question in [`apps/workers/README.md`](../apps/workers/README.md#scan-jobs-in-the-database).
 - **Probe paths:** the paths taken from the active signatures (`/admin`, `/login`, `/version`, …).
@@ -282,17 +282,6 @@ The worker result does not contain these. The backend computes them from stored 
 - **Contract:** `WorkerResultSchema` in `packages/contracts/src/workers/worker-result.schema.ts` validates this format. It is the request body of `POST /workers/nmap/results` in `openapi.json`. `worker-result.fixture.ts` next to it builds the example above for tests.
 - **Backend:** `resultsService.ingest()` (`apps/backend/src/modules/results/`) turns a validated result into database rows. See [Scan results in the backend README](../apps/backend/README.md#scan-results).
 
-## Gap to the current implementation
+## Current nmap-worker coverage
 
-The contract matches this document. The output of `nmap-worker` predates it:
-
-- Keys are snake_case (`job_id`, `duration_ms`), and the envelope lacks `scanId`, `worker`, `stopReason`, timestamps, `phasesMs`, `params` and `counts`.
-- Host statuses are `pending`/`scanned`/`failed`/`timeout`/`cancelled` instead of `up`/`down`/`timeout`/`cancelled`/`failed`.
-- Hosts have no `reason`, `observedAt`, `latencyMs` or `hostnames`.
-- Ports report every requested port, including `not_reported`, instead of open ports only.
-- `service` has no `extraInfo`, `method` or `confidence`, and ports have no `reason`, `identity`, `banner` or `http`.
-
-To close the gap:
-
-1. Update the worker's JSON codec to produce this format.
-2. Extend `NmapJob` as described in [What the job must provide](#what-the-job-must-provide).
+`nmap-worker` produces the `{ scan, hosts }` structure above, including all required keys, host and port statuses, service metadata, counts, and job timing. It accepts multiple domains per IP, probe paths, and HTTP limits in the job. It currently runs Nmap service detection only: `http[]`, banners, and cryptographic identity fields are empty or `null`; probe paths are not requested yet. The HTTP/TLS collection phase still needs implementation. Because Nmap scans each host's assigned port list, `scan.params.ports` is the union of those lists and `nmapArgs` contains the common arguments; each invocation adds its own `-p`, output path and target IP.

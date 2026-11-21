@@ -7,18 +7,22 @@
 
 ARG UBUNTU_VERSION=26.04
 
-FROM ubuntu:${UBUNTU_VERSION} AS builder
+ARG UBUNTU_IMAGE=ubuntu
+
+FROM ${UBUNTU_IMAGE}:${UBUNTU_VERSION} AS builder
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential cmake ninja-build \
-      libcurl4-openssl-dev libpugixml-dev nlohmann-json3-dev \
+      libcurl4-openssl-dev libpugixml-dev nlohmann-json3-dev nmap python3 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY CMakeLists.txt CMakePresets.json ./
 COPY src ./src
+COPY tests ./tests
 RUN cmake --preset release && cmake --build --preset release \
+    && ctest --test-dir build/release --output-on-failure \
     && cmake --install build/release --prefix /out
 
-FROM ubuntu:${UBUNTU_VERSION} AS runner
+FROM ${UBUNTU_IMAGE}:${UBUNTU_VERSION} AS runner
 RUN apt-get update \
     && apt-get install -y --no-install-recommends nmap ca-certificates libcap2-bin \
       libcurl4-openssl-dev libpugixml-dev \

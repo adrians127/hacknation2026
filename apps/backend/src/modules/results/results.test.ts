@@ -49,7 +49,7 @@ describe("resultsService.ingest", () => {
 
     const outcome = await resultsService.ingest(result);
 
-    expect(outcome).toMatchObject({ status: "ingested", hostsWritten: 4, hostsKept: 0 });
+    expect(outcome).toMatchObject({ status: "ingested", hostsWritten: 4 });
     const stored = await prisma.scanJobResult.findUniqueOrThrow({
       where: { leaseId: result.scan.leaseId },
     });
@@ -123,9 +123,9 @@ describe("resultsService.ingest", () => {
     expect(await prisma.hostObservation.count()).toBe(4);
   });
 
-  it("never replaces a conclusive answer with an inconclusive retry", async () => {
+  it("preserves each worker run's observations, including inconclusive results", async () => {
     const result = await exampleResult();
-    await resultsService.ingest(result);
+    const first = await resultsService.ingest(result);
     const [up, down] = result.hosts;
 
     // A retry under a new lease: the cancelled address now answers, the down one times out.
@@ -136,16 +136,54 @@ describe("resultsService.ingest", () => {
       ]),
     );
 
-    expect(outcome).toMatchObject({ status: "ingested", hostsWritten: 1, hostsKept: 1 });
-    const statuses = await prisma.hostObservation.findMany({
-      where: { ip: { in: ["10.0.5.8", "10.0.5.200"] } },
-      orderBy: { ipNumber: "asc" },
-      select: { ip: true, status: true, _count: { select: { ports: true } } },
+    expect(outcome).toMatchObject({ status: "ingested", hostsWritten: 2 });
+    if (first.status !== "ingested" || outcome.status !== "ingested") {
+      throw new Error("Expected two distinct worker results");
+    }
+    const observations = await prisma.hostObservation.findMany({
+      where: { resultId: { in: [first.resultId, outcome.resultId] } },
+      select: { resultId: true, ip: true, status: true, _count: { select: { ports: true } } },
     });
-    expect(statuses).toEqual([
-      { ip: "10.0.5.8", status: "down", _count: { ports: 0 } },
-      { ip: "10.0.5.200", status: "up", _count: { ports: 2 } },
-    ]);
+    expect(observations.filter((row) => row.resultId === first.resultId)).toEqual(
+      expect.arrayContaining([
+        { resultId: first.resultId, ip: "10.0.5.8", status: "down", _count: { ports: 0 } },
+        {
+          resultId: first.resultId,
+          ip: "10.0.5.200",
+          status: "cancelled",
+          _count: { ports: 0 },
+        },
+      ]),
+    );
+    expect(observations.filter((row) => row.resultId === outcome.resultId)).toEqual(
+      expect.arrayContaining([
+        { resultId: outcome.resultId, ip: "10.0.5.8", status: "timeout", _count: { ports: 0 } },
+        { resultId: outcome.resultId, ip: "10.0.5.200", status: "up", _count: { ports: 2 } },
+      ]),
+    );
+  });
+
+  it("keeps an earlier open port when a later worker reports the host down", async () => {
+    const result = await exampleResult();
+    const first = await resultsService.ingest(result);
+    const down = { ...result.hosts[1], ip: result.hosts[0].ip };
+    const second = await resultsService.ingest(withHosts(result, [down]));
+    if (first.status !== "ingested" || second.status !== "ingested") {
+      throw new Error("Expected two distinct worker results");
+    }
+
+    const observations = await prisma.hostObservation.findMany({
+      where: { scanId: result.scan.scanId, ip: down.ip },
+      select: { resultId: true, status: true, _count: { select: { ports: true } } },
+    });
+    expect(observations).toEqual(
+      expect.arrayContaining([
+        { resultId: first.resultId, status: "up", _count: { ports: 2 } },
+        { resultId: second.resultId, status: "down", _count: { ports: 0 } },
+      ]),
+    );
+    expect(observations).toHaveLength(2);
+    expect(await prisma.portObservation.count()).toBe(2);
   });
 
   it("widens the seen window across scans and keeps user edits", async () => {

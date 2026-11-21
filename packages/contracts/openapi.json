@@ -478,13 +478,16 @@
         "properties": {
           "job_id": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 256
+            "format": "uuid"
           },
           "lease_id": {
             "type": "string",
             "minLength": 1,
             "maxLength": 256
+          },
+          "scan_id": {
+            "type": "string",
+            "format": "uuid"
           },
           "subnet": {
             "type": "string",
@@ -508,8 +511,28 @@
               "host_timeout_ms": {
                 "type": "integer",
                 "exclusiveMinimum": 0
+              },
+              "http_timeout_ms": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "max_body_bytes": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "max_redirects": {
+                "type": "integer",
+                "minimum": 0
               }
             }
+          },
+          "probe_paths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 2048
+            },
+            "maxItems": 128
           },
           "targets": {
             "type": "array",
@@ -520,11 +543,21 @@
                   "type": "string",
                   "format": "ip"
                 },
+                "domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 253
+                  },
+                  "maxItems": 128
+                },
                 "domain": {
                   "type": [
                     "string",
                     "null"
                   ],
+                  "minLength": 1,
                   "maxLength": 253
                 },
                 "tcp_ports": {
@@ -550,6 +583,7 @@
         "required": [
           "job_id",
           "lease_id",
+          "scan_id",
           "subnet",
           "deadline",
           "targets"
@@ -5402,13 +5436,16 @@
                   "properties": {
                     "job_id": {
                       "type": "string",
-                      "minLength": 1,
-                      "maxLength": 256
+                      "format": "uuid"
                     },
                     "lease_id": {
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 256
+                    },
+                    "scan_id": {
+                      "type": "string",
+                      "format": "uuid"
                     },
                     "subnet": {
                       "type": "string",
@@ -5432,8 +5469,28 @@
                         "host_timeout_ms": {
                           "type": "integer",
                           "exclusiveMinimum": 0
+                        },
+                        "http_timeout_ms": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "max_body_bytes": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "max_redirects": {
+                          "type": "integer",
+                          "minimum": 0
                         }
                       }
+                    },
+                    "probe_paths": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 2048
+                      },
+                      "maxItems": 128
                     },
                     "targets": {
                       "type": "array",
@@ -5444,11 +5501,21 @@
                             "type": "string",
                             "format": "ip"
                           },
+                          "domains": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 253
+                            },
+                            "maxItems": 128
+                          },
                           "domain": {
                             "type": [
                               "string",
                               "null"
                             ],
+                            "minLength": 1,
                             "maxLength": 253
                           },
                           "tcp_ports": {
@@ -5474,6 +5541,7 @@
                   "required": [
                     "job_id",
                     "lease_id",
+                    "scan_id",
                     "subnet",
                     "deadline",
                     "targets"

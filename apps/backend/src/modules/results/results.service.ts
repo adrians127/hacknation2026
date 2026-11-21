@@ -1,6 +1,5 @@
 import { ipv4ToInt } from "@subsurf/contracts/targets/ipv4";
 import type {
-  HostStatus,
   ObservedHost,
   WorkerResult,
 } from "@subsurf/contracts/workers/worker-result.schema";
@@ -18,7 +17,7 @@ import { portFingerprint } from "~backend/modules/results/fingerprint";
 import { addressesOutsideJob, portsOutsideSpec } from "~backend/modules/results/job-scope";
 
 export type IngestOutcome =
-  | { status: "ingested"; resultId: string; hostsWritten: number; hostsKept: number }
+  | { status: "ingested"; resultId: string; hostsWritten: number }
   | { status: "duplicate"; resultId: string };
 
 // One result holds at most 1024 hosts; nested writes for the `up` ones take a while.
@@ -37,16 +36,6 @@ const HOSTNAME_SOURCES = {
   ptr: "ptr",
   "tls-san": "tls_san",
 } as const satisfies Record<ObservedHost["hostnames"][number]["source"], HostnameSource>;
-
-/** `up` and `down` are answers; the other statuses only say the address went unscanned. */
-function isConclusive(status: HostStatus): boolean {
-  return status === "up" || status === "down";
-}
-
-/** A retry may rescan an address: a conclusive answer is never replaced by an inconclusive one. */
-function shouldReplace(existing: HostStatus, incoming: HostStatus): boolean {
-  return isConclusive(incoming) || !isConclusive(existing);
-}
 
 const jsonOrDbNull = <T extends Prisma.InputJsonValue>(value: T | null) => value ?? Prisma.DbNull;
 
@@ -177,22 +166,8 @@ async function ingestInTransaction(
     select: { id: true },
   });
 
-  const existing = await tx.hostObservation.findMany({
-    where: { scanId: scan.scanId, ip: { in: result.hosts.map((host) => host.ip) } },
-    select: { id: true, ip: true, status: true },
-  });
-  const existingByIp = new Map(existing.map((row) => [row.ip, row]));
-  const toWrite = result.hosts.filter((host) => {
-    const previous = existingByIp.get(host.ip);
-    return !previous || shouldReplace(previous.status, host.status);
-  });
-  const replacedIds = toWrite.flatMap((host) => existingByIp.get(host.ip)?.id ?? []);
-  if (replacedIds.length > 0) {
-    await tx.hostObservation.deleteMany({ where: { id: { in: replacedIds } } });
-  }
-
-  const upHosts = toWrite.filter((host) => host.status === "up");
-  const otherHosts = toWrite.filter((host) => host.status !== "up");
+  const upHosts = result.hosts.filter((host) => host.status === "up");
+  const otherHosts = result.hosts.filter((host) => host.status !== "up");
   if (otherHosts.length > 0) {
     await tx.hostObservation.createMany({
       data: otherHosts.map((host) => hostObservationRow(scan.scanId, stored.id, host)),
@@ -207,8 +182,7 @@ async function ingestInTransaction(
   return {
     status: "ingested",
     resultId: stored.id,
-    hostsWritten: toWrite.length,
-    hostsKept: result.hosts.length - toWrite.length,
+    hostsWritten: result.hosts.length,
   };
 }
 
