@@ -11,11 +11,54 @@
     "down": "down",
     "refresh": "Refresh"
   },
+  "home": {
+    "welcome": "Signed in as {{name}}",
+    "role": "Your role: {{role}}"
+  },
   "language": {
     "switchTo": "Polski"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "roles": "Roles"
   },
   "notFound": {
     "title": "Page not found",
     "back": "Back to the home page"
+  },
+  "forbidden": {
+    "title": "No access",
+    "description": "Your role does not include the permission this page needs: {{permission}}.",
+    "back": "Back to the dashboard"
+  },
+  "routeError": {
+    "title": "Something went wrong",
+    "retry": "Try again"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "errors": {
+    "generic": "Something went wrong. Try again.",
+    "network": "Cannot reach the server.",
+    "validation": "Some fields are invalid.",
+    "notFound": "It no longer exists.",
+    "UNAUTHENTICATED": "Your session has expired. Sign in again.",
+    "INVALID_CREDENTIALS": "Invalid email or password.",
+    "PASSWORD_CHANGE_REQUIRED": "Change your password to continue.",
+    "FORBIDDEN": "Your role does not allow this.",
+    "UNTRUSTED_ORIGIN": "The request came from an untrusted page.",
+    "PERMISSION_ESCALATION": "You cannot grant or manage permissions you do not have yourself.",
+    "SELF_MODIFICATION": "You cannot do this to your own account or role.",
+    "LAST_ADMIN": "At least one active administrator must remain.",
+    "SYSTEM_ROLE_READ_ONLY": "System roles cannot be changed.",
+    "ROLE_IN_USE": "Users still have this role. Move them to another role first.",
+    "EMAIL_TAKEN": "A user with this email already exists.",
+    "ROLE_NAME_TAKEN": "A role with this name already exists."
   }
 }

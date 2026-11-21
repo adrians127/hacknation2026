@@ -2,7 +2,9 @@ import i18next from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 
+import authEn from "@/lib/i18n/locales/en/auth.json";
 import commonEn from "@/lib/i18n/locales/en/common.json";
+import authPl from "@/lib/i18n/locales/pl/auth.json";
 import commonPl from "@/lib/i18n/locales/pl/common.json";
 
 export const SUPPORTED_LANGUAGES = ["en", "pl"] as const;
@@ -12,8 +14,8 @@ export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 export const LANGUAGE_STORAGE_KEY = "asi.language";
 
 export const resources = {
-  en: { common: commonEn },
-  pl: { common: commonPl },
+  en: { common: commonEn, auth: authEn },
+  pl: { common: commonPl, auth: authPl },
 } as const;
 
 // Resources are bundled eagerly, so init() resolves before the first render and

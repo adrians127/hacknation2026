@@ -11,11 +11,54 @@
     "down": "niedostępna",
     "refresh": "Odśwież"
   },
+  "home": {
+    "welcome": "Zalogowano jako {{name}}",
+    "role": "Twoja rola: {{role}}"
+  },
   "language": {
     "switchTo": "English"
+  },
+  "nav": {
+    "label": "Nawigacja główna",
+    "dashboard": "Pulpit",
+    "users": "Użytkownicy",
+    "roles": "Role"
   },
   "notFound": {
     "title": "Nie znaleziono strony",
     "back": "Wróć na stronę główną"
+  },
+  "forbidden": {
+    "title": "Brak dostępu",
+    "description": "Twoja rola nie ma uprawnienia wymaganego przez tę stronę: {{permission}}.",
+    "back": "Wróć na pulpit"
+  },
+  "routeError": {
+    "title": "Coś poszło nie tak",
+    "retry": "Spróbuj ponownie"
+  },
+  "actions": {
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "copy": "Kopiuj",
+    "copied": "Skopiowano"
+  },
+  "errors": {
+    "generic": "Coś poszło nie tak. Spróbuj ponownie.",
+    "network": "Brak połączenia z serwerem.",
+    "validation": "Niektóre pola są niepoprawne.",
+    "notFound": "Ten element już nie istnieje.",
+    "UNAUTHENTICATED": "Sesja wygasła. Zaloguj się ponownie.",
+    "INVALID_CREDENTIALS": "Nieprawidłowy email lub hasło.",
+    "PASSWORD_CHANGE_REQUIRED": "Zmień hasło, aby kontynuować.",
+    "FORBIDDEN": "Twoja rola na to nie pozwala.",
+    "UNTRUSTED_ORIGIN": "Żądanie pochodzi z niezaufanej strony.",
+    "PERMISSION_ESCALATION": "Nie możesz nadawać ani zarządzać uprawnieniami, których sam nie masz.",
+    "SELF_MODIFICATION": "Nie możesz tego zrobić z własnym kontem ani własną rolą.",
+    "LAST_ADMIN": "Musi zostać co najmniej jeden aktywny administrator.",
+    "SYSTEM_ROLE_READ_ONLY": "Ról systemowych nie można zmieniać.",
+    "ROLE_IN_USE": "Ta rola jest nadal przypisana użytkownikom. Najpierw przenieś ich do innej roli.",
+    "EMAIL_TAKEN": "Użytkownik z tym adresem email już istnieje.",
+    "ROLE_NAME_TAKEN": "Rola o tej nazwie już istnieje."
   }
 }

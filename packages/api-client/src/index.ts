@@ -1,8 +1,8 @@
-import createClient, { type ClientOptions } from "openapi-fetch";
+import createClient, { type ClientOptions, type Middleware } from "openapi-fetch";
 
 import type { components, paths } from "./generated/openapi";
 
-export type { components, paths };
+export type { components, Middleware, paths };
 
 /** A response/request schema from the spec by its component name, e.g. `Schema<"HealthResponse">`. */
 export type Schema<Name extends keyof components["schemas"]> = components["schemas"][Name];
