@@ -1,6 +1,5 @@
 {
   "appName": "Attack Surface Intelligence",
-  "tagline": "Recurring discovery scans of large network infrastructure",
   "health": {
     "title": "System status",
     "api": "API",
@@ -11,9 +10,28 @@
     "down": "down",
     "refresh": "Refresh"
   },
-  "home": {
-    "welcome": "Signed in as {{name}}",
-    "role": "Your role: {{role}}"
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "The most important findings from recent scans",
+    "stats": {
+      "activeHosts": "Active hosts",
+      "newServices": "New services",
+      "disappeared": "Disappeared services",
+      "changed": "Changed services"
+    },
+    "recent": {
+      "title": "Recent changes",
+      "kind": "Change",
+      "host": "Host",
+      "service": "Service",
+      "detail": "Detail",
+      "detected": "Detected",
+      "kinds": {
+        "new": "New",
+        "disappeared": "Disappeared",
+        "changed": "Changed"
+      }
+    }
   },
   "language": {
     "switchTo": "Polski"

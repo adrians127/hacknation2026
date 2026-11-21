@@ -1,6 +1,5 @@
 {
   "appName": "Attack Surface Intelligence",
-  "tagline": "Cykliczny discovery scan dużej infrastruktury sieciowej",
   "health": {
     "title": "Stan systemu",
     "api": "API",
@@ -11,9 +10,28 @@
     "down": "niedostępna",
     "refresh": "Odśwież"
   },
-  "home": {
-    "welcome": "Zalogowano jako {{name}}",
-    "role": "Twoja rola: {{role}}"
+  "dashboard": {
+    "title": "Pulpit",
+    "subtitle": "Najważniejsze znaleziska z ostatnich skanów",
+    "stats": {
+      "activeHosts": "Aktywne hosty",
+      "newServices": "Nowe usługi",
+      "disappeared": "Zniknięte usługi",
+      "changed": "Zmienione usługi"
+    },
+    "recent": {
+      "title": "Ostatnie zmiany",
+      "kind": "Zmiana",
+      "host": "Host",
+      "service": "Usługa",
+      "detail": "Szczegóły",
+      "detected": "Wykryto",
+      "kinds": {
+        "new": "Nowa",
+        "disappeared": "Zniknęła",
+        "changed": "Zmieniona"
+      }
+    }
   },
   "language": {
     "switchTo": "English"
