@@ -342,6 +342,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description The locked result format in docs/worker-result-format.md. */
         post: operations["submitNmapResult"];
         delete?: never;
         options?: never;
@@ -466,36 +467,186 @@ export interface components {
                 tcp_ports: number[];
             }[];
         };
-        NmapResult: {
-            job_id: string;
-            lease_id: string;
-            /** @enum {string} */
-            status: "completed" | "partial";
-            duration_ms: number;
+        WorkerResult: {
+            scan: {
+                /** Format: uuid */
+                jobId: string;
+                leaseId: string;
+                /** Format: uuid */
+                scanId: string;
+                worker: {
+                    id: string;
+                    version: string;
+                    nmapVersion: string | null;
+                };
+                /** @enum {string} */
+                status: "completed" | "partial" | "failed";
+                /** @enum {string|null} */
+                stopReason: "deadline" | "stop-requested" | "lease-lost" | "error" | null;
+                /** Format: date-time */
+                startedAt: string;
+                /** Format: date-time */
+                finishedAt: string;
+                durationMs: number;
+                phasesMs: {
+                    hostDiscovery: number;
+                    portScan: number;
+                    serviceDetection: number;
+                    http: number;
+                };
+                params: {
+                    /** Format: ipv4-cidr */
+                    subnet: string;
+                    ports: string;
+                    maxParallel: number;
+                    maxRatePerProcess: number;
+                    hostTimeoutMs: number;
+                    httpTimeoutMs: number;
+                    maxBodyBytes: number;
+                    maxRedirects: number;
+                    nmapArgs: string[];
+                };
+                counts: {
+                    addresses: number;
+                    up: number;
+                    down: number;
+                    timeout: number;
+                    cancelled: number;
+                    failed: number;
+                    openPorts: number;
+                    httpEndpoints: number;
+                    httpRequests: number;
+                };
+                error: {
+                    code: string;
+                    message: string;
+                } | null;
+            };
             hosts: {
                 /** Format: ip */
                 ip: string;
-                domain: string | null;
                 /** @enum {string} */
-                status: "pending" | "scanned" | "failed" | "timeout" | "cancelled";
-                error?: {
+                status: "up" | "down" | "timeout" | "cancelled" | "failed";
+                reason: string | null;
+                /** Format: date-time */
+                observedAt: string | null;
+                latencyMs: number | null;
+                hostnames: {
+                    name: string;
+                    /** @enum {string} */
+                    source: "job" | "ptr" | "tls-san";
+                }[];
+                error: {
                     code: string;
                     message: string;
-                };
+                } | null;
                 ports: {
-                    number: number;
+                    port: number;
                     /** @enum {string} */
                     protocol: "tcp";
-                    state: string;
+                    /** @enum {string} */
+                    state: "open";
+                    reason: string | null;
                     service: {
                         name: string;
-                        product: string;
-                        version: string;
+                        product: string | null;
+                        version: string | null;
+                        extraInfo: string | null;
                         cpe: string[];
+                        /** @enum {string} */
+                        method: "probed" | "table";
+                        confidence: number;
                     } | null;
+                    identity: {
+                        ttl: number | null;
+                        sshHostKeySha256: string | null;
+                        tlsCertSha256: string | null;
+                    };
+                    banner: string | null;
                     scripts: {
                         id: string;
                         output: string;
+                    }[];
+                    http: {
+                        /** @enum {string} */
+                        scheme: "http" | "https";
+                        vhost: string | null;
+                        /** Format: uri */
+                        url: string;
+                        /** Format: uri */
+                        finalUrl: string;
+                        statusCode: number | null;
+                        title: string | null;
+                        headers: {
+                            name: string;
+                            value: string;
+                        }[];
+                        cookies: {
+                            name: string;
+                            valueSha256: string;
+                            secure: boolean;
+                            httpOnly: boolean;
+                            /** @enum {string|null} */
+                            sameSite: "Strict" | "Lax" | "None" | null;
+                            domain: string | null;
+                            path: string | null;
+                            expires: string | null;
+                        }[];
+                        redirects: {
+                            /** Format: uri */
+                            url: string;
+                            statusCode: number;
+                            location: string;
+                            followed: boolean;
+                        }[];
+                        body: {
+                            sha256: string;
+                            size: number;
+                            contentType: string | null;
+                            content: string | null;
+                            truncated: boolean;
+                        } | null;
+                        favicon: {
+                            /** Format: uri */
+                            url: string;
+                            mmh3: number;
+                            sha256: string;
+                        } | null;
+                        tls: {
+                            version: string;
+                            cipher: string;
+                            alpn: string | null;
+                            cert: {
+                                subjectCn: string | null;
+                                san: string[];
+                                issuer: string | null;
+                                /** Format: date-time */
+                                notBefore: string;
+                                /** Format: date-time */
+                                notAfter: string;
+                                serial: string;
+                                sha256: string;
+                                selfSigned: boolean;
+                                keyAlgorithm: string;
+                                keyBits: number | null;
+                            };
+                        } | null;
+                        probes: {
+                            path: string;
+                            statusCode: number | null;
+                            location: string | null;
+                            title: string | null;
+                            size: number | null;
+                            bodySha256: string | null;
+                            error: {
+                                code: string;
+                                message: string;
+                            } | null;
+                        }[];
+                        error: {
+                            code: string;
+                            message: string;
+                        } | null;
                     }[];
                 }[];
             }[];
@@ -1633,35 +1784,185 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    job_id: string;
-                    lease_id: string;
-                    /** @enum {string} */
-                    status: "completed" | "partial";
-                    duration_ms: number;
+                    scan: {
+                        /** Format: uuid */
+                        jobId: string;
+                        leaseId: string;
+                        /** Format: uuid */
+                        scanId: string;
+                        worker: {
+                            id: string;
+                            version: string;
+                            nmapVersion: string | null;
+                        };
+                        /** @enum {string} */
+                        status: "completed" | "partial" | "failed";
+                        /** @enum {string|null} */
+                        stopReason: "deadline" | "stop-requested" | "lease-lost" | "error" | null;
+                        /** Format: date-time */
+                        startedAt: string;
+                        /** Format: date-time */
+                        finishedAt: string;
+                        durationMs: number;
+                        phasesMs: {
+                            hostDiscovery: number;
+                            portScan: number;
+                            serviceDetection: number;
+                            http: number;
+                        };
+                        params: {
+                            /** Format: ipv4-cidr */
+                            subnet: string;
+                            ports: string;
+                            maxParallel: number;
+                            maxRatePerProcess: number;
+                            hostTimeoutMs: number;
+                            httpTimeoutMs: number;
+                            maxBodyBytes: number;
+                            maxRedirects: number;
+                            nmapArgs: string[];
+                        };
+                        counts: {
+                            addresses: number;
+                            up: number;
+                            down: number;
+                            timeout: number;
+                            cancelled: number;
+                            failed: number;
+                            openPorts: number;
+                            httpEndpoints: number;
+                            httpRequests: number;
+                        };
+                        error: {
+                            code: string;
+                            message: string;
+                        } | null;
+                    };
                     hosts: {
                         /** Format: ip */
                         ip: string;
-                        domain: string | null;
                         /** @enum {string} */
-                        status: "pending" | "scanned" | "failed" | "timeout" | "cancelled";
-                        error?: {
+                        status: "up" | "down" | "timeout" | "cancelled" | "failed";
+                        reason: string | null;
+                        /** Format: date-time */
+                        observedAt: string | null;
+                        latencyMs: number | null;
+                        hostnames: {
+                            name: string;
+                            /** @enum {string} */
+                            source: "job" | "ptr" | "tls-san";
+                        }[];
+                        error: {
                             code: string;
                             message: string;
-                        };
+                        } | null;
                         ports: {
-                            number: number;
+                            port: number;
                             /** @enum {string} */
                             protocol: "tcp";
-                            state: string;
+                            /** @enum {string} */
+                            state: "open";
+                            reason: string | null;
                             service: {
                                 name: string;
-                                product: string;
-                                version: string;
+                                product: string | null;
+                                version: string | null;
+                                extraInfo: string | null;
                                 cpe: string[];
+                                /** @enum {string} */
+                                method: "probed" | "table";
+                                confidence: number;
                             } | null;
+                            identity: {
+                                ttl: number | null;
+                                sshHostKeySha256: string | null;
+                                tlsCertSha256: string | null;
+                            };
+                            banner: string | null;
                             scripts: {
                                 id: string;
                                 output: string;
+                            }[];
+                            http: {
+                                /** @enum {string} */
+                                scheme: "http" | "https";
+                                vhost: string | null;
+                                /** Format: uri */
+                                url: string;
+                                /** Format: uri */
+                                finalUrl: string;
+                                statusCode: number | null;
+                                title: string | null;
+                                headers: {
+                                    name: string;
+                                    value: string;
+                                }[];
+                                cookies: {
+                                    name: string;
+                                    valueSha256: string;
+                                    secure: boolean;
+                                    httpOnly: boolean;
+                                    /** @enum {string|null} */
+                                    sameSite: "Strict" | "Lax" | "None" | null;
+                                    domain: string | null;
+                                    path: string | null;
+                                    expires: string | null;
+                                }[];
+                                redirects: {
+                                    /** Format: uri */
+                                    url: string;
+                                    statusCode: number;
+                                    location: string;
+                                    followed: boolean;
+                                }[];
+                                body: {
+                                    sha256: string;
+                                    size: number;
+                                    contentType: string | null;
+                                    content: string | null;
+                                    truncated: boolean;
+                                } | null;
+                                favicon: {
+                                    /** Format: uri */
+                                    url: string;
+                                    mmh3: number;
+                                    sha256: string;
+                                } | null;
+                                tls: {
+                                    version: string;
+                                    cipher: string;
+                                    alpn: string | null;
+                                    cert: {
+                                        subjectCn: string | null;
+                                        san: string[];
+                                        issuer: string | null;
+                                        /** Format: date-time */
+                                        notBefore: string;
+                                        /** Format: date-time */
+                                        notAfter: string;
+                                        serial: string;
+                                        sha256: string;
+                                        selfSigned: boolean;
+                                        keyAlgorithm: string;
+                                        keyBits: number | null;
+                                    };
+                                } | null;
+                                probes: {
+                                    path: string;
+                                    statusCode: number | null;
+                                    location: string | null;
+                                    title: string | null;
+                                    size: number | null;
+                                    bodySha256: string | null;
+                                    error: {
+                                        code: string;
+                                        message: string;
+                                    } | null;
+                                }[];
+                                error: {
+                                    code: string;
+                                    message: string;
+                                } | null;
                             }[];
                         }[];
                     }[];

@@ -1,13 +1,9 @@
 import { registry } from "../../scripts/registry";
-import {
-  NmapHeartbeatSchema,
-  NmapJobSchema,
-  NmapLeaseRequestSchema,
-  NmapResultSchema,
-} from "./workers.schema";
+import { WorkerResultSchema } from "./worker-result.schema";
+import { NmapHeartbeatSchema, NmapJobSchema, NmapLeaseRequestSchema } from "./workers.schema";
 
 registry.register("NmapJob", NmapJobSchema);
-registry.register("NmapResult", NmapResultSchema);
+registry.register("WorkerResult", WorkerResultSchema);
 
 registry.registerPath({
   method: "post",
@@ -46,7 +42,8 @@ registry.registerPath({
   tags: ["Workers"],
   security: [{ workerToken: [] }],
   request: {
-    body: { content: { "application/json": { schema: NmapResultSchema } } },
+    body: { content: { "application/json": { schema: WorkerResultSchema } } },
   },
+  description: "The locked result format in docs/worker-result-format.md.",
   responses: { 204: { description: "Result accepted" } },
 });

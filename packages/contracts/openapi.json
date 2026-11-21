@@ -553,29 +553,254 @@
           "targets"
         ]
       },
-      "NmapResult": {
+      "WorkerResult": {
         "type": "object",
         "properties": {
-          "job_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
-          },
-          "lease_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "completed",
-              "partial"
+          "scan": {
+            "type": "object",
+            "properties": {
+              "jobId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "leaseId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "scanId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "worker": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "nmapVersion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "nmapVersion"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "completed",
+                  "partial",
+                  "failed"
+                ]
+              },
+              "stopReason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "deadline",
+                  "stop-requested",
+                  "lease-lost",
+                  "error",
+                  null
+                ]
+              },
+              "startedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "finishedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "durationMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "phasesMs": {
+                "type": "object",
+                "properties": {
+                  "hostDiscovery": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "portScan": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "serviceDetection": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "http": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "hostDiscovery",
+                  "portScan",
+                  "serviceDetection",
+                  "http"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "subnet": {
+                    "type": "string",
+                    "format": "ipv4-cidr"
+                  },
+                  "ports": {
+                    "type": "string",
+                    "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+                  },
+                  "maxParallel": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "maxRatePerProcess": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "hostTimeoutMs": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "httpTimeoutMs": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "maxBodyBytes": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "maxRedirects": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "nmapArgs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "subnet",
+                  "ports",
+                  "maxParallel",
+                  "maxRatePerProcess",
+                  "hostTimeoutMs",
+                  "httpTimeoutMs",
+                  "maxBodyBytes",
+                  "maxRedirects",
+                  "nmapArgs"
+                ]
+              },
+              "counts": {
+                "type": "object",
+                "properties": {
+                  "addresses": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "up": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "down": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "timeout": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "cancelled": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "failed": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "openPorts": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "httpEndpoints": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "httpRequests": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "addresses",
+                  "up",
+                  "down",
+                  "timeout",
+                  "cancelled",
+                  "failed",
+                  "openPorts",
+                  "httpEndpoints",
+                  "httpRequests"
+                ]
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ]
+              }
+            },
+            "required": [
+              "jobId",
+              "leaseId",
+              "scanId",
+              "worker",
+              "status",
+              "stopReason",
+              "startedAt",
+              "finishedAt",
+              "durationMs",
+              "phasesMs",
+              "params",
+              "counts",
+              "error"
             ]
-          },
-          "duration_ms": {
-            "type": "integer",
-            "minimum": 0
           },
           "hosts": {
             "type": "array",
@@ -586,27 +811,70 @@
                   "type": "string",
                   "format": "ip"
                 },
-                "domain": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "up",
+                    "down",
+                    "timeout",
+                    "cancelled",
+                    "failed"
+                  ]
+                },
+                "reason": {
                   "type": [
                     "string",
                     "null"
                   ]
                 },
-                "status": {
-                  "type": "string",
-                  "enum": [
-                    "pending",
-                    "scanned",
-                    "failed",
-                    "timeout",
-                    "cancelled"
-                  ]
+                "observedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "latencyMs": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "hostnames": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 253
+                      },
+                      "source": {
+                        "type": "string",
+                        "enum": [
+                          "job",
+                          "ptr",
+                          "tls-san"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "source"
+                    ]
+                  }
                 },
                 "error": {
-                  "type": "object",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
                   "properties": {
                     "code": {
-                      "type": "string"
+                      "type": "string",
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
                     },
                     "message": {
                       "type": "string"
@@ -622,7 +890,7 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "number": {
+                      "port": {
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 65535
@@ -634,7 +902,16 @@
                         ]
                       },
                       "state": {
-                        "type": "string"
+                        "type": "string",
+                        "enum": [
+                          "open"
+                        ]
+                      },
+                      "reason": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "service": {
                         "type": [
@@ -643,26 +920,92 @@
                         ],
                         "properties": {
                           "name": {
-                            "type": "string"
+                            "type": "string",
+                            "minLength": 1
                           },
                           "product": {
-                            "type": "string"
+                            "type": [
+                              "string",
+                              "null"
+                            ]
                           },
                           "version": {
-                            "type": "string"
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "extraInfo": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
                           },
                           "cpe": {
                             "type": "array",
                             "items": {
                               "type": "string"
                             }
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "probed",
+                              "table"
+                            ]
+                          },
+                          "confidence": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10
                           }
                         },
                         "required": [
                           "name",
                           "product",
                           "version",
-                          "cpe"
+                          "extraInfo",
+                          "cpe",
+                          "method",
+                          "confidence"
+                        ]
+                      },
+                      "identity": {
+                        "type": "object",
+                        "properties": {
+                          "ttl": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          "sshHostKeySha256": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[0-9a-f]{64}$"
+                          },
+                          "tlsCertSha256": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[0-9a-f]{64}$"
+                          }
+                        },
+                        "required": [
+                          "ttl",
+                          "sshHostKeySha256",
+                          "tlsCertSha256"
+                        ]
+                      },
+                      "banner": {
+                        "type": [
+                          "string",
+                          "null"
                         ]
                       },
                       "scripts": {
@@ -671,7 +1014,8 @@
                           "type": "object",
                           "properties": {
                             "id": {
-                              "type": "string"
+                              "type": "string",
+                              "minLength": 1
                             },
                             "output": {
                               "type": "string"
@@ -682,32 +1026,455 @@
                             "output"
                           ]
                         }
+                      },
+                      "http": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "scheme": {
+                              "type": "string",
+                              "enum": [
+                                "http",
+                                "https"
+                              ]
+                            },
+                            "vhost": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "minLength": 1,
+                              "maxLength": 253
+                            },
+                            "url": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "finalUrl": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "statusCode": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 100,
+                              "maximum": 599
+                            },
+                            "title": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "headers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "value": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "value"
+                                ]
+                              }
+                            },
+                            "cookies": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "valueSha256": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  },
+                                  "secure": {
+                                    "type": "boolean"
+                                  },
+                                  "httpOnly": {
+                                    "type": "boolean"
+                                  },
+                                  "sameSite": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "enum": [
+                                      "Strict",
+                                      "Lax",
+                                      "None",
+                                      null
+                                    ]
+                                  },
+                                  "domain": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "path": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "expires": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "valueSha256",
+                                  "secure",
+                                  "httpOnly",
+                                  "sameSite",
+                                  "domain",
+                                  "path",
+                                  "expires"
+                                ]
+                              }
+                            },
+                            "redirects": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "url": {
+                                    "type": "string",
+                                    "format": "uri"
+                                  },
+                                  "statusCode": {
+                                    "type": "integer",
+                                    "minimum": 300,
+                                    "maximum": 399
+                                  },
+                                  "location": {
+                                    "type": "string"
+                                  },
+                                  "followed": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "url",
+                                  "statusCode",
+                                  "location",
+                                  "followed"
+                                ]
+                              }
+                            },
+                            "body": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "sha256": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{64}$"
+                                },
+                                "size": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "contentType": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "content": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "truncated": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "sha256",
+                                "size",
+                                "contentType",
+                                "content",
+                                "truncated"
+                              ]
+                            },
+                            "favicon": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "url": {
+                                  "type": "string",
+                                  "format": "uri"
+                                },
+                                "mmh3": {
+                                  "type": "integer",
+                                  "minimum": -2147483648,
+                                  "maximum": 2147483647
+                                },
+                                "sha256": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{64}$"
+                                }
+                              },
+                              "required": [
+                                "url",
+                                "mmh3",
+                                "sha256"
+                              ]
+                            },
+                            "tls": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "version": {
+                                  "type": "string"
+                                },
+                                "cipher": {
+                                  "type": "string"
+                                },
+                                "alpn": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "cert": {
+                                  "type": "object",
+                                  "properties": {
+                                    "subjectCn": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "san": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "issuer": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "notBefore": {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    },
+                                    "notAfter": {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    },
+                                    "serial": {
+                                      "type": "string"
+                                    },
+                                    "sha256": {
+                                      "type": "string",
+                                      "pattern": "^[0-9a-f]{64}$"
+                                    },
+                                    "selfSigned": {
+                                      "type": "boolean"
+                                    },
+                                    "keyAlgorithm": {
+                                      "type": "string"
+                                    },
+                                    "keyBits": {
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ],
+                                      "exclusiveMinimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "subjectCn",
+                                    "san",
+                                    "issuer",
+                                    "notBefore",
+                                    "notAfter",
+                                    "serial",
+                                    "sha256",
+                                    "selfSigned",
+                                    "keyAlgorithm",
+                                    "keyBits"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "version",
+                                "cipher",
+                                "alpn",
+                                "cert"
+                              ]
+                            },
+                            "probes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string"
+                                  },
+                                  "statusCode": {
+                                    "type": [
+                                      "integer",
+                                      "null"
+                                    ],
+                                    "minimum": 100,
+                                    "maximum": 599
+                                  },
+                                  "location": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "title": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "size": {
+                                    "type": [
+                                      "integer",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  },
+                                  "bodySha256": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  },
+                                  "error": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "properties": {
+                                      "code": {
+                                        "type": "string",
+                                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                      },
+                                      "message": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "code",
+                                      "message"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "statusCode",
+                                  "location",
+                                  "title",
+                                  "size",
+                                  "bodySha256",
+                                  "error"
+                                ]
+                              }
+                            },
+                            "error": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                },
+                                "message": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "message"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "scheme",
+                            "vhost",
+                            "url",
+                            "finalUrl",
+                            "statusCode",
+                            "title",
+                            "headers",
+                            "cookies",
+                            "redirects",
+                            "body",
+                            "favicon",
+                            "tls",
+                            "probes",
+                            "error"
+                          ]
+                        }
                       }
                     },
                     "required": [
-                      "number",
+                      "port",
                       "protocol",
                       "state",
+                      "reason",
                       "service",
-                      "scripts"
+                      "identity",
+                      "banner",
+                      "scripts",
+                      "http"
                     ]
-                  }
+                  },
+                  "maxItems": 65535
                 }
               },
               "required": [
                 "ip",
-                "domain",
                 "status",
+                "reason",
+                "observedAt",
+                "latencyMs",
+                "hostnames",
+                "error",
                 "ports"
               ]
-            }
+            },
+            "maxItems": 1024
           }
         },
         "required": [
-          "job_id",
-          "lease_id",
-          "status",
-          "duration_ms",
+          "scan",
           "hosts"
         ]
       }
@@ -2673,32 +3440,258 @@
             "workerToken": []
           }
         ],
+        "description": "The locked result format in docs/worker-result-format.md.",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "job_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
-                  },
-                  "lease_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": [
-                      "completed",
-                      "partial"
+                  "scan": {
+                    "type": "object",
+                    "properties": {
+                      "jobId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "leaseId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      "scanId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "worker": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          },
+                          "version": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "nmapVersion": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1,
+                            "maxLength": 64
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version",
+                          "nmapVersion"
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "completed",
+                          "partial",
+                          "failed"
+                        ]
+                      },
+                      "stopReason": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "deadline",
+                          "stop-requested",
+                          "lease-lost",
+                          "error",
+                          null
+                        ]
+                      },
+                      "startedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "finishedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "durationMs": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "phasesMs": {
+                        "type": "object",
+                        "properties": {
+                          "hostDiscovery": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "portScan": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "serviceDetection": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "http": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "hostDiscovery",
+                          "portScan",
+                          "serviceDetection",
+                          "http"
+                        ]
+                      },
+                      "params": {
+                        "type": "object",
+                        "properties": {
+                          "subnet": {
+                            "type": "string",
+                            "format": "ipv4-cidr"
+                          },
+                          "ports": {
+                            "type": "string",
+                            "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+                          },
+                          "maxParallel": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "maxRatePerProcess": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "hostTimeoutMs": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "httpTimeoutMs": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "maxBodyBytes": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "maxRedirects": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "nmapArgs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "subnet",
+                          "ports",
+                          "maxParallel",
+                          "maxRatePerProcess",
+                          "hostTimeoutMs",
+                          "httpTimeoutMs",
+                          "maxBodyBytes",
+                          "maxRedirects",
+                          "nmapArgs"
+                        ]
+                      },
+                      "counts": {
+                        "type": "object",
+                        "properties": {
+                          "addresses": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "up": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "down": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "timeout": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "cancelled": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "failed": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "openPorts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "httpEndpoints": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "httpRequests": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "addresses",
+                          "up",
+                          "down",
+                          "timeout",
+                          "cancelled",
+                          "failed",
+                          "openPorts",
+                          "httpEndpoints",
+                          "httpRequests"
+                        ]
+                      },
+                      "error": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "message"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "jobId",
+                      "leaseId",
+                      "scanId",
+                      "worker",
+                      "status",
+                      "stopReason",
+                      "startedAt",
+                      "finishedAt",
+                      "durationMs",
+                      "phasesMs",
+                      "params",
+                      "counts",
+                      "error"
                     ]
-                  },
-                  "duration_ms": {
-                    "type": "integer",
-                    "minimum": 0
                   },
                   "hosts": {
                     "type": "array",
@@ -2709,27 +3702,70 @@
                           "type": "string",
                           "format": "ip"
                         },
-                        "domain": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "up",
+                            "down",
+                            "timeout",
+                            "cancelled",
+                            "failed"
+                          ]
+                        },
+                        "reason": {
                           "type": [
                             "string",
                             "null"
                           ]
                         },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "pending",
-                            "scanned",
-                            "failed",
-                            "timeout",
-                            "cancelled"
-                          ]
+                        "observedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "latencyMs": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "minimum": 0
+                        },
+                        "hostnames": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 253
+                              },
+                              "source": {
+                                "type": "string",
+                                "enum": [
+                                  "job",
+                                  "ptr",
+                                  "tls-san"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "source"
+                            ]
+                          }
                         },
                         "error": {
-                          "type": "object",
+                          "type": [
+                            "object",
+                            "null"
+                          ],
                           "properties": {
                             "code": {
-                              "type": "string"
+                              "type": "string",
+                              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
                             },
                             "message": {
                               "type": "string"
@@ -2745,7 +3781,7 @@
                           "items": {
                             "type": "object",
                             "properties": {
-                              "number": {
+                              "port": {
                                 "type": "integer",
                                 "minimum": 1,
                                 "maximum": 65535
@@ -2757,7 +3793,16 @@
                                 ]
                               },
                               "state": {
-                                "type": "string"
+                                "type": "string",
+                                "enum": [
+                                  "open"
+                                ]
+                              },
+                              "reason": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
                               },
                               "service": {
                                 "type": [
@@ -2766,26 +3811,92 @@
                                 ],
                                 "properties": {
                                   "name": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "minLength": 1
                                   },
                                   "product": {
-                                    "type": "string"
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
                                   },
                                   "version": {
-                                    "type": "string"
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "extraInfo": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
                                   },
                                   "cpe": {
                                     "type": "array",
                                     "items": {
                                       "type": "string"
                                     }
+                                  },
+                                  "method": {
+                                    "type": "string",
+                                    "enum": [
+                                      "probed",
+                                      "table"
+                                    ]
+                                  },
+                                  "confidence": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 10
                                   }
                                 },
                                 "required": [
                                   "name",
                                   "product",
                                   "version",
-                                  "cpe"
+                                  "extraInfo",
+                                  "cpe",
+                                  "method",
+                                  "confidence"
+                                ]
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "ttl": {
+                                    "type": [
+                                      "integer",
+                                      "null"
+                                    ],
+                                    "minimum": 0,
+                                    "maximum": 255
+                                  },
+                                  "sshHostKeySha256": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  },
+                                  "tlsCertSha256": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  }
+                                },
+                                "required": [
+                                  "ttl",
+                                  "sshHostKeySha256",
+                                  "tlsCertSha256"
+                                ]
+                              },
+                              "banner": {
+                                "type": [
+                                  "string",
+                                  "null"
                                 ]
                               },
                               "scripts": {
@@ -2794,7 +3905,8 @@
                                   "type": "object",
                                   "properties": {
                                     "id": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "minLength": 1
                                     },
                                     "output": {
                                       "type": "string"
@@ -2805,32 +3917,455 @@
                                     "output"
                                   ]
                                 }
+                              },
+                              "http": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "scheme": {
+                                      "type": "string",
+                                      "enum": [
+                                        "http",
+                                        "https"
+                                      ]
+                                    },
+                                    "vhost": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "minLength": 1,
+                                      "maxLength": 253
+                                    },
+                                    "url": {
+                                      "type": "string",
+                                      "format": "uri"
+                                    },
+                                    "finalUrl": {
+                                      "type": "string",
+                                      "format": "uri"
+                                    },
+                                    "statusCode": {
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ],
+                                      "minimum": 100,
+                                      "maximum": 599
+                                    },
+                                    "title": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "headers": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "value": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "name",
+                                          "value"
+                                        ]
+                                      }
+                                    },
+                                    "cookies": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "valueSha256": {
+                                            "type": "string",
+                                            "pattern": "^[0-9a-f]{64}$"
+                                          },
+                                          "secure": {
+                                            "type": "boolean"
+                                          },
+                                          "httpOnly": {
+                                            "type": "boolean"
+                                          },
+                                          "sameSite": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "enum": [
+                                              "Strict",
+                                              "Lax",
+                                              "None",
+                                              null
+                                            ]
+                                          },
+                                          "domain": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "path": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "expires": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "name",
+                                          "valueSha256",
+                                          "secure",
+                                          "httpOnly",
+                                          "sameSite",
+                                          "domain",
+                                          "path",
+                                          "expires"
+                                        ]
+                                      }
+                                    },
+                                    "redirects": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "url": {
+                                            "type": "string",
+                                            "format": "uri"
+                                          },
+                                          "statusCode": {
+                                            "type": "integer",
+                                            "minimum": 300,
+                                            "maximum": 399
+                                          },
+                                          "location": {
+                                            "type": "string"
+                                          },
+                                          "followed": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "url",
+                                          "statusCode",
+                                          "location",
+                                          "followed"
+                                        ]
+                                      }
+                                    },
+                                    "body": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "sha256": {
+                                          "type": "string",
+                                          "pattern": "^[0-9a-f]{64}$"
+                                        },
+                                        "size": {
+                                          "type": "integer",
+                                          "minimum": 0
+                                        },
+                                        "contentType": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "content": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "truncated": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "sha256",
+                                        "size",
+                                        "contentType",
+                                        "content",
+                                        "truncated"
+                                      ]
+                                    },
+                                    "favicon": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "url": {
+                                          "type": "string",
+                                          "format": "uri"
+                                        },
+                                        "mmh3": {
+                                          "type": "integer",
+                                          "minimum": -2147483648,
+                                          "maximum": 2147483647
+                                        },
+                                        "sha256": {
+                                          "type": "string",
+                                          "pattern": "^[0-9a-f]{64}$"
+                                        }
+                                      },
+                                      "required": [
+                                        "url",
+                                        "mmh3",
+                                        "sha256"
+                                      ]
+                                    },
+                                    "tls": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "version": {
+                                          "type": "string"
+                                        },
+                                        "cipher": {
+                                          "type": "string"
+                                        },
+                                        "alpn": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "cert": {
+                                          "type": "object",
+                                          "properties": {
+                                            "subjectCn": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "san": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "issuer": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "notBefore": {
+                                              "type": "string",
+                                              "format": "date-time"
+                                            },
+                                            "notAfter": {
+                                              "type": "string",
+                                              "format": "date-time"
+                                            },
+                                            "serial": {
+                                              "type": "string"
+                                            },
+                                            "sha256": {
+                                              "type": "string",
+                                              "pattern": "^[0-9a-f]{64}$"
+                                            },
+                                            "selfSigned": {
+                                              "type": "boolean"
+                                            },
+                                            "keyAlgorithm": {
+                                              "type": "string"
+                                            },
+                                            "keyBits": {
+                                              "type": [
+                                                "integer",
+                                                "null"
+                                              ],
+                                              "exclusiveMinimum": 0
+                                            }
+                                          },
+                                          "required": [
+                                            "subjectCn",
+                                            "san",
+                                            "issuer",
+                                            "notBefore",
+                                            "notAfter",
+                                            "serial",
+                                            "sha256",
+                                            "selfSigned",
+                                            "keyAlgorithm",
+                                            "keyBits"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "version",
+                                        "cipher",
+                                        "alpn",
+                                        "cert"
+                                      ]
+                                    },
+                                    "probes": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "path": {
+                                            "type": "string"
+                                          },
+                                          "statusCode": {
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ],
+                                            "minimum": 100,
+                                            "maximum": 599
+                                          },
+                                          "location": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "title": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "size": {
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ],
+                                            "minimum": 0
+                                          },
+                                          "bodySha256": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "pattern": "^[0-9a-f]{64}$"
+                                          },
+                                          "error": {
+                                            "type": [
+                                              "object",
+                                              "null"
+                                            ],
+                                            "properties": {
+                                              "code": {
+                                                "type": "string",
+                                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                              },
+                                              "message": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": [
+                                              "code",
+                                              "message"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "path",
+                                          "statusCode",
+                                          "location",
+                                          "title",
+                                          "size",
+                                          "bodySha256",
+                                          "error"
+                                        ]
+                                      }
+                                    },
+                                    "error": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "code": {
+                                          "type": "string",
+                                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                        },
+                                        "message": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "code",
+                                        "message"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "scheme",
+                                    "vhost",
+                                    "url",
+                                    "finalUrl",
+                                    "statusCode",
+                                    "title",
+                                    "headers",
+                                    "cookies",
+                                    "redirects",
+                                    "body",
+                                    "favicon",
+                                    "tls",
+                                    "probes",
+                                    "error"
+                                  ]
+                                }
                               }
                             },
                             "required": [
-                              "number",
+                              "port",
                               "protocol",
                               "state",
+                              "reason",
                               "service",
-                              "scripts"
+                              "identity",
+                              "banner",
+                              "scripts",
+                              "http"
                             ]
-                          }
+                          },
+                          "maxItems": 65535
                         }
                       },
                       "required": [
                         "ip",
-                        "domain",
                         "status",
+                        "reason",
+                        "observedAt",
+                        "latencyMs",
+                        "hostnames",
+                        "error",
                         "ports"
                       ]
-                    }
+                    },
+                    "maxItems": 1024
                   }
                 },
                 "required": [
-                  "job_id",
-                  "lease_id",
-                  "status",
-                  "duration_ms",
+                  "scan",
                   "hosts"
                 ]
               }
