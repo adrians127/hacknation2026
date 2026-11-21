@@ -2,7 +2,6 @@ import { Router } from "express";
 
 import { IdParamsSchema } from "@subsurf/contracts/common/common.schema";
 import {
-  HostListQuerySchema,
   HostServiceParamsSchema,
   UpdateHostBodySchema,
   UpdateServiceBodySchema,
@@ -13,31 +12,14 @@ import { requirePermission } from "~backend/middleware/authorize";
 import { validate } from "~backend/middleware/validate";
 import { hostsController as c } from "~backend/modules/hosts/hosts.controller";
 
+// Hosts are read through the scans that saw them (`/scans/{id}/hosts`); this module edits them.
 export const hostsRoutes = Router();
 
-hostsRoutes.use(requireAuth);
+hostsRoutes.use(requireAuth, requirePermission("hosts:update"));
 
-hostsRoutes.get(
-  "/",
-  requirePermission("hosts:read"),
-  validate({ query: HostListQuerySchema }),
-  c.list,
-);
-hostsRoutes.get(
-  "/:id",
-  requirePermission("hosts:read"),
-  validate({ params: IdParamsSchema }),
-  c.get,
-);
-hostsRoutes.patch(
-  "/:id",
-  requirePermission("hosts:update"),
-  validate({ params: IdParamsSchema, body: UpdateHostBodySchema }),
-  c.update,
-);
+hostsRoutes.patch("/:id", validate({ params: IdParamsSchema, body: UpdateHostBodySchema }), c.update);
 hostsRoutes.patch(
   "/:id/services/:serviceId",
-  requirePermission("hosts:update"),
   validate({ params: HostServiceParamsSchema, body: UpdateServiceBodySchema }),
   c.updateService,
 );

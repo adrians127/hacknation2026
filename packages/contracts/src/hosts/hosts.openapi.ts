@@ -8,66 +8,25 @@ import {
 } from "../common/common.openapi";
 import { IdParamsSchema } from "../common/common.schema";
 import {
-  HostDetailSchema,
-  HostListQuerySchema,
-  HostListResponseSchema,
+  HostEditsSchema,
   HostServiceParamsSchema,
-  ServiceDetailSchema,
+  ServiceEditsSchema,
   UpdateHostBodySchema,
   UpdateServiceBodySchema,
 } from "./hosts.schema";
 
 const tags = ["Hosts"];
 const security = cookieAuth;
-const HostDetail = registry.register("HostDetail", HostDetailSchema);
-const ServiceDetail = registry.register("ServiceDetail", ServiceDetailSchema);
-const hostResponse = {
-  description: "The host with its services, decrypted details and scan history",
-  content: { "application/json": { schema: HostDetail } },
-};
-
-registry.registerPath({
-  method: "get",
-  path: "/hosts",
-  operationId: "listHosts",
-  summary: "List hosts and their services",
-  description: [
-    "Requires `hosts:read`. Every address that has been `up` in some scan, in address order.",
-    "`q` matches an IP prefix, a hostname, a tag, a port number or a service name/product.",
-  ].join(" "),
-  tags,
-  security,
-  request: { query: HostListQuerySchema },
-  responses: {
-    200: {
-      description: "One page of hosts",
-      content: { "application/json": { schema: HostListResponseSchema } },
-    },
-    400: validationFailed,
-    401: unauthenticated,
-    403: forbidden,
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/hosts/{id}",
-  operationId: "getHost",
-  summary: "Get a host",
-  description: "Requires `hosts:read`.",
-  tags,
-  security,
-  request: { params: IdParamsSchema },
-  responses: { 200: hostResponse, 401: unauthenticated, 403: forbidden, 404: notFound },
-});
 
 registry.registerPath({
   method: "patch",
   path: "/hosts/{id}",
   operationId: "updateHost",
   summary: "Edit a host's note, tags or triage status",
-  description:
-    "Requires `hosts:update`. These fields belong to users: later scans never change them. The note is encrypted at rest.",
+  description: [
+    "Requires `hosts:update`. These fields belong to users: later scans never change them.",
+    "The note is encrypted at rest.",
+  ].join(" "),
   tags,
   security,
   request: {
@@ -75,7 +34,10 @@ registry.registerPath({
     body: { content: { "application/json": { schema: UpdateHostBodySchema } } },
   },
   responses: {
-    200: hostResponse,
+    200: {
+      description: "The host's user-owned fields",
+      content: { "application/json": { schema: HostEditsSchema } },
+    },
     400: validationFailed,
     401: unauthenticated,
     403: forbidden,
@@ -100,8 +62,8 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "The service",
-      content: { "application/json": { schema: ServiceDetail } },
+      description: "The service's user-owned fields",
+      content: { "application/json": { schema: ServiceEditsSchema } },
     },
     400: validationFailed,
     401: unauthenticated,

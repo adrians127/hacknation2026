@@ -28,7 +28,6 @@ export const PERMISSIONS = [
   "targets:delete",
   "scans:read",
   "scans:run",
-  "hosts:read",
   "hosts:update",
 ] as const satisfies readonly `${PermissionResource}:${PermissionAction}`[];
 
@@ -45,7 +44,7 @@ export const SYSTEM_ROLE_KEYS = ["admin", "editor", "analyst", "viewer"] as cons
 export const SystemRoleKeySchema = z.enum(SYSTEM_ROLE_KEYS);
 export type SystemRoleKey = z.infer<typeof SystemRoleKeySchema>;
 
-const READ = ["targets:read", "scans:read", "hosts:read"] as const satisfies readonly Permission[];
+const READ = ["targets:read", "scans:read"] as const satisfies readonly Permission[];
 
 // Mapping rules: apps/backend/README.md ("Adding a permission"). Users and roles stay admin-only.
 export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRoleKey, readonly Permission[]> = {
