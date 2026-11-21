@@ -17,7 +17,7 @@ The frontend wraps it in TanStack Query hooks via `openapi-react-query` (`apps/f
 pnpm generate     # from the repo root: contracts -> openapi.json first, then this package
 ```
 
-`src/generated/openapi.d.ts` is committed, and CI checks that it is up to date. Do not edit it by hand.
+`src/generated/openapi.d.ts` is committed. Regenerate it with `pnpm generate`; do not edit it by hand.
 
 ## Why this package uses TypeScript 6
 

@@ -162,7 +162,7 @@ Progress comes from masscan's own status line, so `% done` covers masscan's full
 
 ## Docker image
 
-The image is built and runs on `ubuntu:26.04`, with the distribution's `masscan` and `nlohmann-json3-dev`. The image build compiles with the strict warning flags and runs the unit tests (`ctest`), so `pnpm workers:build` fails if a test fails. CI builds the same image.
+The image is built and runs on `ubuntu:26.04`, with the distribution's `masscan` and `nlohmann-json3-dev`. The image build compiles with the strict warning flags and runs the unit tests (`ctest`), so `pnpm workers:build` fails if a test fails.
 
 If the build fails with `429 Too Many Requests`, Docker Hub is rate-limiting your IP address; a shared network makes this happen quickly. Either run `docker login` with a free Docker account (the limit then counts per account, not per IP), or pull the Ubuntu base image from a mirror:
 

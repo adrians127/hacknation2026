@@ -31,7 +31,7 @@ openapi.json                         GENERATED, committed
    - To get a named component (`$ref`), use the schema that `registry.register("Name", Schema)` **returns**. Only that instance carries the reference; passing the original schema inlines it.
    - A new permission goes into `src/auth/permissions.ts` (see [RBAC in the backend README](../../apps/backend/README.md#auth-and-rbac)).
 3. Run `pnpm generate` from the repo root. It regenerates `openapi.json` and then the `api-client` types, in that order.
-4. Commit the generated files. CI checks that they are up to date.
+4. Commit the generated files.
 
 Importing in apps: `import { HealthResponseSchema } from "@subsurf/contracts/health/health.schema"`.
 

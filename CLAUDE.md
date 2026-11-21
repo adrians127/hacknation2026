@@ -102,7 +102,7 @@ pnpm workers:build  # build the masscan-worker image (run a sweep: pnpm workers:
 
 ## Conventions
 
-- **After every change in `packages/contracts`, run `pnpm generate`** and commit `openapi.json` and `api-client/src/generated`. CI rejects stale generated files.
+- **After every change in `packages/contracts`, run `pnpm generate`** and commit `openapi.json` and `api-client/src/generated`. Nothing checks this automatically, so a forgotten `pnpm generate` silently desyncs frontend, backend and workers.
 - Import aliases: `@/*` → `apps/frontend/src/*`, `~backend/*` → `apps/backend/src/*`.
 - Every workspace has its own `tsconfig.json` and `.oxlintrc.json` (the latter extends the root `.oxlintrc.json`). TS 6+ defaults to `types: []`, so list `types` (e.g. `["node"]`, `["vite/client"]`) explicitly.
 - **Adding dependencies:** before adding a package, check its latest version on npm (`npm view <pkg> version`). Never write a version from memory. `pnpm-workspace.yaml` sets `minimumReleaseAge: 2880` (48 h). If the latest version is younger than that, use the newest version that is more than 48 h old. Do not disable this safeguard.
@@ -177,6 +177,5 @@ Then, in the same change:
 
 1. Add the worker to the table in [`apps/workers/README.md`](apps/workers/README.md).
 2. Add a service to `docker/docker-compose.workers.yml` (grant only the capabilities it needs; a one-shot CLI worker goes in the `cli` profile).
-3. Add a `docker build apps/workers/<name>-worker` step to `.github/workflows/ci.yml`.
-4. Add the worker's README to the "Where to look" table here (ask the user first, per the rule above).
-5. Dependencies: system packages in the Dockerfile or CMake `FetchContent` pinned to a release tag or commit hash, never a branch. Check the latest release before pinning; do not write a version from memory.
+3. Add the worker's README to the "Where to look" table here (ask the user first, per the rule above).
+4. Dependencies: system packages in the Dockerfile or CMake `FetchContent` pinned to a release tag or commit hash, never a branch. Check the latest release before pinning; do not write a version from memory.
