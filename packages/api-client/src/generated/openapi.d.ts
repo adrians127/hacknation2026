@@ -121,6 +121,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/hosts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List hosts and their services
+         * @description Requires `hosts:read`. Every address that has been `up` in some scan, in address order. `q` matches an IP prefix, a hostname, a tag, a port number or a service name/product.
+         */
+        get: operations["listHosts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hosts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a host
+         * @description Requires `hosts:read`.
+         */
+        get: operations["getHost"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a host's note, tags or triage status
+         * @description Requires `hosts:update`. These fields belong to users: later scans never change them. The note is encrypted at rest.
+         */
+        patch: operations["updateHost"];
+        trace?: never;
+    };
+    "/hosts/{id}/services/{serviceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a service, or correct what the scanner identified
+         * @description Requires `hosts:update`. Note, tags, triage status and corrections of the service name, product and version (`null` removes a correction). Later scans never change these fields.
+         */
+        patch: operations["updateHostService"];
+        trace?: never;
+    };
     "/roles": {
         parameters: {
             query?: never;
@@ -376,7 +440,7 @@ export interface components {
                 key: "admin" | "editor" | "analyst" | "viewer" | null;
                 name: string;
             };
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:read" | "hosts:update")[];
             mustChangePassword: boolean;
         };
         HealthResponse: {
@@ -389,6 +453,285 @@ export interface components {
             /** Format: date-time */
             timestamp: string;
         };
+        HostDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: ip */
+            ip: string;
+            hostnames: string[];
+            /** @enum {string|null} */
+            lastStatus: "up" | "down" | null;
+            /** Format: date-time */
+            lastScannedAt: string | null;
+            /** Format: date-time */
+            firstSeenAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+            /** @enum {string} */
+            triage: "unreviewed" | "reviewed" | "important" | "false_positive";
+            tags: string[];
+            note: string;
+            services: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                protocol: "tcp";
+                port: number;
+                observed: {
+                    name: string | null;
+                    product: string | null;
+                    version: string | null;
+                };
+                overrides: {
+                    name: string | null;
+                    product: string | null;
+                    version: string | null;
+                };
+                seenInLatestScan: boolean;
+                http: {
+                    /** @enum {string} */
+                    scheme: "http" | "https";
+                    vhost: string | null;
+                    /** Format: uri */
+                    url: string;
+                    /** Format: uri */
+                    finalUrl: string;
+                    statusCode: number | null;
+                    title: string | null;
+                    headers: {
+                        name: string;
+                        value: string;
+                    }[];
+                    cookies: {
+                        name: string;
+                        valueSha256: string;
+                        secure: boolean;
+                        httpOnly: boolean;
+                        /** @enum {string|null} */
+                        sameSite: "Strict" | "Lax" | "None" | null;
+                        domain: string | null;
+                        path: string | null;
+                        expires: string | null;
+                    }[];
+                    redirects: {
+                        /** Format: uri */
+                        url: string;
+                        statusCode: number;
+                        location: string;
+                        followed: boolean;
+                    }[];
+                    body: {
+                        sha256: string;
+                        size: number;
+                        contentType: string | null;
+                        content: string | null;
+                        truncated: boolean;
+                    } | null;
+                    favicon: {
+                        /** Format: uri */
+                        url: string;
+                        mmh3: number;
+                        sha256: string;
+                    } | null;
+                    tls: {
+                        version: string;
+                        cipher: string;
+                        alpn: string | null;
+                        cert: {
+                            subjectCn: string | null;
+                            san: string[];
+                            issuer: string | null;
+                            /** Format: date-time */
+                            notBefore: string;
+                            /** Format: date-time */
+                            notAfter: string;
+                            serial: string;
+                            sha256: string;
+                            selfSigned: boolean;
+                            keyAlgorithm: string;
+                            keyBits: number | null;
+                        };
+                    } | null;
+                    probes: {
+                        path: string;
+                        statusCode: number | null;
+                        location: string | null;
+                        title: string | null;
+                        size: number | null;
+                        bodySha256: string | null;
+                        error: {
+                            code: string;
+                            message: string;
+                        } | null;
+                    }[];
+                    error: {
+                        code: string;
+                        message: string;
+                    } | null;
+                }[];
+                /** Format: date-time */
+                firstSeenAt: string;
+                /** Format: date-time */
+                lastSeenAt: string;
+                /** @enum {string} */
+                triage: "unreviewed" | "reviewed" | "important" | "false_positive";
+                tags: string[];
+                note: string;
+                /** Format: date-time */
+                observedAt: string | null;
+                reason: string | null;
+                extraInfo: string | null;
+                cpe: string[];
+                method: string | null;
+                confidence: number | null;
+                identity: {
+                    ttl: number | null;
+                    sshHostKeySha256: string | null;
+                    tlsCertSha256: string | null;
+                };
+                banner: string | null;
+                scripts: {
+                    id: string;
+                    output: string;
+                }[];
+            }[];
+            history: {
+                /** Format: uuid */
+                scanId: string;
+                /** Format: date-time */
+                scannedAt: string;
+                /** @enum {string} */
+                status: "up" | "down" | "timeout" | "cancelled" | "failed";
+                /** Format: date-time */
+                observedAt: string | null;
+                latencyMs: number | null;
+                openPorts: number;
+            }[];
+        };
+        ServiceDetail: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            protocol: "tcp";
+            port: number;
+            observed: {
+                name: string | null;
+                product: string | null;
+                version: string | null;
+            };
+            overrides: {
+                name: string | null;
+                product: string | null;
+                version: string | null;
+            };
+            seenInLatestScan: boolean;
+            http: {
+                /** @enum {string} */
+                scheme: "http" | "https";
+                vhost: string | null;
+                /** Format: uri */
+                url: string;
+                /** Format: uri */
+                finalUrl: string;
+                statusCode: number | null;
+                title: string | null;
+                headers: {
+                    name: string;
+                    value: string;
+                }[];
+                cookies: {
+                    name: string;
+                    valueSha256: string;
+                    secure: boolean;
+                    httpOnly: boolean;
+                    /** @enum {string|null} */
+                    sameSite: "Strict" | "Lax" | "None" | null;
+                    domain: string | null;
+                    path: string | null;
+                    expires: string | null;
+                }[];
+                redirects: {
+                    /** Format: uri */
+                    url: string;
+                    statusCode: number;
+                    location: string;
+                    followed: boolean;
+                }[];
+                body: {
+                    sha256: string;
+                    size: number;
+                    contentType: string | null;
+                    content: string | null;
+                    truncated: boolean;
+                } | null;
+                favicon: {
+                    /** Format: uri */
+                    url: string;
+                    mmh3: number;
+                    sha256: string;
+                } | null;
+                tls: {
+                    version: string;
+                    cipher: string;
+                    alpn: string | null;
+                    cert: {
+                        subjectCn: string | null;
+                        san: string[];
+                        issuer: string | null;
+                        /** Format: date-time */
+                        notBefore: string;
+                        /** Format: date-time */
+                        notAfter: string;
+                        serial: string;
+                        sha256: string;
+                        selfSigned: boolean;
+                        keyAlgorithm: string;
+                        keyBits: number | null;
+                    };
+                } | null;
+                probes: {
+                    path: string;
+                    statusCode: number | null;
+                    location: string | null;
+                    title: string | null;
+                    size: number | null;
+                    bodySha256: string | null;
+                    error: {
+                        code: string;
+                        message: string;
+                    } | null;
+                }[];
+                error: {
+                    code: string;
+                    message: string;
+                } | null;
+            }[];
+            /** Format: date-time */
+            firstSeenAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+            /** @enum {string} */
+            triage: "unreviewed" | "reviewed" | "important" | "false_positive";
+            tags: string[];
+            note: string;
+            /** Format: date-time */
+            observedAt: string | null;
+            reason: string | null;
+            extraInfo: string | null;
+            cpe: string[];
+            method: string | null;
+            confidence: number | null;
+            identity: {
+                ttl: number | null;
+                sshHostKeySha256: string | null;
+                tlsCertSha256: string | null;
+            };
+            banner: string | null;
+            scripts: {
+                id: string;
+                output: string;
+            }[];
+        };
         Role: {
             /** Format: uuid */
             id: string;
@@ -397,7 +740,7 @@ export interface components {
             name: string;
             description: string;
             isSystem: boolean;
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:read" | "hosts:update")[];
             userCount: number;
             /** Format: date-time */
             createdAt: string;
@@ -852,6 +1195,305 @@ export interface operations {
             };
         };
     };
+    listHosts: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                q?: string;
+                triage?: "unreviewed" | "reviewed" | "important" | "false_positive";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of hosts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: ip */
+                            ip: string;
+                            hostnames: string[];
+                            /** @enum {string|null} */
+                            lastStatus: "up" | "down" | null;
+                            /** Format: date-time */
+                            lastScannedAt: string | null;
+                            /** Format: date-time */
+                            firstSeenAt: string;
+                            /** Format: date-time */
+                            lastSeenAt: string;
+                            /** @enum {string} */
+                            triage: "unreviewed" | "reviewed" | "important" | "false_positive";
+                            tags: string[];
+                            note: string;
+                            services: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                protocol: "tcp";
+                                port: number;
+                                observed: {
+                                    name: string | null;
+                                    product: string | null;
+                                    version: string | null;
+                                };
+                                overrides: {
+                                    name: string | null;
+                                    product: string | null;
+                                    version: string | null;
+                                };
+                                seenInLatestScan: boolean;
+                                http: {
+                                    /** @enum {string} */
+                                    scheme: "http" | "https";
+                                    vhost: string | null;
+                                    /** Format: uri */
+                                    url: string;
+                                    /** Format: uri */
+                                    finalUrl: string;
+                                    statusCode: number | null;
+                                    title: string | null;
+                                }[];
+                                /** Format: date-time */
+                                firstSeenAt: string;
+                                /** Format: date-time */
+                                lastSeenAt: string;
+                                /** @enum {string} */
+                                triage: "unreviewed" | "reviewed" | "important" | "false_positive";
+                                tags: string[];
+                                note: string;
+                            }[];
+                        }[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getHost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The host with its services, decrypted details and scan history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HostDetail"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateHost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                    tags?: string[];
+                    /** @enum {string} */
+                    triage?: "unreviewed" | "reviewed" | "important" | "false_positive";
+                };
+            };
+        };
+        responses: {
+            /** @description The host with its services, decrypted details and scan history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HostDetail"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateHostService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                    tags?: string[];
+                    /** @enum {string} */
+                    triage?: "unreviewed" | "reviewed" | "important" | "false_positive";
+                    nameOverride?: string | null;
+                    productOverride?: string | null;
+                    versionOverride?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description The service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceDetail"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     listRoles: {
         parameters: {
             query?: never;
@@ -876,7 +1518,7 @@ export interface operations {
                             name: string;
                             description: string;
                             isSystem: boolean;
-                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:read" | "hosts:update")[];
                             userCount: number;
                             /** Format: date-time */
                             createdAt: string;
@@ -918,7 +1560,7 @@ export interface operations {
                 "application/json": {
                     name: string;
                     description: string;
-                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:read" | "hosts:update")[];
                 };
             };
         };
@@ -995,7 +1637,7 @@ export interface operations {
                         name: string;
                         description: string;
                         isSystem: boolean;
-                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:read" | "hosts:update")[];
                         userCount: number;
                         /** Format: date-time */
                         createdAt: string;
@@ -1113,7 +1755,7 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     description?: string;
-                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:read" | "hosts:update")[];
                 };
             };
         };
