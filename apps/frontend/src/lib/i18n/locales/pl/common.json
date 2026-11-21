@@ -33,6 +33,54 @@
       }
     }
   },
+  "targets": {
+    "title": "Cele",
+    "subtitle": "Adresy IP, zakresy CIDR i domeny objęte skanowaniem",
+    "add": "Dodaj cel",
+    "never": "Nigdy",
+    "columns": {
+      "value": "Cel",
+      "kind": "Typ",
+      "note": "Notatka",
+      "tags": "Tagi",
+      "activeHosts": "Aktywne hosty",
+      "lastScan": "Ostatni skan",
+      "actions": "Akcje"
+    },
+    "kinds": {
+      "ip": "IP",
+      "cidr": "CIDR",
+      "domain": "Domena"
+    },
+    "actions": {
+      "edit": "Edytuj {{value}}",
+      "delete": "Usuń {{value}}"
+    },
+    "form": {
+      "createTitle": "Dodaj cel",
+      "editTitle": "Edytuj cel",
+      "value": "IP, zakres CIDR lub domena",
+      "valuePlaceholder": "10.0.0.0/24",
+      "valueRequired": "Podaj adres, zakres lub domenę.",
+      "note": "Notatka",
+      "noteTooLong": "Użyj najwyżej 500 znaków.",
+      "tags": "Tagi",
+      "tagsHint": "oddzielone, przecinkami",
+      "tagsInvalid": "Najwyżej 20 tagów, każdy do 50 znaków.",
+      "submit": "Zapisz",
+      "submitting": "Zapisywanie…"
+    },
+    "confirmDelete": {
+      "title": "Usunąć {{value}}?",
+      "description": "Ten cel nie będzie już skanowany.",
+      "confirm": "Usuń"
+    },
+    "toast": {
+      "created": "Dodano cel.",
+      "updated": "Zapisano cel.",
+      "deleted": "Usunięto cel."
+    }
+  },
   "language": {
     "switchTo": "English"
   },
@@ -59,6 +107,7 @@
   "nav": {
     "label": "Nawigacja główna",
     "dashboard": "Pulpit",
+    "targets": "Cele",
     "users": "Użytkownicy",
     "roles": "Role"
   },
@@ -100,6 +149,7 @@
     "SYSTEM_ROLE_READ_ONLY": "Ról systemowych nie można zmieniać.",
     "ROLE_IN_USE": "Ta rola jest nadal przypisana użytkownikom. Najpierw przenieś ich do innej roli.",
     "EMAIL_TAKEN": "Użytkownik z tym adresem email już istnieje.",
-    "ROLE_NAME_TAKEN": "Rola o tej nazwie już istnieje."
+    "ROLE_NAME_TAKEN": "Rola o tej nazwie już istnieje.",
+    "TARGET_EXISTS": "Ten cel jest już na liście."
   }
 }

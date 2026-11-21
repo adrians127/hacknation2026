@@ -28,4 +28,15 @@ describe("api mocks", () => {
 
     expect(await pending).toEqual({ error: { status: 404, message: "Target not found" } });
   });
+
+  it("mockError adds the error code when given", async () => {
+    const pending = mockError(409, "Target already exists", "TARGET_EXISTS").catch(
+      (error: unknown) => error,
+    );
+    await vi.runAllTimersAsync();
+
+    expect(await pending).toEqual({
+      error: { status: 409, message: "Target already exists", code: "TARGET_EXISTS" },
+    });
+  });
 });

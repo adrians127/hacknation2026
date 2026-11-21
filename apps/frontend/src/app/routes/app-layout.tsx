@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShieldCheck, Users, type LucideIcon } from "lucide-react";
+import { Crosshair, LayoutDashboard, ShieldCheck, Users, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, Outlet } from "react-router";
 
@@ -11,13 +11,14 @@ import { cn } from "@/lib/utils";
 
 interface NavItem {
   to: string;
-  label: "nav.dashboard" | "nav.users" | "nav.roles";
+  label: "nav.dashboard" | "nav.targets" | "nav.users" | "nav.roles";
   Icon: LucideIcon;
   permission?: Permission;
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
   { to: "/app", label: "nav.dashboard", Icon: LayoutDashboard },
+  { to: "/app/targets", label: "nav.targets", Icon: Crosshair, permission: "targets:read" },
   { to: "/app/admin/users", label: "nav.users", Icon: Users, permission: "users:read" },
   { to: "/app/admin/roles", label: "nav.roles", Icon: ShieldCheck, permission: "roles:read" },
 ];

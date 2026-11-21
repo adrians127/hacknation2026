@@ -65,7 +65,7 @@ Rules:
 - **Mutations take `{ body, params }`**, like `api.useMutation`, so the `mutate(...)` calls in components don't change.
 - **Fixtures live in `features/<name>/api/mocks.ts`** as in-memory data. Mocked mutations modify that data, so lists refresh after invalidation as they will with the backend. A page reload resets it.
 - **Mark every mock with `// MOCK: <target api call>`.** `grep -rn "MOCK:" apps/frontend/src` lists what is still left to integrate.
-- `mockResponse(data)` and `mockError(status, message)` from `@/api/mock` add a short delay, return a copy of the fixture and reject with the same `ErrorResponse` body as a real non-2xx response.
+- `mockResponse(data)` and `mockError(status, message, code?)` from `@/api/mock` add a short delay, return a copy of the fixture and reject with the same `ErrorResponse` body as a real non-2xx response (with `code`, the UI shows the translated `errors.<code>` message).
 
 A mocked query and a mocked mutation:
 

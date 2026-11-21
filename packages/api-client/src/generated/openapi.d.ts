@@ -290,7 +290,7 @@ export interface components {
                 message: string;
                 status: number;
                 /** @enum {string} */
-                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN";
+                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN" | "TARGET_EXISTS";
                 details?: unknown;
             };
         };
