@@ -19,8 +19,10 @@ model Service {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  host         Host              @relation(fields: [hostId], references: [id], onDelete: Cascade)
-  observations PortObservation[]
+  host                 Host                         @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  observations         PortObservation[]
+  vulnerabilityMatches VulnerabilityMatch[]
+  vulnerabilityTriage  ServiceVulnerabilityTriage[]
 
   /// Also serves lookups by hostId.
   @@unique([hostId, protocol, port])
