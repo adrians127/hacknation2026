@@ -20,6 +20,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset --force && prisma db seed",
     "db:seed": "prisma db seed",
+    "db:seed:hosts": "tsx prisma/seed-hosts.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {

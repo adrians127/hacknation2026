@@ -195,16 +195,15 @@
   },
   "scans": {
     "title": "Skany",
-    "subtitle": "Historia skanów discovery",
+    "subtitle": "Każdy przebieg skanu: otwórz go, aby zobaczyć hosty i zmiany od poprzedniego skanu.",
     "start": "Uruchom skan",
-    "starting": "Uruchamianie…",
     "columns": {
-      "id": "Skan",
-      "status": "Status",
-      "targets": "Cele",
-      "hosts": "Hosty",
-      "services": "Usługi",
       "started": "Rozpoczęto",
+      "status": "Status",
+      "addresses": "Adresy",
+      "up": "Aktywne hosty",
+      "noAnswer": "Bez odpowiedzi",
+      "openPorts": "Otwarte porty",
       "duration": "Czas trwania"
     },
     "statuses": {
@@ -214,8 +213,29 @@
       "stopped": "Zatrzymany",
       "failed": "Błąd"
     },
-    "toast": {
-      "started": "Uruchomiono skan."
+    "detail": {
+      "back": "Wszystkie skany",
+      "title": "Skan z {{date}}",
+      "subtitle": "Co znalazł ten skan. Zmiany liczymy względem poprzedniego skanu, tylko dla adresów, które odpowiedziały w obu.",
+      "addresses": "Adresy",
+      "up": "Aktywne hosty",
+      "down": "nieaktywne: {{formatted}}",
+      "noAnswer": "Bez odpowiedzi",
+      "openPorts": "Otwarte porty",
+      "jobs": "Zakończone joby",
+      "stoppedJobs": "zatrzymane na końcu okna czasowego: {{formatted}}",
+      "duration": "Czas trwania",
+      "rate": "Limit tempa",
+      "ports": "Skanowane porty",
+      "comparedWith": "Porównanie ze skanem z {{date}}. Kliknij liczbę, aby pokazać tylko te hosty.",
+      "firstScan": "To pierwszy skan tych adresów, więc nie ma jeszcze z czym go porównać.",
+      "hosts": {
+        "new": "nowe hosty",
+        "gone": "zniknięte hosty",
+        "changed": "zmienione hosty",
+        "unknown": "hosty bez odpowiedzi"
+      },
+      "serviceChanges": "Usługi: nowe {{new}}, zniknięte {{gone}}, zmienione {{changed}}."
     }
   },
   "language": {
@@ -269,7 +289,13 @@
     "copied": "Skopiowano"
   },
   "table": {
-    "empty": "Nic tu jeszcze nie ma"
+    "empty": "Nic tu jeszcze nie ma",
+    "pagination": {
+      "label": "Stronicowanie",
+      "range": "{{from}}–{{to}} z {{total}}",
+      "previous": "Poprzednia",
+      "next": "Następna"
+    }
   },
   "mock": {
     "badge": "Dane przykładowe",

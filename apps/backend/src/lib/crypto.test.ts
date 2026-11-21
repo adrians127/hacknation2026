@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { decryptJson, encryptJson, encryptNullable, isEncryptedValue } from "~backend/lib/crypto";
+import {
+  decryptJson,
+  decryptText,
+  encryptJson,
+  encryptNullable,
+  encryptText,
+  isEncryptedValue,
+} from "~backend/lib/crypto";
 
 describe("field encryption", () => {
   it("round-trips JSON values", () => {
@@ -27,5 +34,15 @@ describe("field encryption", () => {
     expect(isEncryptedValue(encryptJson("x"))).toBe(true);
     expect(isEncryptedValue({ $enc: "v1.x", other: 1 })).toBe(false);
     expect(isEncryptedValue("v1.x")).toBe(false);
+  });
+
+  it("stores user text encrypted and an empty text as null", () => {
+    const sealed = encryptText("owned by the network team");
+    expect(isEncryptedValue(sealed)).toBe(true);
+    expect(decryptText(sealed)).toBe("owned by the network team");
+    expect(encryptText("")).toBeNull();
+    expect(decryptText(null)).toBe("");
+    expect(() => decryptText("plain text")).toThrow(/Expected an encrypted value/);
+    expect(() => decryptText(encryptJson(42))).toThrow(/not a text/);
   });
 });

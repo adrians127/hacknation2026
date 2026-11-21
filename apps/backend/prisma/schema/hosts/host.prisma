@@ -1,19 +1,30 @@
 /// An address that has been `up` in at least one scan; it lives across scans. Ingest only moves
-/// `firstSeenAt`/`lastSeenAt`. `note` and `tags` belong to users (PDF item 14).
+/// `firstSeenAt`/`lastSeenAt`. `note`, `tags` and `triage` belong to users and ingest never
+/// writes them (PDF item 14).
 model Host {
-  id          String   @id @default(uuid(7)) @db.Uuid
-  ip          String   @unique
+  id          String       @id @default(uuid(7)) @db.Uuid
+  ip          String       @unique
   /// Unsigned integer form for CIDR range queries.
   ipNumber    BigInt
   firstSeenAt DateTime
   lastSeenAt  DateTime
-  note        String   @default("")
-  tags        String[] @default([])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  /// { "$enc": "v1.…" } (src/lib/crypto.ts); null = no note.
+  note        Json?
+  tags        String[]     @default([])
+  triage      TriageStatus @default(unreviewed)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   services     Service[]
   observations HostObservation[]
 
   @@index([ipNumber])
+}
+
+/// The analyst's verdict on a host or service.
+enum TriageStatus {
+  unreviewed
+  reviewed
+  important
+  false_positive
 }

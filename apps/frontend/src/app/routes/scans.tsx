@@ -1,41 +1,34 @@
 import { Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { useNavigate } from "react-router";
 
 import { GuardedButton } from "@/components/guarded-button";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScans } from "@/features/scans/api/get-scans";
-import { useStartScan } from "@/features/scans/api/start-scan";
 import { ScansTable } from "@/features/scans/components/scans-table";
 import { useErrorMessage } from "@/hooks/use-error-message";
 
 export function ScansRoute() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const errorMessage = useErrorMessage();
   const scans = useScans();
-  const startScan = useStartScan();
 
   return (
     <div className="grid gap-6">
       <PageHeader
-        mocked
         title={t("scans.title")}
         description={t("scans.subtitle")}
         actions={
+          // Scans are queued by importing targets with "Start a scan right away".
           <GuardedButton
-            permissions={["scans:run"]}
-            disabled={startScan.isPending}
-            onClick={() =>
-              startScan.mutate(undefined, {
-                onSuccess: () => toast.success(t("scans.toast.started")),
-                onError: (error) => toast.error(errorMessage(error)),
-              })
-            }
+            permissions={["targets:create", "scans:run"]}
+            onClick={() => void navigate("/app/targets/new")}
           >
             <Play />
-            {startScan.isPending ? t("scans.starting") : t("scans.start")}
+            {t("scans.start")}
           </GuardedButton>
         }
       />

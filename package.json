@@ -22,6 +22,7 @@
     "db:up": "docker compose -f docker/docker-compose.yml up -d postgres",
     "db:logs": "docker compose -f docker/docker-compose.yml logs -f postgres",
     "db:reset": "pnpm --filter @subsurf/backend db:reset",
+    "db:seed:hosts": "pnpm --filter @subsurf/backend db:seed:hosts",
     "dojo:up": "docker compose -f docker/docker-compose.yml up -d defectdojo-nginx defectdojo-celeryworker defectdojo-celerybeat",
     "dojo:logs": "docker compose -f docker/docker-compose.yml logs -f defectdojo-initializer defectdojo-uwsgi defectdojo-celeryworker defectdojo-celerybeat defectdojo-nginx",
     "dojo:smoke": "node docker/defectdojo/smoke-test.mjs",

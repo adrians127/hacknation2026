@@ -2,14 +2,31 @@ import { z } from "zod";
 
 export const ScanStatusSchema = z.enum(["queued", "running", "completed", "stopped", "failed"]);
 
+const CountSchema = z.number().int().nonnegative();
+
+/** Addresses of a scan by what the workers answered (docs/worker-result-format.md). */
+export const ScanHostCountsSchema = z.object({
+  up: CountSchema,
+  down: CountSchema,
+  timeout: CountSchema,
+  cancelled: CountSchema,
+  failed: CountSchema,
+});
+
 export const ScanSchema = z.object({
   id: z.uuid(),
   status: ScanStatusSchema,
-  targetCount: z.number().int().nonnegative(),
-  hostsFound: z.number().int().nonnegative(),
-  servicesFound: z.number().int().nonnegative(),
-  startedAt: z.iso.datetime(),
-  durationSeconds: z.number().int().nonnegative().nullable(),
+  createdAt: z.iso.datetime(),
+  startedAt: z.iso.datetime().nullable(),
+  finishedAt: z.iso.datetime().nullable(),
+  /** `finishedAt - startedAt`; `null` until the scan has finished. */
+  durationMs: CountSchema.nullable(),
+  targetCount: CountSchema,
+  addressCount: CountSchema,
+  jobCount: CountSchema,
+  /** Addresses with a result so far; the rest are still queued. */
+  hosts: ScanHostCountsSchema,
+  openPorts: CountSchema,
 });
 
 export const ScanListResponseSchema = z.object({ items: z.array(ScanSchema) });
@@ -48,6 +65,7 @@ export const QueuedScanSchema = z.object({
 });
 
 export type ScanStatus = z.infer<typeof ScanStatusSchema>;
+export type ScanHostCounts = z.infer<typeof ScanHostCountsSchema>;
 export type Scan = z.infer<typeof ScanSchema>;
 export type ScanListResponse = z.infer<typeof ScanListResponseSchema>;
 export type ScanJobKind = z.infer<typeof ScanJobKindSchema>;

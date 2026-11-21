@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { HttpSummarySchema, type HttpSummary } from "@subsurf/contracts/hosts/hosts.schema";
 import {
   HttpEndpointSchema,
   OpenPortSchema,
@@ -87,4 +88,11 @@ function openHttpEndpoint(endpoint: StoredHttpEndpoint): HttpEndpoint {
     tls: tls === null ? null : { ...tls, cert: open(TlsCertificateSchema, tls.cert) },
     probes: open(HttpEndpointSchema.shape.probes, endpoint.probes),
   };
+}
+
+const StoredHttpSummariesSchema = z.object({ http: z.array(HttpSummarySchema) });
+
+/** The plaintext fields of `details.http[]`, without decrypting anything (list views). */
+export function httpSummaries(stored: unknown): HttpSummary[] {
+  return StoredHttpSummariesSchema.parse(stored).http;
 }
