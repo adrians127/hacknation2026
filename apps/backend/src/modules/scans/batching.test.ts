@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cidrToRange, ipv4ToInt, parseCidr } from "@hacknation/contracts/targets/ipv4";
+import { cidrToRange, ipv4ToInt, parseCidr } from "@subsurf/contracts/targets/ipv4";
 
 import { planScanJobs } from "~backend/modules/scans/batching";
 

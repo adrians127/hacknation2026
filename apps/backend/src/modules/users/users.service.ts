@@ -3,7 +3,7 @@ import type {
   UpdateUserBody,
   User,
   UserWithTemporaryPasswordResponse,
-} from "@hacknation/contracts/users/users.schema";
+} from "@subsurf/contracts/users/users.schema";
 
 import type { Role, User as UserRow } from "~backend/generated/prisma/client";
 import { assertHoldsAll, type AuthContext } from "~backend/lib/auth-context";

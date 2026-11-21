@@ -1,8 +1,8 @@
-import { collectTargets } from "@hacknation/contracts/targets/target-input";
+import { collectTargets } from "@subsurf/contracts/targets/target-input";
 import type {
   ImportTargetsBody,
   ImportTargetsResponse,
-} from "@hacknation/contracts/targets/targets.schema";
+} from "@subsurf/contracts/targets/targets.schema";
 
 import type { Prisma } from "~backend/generated/prisma/client";
 import type { AuthContext } from "~backend/lib/auth-context";

@@ -1,4 +1,4 @@
-import type { User } from "@hacknation/contracts/users/users.schema";
+import type { User } from "@subsurf/contracts/users/users.schema";
 
 import type { Role, User as UserRow } from "~backend/generated/prisma/client";
 import { toRoleSummary } from "~backend/modules/roles/roles.mapper";

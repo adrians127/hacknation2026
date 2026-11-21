@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 
 import { z } from "zod";
 
-import { PortSpecSchema } from "@hacknation/contracts/scans/scans.schema";
+import { PortSpecSchema } from "@subsurf/contracts/scans/scans.schema";
 
 import {
   buildDatabaseUrl,

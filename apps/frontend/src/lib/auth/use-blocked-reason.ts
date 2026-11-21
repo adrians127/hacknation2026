@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import type { Permission } from "@hacknation/contracts/auth/permissions";
+import type { Permission } from "@subsurf/contracts/auth/permissions";
 
 import { usePermissionLabel } from "@/lib/auth/labels";
 import { usePermissions } from "@/lib/auth/use-can";

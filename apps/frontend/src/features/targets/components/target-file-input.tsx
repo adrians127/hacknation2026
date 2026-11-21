@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 
-import { TARGET_IMPORT_LIMITS } from "@hacknation/contracts/targets/target-input";
+import { TARGET_IMPORT_LIMITS } from "@subsurf/contracts/targets/target-input";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

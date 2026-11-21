@@ -2,12 +2,12 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import type { Role } from "@hacknation/contracts/roles/roles.schema";
+import type { Role } from "@subsurf/contracts/roles/roles.schema";
 import {
   CreateUserBodySchema,
   type User,
   type UserWithTemporaryPasswordResponse,
-} from "@hacknation/contracts/users/users.schema";
+} from "@subsurf/contracts/users/users.schema";
 
 import { Button } from "@/components/ui/button";
 import {

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { UpdateTargetBodySchema, type Target } from "@hacknation/contracts/targets/targets.schema";
+import { UpdateTargetBodySchema, type Target } from "@subsurf/contracts/targets/targets.schema";
 
 import { Button } from "@/components/ui/button";
 import {

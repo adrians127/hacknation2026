@@ -31,13 +31,13 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/contracts ./packages/contracts
 COPY apps/backend ./apps/backend
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --filter @hacknation/backend...
-RUN pnpm --filter @hacknation/backend build
+    pnpm install --frozen-lockfile --filter @subsurf/backend...
+RUN pnpm --filter @subsurf/backend build
 
 FROM builder AS pruner
 # No --prod: @prisma/client peer-depends on `prisma`, and the migration command needs the CLI.
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm deploy --filter @hacknation/backend /out
+    pnpm deploy --filter @subsurf/backend /out
 
 FROM base AS runner
 ENV NODE_ENV=production

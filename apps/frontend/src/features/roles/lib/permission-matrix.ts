@@ -6,7 +6,7 @@ import {
   type Permission,
   type PermissionAction,
   type PermissionResource,
-} from "@hacknation/contracts/auth/permissions";
+} from "@subsurf/contracts/auth/permissions";
 
 export interface MatrixRow {
   resource: PermissionResource;

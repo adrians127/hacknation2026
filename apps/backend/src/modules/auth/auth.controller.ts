@@ -4,7 +4,7 @@ import type {
   ChangePasswordBody,
   LoginBody,
   MeResponse,
-} from "@hacknation/contracts/auth/auth.schema";
+} from "@subsurf/contracts/auth/auth.schema";
 
 import {
   clearAuthCookies,

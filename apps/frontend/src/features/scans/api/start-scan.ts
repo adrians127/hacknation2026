@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { Scan } from "@hacknation/contracts/scans/scans.schema";
+import type { Scan } from "@subsurf/contracts/scans/scans.schema";
 
 import { mockResponse } from "@/api/mock";
 import { mockScans } from "@/features/scans/api/mocks";

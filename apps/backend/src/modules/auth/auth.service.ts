@@ -2,7 +2,7 @@ import type {
   ChangePasswordBody,
   LoginBody,
   MeResponse,
-} from "@hacknation/contracts/auth/auth.schema";
+} from "@subsurf/contracts/auth/auth.schema";
 
 import type { Role, User } from "~backend/generated/prisma/client";
 import { toPermissions, type AuthContext } from "~backend/lib/auth-context";

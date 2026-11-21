@@ -1,4 +1,4 @@
-import type { QueuedScan } from "@hacknation/contracts/scans/scans.schema";
+import type { QueuedScan } from "@subsurf/contracts/scans/scans.schema";
 
 import type { Scan } from "~backend/generated/prisma/client";
 

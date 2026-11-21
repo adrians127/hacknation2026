@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
-} from "@hacknation/contracts/auth/auth.schema";
+} from "@subsurf/contracts/auth/auth.schema";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

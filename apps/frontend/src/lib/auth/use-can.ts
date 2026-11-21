@@ -1,4 +1,4 @@
-import type { Permission } from "@hacknation/contracts/auth/permissions";
+import type { Permission } from "@subsurf/contracts/auth/permissions";
 
 import { useMe } from "@/lib/auth/me-query";
 

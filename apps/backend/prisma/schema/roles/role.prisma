@@ -6,7 +6,7 @@ model Role {
   name        String   @unique
   description String   @default("")
   isSystem    Boolean  @default(false)
-  /// `resource:action` keys from @hacknation/contracts/auth/permissions.
+  /// `resource:action` keys from @subsurf/contracts/auth/permissions.
   permissions String[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

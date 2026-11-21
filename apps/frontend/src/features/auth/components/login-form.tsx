@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
-import { LoginBodySchema } from "@hacknation/contracts/auth/auth.schema";
+import { LoginBodySchema } from "@subsurf/contracts/auth/auth.schema";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

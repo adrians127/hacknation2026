@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import type { Role } from "@hacknation/contracts/roles/roles.schema";
+import type { Role } from "@subsurf/contracts/roles/roles.schema";
 
 import { DataTable } from "@/components/data-table";
 import { IconAction } from "@/components/icon-action";

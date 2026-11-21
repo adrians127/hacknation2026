@@ -9,7 +9,7 @@ model Scan {
   targetCount   Int
   addressCount  Int
   jobCount      Int
-  /// ImportWarning[] from @hacknation/contracts (domains that could not be scanned).
+  /// ImportWarning[] from @subsurf/contracts (domains that could not be scanned).
   warnings      Json       @default("[]")
   requestedById String     @db.Uuid
   createdAt     DateTime   @default(now())

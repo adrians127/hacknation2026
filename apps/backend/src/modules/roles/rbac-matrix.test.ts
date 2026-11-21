@@ -4,8 +4,8 @@ import {
   SYSTEM_ROLE_KEYS,
   SYSTEM_ROLE_PERMISSIONS,
   type Permission,
-} from "@hacknation/contracts/auth/permissions";
-import { ErrorResponseSchema } from "@hacknation/contracts/common/common.schema";
+} from "@subsurf/contracts/auth/permissions";
+import { ErrorResponseSchema } from "@subsurf/contracts/common/common.schema";
 
 import { prisma } from "~backend/lib/prisma";
 import { createUser, signInAs } from "~backend/test/auth";

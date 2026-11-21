@@ -2,7 +2,7 @@ import type {
   Target,
   TargetListResponse,
   UpdateTargetBody,
-} from "@hacknation/contracts/targets/targets.schema";
+} from "@subsurf/contracts/targets/targets.schema";
 
 const HOUR = 60 * 60_000;
 const DAY = 24 * HOUR;

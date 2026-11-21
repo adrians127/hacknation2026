@@ -2,7 +2,7 @@
 model Target {
   id          String     @id @default(uuid(7)) @db.Uuid
   kind        TargetKind
-  /// Normalized by the shared parser (@hacknation/contracts/targets/target-input): the dedup key.
+  /// Normalized by the shared parser (@subsurf/contracts/targets/target-input): the dedup key.
   value       String     @unique
   note        String     @default("")
   tags        String[]   @default([])

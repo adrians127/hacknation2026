@@ -1,4 +1,4 @@
-import type { ErrorCode, ErrorResponse } from "@hacknation/contracts/common/common.schema";
+import type { ErrorCode, ErrorResponse } from "@subsurf/contracts/common/common.schema";
 
 const DEFAULT_LATENCY_MS = 300;
 

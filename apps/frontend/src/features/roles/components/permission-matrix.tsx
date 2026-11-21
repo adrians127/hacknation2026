@@ -5,7 +5,7 @@ import {
   PERMISSION_ACTIONS,
   PERMISSIONS,
   type Permission,
-} from "@hacknation/contracts/auth/permissions";
+} from "@subsurf/contracts/auth/permissions";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import {

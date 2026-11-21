@@ -1,4 +1,4 @@
-import { createApiClient, type Middleware } from "@hacknation/api-client";
+import { createApiClient, type Middleware } from "@subsurf/api-client";
 import createQueryHooks from "openapi-react-query";
 
 import { env } from "@/config/env";

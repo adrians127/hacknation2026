@@ -30,7 +30,7 @@ async function main(): Promise<void> {
     info: {
       title: "SubSurf API",
       version: "0.0.0",
-      description: "Generated from @hacknation/contracts zod schemas. Do not edit by hand.",
+      description: "Generated from @subsurf/contracts zod schemas. Do not edit by hand.",
     },
     servers: [{ url: "http://localhost:3001/v1", description: "Local development" }],
     tags: [

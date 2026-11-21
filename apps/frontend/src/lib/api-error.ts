@@ -1,4 +1,4 @@
-import { ErrorResponseSchema, type ErrorCode } from "@hacknation/contracts/common/common.schema";
+import { ErrorResponseSchema, type ErrorCode } from "@subsurf/contracts/common/common.schema";
 
 export interface ApiError {
   status: number;

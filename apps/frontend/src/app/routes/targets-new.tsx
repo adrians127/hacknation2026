@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import type { ImportTargetsResponse } from "@hacknation/contracts/targets/targets.schema";
+import type { ImportTargetsResponse } from "@subsurf/contracts/targets/targets.schema";
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";

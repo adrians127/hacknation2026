@@ -1,10 +1,10 @@
 import { Resolver } from "node:dns/promises";
 
-import { ipv4ToInt, overlapsReserved } from "@hacknation/contracts/targets/ipv4";
+import { ipv4ToInt, overlapsReserved } from "@subsurf/contracts/targets/ipv4";
 import type {
   ImportWarning,
   ImportWarningCode,
-} from "@hacknation/contracts/targets/targets.schema";
+} from "@subsurf/contracts/targets/targets.schema";
 
 const CONCURRENCY = 50;
 const TIMEOUT_MS = 2000;

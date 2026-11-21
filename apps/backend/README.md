@@ -1,4 +1,4 @@
-# @hacknation/backend
+# @subsurf/backend
 
 The REST API of SubSurf: it stores targets, configurations and scan results, hands out jobs to workers and serves data to the frontend. Only the backend writes to the database.
 
@@ -7,7 +7,7 @@ The REST API of SubSurf: it stores targets, configurations and scan results, han
 - **Node 26** + **TypeScript 7** (`tsc` is used for type-checking only)
 - **Express 5**: async handlers, rejected promises reach the error handler
 - **Prisma 7.10** + `@prisma/adapter-pg`, **PostgreSQL 19** (from `docker/`)
-- **zod 4**: request validation with schemas from `@hacknation/contracts`
+- **zod 4**: request validation with schemas from `@subsurf/contracts`
 - **jose** (JWT, HS256) · `node:crypto` argon2id (passwords) · **cookie-parser**
 - **pino** / **pino-http**: logging
 - **tsdown** (build, rolldown) · **tsx** (dev, watch) · **Vitest** (tests) · **oxlint** (lint, type-aware)
@@ -17,13 +17,13 @@ The REST API of SubSurf: it stores targets, configurations and scan results, han
 ## Commands
 
 ```bash
-pnpm --filter @hacknation/backend dev          # tsx watch, :3001
-pnpm --filter @hacknation/backend build        # tsdown -> dist/index.mjs
-pnpm --filter @hacknation/backend start        # node dist/index.mjs
-pnpm --filter @hacknation/backend test         # vitest, integration tests: needs `pnpm db:up`
-pnpm --filter @hacknation/backend db:migrate   # prisma migrate dev (new migration)
-pnpm --filter @hacknation/backend db:studio    # Prisma Studio
-pnpm --filter @hacknation/backend db:seed      # system roles, admin, demo accounts (idempotent)
+pnpm --filter @subsurf/backend dev          # tsx watch, :3001
+pnpm --filter @subsurf/backend build        # tsdown -> dist/index.mjs
+pnpm --filter @subsurf/backend start        # node dist/index.mjs
+pnpm --filter @subsurf/backend test         # vitest, integration tests: needs `pnpm db:up`
+pnpm --filter @subsurf/backend db:migrate   # prisma migrate dev (new migration)
+pnpm --filter @subsurf/backend db:studio    # Prisma Studio
+pnpm --filter @subsurf/backend db:seed      # system roles, admin, demo accounts (idempotent)
 pnpm db:reset                                  # from the repo root: drop + all migrations + seed
 ```
 
@@ -121,7 +121,7 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up` loca
 
 ## Targets and scan jobs
 
-`POST /targets/import` takes entries from the import form (manual, CSV or JSON, parsed in the browser by the shared parser in `@hacknation/contracts/targets/target-input`) and runs the same parser again: `validate()` rejects what it rejects, the service normalizes and deduplicates.
+`POST /targets/import` takes entries from the import form (manual, CSV or JSON, parsed in the browser by the shared parser in `@subsurf/contracts/targets/target-input`) and runs the same parser again: `validate()` rejects what it rejects, the service normalizes and deduplicates.
 
 1. New values go into `Target` (`createMany` with `skipDuplicates`); values already in the inventory are counted as `skipped` and left unchanged.
 2. With `startScan` (also requires `scans:run`): domains are resolved to A records **before** the transaction (`modules/scans/dns.ts`: 50 lookups at a time, 2 s timeout, 2 tries). Failures and reserved addresses become `warnings`; the import still succeeds.

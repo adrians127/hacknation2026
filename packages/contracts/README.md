@@ -1,6 +1,6 @@
-# @hacknation/contracts
+# @subsurf/contracts
 
-The single source of truth for the API: **zod 4** schemas and the types derived from them, from which `openapi.json` (OpenAPI 3.1) is generated. That file is consumed by the frontend (through `@hacknation/api-client`), the backend (request validation, Swagger) and the C++ workers (endpoint definitions).
+The single source of truth for the API: **zod 4** schemas and the types derived from them, from which `openapi.json` (OpenAPI 3.1) is generated. That file is consumed by the frontend (through `@subsurf/api-client`), the backend (request validation, Swagger) and the C++ workers (endpoint definitions).
 
 The package is source-only. There is no build step; consumers compile it together with their own code.
 
@@ -33,7 +33,7 @@ openapi.json                         GENERATED, committed
 3. Run `pnpm generate` from the repo root. It regenerates `openapi.json` and then the `api-client` types, in that order.
 4. Commit the generated files. CI checks that they are up to date.
 
-Importing in apps: `import { HealthResponseSchema } from "@hacknation/contracts/health/health.schema"`.
+Importing in apps: `import { HealthResponseSchema } from "@subsurf/contracts/health/health.schema"`.
 
 ## Shared runtime logic: the target parser
 
@@ -41,7 +41,7 @@ The package is otherwise schemas only. `src/targets/target-input.ts` (with `ipv4
 
 - Accepts IPv4 addresses, IPv4 CIDRs up to /16 and domains; rejects IPv6 and the reserved ranges in `RESERVED_IPV4_CIDRS`. Limits are in `TARGET_IMPORT_LIMITS`.
 - Issue and list-error codes are zod enums, so the frontend translates them.
-- Tests: `pnpm --filter @hacknation/contracts test` (Vitest, next to the code). Code here must stay free of Node- and DOM-only APIs, since both apps compile it.
+- Tests: `pnpm --filter @subsurf/contracts test` (Vitest, next to the code). Code here must stay free of Node- and DOM-only APIs, since both apps compile it.
 
 ## Notes
 

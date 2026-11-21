@@ -2,7 +2,7 @@ import {
   isPermission,
   PERMISSIONS,
   type Permission,
-} from "@hacknation/contracts/auth/permissions";
+} from "@subsurf/contracts/auth/permissions";
 
 import type { Role, User } from "~backend/generated/prisma/client";
 import { HttpError } from "~backend/lib/http-error";

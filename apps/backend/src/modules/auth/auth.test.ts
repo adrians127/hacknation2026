@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { MeResponseSchema } from "@hacknation/contracts/auth/auth.schema";
+import { MeResponseSchema } from "@subsurf/contracts/auth/auth.schema";
 
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "~backend/lib/auth-cookies";
 import { prisma } from "~backend/lib/prisma";

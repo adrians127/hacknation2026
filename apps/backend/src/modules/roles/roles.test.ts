@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { PERMISSIONS } from "@hacknation/contracts/auth/permissions";
+import { PERMISSIONS } from "@subsurf/contracts/auth/permissions";
 import {
   RoleDetailResponseSchema,
   RoleListResponseSchema,
   RoleSchema,
-} from "@hacknation/contracts/roles/roles.schema";
+} from "@subsurf/contracts/roles/roles.schema";
 
 import { prisma } from "~backend/lib/prisma";
 import { syncSystemRoles } from "~backend/modules/roles/system-roles";

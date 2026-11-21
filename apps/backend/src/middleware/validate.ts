@@ -8,7 +8,7 @@ export interface RequestSchemas {
 }
 
 /**
- * Validates params/query/body against `@hacknation/contracts` schemas. A mismatch
+ * Validates params/query/body against `@subsurf/contracts` schemas. A mismatch
  * throws a `ZodError`, which the error handler turns into a 400.
  *
  * `parse` without reassigning: Express 5 makes `req.query` read-only, so schema

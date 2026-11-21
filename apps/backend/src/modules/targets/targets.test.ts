@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ErrorResponseSchema } from "@hacknation/contracts/common/common.schema";
-import { ImportTargetsResponseSchema } from "@hacknation/contracts/targets/targets.schema";
+import { ErrorResponseSchema } from "@subsurf/contracts/common/common.schema";
+import { ImportTargetsResponseSchema } from "@subsurf/contracts/targets/targets.schema";
 
 import { prisma } from "~backend/lib/prisma";
 import { resolveDomains } from "~backend/modules/scans/dns";

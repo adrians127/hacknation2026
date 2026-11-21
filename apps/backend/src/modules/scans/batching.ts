@@ -1,4 +1,4 @@
-import type { ScanJobHost } from "@hacknation/contracts/scans/scans.schema";
+import type { ScanJobHost } from "@subsurf/contracts/scans/scans.schema";
 import {
   coveringCidr,
   formatCidr,
@@ -7,7 +7,7 @@ import {
   rangeSize,
   rangeToCidrs,
   type Ipv4Range,
-} from "@hacknation/contracts/targets/ipv4";
+} from "@subsurf/contracts/targets/ipv4";
 
 export interface ScanJobPlan {
   subnet: string;

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Scan } from "@hacknation/contracts/scans/scans.schema";
+import type { Scan } from "@subsurf/contracts/scans/scans.schema";
 
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";

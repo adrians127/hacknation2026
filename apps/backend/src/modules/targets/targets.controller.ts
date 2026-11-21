@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import type {
   ImportTargetsBody,
   ImportTargetsResponse,
-} from "@hacknation/contracts/targets/targets.schema";
+} from "@subsurf/contracts/targets/targets.schema";
 
 import { getAuth } from "~backend/lib/auth-context";
 import { targetsService } from "~backend/modules/targets/targets.service";

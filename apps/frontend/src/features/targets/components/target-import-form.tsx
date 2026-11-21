@@ -2,8 +2,8 @@ import { useDeferredValue, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { parseTargetJson, parseTargetText } from "@hacknation/contracts/targets/target-input";
-import type { ImportTargetsResponse } from "@hacknation/contracts/targets/targets.schema";
+import { parseTargetJson, parseTargetText } from "@subsurf/contracts/targets/target-input";
+import type { ImportTargetsResponse } from "@subsurf/contracts/targets/targets.schema";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

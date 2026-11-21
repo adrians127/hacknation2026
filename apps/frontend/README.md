@@ -1,4 +1,4 @@
-# @hacknation/frontend
+# @subsurf/frontend
 
 The interface for the security team: a dashboard with findings, targets, scans, diffs, signatures and role administration.
 
@@ -6,7 +6,7 @@ The interface for the security team: a dashboard with findings, targets, scans, 
 
 - **React 19** + **Vite 8** + **TypeScript 7**
 - **React Router 8** in data mode (`createBrowserRouter` in `src/app/router.tsx`)
-- **TanStack Query 5** + **openapi-react-query**: hooks generated from the typed `@hacknation/api-client`
+- **TanStack Query 5** + **openapi-react-query**: hooks generated from the typed `@subsurf/api-client`
 - **TanStack Table 9**: sortable data tables (`components/data-table.tsx`)
 - **Tailwind 4** (Vite plugin, no config file) + **shadcn/ui** (`radix-nova` style, `components.json`)
 - **i18next**: EN (default) + PL
@@ -15,10 +15,10 @@ The interface for the security team: a dashboard with findings, targets, scans, 
 ## Commands
 
 ```bash
-pnpm --filter @hacknation/frontend dev       # :3000
-pnpm --filter @hacknation/frontend build     # vite build -> dist/
-pnpm --filter @hacknation/frontend test      # vitest (incl. en/pl key parity)
-pnpm --filter @hacknation/frontend exec shadcn add <component>
+pnpm --filter @subsurf/frontend dev       # :3000
+pnpm --filter @subsurf/frontend build     # vite build -> dist/
+pnpm --filter @subsurf/frontend test      # vitest (incl. en/pl key parity)
+pnpm --filter @subsurf/frontend exec shadcn add <component>
 ```
 
 ## `src/` structure (bulletproof-react)
@@ -51,7 +51,7 @@ const health = api.useQuery("get", "/health");
 const create = api.useMutation("post", "/targets");   // once the endpoint exists
 ```
 
-Query keys are built from the method, path and parameters, so there is no separate key registry to maintain. Forms can use the zod schemas from `@hacknation/contracts`, the same ones the backend validates with.
+Query keys are built from the method, path and parameters, so there is no separate key registry to maintain. Forms can use the zod schemas from `@subsurf/contracts`, the same ones the backend validates with.
 
 A feature's data goes through hooks in `features/<name>/api/`, one file per endpoint (`get-targets.ts` → `useTargets`, `import-targets.ts` → `useImportTargets`). Components call those hooks, never `api.*` directly. A one-off call outside a feature, such as `/health` on the public `/status` page, may use `api.useQuery` directly.
 
@@ -74,7 +74,7 @@ A mocked query and a mocked mutation:
 
 ```ts
 // features/targets/api/get-targets.ts
-import type { TargetListResponse } from "@hacknation/contracts/targets/targets.schema";
+import type { TargetListResponse } from "@subsurf/contracts/targets/targets.schema";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
 import { mockResponse } from "@/api/mock";

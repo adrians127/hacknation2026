@@ -1,7 +1,7 @@
-import type { QueuedScan, ScanJobHost } from "@hacknation/contracts/scans/scans.schema";
-import { ipv4ToInt, type Ipv4Range } from "@hacknation/contracts/targets/ipv4";
-import { parseTargetValue, type TargetKind } from "@hacknation/contracts/targets/target-input";
-import type { ImportWarning } from "@hacknation/contracts/targets/targets.schema";
+import type { QueuedScan, ScanJobHost } from "@subsurf/contracts/scans/scans.schema";
+import { ipv4ToInt, type Ipv4Range } from "@subsurf/contracts/targets/ipv4";
+import { parseTargetValue, type TargetKind } from "@subsurf/contracts/targets/target-input";
+import type { ImportWarning } from "@subsurf/contracts/targets/targets.schema";
 
 import { env } from "~backend/config/env";
 import type { Prisma } from "~backend/generated/prisma/client";

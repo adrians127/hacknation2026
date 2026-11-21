@@ -6,7 +6,7 @@ import {
   type TargetIssue,
   type TargetIssueCode,
   type TargetParseResult,
-} from "@hacknation/contracts/targets/target-input";
+} from "@subsurf/contracts/targets/target-input";
 
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";

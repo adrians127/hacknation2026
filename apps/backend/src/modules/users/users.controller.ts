@@ -1,13 +1,13 @@
 import type { Request, Response } from "express";
 
-import type { IdParams } from "@hacknation/contracts/common/common.schema";
+import type { IdParams } from "@subsurf/contracts/common/common.schema";
 import type {
   CreateUserBody,
   UpdateUserBody,
   User,
   UserListResponse,
   UserWithTemporaryPasswordResponse,
-} from "@hacknation/contracts/users/users.schema";
+} from "@subsurf/contracts/users/users.schema";
 
 import { getAuth } from "~backend/lib/auth-context";
 import { usersService } from "~backend/modules/users/users.service";

@@ -2,7 +2,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Target } from "@hacknation/contracts/targets/targets.schema";
+import type { Target } from "@subsurf/contracts/targets/targets.schema";
 
 import { DataTable } from "@/components/data-table";
 import { IconAction } from "@/components/icon-action";

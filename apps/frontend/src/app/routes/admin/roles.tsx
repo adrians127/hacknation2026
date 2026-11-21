@@ -2,7 +2,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Role } from "@hacknation/contracts/roles/roles.schema";
+import type { Role } from "@subsurf/contracts/roles/roles.schema";
 
 import { GuardedButton } from "@/components/guarded-button";
 import { PageHeader } from "@/components/page-header";

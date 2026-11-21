@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import type { ImportTargetsResponse } from "@hacknation/contracts/targets/targets.schema";
+import type { ImportTargetsResponse } from "@subsurf/contracts/targets/targets.schema";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

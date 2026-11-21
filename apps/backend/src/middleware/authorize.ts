@@ -1,6 +1,6 @@
 import type { RequestHandler } from "express";
 
-import type { Permission } from "@hacknation/contracts/auth/permissions";
+import type { Permission } from "@subsurf/contracts/auth/permissions";
 
 import { getAuth } from "~backend/lib/auth-context";
 import { HttpError } from "~backend/lib/http-error";

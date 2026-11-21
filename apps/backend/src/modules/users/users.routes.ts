@@ -1,10 +1,10 @@
 import { Router } from "express";
 
-import { IdParamsSchema } from "@hacknation/contracts/common/common.schema";
+import { IdParamsSchema } from "@subsurf/contracts/common/common.schema";
 import {
   CreateUserBodySchema,
   UpdateUserBodySchema,
-} from "@hacknation/contracts/users/users.schema";
+} from "@subsurf/contracts/users/users.schema";
 
 import { requireAuth } from "~backend/middleware/authenticate";
 import { requirePermission } from "~backend/middleware/authorize";

@@ -1,9 +1,9 @@
 {
-  "name": "@hacknation/api-client",
+  "name": "@subsurf/api-client",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Typed HTTP client generated from @hacknation/contracts/openapi.json (openapi-typescript + openapi-fetch)",
+  "description": "Typed HTTP client generated from @subsurf/contracts/openapi.json (openapi-typescript + openapi-fetch)",
   "exports": {
     ".": "./src/index.ts"
   },
@@ -17,7 +17,7 @@
     "openapi-fetch": "^0.17.0"
   },
   "devDependencies": {
-    "@hacknation/contracts": "workspace:*",
+    "@subsurf/contracts": "workspace:*",
     "openapi-typescript": "^7.13.0",
     "typescript": "6.0.3"
   }

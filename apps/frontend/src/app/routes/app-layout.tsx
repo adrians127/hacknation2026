@@ -2,7 +2,7 @@ import { Crosshair, LayoutDashboard, Radar, ShieldCheck, Users, type LucideIcon 
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, Outlet } from "react-router";
 
-import type { Permission } from "@hacknation/contracts/auth/permissions";
+import type { Permission } from "@subsurf/contracts/auth/permissions";
 
 import { Logo } from "@/components/logo";
 import { AccountPanel } from "@/features/auth/components/account-panel";

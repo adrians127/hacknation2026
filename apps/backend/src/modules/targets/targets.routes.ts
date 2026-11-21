@@ -1,7 +1,7 @@
 import express, { Router } from "express";
 
-import { TARGET_IMPORT_LIMITS } from "@hacknation/contracts/targets/target-input";
-import { ImportTargetsBodySchema } from "@hacknation/contracts/targets/targets.schema";
+import { TARGET_IMPORT_LIMITS } from "@subsurf/contracts/targets/target-input";
+import { ImportTargetsBodySchema } from "@subsurf/contracts/targets/targets.schema";
 
 import { requireAuth } from "~backend/middleware/authenticate";
 import { requirePermission } from "~backend/middleware/authorize";

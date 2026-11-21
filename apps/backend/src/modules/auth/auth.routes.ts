@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { ChangePasswordBodySchema, LoginBodySchema } from "@hacknation/contracts/auth/auth.schema";
+import { ChangePasswordBodySchema, LoginBodySchema } from "@subsurf/contracts/auth/auth.schema";
 
 import { requireSession } from "~backend/middleware/authenticate";
 import { validate } from "~backend/middleware/validate";

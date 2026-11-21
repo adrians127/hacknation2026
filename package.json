@@ -1,5 +1,5 @@
 {
-  "name": "hacknation2026",
+  "name": "subsurf",
   "version": "0.0.0",
   "private": true,
   "description": "SubSurf \u2014 discovery scan du\u017cej infrastruktury (HackNation 2026, CBI AGH)",
@@ -21,7 +21,7 @@
     "infra:logs": "docker compose -f docker/docker-compose.yml logs -f",
     "db:up": "docker compose -f docker/docker-compose.yml up -d postgres",
     "db:logs": "docker compose -f docker/docker-compose.yml logs -f postgres",
-    "db:reset": "pnpm --filter @hacknation/backend db:reset",
+    "db:reset": "pnpm --filter @subsurf/backend db:reset",
     "dojo:up": "docker compose -f docker/docker-compose.yml up -d defectdojo-nginx defectdojo-celeryworker defectdojo-celerybeat",
     "dojo:logs": "docker compose -f docker/docker-compose.yml logs -f defectdojo-initializer defectdojo-uwsgi defectdojo-celeryworker defectdojo-celerybeat defectdojo-nginx",
     "dojo:smoke": "node docker/defectdojo/smoke-test.mjs",
