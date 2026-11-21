@@ -12,6 +12,7 @@
     "generate": "tsx scripts/generate-openapi.ts",
     "lint": "oxlint",
     "check-types": "tsc --noEmit",
+    "test": "vitest run",
     "clean": "rm -rf .turbo"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
     "@types/node": "^26.6.6",
     "glob": "^14.0.6",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
   }
 }

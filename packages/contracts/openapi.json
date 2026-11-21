@@ -25,6 +25,10 @@
       "description": "System and custom roles (RBAC)"
     },
     {
+      "name": "Targets",
+      "description": "IP addresses, CIDR ranges and domains to scan"
+    },
+    {
       "name": "Users",
       "description": "User accounts, managed by administrators"
     },
@@ -279,6 +283,107 @@
           "userCount",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "ImportTargetsResponse": {
+        "type": "object",
+        "properties": {
+          "received": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "created": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "scan": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "running",
+                  "completed",
+                  "stopped",
+                  "failed"
+                ]
+              },
+              "targetCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "addressCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "jobCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ports": {
+                "type": "string",
+                "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+              },
+              "maxRate": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "targetCount",
+              "addressCount",
+              "jobCount",
+              "ports",
+              "maxRate"
+            ]
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "dns_not_found",
+                    "dns_no_addresses",
+                    "dns_timeout",
+                    "dns_failed",
+                    "resolves_to_reserved",
+                    "no_scannable_targets"
+                  ]
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "value"
+              ]
+            }
+          }
+        },
+        "required": [
+          "received",
+          "created",
+          "skipped",
+          "scan",
+          "warnings"
         ]
       },
       "User": {
@@ -1463,6 +1568,114 @@
           },
           "409": {
             "description": "Users still have this role (`ROLE_IN_USE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/targets/import": {
+      "post": {
+        "operationId": "importTargets",
+        "summary": "Import IP addresses, CIDR ranges and domains",
+        "description": "Requires `targets:create`; with `startScan: true` also `scans:run`. Adds the entries to the target inventory; values already there are counted as `skipped`. With `startScan`, queues a scan of every entry: domains are resolved to IPv4 addresses and the addresses are split into scan jobs. Accepts IPv4, CIDRs up to /16 and domains; the body may be up to 10 MB.",
+        "tags": [
+          "Targets"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "entries": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2048,
+                          "pattern": "\\S"
+                        },
+                        "note": {
+                          "type": "string",
+                          "maxLength": 500
+                        }
+                      },
+                      "required": [
+                        "value"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 100000
+                  },
+                  "startScan": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "entries",
+                  "startScan"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Entries imported (and a scan queued)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportTargetsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body larger than 10 MB",
             "content": {
               "application/json": {
                 "schema": {

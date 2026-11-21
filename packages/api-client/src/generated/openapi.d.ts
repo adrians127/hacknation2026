@@ -173,6 +173,26 @@ export interface paths {
         patch: operations["updateRole"];
         trace?: never;
     };
+    "/targets/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import IP addresses, CIDR ranges and domains
+         * @description Requires `targets:create`; with `startScan: true` also `scans:run`. Adds the entries to the target inventory; values already there are counted as `skipped`. With `startScan`, queues a scan of every entry: domains are resolved to IPv4 addresses and the addresses are split into scan jobs. Accepts IPv4, CIDRs up to /16 and domains; the body may be up to 10 MB.
+         */
+        post: operations["importTargets"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users": {
         parameters: {
             query?: never;
@@ -382,6 +402,27 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        ImportTargetsResponse: {
+            received: number;
+            created: number;
+            skipped: number;
+            scan: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                status: "queued" | "running" | "completed" | "stopped" | "failed";
+                targetCount: number;
+                addressCount: number;
+                jobCount: number;
+                ports: string;
+                maxRate: number;
+            } | null;
+            warnings: {
+                /** @enum {string} */
+                code: "dns_not_found" | "dns_no_addresses" | "dns_timeout" | "dns_failed" | "resolves_to_reserved" | "no_scannable_targets";
+                value: string;
+            }[];
         };
         User: {
             /** Format: uuid */
@@ -973,6 +1014,72 @@ export interface operations {
             };
             /** @description Name already taken (`ROLE_NAME_TAKEN`) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    importTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    entries: {
+                        value: string;
+                        note?: string;
+                    }[];
+                    startScan: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Entries imported (and a scan queued) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportTargetsResponse"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request body larger than 10 MB */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };

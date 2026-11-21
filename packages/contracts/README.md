@@ -10,6 +10,8 @@ src/<feature>/<feature>.openapi.ts   path and component registration (side effec
 src/common/common.schema.ts          shared primitives, ErrorResponse (+ error codes), IdParams
 src/common/common.openapi.ts         cookieAuth and shared error responses for registrations
 src/auth/permissions.ts              RBAC permission catalog and the four system roles
+src/targets/target-input.ts          target parser (manual/CSV/JSON → normalized targets), see below
+src/targets/ipv4.ts                  IPv4 arithmetic: CIDRs, reserved ranges, merging, splitting
 scripts/                             registry, import-registries (sorted import), generate-openapi
 openapi.json                         GENERATED, committed
 ```
@@ -32,6 +34,14 @@ openapi.json                         GENERATED, committed
 4. Commit the generated files. CI checks that they are up to date.
 
 Importing in apps: `import { HealthResponseSchema } from "@hacknation/contracts/health/health.schema"`.
+
+## Shared runtime logic: the target parser
+
+The package is otherwise schemas only. `src/targets/target-input.ts` (with `ipv4.ts`) is the deliberate exception: the frontend runs it for the import form's live preview, and the backend runs the same code to validate (`ImportTargetsBodySchema`) and normalize the request. Keeping one copy guarantees that what the preview accepts is what the API accepts.
+
+- Accepts IPv4 addresses, IPv4 CIDRs up to /16 and domains; rejects IPv6 and the reserved ranges in `RESERVED_IPV4_CIDRS`. Limits are in `TARGET_IMPORT_LIMITS`.
+- Issue and list-error codes are zod enums, so the frontend translates them.
+- Tests: `pnpm --filter @hacknation/contracts test` (Vitest, next to the code). Code here must stay free of Node- and DOM-only APIs, since both apps compile it.
 
 ## Notes
 

@@ -37,6 +37,7 @@ async function main(): Promise<void> {
       { name: "Auth", description: "Sign-in, session and the current user" },
       { name: "Health", description: "Service health checks" },
       { name: "Roles", description: "System and custom roles (RBAC)" },
+      { name: "Targets", description: "IP addresses, CIDR ranges and domains to scan" },
       { name: "Users", description: "User accounts, managed by administrators" },
       { name: "Workers", description: "Scanning worker lease and result protocol" },
     ],
