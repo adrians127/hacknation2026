@@ -7,7 +7,9 @@ The package is source-only. There is no build step; consumers compile it togethe
 ```
 src/<feature>/<feature>.schema.ts    schemas + types (no OpenAPI imports, apps don't need them)
 src/<feature>/<feature>.openapi.ts   path and component registration (side effect)
-src/common/common.schema.ts          shared primitives, ErrorResponse
+src/common/common.schema.ts          shared primitives, ErrorResponse (+ error codes), IdParams
+src/common/common.openapi.ts         cookieAuth and shared error responses for registrations
+src/auth/permissions.ts              RBAC permission catalog and the four system roles
 scripts/                             registry, import-registries (sorted import), generate-openapi
 openapi.json                         GENERATED, committed
 ```
@@ -23,7 +25,9 @@ openapi.json                         GENERATED, committed
 ## Adding an endpoint
 
 1. In `src/<feature>/<feature>.schema.ts`, add schemas following the `XParamsSchema`, `XQuerySchema`, `XBodySchema`, `XResponseSchema` naming convention, plus `z.infer` types at the end of the file.
-2. In `src/<feature>/<feature>.openapi.ts`, add `registry.registerPath({...})` with an `operationId`. Protected endpoints get `security: [{ bearerAuth: [] }]`.
+2. In `src/<feature>/<feature>.openapi.ts`, add `registry.registerPath({...})` with an `operationId`. Protected endpoints get `security: cookieAuth` and their error responses from `src/common/common.openapi.ts` (`unauthenticated`, `forbidden`, `errorResponse(...)`). Name the endpoint's permission in `description` (e.g. "Requires `users:read`.").
+   - To get a named component (`$ref`), use the schema that `registry.register("Name", Schema)` **returns**. Only that instance carries the reference; passing the original schema inlines it.
+   - A new permission goes into `src/auth/permissions.ts` (see [RBAC in the backend README](../../apps/backend/README.md#auth-and-rbac)).
 3. Run `pnpm generate` from the repo root. It regenerates `openapi.json` and then the `api-client` types, in that order.
 4. Commit the generated files. CI checks that they are up to date.
 
