@@ -176,6 +176,12 @@ Users reach hosts through scans: `/scans` → a scan → the hosts it saw (`modu
 | `GET /scans/{id}/hosts` | The scan's hosts with their services, as this scan saw them, paged in address order. Filters: `q` (IP prefix, hostname, tag, port, service name/product, HTTP title), `triage` (host or any service), `change` |
 | `GET /scans/{id}/hosts/{hostId}` | One host in that scan: decrypted HTTP details, banner, NSE scripts, and the address's scan history |
 
+When several worker results in one scan report the same IP, the stored observations remain
+separate. These endpoints select one effective observation per IP: `up` takes precedence over
+`down`, then `timeout`, `cancelled` and `failed`; among matching statuses Nmap takes
+precedence over discovery, then the latest observation. Scan counters, diffs and history
+use that same selection, so a retry does not duplicate a host in the scan view.
+
 **Changes** (`scan-diff.ts`, PDF items 8–9) compare a scan with its **base scan**, the previous scan (by `createdAt`) that has results. They follow the rules in [`docs/worker-result-format.md`](../../docs/worker-result-format.md#what-the-backend-derives):
 - Hosts are keyed by IP and services by IP + protocol + port. A service is `changed` when its `fingerprint` differs.
 - A host is `new` (up now, not before), `gone` (up before, `down` now), `changed` (a service is new, gone or changed), `unchanged`, or `unknown` (up before, `timeout`/`cancelled`/`failed` now). Unknown is never gone, and addresses outside this scan's coverage are left out.

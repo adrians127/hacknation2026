@@ -24,8 +24,9 @@ describe("field encryption", () => {
     const sealed = encryptJson("secret");
     const bytes = Buffer.from(sealed.$enc.slice(3), "base64");
     bytes[bytes.length - 1] ^= 1;
+    // OpenSSL's error wording differs between platforms and Node versions.
     expect(() => decryptJson({ $enc: `v1.${bytes.toString("base64")}` })).toThrow(
-      /unable to authenticate/,
+      /unable to authenticate|bad decrypt/i,
     );
   });
 
