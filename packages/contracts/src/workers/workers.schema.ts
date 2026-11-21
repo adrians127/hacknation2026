@@ -30,38 +30,4 @@ export const NmapHeartbeatSchema = z.object({
   lease_id: z.string().min(1).max(256),
 });
 
-export const NmapResultSchema = z.object({
-  job_id: z.string().min(1).max(256),
-  lease_id: z.string().min(1).max(256),
-  status: z.enum(["completed", "partial"]),
-  duration_ms: z.number().int().nonnegative(),
-  hosts: z.array(
-    z.object({
-      ip: z.ipv4(),
-      domain: z.string().nullable(),
-      status: z.enum(["pending", "scanned", "failed", "timeout", "cancelled"]),
-      error: z
-        .object({ code: z.string(), message: z.string() })
-        .optional(),
-      ports: z.array(
-        z.object({
-          number: TcpPortSchema,
-          protocol: z.literal("tcp"),
-          state: z.string(),
-          service: z
-            .object({
-              name: z.string(),
-              product: z.string(),
-              version: z.string(),
-              cpe: z.array(z.string()),
-            })
-            .nullable(),
-          scripts: z.array(z.object({ id: z.string(), output: z.string() })),
-        }),
-      ),
-    }),
-  ),
-});
-
 export type NmapJob = z.infer<typeof NmapJobSchema>;
-export type NmapResult = z.infer<typeof NmapResultSchema>;

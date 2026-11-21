@@ -17,9 +17,11 @@ model Scan {
   finishedAt    DateTime?
   updatedAt     DateTime   @updatedAt
 
-  requestedBy User         @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+  requestedBy User              @relation(fields: [requestedById], references: [id], onDelete: Restrict)
   targets     ScanTarget[]
   jobs        ScanJob[]
+  results     ScanJobResult[]
+  hosts       HostObservation[]
 
   @@index([requestedById])
   @@index([status, createdAt])

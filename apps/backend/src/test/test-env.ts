@@ -13,4 +13,5 @@ export const TEST_ENV = {
   // Always a separate database: the setup truncates every table before each test.
   DB_NAME: TEST_DATABASE_NAME,
   JWT_SECRET: "test-only-jwt-secret-at-least-32-characters-long",
+  DATA_ENCRYPTION_KEY: "dGVzdC1vbmx5LWRhdGEta2V5LTAxMjM0NTY3ODlhYmM=",
 } as const;

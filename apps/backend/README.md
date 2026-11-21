@@ -35,7 +35,8 @@ Swagger UI is at `http://localhost:3001/docs` (only when `NODE_ENV=development`)
 app.ts                 buildApp(): middleware -> /v1 -> notFound -> errorHandler
 index.ts               listen, DB connection check, graceful shutdown
 config/                env.ts (zod + process.loadEnvFile), database-url.ts (DB_* -> URL)
-lib/                   prisma, logger, http-error, api-docs, password, tokens, auth-cookies, auth-context, chunks
+lib/                   prisma, logger, http-error, api-docs, password, tokens, auth-cookies, auth-context, chunks,
+                       crypto (field encryption at rest)
 middleware/            validate, authenticate (requireAuth/requireSession), authorize (requirePermission),
                        trusted-origin (CSRF), error-handler, not-found
 routes/index.ts        apiRouter: one apiRouter.use("/x", ...) line per module
@@ -43,6 +44,8 @@ modules/<feature>/     <feature>.routes.ts | .controller.ts | .service.ts | .tes
 modules/auth|users|roles   sign-in and sessions, user accounts, roles (+ system-roles sync, first-admin bootstrap)
 modules/targets        target inventory: POST /targets/import (manual, CSV and JSON all arrive as one JSON body)
 modules/scans          no routes yet: queues a Scan and its ScanJob batches (dns.ts, batching.ts)
+modules/results        no routes yet: ingests worker results into observations (details.ts, fingerprint.ts, job-scope.ts)
+modules/hosts          no routes yet: Host and Service assets that live across scans
 test/                  integration test setup: test database, TestClient (fetch + cookie jar), sign-in helpers
 types/express.d.ts     req.auth
 generated/prisma       Prisma Client (gitignored, generated in postinstall)
@@ -117,7 +120,7 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up` loca
 - `prisma.config.ts`: schema path, migrations, seed and the URL built from `DB_*`. A placeholder URL lets `prisma generate` run on a fresh clone without a database.
 - `prisma/schema/schema.prisma`: only the generator and the datasource. Models live in `prisma/schema/<module>/<model>.prisma` (one file per model, in a folder named after the module in `src/modules/` that owns the table).
 - Every relation field needs an `@@index`, because Prisma does not create indexes on foreign keys in Postgres.
-- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF), e.g. AES-256-GCM in a Prisma Client extension. Not designed yet: the auth tables hold only hashes (passwords, refresh secrets), emails and display names. To cover once it is: `Target.value` and `note`, `ScanJob.targets` and `hosts` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
+- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF). `src/lib/crypto.ts` does it at the field level: AES-256-GCM with `DATA_ENCRYPTION_KEY`, a value becomes `{ "$enc": "v1.<base64(iv | tag | ciphertext)>" }`, and `decryptJson` returns `unknown`, so readers validate with zod. Scan results use it (see [Scan results](#scan-results)). The auth tables hold only hashes (passwords, refresh secrets), emails and display names. Still to cover: `Target.value` and `note`, `ScanJob.targets` and `hosts` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
 
 ## Targets and scan jobs
 
@@ -128,6 +131,35 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up` loca
 3. In one transaction: a `Scan` with `SCAN_DEFAULT_PORTS`, `SCAN_DEFAULT_MAX_RATE` and `SCAN_BATCH_SIZE` snapshotted, a `ScanTarget` row per entry and the `ScanJob` batches from `planScanJobs` (`modules/scans/batching.ts`): addresses merged, split in address order into batches of at most `SCAN_BATCH_SIZE`, never across two /16 blocks. Each job has a `subnet` (the smallest aligned CIDR around it), its `targets` (CIDRs/IPs) and `hosts` (resolved domain → IP pairs).
 
 Jobs start as `queued` with `kind = discovery`. Leasing them (`/workers/*`, machine token) is the workers team's part; see [`apps/workers/README.md`](../workers/README.md#scan-jobs-in-the-database).
+
+## Scan results
+
+The result a worker sends for a job is fixed in [`docs/worker-result-format.md`](../../docs/worker-result-format.md) (locked). It is the backend's single input for scan data. Results storage, diffs between scans, the dashboard, signatures, export/import and DefectDojo all build on it. That document also lists what the backend derives itself: target membership, detections, coverage, new/gone/changed and host lifecycle.
+
+`resultsService.ingest(result)` (`modules/results/`) takes a result already validated with `WorkerResultSchema` and writes it in one transaction. No route calls it yet: `POST /workers/nmap/results` comes with the lease endpoints and the worker token.
+
+**Two layers of tables:**
+
+| Layer | Model | One row per | Notes |
+|---|---|---|---|
+| Observations (`prisma/schema/results/`), appended, never edited | `ScanJobResult` | lease | The `scan` envelope; `params` keeps `nmapArgs` for the safety audit |
+| | `HostObservation` | scan + address | **Every** address of the job, `down` included, so a scan's coverage is known; `ipNumber` (BigInt) for CIDR range queries |
+| | `HostnameObservation` | observation + name + source | `job`, `ptr`, `tls_san` |
+| | `PortObservation` | observation + protocol + port | Service detection in columns, `fingerprint` for diffs, everything else in `details` (JSONB) |
+| Assets (`prisma/schema/hosts/`), live across scans | `Host` | address ever `up` | `firstSeenAt`/`lastSeenAt`; `note`/`tags` belong to users and ingest never writes them (PDF item 14) |
+| | `Service` | host + protocol + port | Same; every `PortObservation` points at its `Service`, so a service's history is one query |
+
+**`PortObservation.details`** holds the rest of the worker's port object: `identity`, `banner`, `scripts` and `http[]`. A new protocol is a new key there, without a migration, once the locked format has it.
+- `details.ts` encrypts the fields the format lists as sensitive: `banner`, `scripts`, `http[].headers`, `http[].cookies`, `http[].body.content`, `http[].tls.cert`, `http[].probes`. `openPortDetails()` decrypts and validates them back.
+- The rest stays plaintext under a GIN index (`jsonb_path_ops`), for containment queries such as `details @> '{"http":[{"favicon":{"mmh3":…}}]}'`. Queries on encrypted fields (expired certificates, cookie flags) are meant to go through detections computed at ingest.
+
+**Rules ingest applies:**
+- **Idempotency:** `ScanJobResult.leaseId` is unique. A result resent under the same lease is a no-op that returns the stored id.
+- **Scope:** the job must exist and belong to `scan.scanId` (404 / 400). Every address must be inside the job's `targets`, and every open port inside the scan's `ports` (400 otherwise, nothing is written).
+- **Retries:** `(scanId, ip)` is unique. A later result for the same address replaces the earlier observation, except that an inconclusive status (`timeout`, `cancelled`, `failed`) never replaces a conclusive one (`up`, `down`).
+- **Seen window:** results may arrive out of order, so ingest only ever widens `firstSeenAt`/`lastSeenAt`.
+- **Fingerprint** (`fingerprint.ts`): SHA-256 over the service detection and, per HTTP endpoint, status, title, final path, software headers (`server`, `x-powered-by`, …), certificate and favicon hashes. Request-dependent values (dates, cookie values, body hashes, query strings) are left out so unchanged pages do not show up as changed.
+- `ScanJob` itself (status, timings) is not touched: its lifecycle belongs to the lease handlers.
 
 ## Environment variables
 
@@ -141,6 +173,7 @@ Jobs start as `queued` with `kind = discovery`. Leasing them (`/workers/*`, mach
 | `CORS_ORIGIN` | `http://localhost:3000` | allowed origin (with credentials) |
 | `DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASSWORD` `DB_SSLMODE` | — | Postgres connection in parts, no `DATABASE_URL` |
 | `JWT_SECRET` | — | HS256 key for access tokens, ≥ 32 characters. Production refuses the `.env.example` value |
+| `DATA_ENCRYPTION_KEY` | — | AES-256-GCM key for fields encrypted at rest: 32 bytes, base64 (`openssl rand -base64 32`). Production refuses the `.env.example` value. Changing it makes stored encrypted fields unreadable |
 | `ADMIN_EMAIL` `ADMIN_PASSWORD` | — | First admin (startup while there are no users, and the seed). Production refuses the example password |
 | `SEED_DEMO_USERS` `DEMO_USER_PASSWORD` | `false` | Seed only: demo accounts for the editor, analyst and viewer roles |
 | `SCAN_DEFAULT_PORTS` | 28 common TCP ports | Ports snapshotted onto every queued scan (`22,80,8000-8100` syntax) |

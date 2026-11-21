@@ -18,6 +18,7 @@ const blankAsAbsent = <T extends z.ZodType>(schema: T) =>
 // Must match .env.example; production refuses to start with these public values.
 const EXAMPLE_JWT_SECRET = "dev-only-jwt-secret-change-me-in-production";
 const EXAMPLE_ADMIN_PASSWORD = "admin-change-me-now";
+const EXAMPLE_DATA_ENCRYPTION_KEY = "ZGV2LW9ubHktZGF0YS1rZXktY2hhbmdlLW1lLTAwMDA=";
 
 // Must match .env.example.
 const DEFAULT_SCAN_PORTS =
@@ -50,6 +51,13 @@ const envSchema = z
     // HS256 key for access tokens (src/lib/tokens.ts).
     JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
 
+    // AES-256-GCM key for sensitive fields encrypted at rest (src/lib/crypto.ts).
+    DATA_ENCRYPTION_KEY: z
+      .base64()
+      .refine((value) => Buffer.from(value, "base64").length === 32, {
+        message: "DATA_ENCRYPTION_KEY must be 32 bytes, base64-encoded",
+      }),
+
     // First admin, created at startup while there are no users (and by the seed).
     ADMIN_EMAIL: blankAsAbsent(z.email().optional()),
     ADMIN_PASSWORD: blankAsAbsent(z.string().min(12).max(128).optional()),
@@ -72,6 +80,14 @@ const envSchema = z
     path: ["JWT_SECRET"],
     message: "Set a real JWT_SECRET in production (the .env.example value is public)",
   })
+  .refine(
+    (value) =>
+      value.NODE_ENV !== "production" || value.DATA_ENCRYPTION_KEY !== EXAMPLE_DATA_ENCRYPTION_KEY,
+    {
+      path: ["DATA_ENCRYPTION_KEY"],
+      message: "Set a real DATA_ENCRYPTION_KEY in production (the .env.example value is public)",
+    },
+  )
   .refine(
     (value) => value.NODE_ENV !== "production" || value.ADMIN_PASSWORD !== EXAMPLE_ADMIN_PASSWORD,
     {

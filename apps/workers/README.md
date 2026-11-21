@@ -19,6 +19,10 @@ Workers have no database access. Only the backend writes to it (Prisma). Each wo
 
 The Nmap worker sends `WORKER_TOKEN` as a bearer machine token to JSON endpoints described in `packages/contracts` (tag `Workers`). Machine-token validation is separate from user authentication and still needs to be implemented with the backend lease, heartbeat, and result handlers.
 
+## Result format (locked)
+
+What a worker returns for a job is fixed in [`docs/worker-result-format.md`](../../docs/worker-result-format.md): a `{ scan, hosts[] }` document with every address of the job, its open ports, service detection and HTTP/TLS fingerprint data. Every worker works towards producing exactly that structure. The backend builds all scan-data features on it. The document also lists what the current `nmap-worker` output still lacks, and what the job must provide (domains per IP, probe paths).
+
 ## Scan jobs in the database
 
 The work a lease hands out already exists: `POST /targets/import` with `startScan` (see [the backend README](../backend/README.md#targets-and-scan-jobs)) queues a `Scan` and splits its addresses into `ScanJob` rows (`apps/backend/prisma/schema/scans/`). The lease, heartbeat and result handlers read and update those rows.
@@ -39,7 +43,7 @@ Scan parameters live on the parent `Scan`, snapshotted from the backend's env wh
 Open questions for the lease implementation:
 
 - Which worker consumes the `discovery` jobs: Masscan over `targets` with `Scan.ports`, followed by `service` jobs built from its hits, or Nmap directly (every address of `targets` × `Scan.ports`)?
-- `NmapJob.targets` rejects duplicate IPs, but `hosts` can list one IP under two domains: pick one domain per IP or send several jobs.
+- ~~`NmapJob.targets` rejects duplicate IPs, but `hosts` can list one IP under two domains.~~ Settled by the [result format](../../docs/worker-result-format.md#what-the-job-must-provide): the job lists each IP once with all its domains, and the worker fingerprints HTTP once per domain.
 
 ## Scan safety (PDF requirement)
 
