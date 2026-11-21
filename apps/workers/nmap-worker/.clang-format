@@ -4,3 +4,10 @@ IndentWidth: 4
 AccessModifierOffset: -4
 DerivePointerAlignment: false
 PointerAlignment: Left
+IncludeCategories:
+  - Regex: '^"'
+    Priority: 1
+  - Regex: '^<(curl|nlohmann|pugixml)'
+    Priority: 2
+  - Regex: '^<'
+    Priority: 3
