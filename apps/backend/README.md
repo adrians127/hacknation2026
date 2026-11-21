@@ -69,7 +69,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Permissions and roles
 
-- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action` (today only `users:*` and `roles:*`). The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
+- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*` and `scans:read|run`. Targets and scans have no endpoints yet; the frontend gates its mocked screens with them. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
 - A route checks permissions with `requirePermission("users:read")` after `requireAuth`. Services that act on other accounts or roles also call `assertHoldsAll` (below).
 - **System roles** (`admin`, `editor`, `analyst`, `viewer`) are read-only. `syncSystemRoles()` (`modules/roles/system-roles.ts`) runs at startup and in the seed: it gives them exactly `SYSTEM_ROLE_PERMISSIONS` and drops permissions that no longer exist from custom roles.
 - **Custom roles** are rows with a `permissions` array. Deleting a role that users still have needs `reassignToRoleId` (and `users:update`); the users move and the role is deleted in one transaction.
@@ -90,7 +90,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
    | read (lists, details, dashboard) | ✓ | ✓ | ✓ | ✓ |
    | update existing data (targets, scan configs, results, findings, signatures) | ✓ | ✓ | ✓ | |
    | create and delete, including import | ✓ | ✓ | | |
-   | run, stop and schedule scans | ✓ | ✓ | | |
+   | run, stop and schedule scans (`scans:run`) | ✓ | ✓ | | |
    | export to a CSV/JSON file | ✓ | ✓ | ✓ | ✓ |
    | export to DefectDojo | ✓ | ✓ | | |
    | global scanner limits (`settings:manage`: rate, ports, ranges, time windows) | ✓ | | | |

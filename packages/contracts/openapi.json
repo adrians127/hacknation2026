@@ -73,7 +73,8 @@
                   "SYSTEM_ROLE_READ_ONLY",
                   "ROLE_IN_USE",
                   "EMAIL_TAKEN",
-                  "ROLE_NAME_TAKEN"
+                  "ROLE_NAME_TAKEN",
+                  "TARGET_EXISTS"
                 ]
               },
               "details": {}
@@ -144,7 +145,13 @@
                 "roles:read",
                 "roles:create",
                 "roles:update",
-                "roles:delete"
+                "roles:delete",
+                "targets:read",
+                "targets:create",
+                "targets:update",
+                "targets:delete",
+                "scans:read",
+                "scans:run"
               ]
             }
           },
@@ -239,7 +246,13 @@
                 "roles:read",
                 "roles:create",
                 "roles:update",
-                "roles:delete"
+                "roles:delete",
+                "targets:read",
+                "targets:create",
+                "targets:update",
+                "targets:delete",
+                "scans:read",
+                "scans:run"
               ]
             }
           },
@@ -902,7 +915,13 @@
                                 "roles:read",
                                 "roles:create",
                                 "roles:update",
-                                "roles:delete"
+                                "roles:delete",
+                                "targets:read",
+                                "targets:create",
+                                "targets:update",
+                                "targets:delete",
+                                "scans:read",
+                                "scans:run"
                               ]
                             }
                           },
@@ -1002,10 +1021,16 @@
                         "roles:read",
                         "roles:create",
                         "roles:update",
-                        "roles:delete"
+                        "roles:delete",
+                        "targets:read",
+                        "targets:create",
+                        "targets:update",
+                        "targets:delete",
+                        "scans:read",
+                        "scans:run"
                       ]
                     },
-                    "maxItems": 8
+                    "maxItems": 14
                   }
                 },
                 "required": [
@@ -1141,7 +1166,13 @@
                           "roles:read",
                           "roles:create",
                           "roles:update",
-                          "roles:delete"
+                          "roles:delete",
+                          "targets:read",
+                          "targets:create",
+                          "targets:update",
+                          "targets:delete",
+                          "scans:read",
+                          "scans:run"
                         ]
                       }
                     },
@@ -1285,10 +1316,16 @@
                         "roles:read",
                         "roles:create",
                         "roles:update",
-                        "roles:delete"
+                        "roles:delete",
+                        "targets:read",
+                        "targets:create",
+                        "targets:update",
+                        "targets:delete",
+                        "scans:read",
+                        "scans:run"
                       ]
                     },
-                    "maxItems": 8
+                    "maxItems": 14
                   }
                 }
               }

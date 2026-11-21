@@ -4,7 +4,7 @@ import { queryClient } from "@/api/query-client";
 import { isUnauthenticated } from "@/lib/api-error";
 import { meQueryOptions } from "@/lib/auth/me-query";
 
-const CHANGE_PASSWORD_PATH = "/change-password";
+const CHANGE_PASSWORD_PATH = "/app/change-password";
 
 /** Protected layout: loads the user (refreshing the session if needed) or sends them to /login. */
 export async function requireAuthLoader({ request }: LoaderFunctionArgs) {
@@ -25,7 +25,7 @@ export async function requireAuthLoader({ request }: LoaderFunctionArgs) {
 export async function guestLoader() {
   try {
     await queryClient.ensureQueryData(meQueryOptions());
-    return redirect("/");
+    return redirect("/app");
   } catch {
     return null;
   }

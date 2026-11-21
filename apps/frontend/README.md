@@ -7,6 +7,7 @@ The interface for the security team: a dashboard with findings, targets, scans, 
 - **React 19** + **Vite 8** + **TypeScript 7**
 - **React Router 8** in data mode (`createBrowserRouter` in `src/app/router.tsx`)
 - **TanStack Query 5** + **openapi-react-query**: hooks generated from the typed `@hacknation/api-client`
+- **TanStack Table 9**: sortable data tables (`components/data-table.tsx`)
 - **Tailwind 4** (Vite plugin, no config file) + **shadcn/ui** (`radix-nova` style, `components.json`)
 - **i18next**: EN (default) + PL
 - **Vitest** · **oxlint** (type-aware, react / jsx-a11y rules)
@@ -26,7 +27,7 @@ pnpm --filter @hacknation/frontend exec shadcn add <component>
 main.tsx                 bootstrap: i18n, App, CSS
 app/                     app.tsx (RouterProvider), router.tsx, provider.tsx, routes/
 api/                     client.ts (apiClient + `api` hooks + session refresh), query-client.ts, mock.ts (mock helpers)
-components/              shared components: guarded-button, icon-action, confirm-dialog, language-toggle
+components/              shared components: data-table, page-header, guarded-button, icon-action, confirm-dialog, language-toggle, logo
 components/ui/           shadcn components (excluded from lint)
 config/                  typed env variables (fail-fast)
 features/<name>/         api/, components/, hooks/, lib/, types/ (no barrel files)
@@ -50,7 +51,7 @@ const create = api.useMutation("post", "/targets");   // once the endpoint exist
 
 Query keys are built from the method, path and parameters, so there is no separate key registry to maintain. Forms can use the zod schemas from `@hacknation/contracts`, the same ones the backend validates with.
 
-A feature's data goes through hooks in `features/<name>/api/`, one file per endpoint (`get-targets.ts` → `useTargets`, `create-target.ts` → `useCreateTarget`). Components call those hooks, never `api.*` directly. A one-off call outside a feature, such as `/health` on the home route, may use `api.useQuery` directly.
+A feature's data goes through hooks in `features/<name>/api/`, one file per endpoint (`get-targets.ts` → `useTargets`, `create-target.ts` → `useCreateTarget`). Components call those hooks, never `api.*` directly. A one-off call outside a feature, such as `/health` on the public `/status` page, may use `api.useQuery` directly.
 
 ## Mocking endpoints the backend doesn't have yet
 
@@ -64,7 +65,7 @@ Rules:
 - **Mutations take `{ body, params }`**, like `api.useMutation`, so the `mutate(...)` calls in components don't change.
 - **Fixtures live in `features/<name>/api/mocks.ts`** as in-memory data. Mocked mutations modify that data, so lists refresh after invalidation as they will with the backend. A page reload resets it.
 - **Mark every mock with `// MOCK: <target api call>`.** `grep -rn "MOCK:" apps/frontend/src` lists what is still left to integrate.
-- `mockResponse(data)` and `mockError(status, message)` from `@/api/mock` add a short delay, return a copy of the fixture and reject with the same `ErrorResponse` body as a real non-2xx response.
+- `mockResponse(data)` and `mockError(status, message, code?)` from `@/api/mock` add a short delay, return a copy of the fixture and reject with the same `ErrorResponse` body as a real non-2xx response (with `code`, the UI shows the translated `errors.<code>` message).
 
 A mocked query and a mocked mutation:
 
@@ -123,7 +124,7 @@ Swap checklist:
 Sign-in, sessions and RBAC are enforced by the backend ([backend README](../backend/README.md#auth-and-rbac)). The frontend only decides what to show.
 
 - **Session:** two httpOnly cookies the frontend never reads. `api/client.ts` has an openapi-fetch middleware: on a 401 (except from `/auth/login|refresh|logout`) it calls `POST /auth/refresh` once, shared by parallel requests, and retries the request. If the refresh fails, the handler registered in `app/provider.tsx` clears the cache and sends the user to `/login?redirectTo=…`.
-- **Routes** (`app/router.tsx`): `/login` is public (`guestLoader` sends signed-in users away). Everything else sits under the protected layout, whose `requireAuthLoader` loads `/auth/me`, redirects to `/login` on a 401 and to `/change-password` while `mustChangePassword` is set. `redirectTo` only accepts same-app paths (`lib/auth/safe-redirect.ts`).
+- **Routes** (`app/router.tsx`): the landing page `/`, `/status` (API health) and `/login` are public (`guestLoader` sends signed-in users to `/app`). The app sits under `/app`, in the protected layout whose `requireAuthLoader` loads `/auth/me`, redirects to `/login` on a 401 and to `/app/change-password` while `mustChangePassword` is set. `redirectTo` only accepts same-app paths (`lib/auth/safe-redirect.ts`).
 - **Current user:** `useMe()` (`lib/auth/me-query.ts`) inside the protected layout; the loader guarantees the data. Update the `/auth/me` cache yourself when a mutation changes what a loader reads (see `features/auth/api/change-password.ts`).
 - **Permissions in the UI:**
   - `useCan("users:create")` / `usePermissions()` from `lib/auth/use-can.ts`.
@@ -133,6 +134,12 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 - **Labels:** system roles are translated by key and custom roles show their stored name (`useRoleLabels`); permissions read as "Resource: Action" (`usePermissionLabel`, keys in `auth.json`). A new permission needs `permissions.resources.<resource>` (and a new action) in both languages.
 - **Errors:** `useErrorMessage()` turns anything a query or mutation threw into a translated message, by the API's `error.code` (`common.json`, `errors.*`) or by status.
 - **Admin panel:** `features/users` and `features/roles` (the permission matrix in `features/roles/lib/permission-matrix.ts` is built from the contracts catalog). The admin routes compose them, e.g. the user form gets the role list from `features/roles`.
+
+## Pages and tables
+
+- A page starts with `PageHeader` (title, description, page-level buttons in `actions`) and puts its content in `Card`s.
+- Lists use `DataTable` (`components/data-table.tsx`), a sortable table on TanStack Table v9. Define columns with `createDataTableColumns<T>().columns([...])` from `lib/data-table.ts`, inside `useMemo`: v9 rebuilds the table whenever `columns` or `data` change identity. `meta: { className }` styles a column's header and cells (e.g. `text-right`). Dates go through `lib/format.ts`.
+- The app is dark-only (`class="dark"` in `index.html`); `brand` is the accent color (`text-brand`, `bg-brand/15`).
 
 ## Translations
 

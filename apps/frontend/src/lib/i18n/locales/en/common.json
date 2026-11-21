@@ -1,6 +1,5 @@
 {
   "appName": "Attack Surface Intelligence",
-  "tagline": "Recurring discovery scans of large network infrastructure",
   "health": {
     "title": "System status",
     "api": "API",
@@ -11,16 +10,130 @@
     "down": "down",
     "refresh": "Refresh"
   },
-  "home": {
-    "welcome": "Signed in as {{name}}",
-    "role": "Your role: {{role}}"
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "The most important findings from recent scans",
+    "stats": {
+      "activeHosts": "Active hosts",
+      "newServices": "New services",
+      "disappeared": "Disappeared services",
+      "changed": "Changed services"
+    },
+    "recent": {
+      "title": "Recent changes",
+      "kind": "Change",
+      "host": "Host",
+      "service": "Service",
+      "detail": "Detail",
+      "detected": "Detected",
+      "kinds": {
+        "new": "New",
+        "disappeared": "Disappeared",
+        "changed": "Changed"
+      }
+    }
+  },
+  "targets": {
+    "title": "Targets",
+    "subtitle": "IP addresses, CIDR ranges and domains included in scans",
+    "add": "Add target",
+    "never": "Never",
+    "columns": {
+      "value": "Target",
+      "kind": "Type",
+      "note": "Note",
+      "tags": "Tags",
+      "activeHosts": "Active hosts",
+      "lastScan": "Last scan",
+      "actions": "Actions"
+    },
+    "kinds": {
+      "ip": "IP",
+      "cidr": "CIDR",
+      "domain": "Domain"
+    },
+    "actions": {
+      "edit": "Edit {{value}}",
+      "delete": "Delete {{value}}"
+    },
+    "form": {
+      "createTitle": "Add target",
+      "editTitle": "Edit target",
+      "value": "IP, CIDR range or domain",
+      "valuePlaceholder": "10.0.0.0/24",
+      "valueRequired": "Enter an address, range or domain.",
+      "note": "Note",
+      "noteTooLong": "Use at most 500 characters.",
+      "tags": "Tags",
+      "tagsHint": "comma, separated",
+      "tagsInvalid": "Up to 20 tags, each at most 50 characters.",
+      "submit": "Save",
+      "submitting": "Saving…"
+    },
+    "confirmDelete": {
+      "title": "Delete {{value}}?",
+      "description": "It will no longer be scanned.",
+      "confirm": "Delete"
+    },
+    "toast": {
+      "created": "Target added.",
+      "updated": "Target saved.",
+      "deleted": "Target deleted."
+    }
+  },
+  "scans": {
+    "title": "Scans",
+    "subtitle": "History of discovery scans",
+    "start": "Start scan",
+    "starting": "Starting…",
+    "columns": {
+      "id": "Scan",
+      "status": "Status",
+      "targets": "Targets",
+      "hosts": "Hosts",
+      "services": "Services",
+      "started": "Started",
+      "duration": "Duration"
+    },
+    "statuses": {
+      "queued": "Queued",
+      "running": "Running",
+      "completed": "Completed",
+      "stopped": "Stopped",
+      "failed": "Failed"
+    },
+    "toast": {
+      "started": "Scan started."
+    }
   },
   "language": {
     "switchTo": "Polski"
   },
+  "landing": {
+    "logoAlt": "SubSurf",
+    "signIn": "Sign In",
+    "getStarted": "Get Started",
+    "nav": {
+      "label": "Main",
+      "features": "Features",
+      "about": "About"
+    },
+    "headline": {
+      "line1": "Know what’s on your network.",
+      "line2": "Stay in control."
+    },
+    "features": {
+      "discover": "Discover Network Assets",
+      "ports": "Monitor Open Ports",
+      "dojo": "Sync with DefectDojo",
+      "insights": "Get Clear Insights"
+    }
+  },
   "nav": {
     "label": "Main navigation",
     "dashboard": "Dashboard",
+    "targets": "Targets",
+    "scans": "Scans",
     "users": "Users",
     "roles": "Roles"
   },
@@ -43,6 +156,9 @@
     "copy": "Copy",
     "copied": "Copied"
   },
+  "table": {
+    "empty": "Nothing here yet"
+  },
   "errors": {
     "generic": "Something went wrong. Try again.",
     "network": "Cannot reach the server.",
@@ -59,6 +175,7 @@
     "SYSTEM_ROLE_READ_ONLY": "System roles cannot be changed.",
     "ROLE_IN_USE": "Users still have this role. Move them to another role first.",
     "EMAIL_TAKEN": "A user with this email already exists.",
-    "ROLE_NAME_TAKEN": "A role with this name already exists."
+    "ROLE_NAME_TAKEN": "A role with this name already exists.",
+    "TARGET_EXISTS": "This target is already on the list."
   }
 }

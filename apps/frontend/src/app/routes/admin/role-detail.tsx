@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { IconAction } from "@/components/icon-action";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +32,7 @@ export function RoleDetailRoute() {
 
   const back = (
     <Button asChild variant="ghost" size="sm" className="w-fit">
-      <Link to="/admin/roles">
+      <Link to="/app/admin/roles">
         <ArrowLeft />
         {t("roles.detail.back")}
       </Link>
@@ -61,46 +62,56 @@ export function RoleDetailRoute() {
   return (
     <div className="grid gap-6">
       {back}
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="grid gap-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold">{name}</h1>
+      <PageHeader
+        title={
+          <span className="flex flex-wrap items-center gap-2">
+            {name}
             <Badge variant={detail.isSystem ? "secondary" : "outline"}>
               {detail.isSystem ? t("roles.system") : t("roles.custom")}
             </Badge>
+          </span>
+        }
+        description={
+          <>
+            {roleLabels.description(detail)}
+            {detail.isSystem && <span className="block text-sm">{t("roles.detail.readOnly")}</span>}
+          </>
+        }
+        actions={
+          <div className="flex gap-1">
+            <IconAction
+              label={t("roles.actions.edit", { name })}
+              icon={<Pencil />}
+              permissions={["roles:update"]}
+              disabledReason={lockedReason}
+              onClick={() => setDialog("edit")}
+            />
+            <IconAction
+              label={t("roles.actions.duplicate", { name })}
+              icon={<Copy />}
+              permissions={["roles:create"]}
+              onClick={() => setDialog("duplicate")}
+            />
+            <IconAction
+              label={t("roles.actions.delete", { name })}
+              icon={<Trash2 />}
+              permissions={["roles:delete"]}
+              disabledReason={lockedReason}
+              destructive
+              onClick={() => setDialog("delete")}
+            />
           </div>
-          <p className="text-muted-foreground">{roleLabels.description(detail)}</p>
-          {detail.isSystem && <p className="text-sm text-muted-foreground">{t("roles.detail.readOnly")}</p>}
-        </div>
-        <div className="flex gap-1">
-          <IconAction
-            label={t("roles.actions.edit", { name })}
-            icon={<Pencil />}
-            permissions={["roles:update"]}
-            disabledReason={lockedReason}
-            onClick={() => setDialog("edit")}
-          />
-          <IconAction
-            label={t("roles.actions.duplicate", { name })}
-            icon={<Copy />}
-            permissions={["roles:create"]}
-            onClick={() => setDialog("duplicate")}
-          />
-          <IconAction
-            label={t("roles.actions.delete", { name })}
-            icon={<Trash2 />}
-            permissions={["roles:delete"]}
-            disabledReason={lockedReason}
-            destructive
-            onClick={() => setDialog("delete")}
-          />
-        </div>
-      </header>
+        }
+      />
 
-      <section className="grid gap-2">
-        <h2 className="text-lg font-medium">{t("roles.detail.permissions")}</h2>
-        <PermissionMatrix value={detail.permissions} />
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("roles.detail.permissions")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PermissionMatrix value={detail.permissions} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -113,7 +124,7 @@ export function RoleDetailRoute() {
             <ul className="divide-y">
               {detail.users.map((user) => (
                 <li key={user.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                  <Link to={`/admin/users?edit=${user.id}`} className="hover:underline">
+                  <Link to={`/app/admin/users?edit=${user.id}`} className="hover:underline">
                     <span className="font-medium">{user.displayName}</span>{" "}
                     <span className="text-sm text-muted-foreground">{user.email}</span>
                   </Link>
@@ -133,7 +144,7 @@ export function RoleDetailRoute() {
           role={detail}
           roles={roles.data?.items ?? []}
           onClose={() => setDialog(null)}
-          onDeleted={() => void navigate("/admin/roles", { replace: true })}
+          onDeleted={() => void navigate("/app/admin/roles", { replace: true })}
         />
       )}
     </div>

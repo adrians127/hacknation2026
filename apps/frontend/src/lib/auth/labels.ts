@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -30,11 +31,15 @@ interface RoleLike {
 /** System roles are translated by key; custom roles show what the admin typed. */
 export function useRoleLabels() {
   const { t } = useTranslation("auth");
-  return {
-    name: (role: RoleLike) => (role.key ? t(`roles.${role.key}.name`) : role.name),
-    description: (role: RoleLike) =>
-      role.key ? t(`roles.${role.key}.description`) : (role.description ?? ""),
-  };
+  // Stable per language, so table columns that use it stay memoized.
+  return useMemo(
+    () => ({
+      name: (role: RoleLike) => (role.key ? t(`roles.${role.key}.name`) : role.name),
+      description: (role: RoleLike) =>
+        role.key ? t(`roles.${role.key}.description`) : (role.description ?? ""),
+    }),
+    [t],
+  );
 }
 
 export function usePermissionLabel() {

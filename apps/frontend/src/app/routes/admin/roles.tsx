@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import type { Role } from "@hacknation/contracts/roles/roles.schema";
 
 import { GuardedButton } from "@/components/guarded-button";
+import { PageHeader } from "@/components/page-header";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRoles } from "@/features/roles/api/get-roles";
 import { DeleteRoleDialog } from "@/features/roles/components/delete-role-dialog";
@@ -23,16 +25,16 @@ export function RolesRoute() {
 
   return (
     <div className="grid gap-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t("roles.title")}</h1>
-          <p className="max-w-2xl text-muted-foreground">{t("roles.description")}</p>
-        </div>
-        <GuardedButton permissions={["roles:create"]} onClick={() => setDialog({ kind: "create" })}>
-          <Plus />
-          {t("roles.create")}
-        </GuardedButton>
-      </header>
+      <PageHeader
+        title={t("roles.title")}
+        description={t("roles.description")}
+        actions={
+          <GuardedButton permissions={["roles:create"]} onClick={() => setDialog({ kind: "create" })}>
+            <Plus />
+            {t("roles.create")}
+          </GuardedButton>
+        }
+      />
 
       {roles.isPending ? (
         <Skeleton className="h-48 w-full" />
@@ -41,12 +43,16 @@ export function RolesRoute() {
           {errorMessage(roles.error)}
         </p>
       ) : (
-        <RolesTable
-          roles={roles.data.items}
-          onEdit={(role) => setDialog({ kind: "edit", role })}
-          onDuplicate={(role) => setDialog({ kind: "duplicate", role })}
-          onDelete={(role) => setDialog({ kind: "delete", role })}
-        />
+        <Card>
+          <CardContent>
+            <RolesTable
+              roles={roles.data.items}
+              onEdit={(role) => setDialog({ kind: "edit", role })}
+              onDuplicate={(role) => setDialog({ kind: "duplicate", role })}
+              onDelete={(role) => setDialog({ kind: "delete", role })}
+            />
+          </CardContent>
+        </Card>
       )}
 
       {dialog && dialog.kind !== "delete" && (

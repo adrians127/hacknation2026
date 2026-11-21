@@ -1,6 +1,5 @@
 {
   "appName": "Attack Surface Intelligence",
-  "tagline": "Cykliczny discovery scan dużej infrastruktury sieciowej",
   "health": {
     "title": "Stan systemu",
     "api": "API",
@@ -11,16 +10,130 @@
     "down": "niedostępna",
     "refresh": "Odśwież"
   },
-  "home": {
-    "welcome": "Zalogowano jako {{name}}",
-    "role": "Twoja rola: {{role}}"
+  "dashboard": {
+    "title": "Pulpit",
+    "subtitle": "Najważniejsze znaleziska z ostatnich skanów",
+    "stats": {
+      "activeHosts": "Aktywne hosty",
+      "newServices": "Nowe usługi",
+      "disappeared": "Zniknięte usługi",
+      "changed": "Zmienione usługi"
+    },
+    "recent": {
+      "title": "Ostatnie zmiany",
+      "kind": "Zmiana",
+      "host": "Host",
+      "service": "Usługa",
+      "detail": "Szczegóły",
+      "detected": "Wykryto",
+      "kinds": {
+        "new": "Nowa",
+        "disappeared": "Zniknęła",
+        "changed": "Zmieniona"
+      }
+    }
+  },
+  "targets": {
+    "title": "Cele",
+    "subtitle": "Adresy IP, zakresy CIDR i domeny objęte skanowaniem",
+    "add": "Dodaj cel",
+    "never": "Nigdy",
+    "columns": {
+      "value": "Cel",
+      "kind": "Typ",
+      "note": "Notatka",
+      "tags": "Tagi",
+      "activeHosts": "Aktywne hosty",
+      "lastScan": "Ostatni skan",
+      "actions": "Akcje"
+    },
+    "kinds": {
+      "ip": "IP",
+      "cidr": "CIDR",
+      "domain": "Domena"
+    },
+    "actions": {
+      "edit": "Edytuj {{value}}",
+      "delete": "Usuń {{value}}"
+    },
+    "form": {
+      "createTitle": "Dodaj cel",
+      "editTitle": "Edytuj cel",
+      "value": "IP, zakres CIDR lub domena",
+      "valuePlaceholder": "10.0.0.0/24",
+      "valueRequired": "Podaj adres, zakres lub domenę.",
+      "note": "Notatka",
+      "noteTooLong": "Użyj najwyżej 500 znaków.",
+      "tags": "Tagi",
+      "tagsHint": "oddzielone, przecinkami",
+      "tagsInvalid": "Najwyżej 20 tagów, każdy do 50 znaków.",
+      "submit": "Zapisz",
+      "submitting": "Zapisywanie…"
+    },
+    "confirmDelete": {
+      "title": "Usunąć {{value}}?",
+      "description": "Ten cel nie będzie już skanowany.",
+      "confirm": "Usuń"
+    },
+    "toast": {
+      "created": "Dodano cel.",
+      "updated": "Zapisano cel.",
+      "deleted": "Usunięto cel."
+    }
+  },
+  "scans": {
+    "title": "Skany",
+    "subtitle": "Historia skanów discovery",
+    "start": "Uruchom skan",
+    "starting": "Uruchamianie…",
+    "columns": {
+      "id": "Skan",
+      "status": "Status",
+      "targets": "Cele",
+      "hosts": "Hosty",
+      "services": "Usługi",
+      "started": "Rozpoczęto",
+      "duration": "Czas trwania"
+    },
+    "statuses": {
+      "queued": "W kolejce",
+      "running": "W toku",
+      "completed": "Zakończony",
+      "stopped": "Zatrzymany",
+      "failed": "Błąd"
+    },
+    "toast": {
+      "started": "Uruchomiono skan."
+    }
   },
   "language": {
     "switchTo": "English"
   },
+  "landing": {
+    "logoAlt": "SubSurf",
+    "signIn": "Zaloguj się",
+    "getStarted": "Zacznij teraz",
+    "nav": {
+      "label": "Główna",
+      "features": "Funkcje",
+      "about": "O nas"
+    },
+    "headline": {
+      "line1": "Wiesz, co jest w Twojej sieci.",
+      "line2": "Zachowaj kontrolę."
+    },
+    "features": {
+      "discover": "Odkrywaj zasoby sieciowe",
+      "ports": "Monitoruj otwarte porty",
+      "dojo": "Synchronizuj z DefectDojo",
+      "insights": "Zyskaj czytelny obraz"
+    }
+  },
   "nav": {
     "label": "Nawigacja główna",
     "dashboard": "Pulpit",
+    "targets": "Cele",
+    "scans": "Skany",
     "users": "Użytkownicy",
     "roles": "Role"
   },
@@ -43,6 +156,9 @@
     "copy": "Kopiuj",
     "copied": "Skopiowano"
   },
+  "table": {
+    "empty": "Nic tu jeszcze nie ma"
+  },
   "errors": {
     "generic": "Coś poszło nie tak. Spróbuj ponownie.",
     "network": "Brak połączenia z serwerem.",
@@ -59,6 +175,7 @@
     "SYSTEM_ROLE_READ_ONLY": "Ról systemowych nie można zmieniać.",
     "ROLE_IN_USE": "Ta rola jest nadal przypisana użytkownikom. Najpierw przenieś ich do innej roli.",
     "EMAIL_TAKEN": "Użytkownik z tym adresem email już istnieje.",
-    "ROLE_NAME_TAKEN": "Rola o tej nazwie już istnieje."
+    "ROLE_NAME_TAKEN": "Rola o tej nazwie już istnieje.",
+    "TARGET_EXISTS": "Ten cel jest już na liście."
   }
 }

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { MeResponseSchema } from "@hacknation/contracts/auth/auth.schema";
+import { SYSTEM_ROLE_PERMISSIONS } from "@hacknation/contracts/auth/permissions";
 import {
   UserListResponseSchema,
   UserSchema,
@@ -161,8 +162,12 @@ describe("users: guard rails", () => {
   });
 
   it("does not let a user manager hand out or touch permissions they lack", async () => {
+    // Holds the viewer's permissions too, so handing out the viewer role is allowed.
     const manager = await prisma.role.create({
-      data: { name: "User manager", permissions: ["users:read", "users:create", "users:update"] },
+      data: {
+        name: "User manager",
+        permissions: ["users:read", "users:create", "users:update", ...SYSTEM_ROLE_PERMISSIONS.viewer],
+      },
     });
     const { client } = await signInAs(server, { roleId: manager.id });
     const admin = await createUser({ role: "admin" });

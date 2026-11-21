@@ -1,8 +1,8 @@
-import { ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { LanguageToggle } from "@/components/language-toggle";
+import { Logo } from "@/components/logo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "@/features/auth/components/login-form";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
@@ -14,20 +14,19 @@ export function LoginRoute() {
   const [searchParams] = useSearchParams();
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-4">
-      <div className="flex items-center gap-2 text-lg font-semibold">
-        <ShieldCheck className="size-6 text-primary" />
-        {t("appName")}
-      </div>
+    <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-6">
+      <Link to="/">
+        <Logo variant="full" label={t("appName")} className="w-48" />
+      </Link>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>{tAuth("login.title")}</CardTitle>
+          <CardTitle className="text-xl">{tAuth("login.title")}</CardTitle>
           <CardDescription>{tAuth("login.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <LoginForm
             onSuccess={() =>
-              void navigate(safeRedirectPath(searchParams.get("redirectTo")), { replace: true })
+              void navigate(safeRedirectPath(searchParams.get("redirectTo"), "/app"), { replace: true })
             }
           />
         </CardContent>

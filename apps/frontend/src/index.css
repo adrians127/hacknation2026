@@ -6,6 +6,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    --color-brand: oklch(0.65 0.2 255);
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
@@ -84,14 +85,14 @@
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
+    --background: oklch(0.13 0.02 260);
     --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
+    --card: oklch(0.18 0.025 260);
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
+    --primary: oklch(0.65 0.2 255);
+    --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.269 0 0);
     --secondary-foreground: oklch(0.985 0 0);
     --muted: oklch(0.269 0 0);
@@ -127,4 +128,29 @@
   html {
     @apply font-sans;
     }
+}
+
+@keyframes wave-drift-0 {
+  to { transform: translate(90px, -40px) scaleY(1.12); }
+}
+@keyframes wave-drift-1 {
+  to { transform: translate(-110px, 35px) scaleY(0.9); }
+}
+@keyframes wave-drift-2 {
+  to { transform: translate(60px, 55px) scaleY(1.2); }
+}
+
+.wave-ribbon {
+  animation-direction: alternate;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  transform-origin: center;
+  will-change: transform;
+}
+.wave-ribbon-0 { animation-name: wave-drift-0; animation-duration: 11s; }
+.wave-ribbon-1 { animation-name: wave-drift-1; animation-duration: 14s; }
+.wave-ribbon-2 { animation-name: wave-drift-2; animation-duration: 17s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wave-ribbon { animation: none; }
 }

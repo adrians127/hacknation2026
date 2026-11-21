@@ -24,7 +24,7 @@ function ForbiddenPage({ permission }: { permission: Permission }) {
         {t("forbidden.description", { permission: permissionLabel(permission) })}
       </p>
       <Button asChild variant="outline">
-        <Link to="/">{t("forbidden.back")}</Link>
+        <Link to="/app">{t("forbidden.back")}</Link>
       </Button>
     </section>
   );
