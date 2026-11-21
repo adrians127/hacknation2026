@@ -42,7 +42,7 @@ describe("field encryption", () => {
     expect(decryptText(sealed)).toBe("owned by the network team");
     expect(encryptText("")).toBeNull();
     expect(decryptText(null)).toBe("");
-    expect(() => decryptText("plain text")).toThrow();
-    expect(() => decryptText(encryptJson(42))).toThrow();
+    expect(() => decryptText("plain text")).toThrow(/Expected an encrypted value/);
+    expect(() => decryptText(encryptJson(42))).toThrow(/not a text/);
   });
 });
