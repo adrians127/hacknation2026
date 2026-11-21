@@ -11,14 +11,18 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <filesystem>
 #include <expected>
 #include <fstream>
+#include <iostream>
 #include <iterator>
 #include <print>
+#include <span>
 #include <stop_token>
 #include <string>
 #include <string_view>
 #include <thread>
+#include <unistd.h>
 
 namespace nmap_worker {
 namespace {
@@ -96,30 +100,90 @@ std::expected<WorkerConfig, Error> read_config() {
 }
 
 std::expected<std::string, Error> read_job_file(std::string_view path) {
+    if (path == "-") {
+        std::string input{std::istreambuf_iterator<char>{std::cin}, std::istreambuf_iterator<char>{}};
+        if (!std::cin.eof() && std::cin.fail())
+            return std::unexpected(Error{"io-error", "Cannot read stdin"});
+        if (input.size() > 4 * 1024 * 1024)
+            return std::unexpected(Error{"invalid-input", "Job exceeds 4 MiB"});
+        return input;
+    }
     std::ifstream stream{std::string{path}, std::ios::binary | std::ios::ate};
-    if (!stream) return std::unexpected(Error{"file_failed", "Cannot open job file"});
+    if (!stream) return std::unexpected(Error{"io-error", "Cannot open job file"});
     const auto size = stream.tellg();
     if (size < 0 || size > 4 * 1024 * 1024) {
-        return std::unexpected(Error{"file_failed", "Job file exceeds 4 MiB"});
+        return std::unexpected(Error{"invalid-input", "Job file exceeds 4 MiB"});
     }
     stream.seekg(0);
     return std::string{std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{}};
 }
 
-int run_file_mode(std::string_view path, const WorkerConfig& config) {
-    const auto input = read_job_file(path);
+struct CliOptions {
+    std::string input = "-";
+    std::string output = "-";
+    bool pretty = false;
+};
+
+std::expected<CliOptions, Error> parse_cli(std::span<char* const> args) {
+    CliOptions options;
+    for (std::size_t i = 1; i < args.size(); ++i) {
+        const std::string_view arg{args[i]};
+        if ((arg == "--input" || arg == "--output" || arg == "--job-file") &&
+            i + 1 < args.size()) {
+            const std::string value{args[++i]};
+            if (arg == "--output") options.output = value;
+            else options.input = value;
+        } else if (arg == "--pretty") {
+            options.pretty = true;
+        } else {
+            return std::unexpected(Error{"invalid-usage", "usage: nmap-worker [--input FILE] [--output FILE] [--pretty] | --http"});
+        }
+    }
+    return options;
+}
+
+bool write_output(std::string_view path, const std::string& output) {
+    if (path == "-") {
+        std::println("{}", output);
+        return std::fflush(stdout) == 0;
+    }
+    std::filesystem::path target{path};
+    auto temporary = target;
+    temporary += ".tmp-" + std::to_string(::getpid());
+    {
+        std::ofstream stream{temporary, std::ios::binary | std::ios::trunc};
+        stream << output << '\n';
+        if (!stream.flush()) return false;
+    }
+    std::error_code error;
+    std::filesystem::rename(temporary, target, error);
+    if (error) {
+        std::error_code cleanup_error;
+        std::filesystem::remove(temporary, cleanup_error);
+        return false;
+    }
+    return true;
+}
+
+int run_file_mode(const CliOptions& options, const WorkerConfig& config) {
+    const auto input = read_job_file(options.input);
     if (!input) {
-        std::println("{}", serialize_error(input.error()));
-        return EXIT_FAILURE;
+        const auto output = serialize_failed_job("", input.error(), config.maximum_limits);
+        if (!write_output(options.output, output)) return EXIT_FAILURE;
+        return 2;
     }
     const auto job = parse_scan_job(*input, config.maximum_limits);
     if (!job) {
-        std::println("{}", serialize_error(job.error()));
-        return EXIT_FAILURE;
+        std::string output = serialize_failed_job(*input, job.error(), config.maximum_limits);
+        if (options.pretty) output = nlohmann::json::parse(output).dump(2);
+        if (!write_output(options.output, output)) return EXIT_FAILURE;
+        return 2;
     }
     const auto result = scan_job(*job, config.process, std::stop_token{});
-    std::println("{}", serialize_job_result(result));
-    return result.status == "completed" ? EXIT_SUCCESS : EXIT_FAILURE;
+    std::string output = serialize_job_result(result);
+    if (options.pretty) output = nlohmann::json::parse(output).dump(2);
+    if (!write_output(options.output, output)) return EXIT_FAILURE;
+    return result.status == "failed" ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 void wait_interval(std::chrono::milliseconds duration, std::stop_token stop_token) {
@@ -195,12 +259,21 @@ int main(int argc, char* argv[]) {
             std::println(stderr, "configuration error: {}", config.error().message);
             return EXIT_FAILURE;
         }
-        if (argc == 3 && std::string_view{argv[1]} == "--job-file") {
-            return nmap_worker::run_file_mode(argv[2], *config);
+        if (argc == 2 && std::string_view{argv[1]} == "--version") {
+            std::println("nmap-worker {}", NMAP_WORKER_VERSION);
+            return EXIT_SUCCESS;
         }
-        if (argc != 1) {
-            std::println(stderr, "usage: nmap-worker [--job-file path]");
-            return EXIT_FAILURE;
+        if (argc == 2 && std::string_view{argv[1]} == "--help") {
+            std::println("usage: nmap-worker [--input FILE] [--output FILE] [--pretty] | --http");
+            return EXIT_SUCCESS;
+        }
+        if (!(argc == 2 && std::string_view{argv[1]} == "--http")) {
+            const auto cli = nmap_worker::parse_cli({argv, static_cast<std::size_t>(argc)});
+            if (!cli) {
+                std::println(stderr, "{}", cli.error().message);
+                return 2;
+            }
+            return nmap_worker::run_file_mode(*cli, *config);
         }
         if (config->token.empty()) {
             std::println(stderr, "WORKER_TOKEN is required in HTTP mode");

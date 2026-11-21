@@ -26,12 +26,14 @@ pnpm dojo:up        # DefectDojo only
 pnpm dojo:logs      # follow the DefectDojo containers (initializer included)
 pnpm dojo:smoke     # check the API token and import sample findings
 
-# workers (docker-compose.workers.yml): masscan-worker only
+# workers (docker-compose.workers.yml)
 pnpm workers:build                # build the masscan-worker image
 pnpm workers:masscan < job.json   # one masscan sweep, result JSON on stdout
+pnpm workers:nmap:build           # build nmap-worker and run its tests
+pnpm workers:nmap < apps/workers/nmap-worker/examples/job-local.json > result.json
 ```
 
-nmap-worker is opt-in, so it has no pnpm script. Start it explicitly when you need it:
+nmap-worker's long-running HTTP pull mode is opt-in. Start it explicitly when you need it:
 
 ```bash
 docker compose -f docker/docker-compose.workers.yml --profile nmap up -d --build
@@ -47,7 +49,7 @@ docker compose -f docker/docker-compose.workers.yml --profile nmap down
 
 ## nmap-worker
 
-Opt-in (profile `nmap`, see the commands above). By default it connects to the backend on the host via `host.docker.internal:3001`. Set `WORKER_TOKEN` before starting the worker. The backend worker endpoints are not implemented yet; the worker can be exercised with a JSON job file until they are available. Compose selects SYN scanning and grants `cap_add: [NET_RAW, NET_ADMIN]`. Details are in [`apps/workers/nmap-worker/README.md`](../apps/workers/nmap-worker/README.md).
+Use `pnpm workers:nmap:build` and `pnpm workers:nmap < job.json` for one-shot jobs, as with masscan. The opt-in HTTP pull mode connects to the backend on the host via `host.docker.internal:3001`; set `WORKER_TOKEN` before starting it. The backend worker endpoints are not implemented yet. Compose selects SYN scanning, grants `cap_add: [NET_RAW, NET_ADMIN]`, and sets `NMAP_PRIVILEGED=1` so Nmap recognizes the granted capabilities. Details are in [`apps/workers/nmap-worker/README.md`](../apps/workers/nmap-worker/README.md).
 
 ## masscan-worker
 

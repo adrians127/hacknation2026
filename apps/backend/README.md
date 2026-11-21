@@ -147,7 +147,7 @@ The result a worker sends for a job is fixed in [`docs/worker-result-format.md`]
 | Layer | Model | One row per | Notes |
 |---|---|---|---|
 | Observations (`prisma/schema/results/`), appended, never edited | `ScanJobResult` | lease | The `scan` envelope; `params` keeps `nmapArgs` for the safety audit |
-| | `HostObservation` | scan + address | **Every** address of the job, `down` included, so a scan's coverage is known; `ipNumber` (BigInt) for CIDR range queries |
+| | `HostObservation` | job result + address | **Every** address of the job, `down` included. Results from separate worker runs remain available for comparison; `ipNumber` (BigInt) supports CIDR range queries |
 | | `HostnameObservation` | observation + name + source | `job`, `ptr`, `tls_san` |
 | | `PortObservation` | observation + protocol + port | Service detection in columns, `fingerprint` for diffs, everything else in `details` (JSONB) |
 | Assets (`prisma/schema/hosts/`), live across scans | `Host` | address ever `up` | `firstSeenAt`/`lastSeenAt`; `note` (encrypted), `tags` and `triage` belong to users and ingest never writes them (PDF item 14) |
@@ -160,7 +160,7 @@ The result a worker sends for a job is fixed in [`docs/worker-result-format.md`]
 **Rules ingest applies:**
 - **Idempotency:** `ScanJobResult.leaseId` is unique. A result resent under the same lease is a no-op that returns the stored id.
 - **Scope:** the job must exist and belong to `scan.scanId` (404 / 400). Every address must be inside the job's `targets`, and every open port inside the scan's `ports` (400 otherwise, nothing is written).
-- **Retries:** `(scanId, ip)` is unique. A later result for the same address replaces the earlier observation, except that an inconclusive status (`timeout`, `cancelled`, `failed`) never replaces a conclusive one (`up`, `down`).
+- **Separate runs:** `(resultId, ip)` is unique. A new lease writes its own host and port observations, even when another result in the same scan reported the same address. Same-lease resends remain idempotent.
 - **Seen window:** results may arrive out of order, so ingest only ever widens `firstSeenAt`/`lastSeenAt`.
 - **Fingerprint** (`fingerprint.ts`): SHA-256 over the service detection and, per HTTP endpoint, status, title, final path, software headers (`server`, `x-powered-by`, …), certificate and favicon hashes. Request-dependent values (dates, cookie values, body hashes, query strings) are left out so unchanged pages do not show up as changed.
 - `ScanJob` itself (status, timings) is not touched: its lifecycle belongs to the lease handlers.
@@ -175,6 +175,12 @@ Users reach hosts through scans: `/scans` → a scan → the hosts it saw (`modu
 | `GET /scans/{id}` | The same plus parameters, jobs by status, the base scan and the change counts |
 | `GET /scans/{id}/hosts` | The scan's hosts with their services, as this scan saw them, paged in address order. Filters: `q` (IP prefix, hostname, tag, port, service name/product, HTTP title), `triage` (host or any service), `change` |
 | `GET /scans/{id}/hosts/{hostId}` | One host in that scan: decrypted HTTP details, banner, NSE scripts, and the address's scan history |
+
+When several worker results in one scan report the same IP, the stored observations remain
+separate. These endpoints select one effective observation per IP: `up` takes precedence over
+`down`, then `timeout`, `cancelled` and `failed`; among matching statuses Nmap takes
+precedence over discovery, then the latest observation. Scan counters, diffs and history
+use that same selection, so a retry does not duplicate a host in the scan view.
 
 **Changes** (`scan-diff.ts`, PDF items 8–9) compare a scan with its **base scan**, the previous scan (by `createdAt`) that has results. They follow the rules in [`docs/worker-result-format.md`](../../docs/worker-result-format.md#what-the-backend-derives):
 - Hosts are keyed by IP and services by IP + protocol + port. A service is `changed` when its `fingerprint` differs.

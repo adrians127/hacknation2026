@@ -1,0 +1,15 @@
+{
+  "job_id": "0193a1aa-6c1e-7b3f-9d2a-4e5f60718293",
+  "lease_id": "local-smoke-lease",
+  "scan_id": "0193a0f2-1b2c-7d3e-8f40-516273849506",
+  "subnet": "127.0.0.1/32",
+  "deadline": "2099-01-01T00:00:00Z",
+  "limits": {
+    "max_parallel": 1,
+    "max_rate_per_process": 50,
+    "host_timeout_ms": 30000
+  },
+  "targets": [
+    { "ip": "127.0.0.1", "tcp_ports": [1] }
+  ]
+}
