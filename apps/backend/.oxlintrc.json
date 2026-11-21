@@ -5,5 +5,8 @@
   "env": {
     "node": true
   },
+  "rules": {
+    "no-underscore-dangle": ["warn", { "allow": ["_count"] }]
+  },
   "ignorePatterns": ["dist/**", "logs/**", "src/generated/**"]
 }

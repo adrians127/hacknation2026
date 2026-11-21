@@ -42,6 +42,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
       // 5xx messages may leak internals; only show them on a laptop.
       message: status >= 500 && !isDevelopment ? "Internal Server Error" : message,
       status,
+      ...(err instanceof HttpError && err.code ? { code: err.code } : {}),
       ...(isDevelopment && err instanceof Error ? { stack: err.stack } : {}),
     },
   };

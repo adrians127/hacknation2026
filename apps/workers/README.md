@@ -17,7 +17,7 @@ Workers have no database access. Only the backend writes to it (Prisma). Each wo
 3. **Result**: sends results and metrics (duration, host count) back over REST, and the backend adaptively sizes the next batches based on those measurements.
 4. **Heartbeat** extends the lease. A lease without a heartbeat expires and the batch returns to the pool.
 
-Worker endpoints will be described in `packages/contracts` (tag `Workers`), together with the rest of the API. Worker authentication (a machine token) will be decided together with the auth module.
+Worker endpoints will be described in `packages/contracts` (tag `Workers`), together with the rest of the API. Worker authentication (a machine token) is not covered by the user auth module; it will be designed together with the scan module.
 
 ## Scan safety (PDF requirement)
 

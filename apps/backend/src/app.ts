@@ -1,3 +1,4 @@
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Express } from "express";
 import helmet from "helmet";
@@ -8,6 +9,7 @@ import { buildApiDocs } from "~backend/lib/api-docs";
 import { requestLogger } from "~backend/lib/logger";
 import { errorHandler } from "~backend/middleware/error-handler";
 import { notFound } from "~backend/middleware/not-found";
+import { trustedOrigin } from "~backend/middleware/trusted-origin";
 import { apiRouter } from "~backend/routes";
 
 export function buildApp(): Express {
@@ -27,7 +29,9 @@ export function buildApp(): Express {
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(express.json({ limit: "1mb" }));
+  app.use(cookieParser());
   app.use(requestLogger);
+  app.use(trustedOrigin);
 
   app.use("/v1", apiRouter);
 

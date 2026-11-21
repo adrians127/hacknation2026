@@ -64,7 +64,11 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - **Contract:** `contracts/*.schema.ts` (zod) → `pnpm generate` → `openapi.json` → `api-client` (types) → frontend (`api.useQuery("get", "/path")`). The backend validates requests with the same schemas. The C++ workers take their endpoint definitions from the same `openapi.json`.
 - **Frontend mocks:** an endpoint the backend doesn't have yet is mocked only in the feature's `api/` hooks (TanStack Query), never in components, so switching to the backend changes one function. See [`apps/frontend/README.md`](apps/frontend/README.md#mocking-endpoints-the-backend-doesnt-have-yet).
 - **Workers ↔ backend:** HTTP pull. A worker takes a batch of work (lease + heartbeat) and sends results back over REST. Workers have no database access.
-- **Auth/RBAC:** local accounts (argon2) and a JWT in an httpOnly cookie. The four roles from the PDF (item 13). Not implemented yet.
+- **Auth/RBAC (implemented):**
+  - local accounts (argon2id) and a 15-minute access JWT plus a rotating refresh token, both in httpOnly cookies;
+  - roles are database rows built from the `resource:action` catalog in `contracts/src/auth/permissions.ts`;
+  - the PDF's four roles (item 13) are locked system roles, and admins create custom roles (item 12);
+  - details and the rules for mapping new permissions onto system roles: [`apps/backend/README.md`](apps/backend/README.md#auth-and-rbac).
 - **Sensitive data:** encrypted at rest at the application level. To be designed together with the models.
 - **DefectDojo:** a local instance runs in `docker/` (`http://localhost:8080`, fixed dev API token). The backend will push findings through `/api/v2/import-scan/`. Not implemented yet.
 
@@ -79,11 +83,11 @@ pnpm dev            # turbo dev: backend :3001 (+ /docs), frontend :3000
 pnpm build          # turbo build
 pnpm lint           # type-aware oxlint in every workspace
 pnpm check-types    # tsc (TS 7; api-client: TS 6)
-pnpm test           # vitest
+pnpm test           # vitest (backend tests need `pnpm db:up`: they use a separate hacknation_test database)
 pnpm generate       # contracts -> openapi.json -> api-client/src/generated (commit the output)
 pnpm clean
 pnpm db:up          # PostgreSQL in Docker (pnpm db:logs)
-pnpm db:reset       # drop + migrations + seed
+pnpm db:reset       # drop + migrations + seed (system roles, admin, demo accounts)
 pnpm infra:up       # all default compose services, DefectDojo included (infra:down, infra:logs)
 pnpm dojo:up        # DefectDojo only, :8080 (dojo:logs, dojo:smoke)
 pnpm workers:build  # build worker images (workers:up, workers:down, workers:logs)
@@ -95,6 +99,7 @@ pnpm workers:build  # build worker images (workers:up, workers:down, workers:log
 - Import aliases: `@/*` → `apps/frontend/src/*`, `~backend/*` → `apps/backend/src/*`.
 - Every workspace has its own `tsconfig.json` and `.oxlintrc.json` (the latter extends the root `.oxlintrc.json`). TS 6+ defaults to `types: []`, so list `types` (e.g. `["node"]`, `["vite/client"]`) explicitly.
 - **Adding dependencies:** before adding a package, check its latest version on npm (`npm view <pkg> version`). Never write a version from memory. `pnpm-workspace.yaml` sets `minimumReleaseAge: 2880` (48 h). If the latest version is younger than that, use the newest version that is more than 48 h old. Do not disable this safeguard.
+- **Every protected endpoint:** `requireAuth` + `requirePermission("<resource>:<action>")` in its routes file, `security: cookieAuth` in its contract registration, and the permission named in the description. A new permission goes into the catalog and `SYSTEM_ROLE_PERMISSIONS` (see the backend README). The frontend hides or blocks the matching UI with `useCan` / `GuardedButton`, which is a hint only.
 - **Scanner safety** (PDF, section 2): detection only, no exploitation and no login attempts. The rate is always limited. Only allowed ports and ranges are scanned. When the time window is exceeded, the scan stops.
 - **Comments only for non-obvious things, and short:**
   - Write them only for a constraint that will surprise the next person, a rejected obvious alternative, or something that looks like a bug but is not.

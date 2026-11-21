@@ -13,10 +13,11 @@ const outputPath = join(here, "../openapi.json");
 async function main(): Promise<void> {
   await importRegistries();
 
-  registry.registerComponent("securitySchemes", "bearerAuth", {
-    type: "http",
-    scheme: "bearer",
-    bearerFormat: "JWT",
+  registry.registerComponent("securitySchemes", "cookieAuth", {
+    type: "apiKey",
+    in: "cookie",
+    name: "asi_access",
+    description: "Access JWT set by `POST /auth/login`, refreshed through `POST /auth/refresh`.",
   });
 
   const generator = new OpenApiGeneratorV31(registry.definitions);
@@ -28,7 +29,12 @@ async function main(): Promise<void> {
       description: "Generated from @hacknation/contracts zod schemas. Do not edit by hand.",
     },
     servers: [{ url: "http://localhost:3001/v1", description: "Local development" }],
-    tags: [{ name: "Health", description: "Service health checks" }],
+    tags: [
+      { name: "Auth", description: "Sign-in, session and the current user" },
+      { name: "Health", description: "Service health checks" },
+      { name: "Roles", description: "System and custom roles (RBAC)" },
+      { name: "Users", description: "User accounts, managed by administrators" },
+    ],
   });
 
   await writeFile(outputPath, `${JSON.stringify(document, null, 2)}\n`);

@@ -18,7 +18,8 @@
     },
     "lint": {},
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "passThroughEnv": ["DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_SSLMODE"]
     },
     "check-types": {
       "dependsOn": ["^check-types"]

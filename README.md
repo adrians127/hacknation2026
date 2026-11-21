@@ -27,8 +27,16 @@ A prototype tool for recurring discovery scans of large infrastructure (>10,000 
 pnpm install          # dependencies + prisma generate
 pnpm project:setup    # .env.example -> .env in every app
 pnpm db:up            # PostgreSQL in Docker
+pnpm db:reset         # migrations + seed: system roles, admin and demo accounts
 pnpm dev              # backend :3001 (Swagger: /docs) + frontend :3000
 ```
+
+Sign in at `http://localhost:3000` with the accounts from `apps/backend/.env.example` (change them outside local development):
+
+| Account | Role | Password |
+|---|---|---|
+| `admin@hacknation.local` | Administrator | `ADMIN_PASSWORD` (`admin-change-me-now`) |
+| `editor@hacknation.local`, `analyst@hacknation.local`, `viewer@hacknation.local` | Editor, Analyst, Viewer | `DEMO_USER_PASSWORD` (`demo-password-2026`) |
 
 nmap worker: `pnpm workers:up` (builds the image and starts it).
 
@@ -37,7 +45,7 @@ nmap worker: `pnpm workers:up` (builds the image and starts it).
 ```bash
 pnpm lint             # oxlint (type-aware)
 pnpm check-types      # TypeScript 7
-pnpm test             # Vitest
+pnpm test             # Vitest (backend tests need `pnpm db:up`)
 pnpm build
 pnpm generate         # after a contract change: openapi.json + client types
 ```
