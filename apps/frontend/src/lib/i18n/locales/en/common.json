@@ -81,6 +81,31 @@
       "deleted": "Target deleted."
     }
   },
+  "scans": {
+    "title": "Scans",
+    "subtitle": "History of discovery scans",
+    "start": "Start scan",
+    "starting": "Starting…",
+    "columns": {
+      "id": "Scan",
+      "status": "Status",
+      "targets": "Targets",
+      "hosts": "Hosts",
+      "services": "Services",
+      "started": "Started",
+      "duration": "Duration"
+    },
+    "statuses": {
+      "queued": "Queued",
+      "running": "Running",
+      "completed": "Completed",
+      "stopped": "Stopped",
+      "failed": "Failed"
+    },
+    "toast": {
+      "started": "Scan started."
+    }
+  },
   "language": {
     "switchTo": "Polski"
   },
@@ -108,6 +133,7 @@
     "label": "Main navigation",
     "dashboard": "Dashboard",
     "targets": "Targets",
+    "scans": "Scans",
     "users": "Users",
     "roles": "Roles"
   },

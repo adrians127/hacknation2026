@@ -81,6 +81,31 @@
       "deleted": "Usunięto cel."
     }
   },
+  "scans": {
+    "title": "Skany",
+    "subtitle": "Historia skanów discovery",
+    "start": "Uruchom skan",
+    "starting": "Uruchamianie…",
+    "columns": {
+      "id": "Skan",
+      "status": "Status",
+      "targets": "Cele",
+      "hosts": "Hosty",
+      "services": "Usługi",
+      "started": "Rozpoczęto",
+      "duration": "Czas trwania"
+    },
+    "statuses": {
+      "queued": "W kolejce",
+      "running": "W toku",
+      "completed": "Zakończony",
+      "stopped": "Zatrzymany",
+      "failed": "Błąd"
+    },
+    "toast": {
+      "started": "Uruchomiono skan."
+    }
+  },
   "language": {
     "switchTo": "English"
   },
@@ -108,6 +133,7 @@
     "label": "Nawigacja główna",
     "dashboard": "Pulpit",
     "targets": "Cele",
+    "scans": "Skany",
     "users": "Użytkownicy",
     "roles": "Role"
   },
