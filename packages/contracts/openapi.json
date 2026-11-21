@@ -27,6 +27,10 @@
     {
       "name": "Users",
       "description": "User accounts, managed by administrators"
+    },
+    {
+      "name": "Workers",
+      "description": "Scanning worker lease and result protocol"
     }
   ],
   "components": {
@@ -36,6 +40,10 @@
         "in": "cookie",
         "name": "asi_access",
         "description": "Access JWT set by `POST /auth/login`, refreshed through `POST /auth/refresh`."
+      },
+      "workerToken": {
+        "type": "http",
+        "scheme": "bearer"
       }
     },
     "schemas": {
@@ -344,6 +352,246 @@
           "lastLoginAt",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "NmapJob": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "lease_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "subnet": {
+            "type": "string",
+            "format": "ipv4-cidr"
+          },
+          "deadline": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "max_parallel": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "max_rate_per_process": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "host_timeout_ms": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            }
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ip": {
+                  "type": "string",
+                  "format": "ip"
+                },
+                "domain": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 253
+                },
+                "tcp_ports": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  "minItems": 1,
+                  "maxItems": 4096
+                }
+              },
+              "required": [
+                "ip",
+                "tcp_ports"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 1024
+          }
+        },
+        "required": [
+          "job_id",
+          "lease_id",
+          "subnet",
+          "deadline",
+          "targets"
+        ]
+      },
+      "NmapResult": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "lease_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "partial"
+            ]
+          },
+          "duration_ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hosts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ip": {
+                  "type": "string",
+                  "format": "ip"
+                },
+                "domain": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "scanned",
+                    "failed",
+                    "timeout",
+                    "cancelled"
+                  ]
+                },
+                "error": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "ports": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      },
+                      "protocol": {
+                        "type": "string",
+                        "enum": [
+                          "tcp"
+                        ]
+                      },
+                      "state": {
+                        "type": "string"
+                      },
+                      "service": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "product": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "string"
+                          },
+                          "cpe": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "product",
+                          "version",
+                          "cpe"
+                        ]
+                      },
+                      "scripts": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "output": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "output"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "number",
+                      "protocol",
+                      "state",
+                      "service",
+                      "scripts"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "ip",
+                "domain",
+                "status",
+                "ports"
+              ]
+            }
+          }
+        },
+        "required": [
+          "job_id",
+          "lease_id",
+          "status",
+          "duration_ms",
+          "hosts"
         ]
       }
     },
@@ -2001,6 +2249,348 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/workers/nmap/lease": {
+      "post": {
+        "operationId": "leaseNmapJob",
+        "tags": [
+          "Workers"
+        ],
+        "security": [
+          {
+            "workerToken": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Leased Nmap job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "lease_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "subnet": {
+                      "type": "string",
+                      "format": "ipv4-cidr"
+                    },
+                    "deadline": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+                    },
+                    "limits": {
+                      "type": "object",
+                      "properties": {
+                        "max_parallel": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "max_rate_per_process": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "host_timeout_ms": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        }
+                      }
+                    },
+                    "targets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "domain": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 253
+                          },
+                          "tcp_ports": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 65535
+                            },
+                            "minItems": 1,
+                            "maxItems": 4096
+                          }
+                        },
+                        "required": [
+                          "ip",
+                          "tcp_ports"
+                        ]
+                      },
+                      "minItems": 1,
+                      "maxItems": 1024
+                    }
+                  },
+                  "required": [
+                    "job_id",
+                    "lease_id",
+                    "subnet",
+                    "deadline",
+                    "targets"
+                  ]
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Nmap job is available"
+          }
+        }
+      }
+    },
+    "/workers/nmap/heartbeat": {
+      "post": {
+        "operationId": "heartbeatNmapJob",
+        "tags": [
+          "Workers"
+        ],
+        "security": [
+          {
+            "workerToken": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "job_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "lease_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "job_id",
+                  "lease_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Lease extended"
+          }
+        }
+      }
+    },
+    "/workers/nmap/results": {
+      "post": {
+        "operationId": "submitNmapResult",
+        "tags": [
+          "Workers"
+        ],
+        "security": [
+          {
+            "workerToken": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "job_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "lease_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "completed",
+                      "partial"
+                    ]
+                  },
+                  "duration_ms": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "hosts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ip": {
+                          "type": "string",
+                          "format": "ip"
+                        },
+                        "domain": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "scanned",
+                            "failed",
+                            "timeout",
+                            "cancelled"
+                          ]
+                        },
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message"
+                          ]
+                        },
+                        "ports": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "number": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 65535
+                              },
+                              "protocol": {
+                                "type": "string",
+                                "enum": [
+                                  "tcp"
+                                ]
+                              },
+                              "state": {
+                                "type": "string"
+                              },
+                              "service": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "product": {
+                                    "type": "string"
+                                  },
+                                  "version": {
+                                    "type": "string"
+                                  },
+                                  "cpe": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "product",
+                                  "version",
+                                  "cpe"
+                                ]
+                              },
+                              "scripts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "output": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "output"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "number",
+                              "protocol",
+                              "state",
+                              "service",
+                              "scripts"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "ip",
+                        "domain",
+                        "status",
+                        "ports"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "job_id",
+                  "lease_id",
+                  "status",
+                  "duration_ms",
+                  "hosts"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Result accepted"
           }
         }
       }

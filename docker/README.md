@@ -33,7 +33,7 @@ pnpm workers:down
 
 ## nmap-worker
 
-By default it connects to the backend on the host via `host.docker.internal:3001`. It has `cap_add: [NET_RAW, NET_ADMIN]`. Details are in [`apps/workers/nmap-worker/README.md`](../apps/workers/nmap-worker/README.md).
+By default it connects to the backend on the host via `host.docker.internal:3001`. Set `WORKER_TOKEN` before starting the worker. The backend worker endpoints are not implemented yet; the worker can be exercised with a JSON job file until they are available. Compose selects SYN scanning and grants `cap_add: [NET_RAW, NET_ADMIN]`. Details are in [`apps/workers/nmap-worker/README.md`](../apps/workers/nmap-worker/README.md).
 
 ## DefectDojo
 

@@ -60,6 +60,8 @@ services:
     environment:
       # The backend runs on the host via `pnpm dev`.
       BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:3001/v1}
+      WORKER_TOKEN: ${WORKER_TOKEN:-}
+      NMAP_SCAN_TYPE: syn
     extra_hosts:
       - "host.docker.internal:host-gateway"
     cap_add:

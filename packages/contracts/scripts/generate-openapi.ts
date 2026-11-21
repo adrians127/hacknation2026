@@ -19,6 +19,10 @@ async function main(): Promise<void> {
     name: "asi_access",
     description: "Access JWT set by `POST /auth/login`, refreshed through `POST /auth/refresh`.",
   });
+  registry.registerComponent("securitySchemes", "workerToken", {
+    type: "http",
+    scheme: "bearer",
+  });
 
   const generator = new OpenApiGeneratorV31(registry.definitions);
   const document = generator.generateDocument({
@@ -34,6 +38,7 @@ async function main(): Promise<void> {
       { name: "Health", description: "Service health checks" },
       { name: "Roles", description: "System and custom roles (RBAC)" },
       { name: "Users", description: "User accounts, managed by administrators" },
+      { name: "Workers", description: "Scanning worker lease and result protocol" },
     ],
   });
 

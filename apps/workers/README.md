@@ -6,18 +6,18 @@ This directory is **not a pnpm workspace** (it has no `package.json`), so turbo 
 
 | Worker | Description |
 |---|---|
-| [`nmap-worker`](nmap-worker/README.md) | Host and service discovery via nmap (skeleton only for now) |
+| [`nmap-worker`](nmap-worker/README.md) | TCP service and version detection on Masscan hits |
 
-## Backend protocol: HTTP pull (settled, not implemented yet)
+## Backend protocol: HTTP pull
 
 Workers have no database access. Only the backend writes to it (Prisma). Each worker:
 
-1. **Lease**: takes a batch of work from the backend (a subgroup of addresses from a scan target) together with its parameters: ports, rate limits, time window, timeout.
-2. **Scan**: runs nmap (`-oX -` → XML parsing) and, optionally, HTTP fingerprinting. It watches the time window and stops working once the window is exceeded.
+1. **Lease**: takes a batch of Masscan hits from the backend, grouped by host, with a subnet scope, rate limits, and a deadline.
+2. **Scan**: runs Nmap only on the supplied IPs and TCP ports, parses its temporary XML output, and stops when the deadline expires.
 3. **Result**: sends results and metrics (duration, host count) back over REST, and the backend adaptively sizes the next batches based on those measurements.
 4. **Heartbeat** extends the lease. A lease without a heartbeat expires and the batch returns to the pool.
 
-Worker endpoints will be described in `packages/contracts` (tag `Workers`), together with the rest of the API. Worker authentication (a machine token) is not covered by the user auth module; it will be designed together with the scan module.
+The Nmap worker sends `WORKER_TOKEN` as a bearer machine token to JSON endpoints described in `packages/contracts` (tag `Workers`). Machine-token validation is separate from user authentication and still needs to be implemented with the backend lease, heartbeat, and result handlers.
 
 ## Scan safety (PDF requirement)
 

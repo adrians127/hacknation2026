@@ -281,6 +281,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workers/nmap/lease": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["leaseNmapJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workers/nmap/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["heartbeatNmapJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workers/nmap/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["submitNmapResult"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -358,6 +406,58 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        NmapJob: {
+            job_id: string;
+            lease_id: string;
+            /** Format: ipv4-cidr */
+            subnet: string;
+            deadline: string;
+            limits?: {
+                max_parallel?: number;
+                max_rate_per_process?: number;
+                host_timeout_ms?: number;
+            };
+            targets: {
+                /** Format: ip */
+                ip: string;
+                domain?: string | null;
+                tcp_ports: number[];
+            }[];
+        };
+        NmapResult: {
+            job_id: string;
+            lease_id: string;
+            /** @enum {string} */
+            status: "completed" | "partial";
+            duration_ms: number;
+            hosts: {
+                /** Format: ip */
+                ip: string;
+                domain: string | null;
+                /** @enum {string} */
+                status: "pending" | "scanned" | "failed" | "timeout" | "cancelled";
+                error?: {
+                    code: string;
+                    message: string;
+                };
+                ports: {
+                    number: number;
+                    /** @enum {string} */
+                    protocol: "tcp";
+                    state: string;
+                    service: {
+                        name: string;
+                        product: string;
+                        version: string;
+                        cpe: string[];
+                    } | null;
+                    scripts: {
+                        id: string;
+                        output: string;
+                    }[];
+                }[];
+            }[];
         };
     };
     responses: never;
@@ -1340,6 +1440,134 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
+            };
+        };
+    };
+    leaseNmapJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Leased Nmap job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        job_id: string;
+                        lease_id: string;
+                        /** Format: ipv4-cidr */
+                        subnet: string;
+                        deadline: string;
+                        limits?: {
+                            max_parallel?: number;
+                            max_rate_per_process?: number;
+                            host_timeout_ms?: number;
+                        };
+                        targets: {
+                            /** Format: ip */
+                            ip: string;
+                            domain?: string | null;
+                            tcp_ports: number[];
+                        }[];
+                    };
+                };
+            };
+            /** @description No Nmap job is available */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    heartbeatNmapJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    job_id: string;
+                    lease_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Lease extended */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    submitNmapResult: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    job_id: string;
+                    lease_id: string;
+                    /** @enum {string} */
+                    status: "completed" | "partial";
+                    duration_ms: number;
+                    hosts: {
+                        /** Format: ip */
+                        ip: string;
+                        domain: string | null;
+                        /** @enum {string} */
+                        status: "pending" | "scanned" | "failed" | "timeout" | "cancelled";
+                        error?: {
+                            code: string;
+                            message: string;
+                        };
+                        ports: {
+                            number: number;
+                            /** @enum {string} */
+                            protocol: "tcp";
+                            state: string;
+                            service: {
+                                name: string;
+                                product: string;
+                                version: string;
+                                cpe: string[];
+                            } | null;
+                            scripts: {
+                                id: string;
+                                output: string;
+                            }[];
+                        }[];
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Result accepted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
