@@ -39,6 +39,10 @@ async function main(): Promise<void> {
       { name: "Roles", description: "System and custom roles (RBAC)" },
       { name: "Targets", description: "IP addresses, CIDR ranges and domains to scan" },
       { name: "Users", description: "User accounts, managed by administrators" },
+      {
+        name: "Vulnerabilities",
+        description: "Vulnerability databases (NVD, OSV), their sync and the triage of matches",
+      },
       { name: "Workers", description: "Scanning worker lease and result protocol" },
     ],
   });

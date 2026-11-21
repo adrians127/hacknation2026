@@ -33,6 +33,10 @@
       "description": "User accounts, managed by administrators"
     },
     {
+      "name": "Vulnerabilities",
+      "description": "Vulnerability databases (NVD, OSV), their sync and the triage of matches"
+    },
+    {
       "name": "Workers",
       "description": "Scanning worker lease and result protocol"
     }
@@ -77,7 +81,9 @@
                   "SYSTEM_ROLE_READ_ONLY",
                   "ROLE_IN_USE",
                   "EMAIL_TAKEN",
-                  "ROLE_NAME_TAKEN"
+                  "ROLE_NAME_TAKEN",
+                  "PACKAGE_MAPPING_EXISTS",
+                  "SOURCE_DISABLED"
                 ]
               },
               "details": {}
@@ -155,7 +161,12 @@
                 "targets:delete",
                 "scans:read",
                 "scans:run",
-                "hosts:update"
+                "hosts:update",
+                "vulnerabilities:read",
+                "vulnerabilities:update",
+                "vulnerabilities:create",
+                "vulnerabilities:delete",
+                "vulnerabilities:run"
               ]
             }
           },
@@ -257,7 +268,12 @@
                 "targets:delete",
                 "scans:read",
                 "scans:run",
-                "hosts:update"
+                "hosts:update",
+                "vulnerabilities:read",
+                "vulnerabilities:update",
+                "vulnerabilities:create",
+                "vulnerabilities:delete",
+                "vulnerabilities:run"
               ]
             }
           },
@@ -471,6 +487,322 @@
           "lastLoginAt",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "VulnerabilitySource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "recordCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lastIncrementalAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastFullAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastSuccessAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextIncrementalAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "nextFullAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "running": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "incremental",
+                  "full"
+                ]
+              },
+              "trigger": {
+                "type": "string",
+                "enum": [
+                  "schedule",
+                  "manual",
+                  "cli"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "succeeded",
+                  "failed",
+                  "cancelled",
+                  "interrupted"
+                ]
+              },
+              "startedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "stats": {
+                "type": "object",
+                "properties": {
+                  "upserted": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "unchanged": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "withdrawn": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "swept": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "matchesAdded": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "matchesRetracted": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "matchesReactivated": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "upserted",
+                  "unchanged",
+                  "withdrawn",
+                  "swept",
+                  "matchesAdded",
+                  "matchesRetracted",
+                  "matchesReactivated"
+                ]
+              },
+              "error": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "sourceId",
+              "mode",
+              "trigger",
+              "status",
+              "startedAt",
+              "finishedAt",
+              "stats",
+              "error"
+            ]
+          },
+          "pendingRequest": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "sync",
+                  "full_sync",
+                  "rematch"
+                ]
+              },
+              "sourceId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "sourceId",
+              "createdAt"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "enabled",
+          "baseUrl",
+          "scopes",
+          "recordCount",
+          "lastIncrementalAt",
+          "lastFullAt",
+          "lastSuccessAt",
+          "lastError",
+          "nextIncrementalAt",
+          "nextFullAt",
+          "running",
+          "pendingRequest"
+        ]
+      },
+      "VulnerabilityJobRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "sync",
+              "full_sync",
+              "rematch"
+            ]
+          },
+          "sourceId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "sourceId",
+          "createdAt"
+        ]
+      },
+      "PackageMapping": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cpeVendor": {
+            "type": "string"
+          },
+          "cpeProduct": {
+            "type": "string"
+          },
+          "ecosystem": {
+            "type": "string"
+          },
+          "packageName": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "displayName"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "cpeVendor",
+          "cpeProduct",
+          "ecosystem",
+          "packageName",
+          "createdAt",
+          "createdBy"
         ]
       },
       "NmapJob": {
@@ -2144,7 +2476,12 @@
                                 "targets:delete",
                                 "scans:read",
                                 "scans:run",
-                                "hosts:update"
+                                "hosts:update",
+                                "vulnerabilities:read",
+                                "vulnerabilities:update",
+                                "vulnerabilities:create",
+                                "vulnerabilities:delete",
+                                "vulnerabilities:run"
                               ]
                             }
                           },
@@ -2251,10 +2588,15 @@
                         "targets:delete",
                         "scans:read",
                         "scans:run",
-                        "hosts:update"
+                        "hosts:update",
+                        "vulnerabilities:read",
+                        "vulnerabilities:update",
+                        "vulnerabilities:create",
+                        "vulnerabilities:delete",
+                        "vulnerabilities:run"
                       ]
                     },
-                    "maxItems": 15
+                    "maxItems": 20
                   }
                 },
                 "required": [
@@ -2397,7 +2739,12 @@
                           "targets:delete",
                           "scans:read",
                           "scans:run",
-                          "hosts:update"
+                          "hosts:update",
+                          "vulnerabilities:read",
+                          "vulnerabilities:update",
+                          "vulnerabilities:create",
+                          "vulnerabilities:delete",
+                          "vulnerabilities:run"
                         ]
                       }
                     },
@@ -2548,10 +2895,15 @@
                         "targets:delete",
                         "scans:read",
                         "scans:run",
-                        "hosts:update"
+                        "hosts:update",
+                        "vulnerabilities:read",
+                        "vulnerabilities:update",
+                        "vulnerabilities:create",
+                        "vulnerabilities:delete",
+                        "vulnerabilities:run"
                       ]
                     },
-                    "maxItems": 15
+                    "maxItems": 20
                   }
                 }
               }
@@ -3242,6 +3594,20 @@
             "required": false,
             "name": "change",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "any",
+                "critical",
+                "high",
+                "kev"
+              ]
+            },
+            "required": false,
+            "name": "vulnerability",
+            "in": "query"
           }
         ],
         "responses": {
@@ -3325,6 +3691,44 @@
                           },
                           "note": {
                             "type": "string"
+                          },
+                          "vulnerabilities": {
+                            "type": "object",
+                            "properties": {
+                              "confirmed": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "potential": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "kev": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "maxSeverity": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "critical",
+                                  "high",
+                                  "medium",
+                                  "low",
+                                  "none",
+                                  "unknown",
+                                  null
+                                ]
+                              }
+                            },
+                            "required": [
+                              "confirmed",
+                              "potential",
+                              "kev",
+                              "maxSeverity"
+                            ]
                           },
                           "services": {
                             "type": "array",
@@ -3484,6 +3888,44 @@
                                 },
                                 "note": {
                                   "type": "string"
+                                },
+                                "vulnerabilities": {
+                                  "type": "object",
+                                  "properties": {
+                                    "confirmed": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "potential": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "kev": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "maxSeverity": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "enum": [
+                                        "critical",
+                                        "high",
+                                        "medium",
+                                        "low",
+                                        "none",
+                                        "unknown",
+                                        null
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "confirmed",
+                                    "potential",
+                                    "kev",
+                                    "maxSeverity"
+                                  ]
                                 }
                               },
                               "required": [
@@ -3496,7 +3938,8 @@
                                 "http",
                                 "triage",
                                 "tags",
-                                "note"
+                                "note",
+                                "vulnerabilities"
                               ]
                             }
                           }
@@ -3512,6 +3955,7 @@
                           "triage",
                           "tags",
                           "note",
+                          "vulnerabilities",
                           "services"
                         ]
                       }
@@ -3691,6 +4135,44 @@
                     },
                     "note": {
                       "type": "string"
+                    },
+                    "vulnerabilities": {
+                      "type": "object",
+                      "properties": {
+                        "confirmed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "potential": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "kev": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "maxSeverity": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "enum": [
+                            "critical",
+                            "high",
+                            "medium",
+                            "low",
+                            "none",
+                            "unknown",
+                            null
+                          ]
+                        }
+                      },
+                      "required": [
+                        "confirmed",
+                        "potential",
+                        "kev",
+                        "maxSeverity"
+                      ]
                     },
                     "services": {
                       "type": "array",
@@ -4214,6 +4696,44 @@
                           "note": {
                             "type": "string"
                           },
+                          "vulnerabilities": {
+                            "type": "object",
+                            "properties": {
+                              "confirmed": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "potential": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "kev": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "maxSeverity": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "critical",
+                                  "high",
+                                  "medium",
+                                  "low",
+                                  "none",
+                                  "unknown",
+                                  null
+                                ]
+                              }
+                            },
+                            "required": [
+                              "confirmed",
+                              "potential",
+                              "kev",
+                              "maxSeverity"
+                            ]
+                          },
                           "reason": {
                             "type": [
                               "string",
@@ -4308,6 +4828,222 @@
                           "lastSeenAt": {
                             "type": "string",
                             "format": "date-time"
+                          },
+                          "vulnerabilityMatches": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "canonicalId": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "description": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "severity": {
+                                  "type": "string",
+                                  "enum": [
+                                    "critical",
+                                    "high",
+                                    "medium",
+                                    "low",
+                                    "none",
+                                    "unknown"
+                                  ]
+                                },
+                                "cvssScore": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ]
+                                },
+                                "cvssVector": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "kevAddedAt": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "format": "date-time"
+                                },
+                                "publishedAt": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "format": "date-time"
+                                },
+                                "confidence": {
+                                  "type": "string",
+                                  "enum": [
+                                    "confirmed",
+                                    "potential"
+                                  ]
+                                },
+                                "reasons": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "version_unknown",
+                                      "distro_backport_possible",
+                                      "fixed_by_backport",
+                                      "platform_condition"
+                                    ]
+                                  }
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "active",
+                                    "retracted"
+                                  ]
+                                },
+                                "retractReason": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "source_withdrawn",
+                                    "criteria_changed",
+                                    "service_changed",
+                                    "source_disabled",
+                                    null
+                                  ]
+                                },
+                                "retractedAt": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "format": "date-time"
+                                },
+                                "firstMatchedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "lastEvaluatedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "basis": {
+                                  "type": "object",
+                                  "properties": {
+                                    "scanId": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "format": "uuid"
+                                    },
+                                    "cpe": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "version": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "scanId",
+                                    "cpe",
+                                    "version"
+                                  ]
+                                },
+                                "evidence": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "sourceId": {
+                                        "type": "string"
+                                      },
+                                      "externalId": {
+                                        "type": "string"
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "format": "uri"
+                                      },
+                                      "verdict": {
+                                        "type": "string",
+                                        "enum": [
+                                          "affected",
+                                          "not_affected",
+                                          "unknown"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "sourceId",
+                                      "externalId",
+                                      "url",
+                                      "verdict"
+                                    ]
+                                  }
+                                },
+                                "references": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uri"
+                                  }
+                                },
+                                "triage": {
+                                  "type": "string",
+                                  "enum": [
+                                    "unreviewed",
+                                    "important",
+                                    "accepted_risk",
+                                    "false_positive"
+                                  ]
+                                },
+                                "note": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "canonicalId",
+                                "title",
+                                "description",
+                                "severity",
+                                "cvssScore",
+                                "cvssVector",
+                                "kevAddedAt",
+                                "publishedAt",
+                                "confidence",
+                                "reasons",
+                                "status",
+                                "retractReason",
+                                "retractedAt",
+                                "firstMatchedAt",
+                                "lastEvaluatedAt",
+                                "basis",
+                                "evidence",
+                                "references",
+                                "triage",
+                                "note"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -4321,6 +5057,7 @@
                           "triage",
                           "tags",
                           "note",
+                          "vulnerabilities",
                           "reason",
                           "extraInfo",
                           "cpe",
@@ -4330,7 +5067,8 @@
                           "banner",
                           "scripts",
                           "firstSeenAt",
-                          "lastSeenAt"
+                          "lastSeenAt",
+                          "vulnerabilityMatches"
                         ]
                       }
                     },
@@ -4405,6 +5143,7 @@
                     "triage",
                     "tags",
                     "note",
+                    "vulnerabilities",
                     "services",
                     "firstSeenAt",
                     "lastSeenAt",
@@ -5360,6 +6099,1102 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vulnerabilities/sources": {
+      "get": {
+        "operationId": "listVulnerabilitySources",
+        "summary": "List the vulnerability databases and their sync state",
+        "description": "Requires `vulnerabilities:read`. Each source (NVD, OSV) is mirrored into the database by the `vuln-sync` process: incrementally every few hours, fully once a week and on request.",
+        "tags": [
+          "Vulnerabilities"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "baseUrl": {
+                            "type": "string"
+                          },
+                          "scopes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "recordCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "lastIncrementalAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "lastFullAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "lastSuccessAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "lastError": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "nextIncrementalAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "nextFullAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "running": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "sourceId": {
+                                "type": "string"
+                              },
+                              "mode": {
+                                "type": "string",
+                                "enum": [
+                                  "incremental",
+                                  "full"
+                                ]
+                              },
+                              "trigger": {
+                                "type": "string",
+                                "enum": [
+                                  "schedule",
+                                  "manual",
+                                  "cli"
+                                ]
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "running",
+                                  "succeeded",
+                                  "failed",
+                                  "cancelled",
+                                  "interrupted"
+                                ]
+                              },
+                              "startedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "finishedAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              },
+                              "stats": {
+                                "type": "object",
+                                "properties": {
+                                  "upserted": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "unchanged": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "withdrawn": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "swept": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "matchesAdded": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "matchesRetracted": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "matchesReactivated": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "upserted",
+                                  "unchanged",
+                                  "withdrawn",
+                                  "swept",
+                                  "matchesAdded",
+                                  "matchesRetracted",
+                                  "matchesReactivated"
+                                ]
+                              },
+                              "error": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "sourceId",
+                              "mode",
+                              "trigger",
+                              "status",
+                              "startedAt",
+                              "finishedAt",
+                              "stats",
+                              "error"
+                            ]
+                          },
+                          "pendingRequest": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "sync",
+                                  "full_sync",
+                                  "rematch"
+                                ]
+                              },
+                              "sourceId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "kind",
+                              "sourceId",
+                              "createdAt"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "displayName",
+                          "enabled",
+                          "baseUrl",
+                          "scopes",
+                          "recordCount",
+                          "lastIncrementalAt",
+                          "lastFullAt",
+                          "lastSuccessAt",
+                          "lastError",
+                          "nextIncrementalAt",
+                          "nextFullAt",
+                          "running",
+                          "pendingRequest"
+                        ]
+                      }
+                    },
+                    "syncProcessActive": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "syncProcessActive"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vulnerabilities/sources/{id}/runs": {
+      "get": {
+        "operationId": "listVulnerabilitySyncRuns",
+        "summary": "List a source's recent sync runs",
+        "description": "Requires `vulnerabilities:read`. Newest first, with what each run changed.",
+        "tags": [
+          "Vulnerabilities"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]{1,32}$"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sync runs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "sourceId": {
+                            "type": "string"
+                          },
+                          "mode": {
+                            "type": "string",
+                            "enum": [
+                              "incremental",
+                              "full"
+                            ]
+                          },
+                          "trigger": {
+                            "type": "string",
+                            "enum": [
+                              "schedule",
+                              "manual",
+                              "cli"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "running",
+                              "succeeded",
+                              "failed",
+                              "cancelled",
+                              "interrupted"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "finishedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "stats": {
+                            "type": "object",
+                            "properties": {
+                              "upserted": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "unchanged": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "withdrawn": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "swept": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "matchesAdded": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "matchesRetracted": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "matchesReactivated": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "upserted",
+                              "unchanged",
+                              "withdrawn",
+                              "swept",
+                              "matchesAdded",
+                              "matchesRetracted",
+                              "matchesReactivated"
+                            ]
+                          },
+                          "error": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "sourceId",
+                          "mode",
+                          "trigger",
+                          "status",
+                          "startedAt",
+                          "finishedAt",
+                          "stats",
+                          "error"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vulnerabilities/sources/{id}/sync": {
+      "post": {
+        "operationId": "requestVulnerabilitySync",
+        "summary": "Ask the sync process to sync a source now",
+        "description": "Requires `vulnerabilities:run`. Queues the request; the `vuln-sync` process picks it up within its poll interval and re-matches every service afterwards. A request already waiting for the same source is returned instead of a new one.",
+        "tags": [
+          "Vulnerabilities"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]{1,32}$"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "incremental",
+                      "full"
+                    ]
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The queued request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VulnerabilityJobRequest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The source is disabled (`SOURCE_DISABLED`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vulnerabilities/sources/{id}": {
+      "patch": {
+        "operationId": "updateVulnerabilitySource",
+        "summary": "Enable or disable a source",
+        "description": "Requires `vulnerabilities:run`. A disabled source is not synced and its matches are retracted (`source_disabled`) at the next re-match; its records stay in the database.",
+        "tags": [
+          "Vulnerabilities"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]{1,32}$"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VulnerabilitySource"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vulnerabilities/mappings": {
+      "get": {
+        "operationId": "listPackageMappings",
+        "summary": "List the CPE → package mappings",
+        "description": "Requires `vulnerabilities:read`. Package databases (OSV) describe packages, not CPE products: a mapping says which package a product reported by the scanner is in a given ecosystem.",
+        "tags": [
+          "Vulnerabilities"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mappings, sorted by vendor and product",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "cpeVendor": {
+                            "type": "string"
+                          },
+                          "cpeProduct": {
+                            "type": "string"
+                          },
+                          "ecosystem": {
+                            "type": "string"
+                          },
+                          "packageName": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "createdBy": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "displayName"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "cpeVendor",
+                          "cpeProduct",
+                          "ecosystem",
+                          "packageName",
+                          "createdAt",
+                          "createdBy"
+                        ]
+                      }
+                    },
+                    "ecosystems": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "ecosystems"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPackageMapping",
+        "summary": "Add a CPE → package mapping",
+        "description": "Requires `vulnerabilities:create`. Queues a re-match of every service.",
+        "tags": [
+          "Vulnerabilities"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cpeVendor": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[a-z0-9][a-z0-9_.\\-+]*$"
+                  },
+                  "cpeProduct": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[a-z0-9][a-z0-9_.\\-+]*$"
+                  },
+                  "ecosystem": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50,
+                    "pattern": "^[A-Za-z][A-Za-z0-9.]*$"
+                  },
+                  "packageName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "pattern": "^\\S+$"
+                  }
+                },
+                "required": [
+                  "cpeVendor",
+                  "cpeProduct",
+                  "ecosystem",
+                  "packageName"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The mapping",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageMapping"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The mapping already exists (`PACKAGE_MAPPING_EXISTS`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vulnerabilities/mappings/{id}": {
+      "delete": {
+        "operationId": "deletePackageMapping",
+        "summary": "Remove a CPE → package mapping",
+        "description": "Requires `vulnerabilities:delete`. Queues a re-match of every service.",
+        "tags": [
+          "Vulnerabilities"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vulnerabilities/services/{serviceId}/{canonicalId}": {
+      "patch": {
+        "operationId": "updateServiceVulnerability",
+        "summary": "Triage a vulnerability of a service",
+        "description": "Requires `vulnerabilities:update`. The verdict belongs to users: it is kept per service and vulnerability, so it survives syncs, retractions and later scans. The note is encrypted at rest.",
+        "tags": [
+          "Vulnerabilities"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "serviceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9:_.-]{1,100}$"
+            },
+            "required": true,
+            "name": "canonicalId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "triage": {
+                    "type": "string",
+                    "enum": [
+                      "unreviewed",
+                      "important",
+                      "accepted_risk",
+                      "false_positive"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The triage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "serviceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "canonicalId": {
+                      "type": "string"
+                    },
+                    "triage": {
+                      "type": "string",
+                      "enum": [
+                        "unreviewed",
+                        "important",
+                        "accepted_risk",
+                        "false_positive"
+                      ]
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "serviceId",
+                    "canonicalId",
+                    "triage",
+                    "note"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such service, or it never matched this vulnerability",
             "content": {
               "application/json": {
                 "schema": {

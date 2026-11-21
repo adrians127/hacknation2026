@@ -421,6 +421,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vulnerabilities/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the vulnerability databases and their sync state
+         * @description Requires `vulnerabilities:read`. Each source (NVD, OSV) is mirrored into the database by the `vuln-sync` process: incrementally every few hours, fully once a week and on request.
+         */
+        get: operations["listVulnerabilitySources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vulnerabilities/sources/{id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a source's recent sync runs
+         * @description Requires `vulnerabilities:read`. Newest first, with what each run changed.
+         */
+        get: operations["listVulnerabilitySyncRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vulnerabilities/sources/{id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the sync process to sync a source now
+         * @description Requires `vulnerabilities:run`. Queues the request; the `vuln-sync` process picks it up within its poll interval and re-matches every service afterwards. A request already waiting for the same source is returned instead of a new one.
+         */
+        post: operations["requestVulnerabilitySync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vulnerabilities/sources/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Enable or disable a source
+         * @description Requires `vulnerabilities:run`. A disabled source is not synced and its matches are retracted (`source_disabled`) at the next re-match; its records stay in the database.
+         */
+        patch: operations["updateVulnerabilitySource"];
+        trace?: never;
+    };
+    "/vulnerabilities/mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the CPE → package mappings
+         * @description Requires `vulnerabilities:read`. Package databases (OSV) describe packages, not CPE products: a mapping says which package a product reported by the scanner is in a given ecosystem.
+         */
+        get: operations["listPackageMappings"];
+        put?: never;
+        /**
+         * Add a CPE → package mapping
+         * @description Requires `vulnerabilities:create`. Queues a re-match of every service.
+         */
+        post: operations["createPackageMapping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vulnerabilities/mappings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a CPE → package mapping
+         * @description Requires `vulnerabilities:delete`. Queues a re-match of every service.
+         */
+        delete: operations["deletePackageMapping"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vulnerabilities/services/{serviceId}/{canonicalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Triage a vulnerability of a service
+         * @description Requires `vulnerabilities:update`. The verdict belongs to users: it is kept per service and vulnerability, so it survives syncs, retractions and later scans. The note is encrypted at rest.
+         */
+        patch: operations["updateServiceVulnerability"];
+        trace?: never;
+    };
     "/workers/nmap/lease": {
         parameters: {
             query?: never;
@@ -479,7 +623,7 @@ export interface components {
                 message: string;
                 status: number;
                 /** @enum {string} */
-                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN";
+                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN" | "PACKAGE_MAPPING_EXISTS" | "SOURCE_DISABLED";
                 details?: unknown;
             };
         };
@@ -496,7 +640,7 @@ export interface components {
                 key: "admin" | "editor" | "analyst" | "viewer" | null;
                 name: string;
             };
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run")[];
             mustChangePassword: boolean;
         };
         HealthResponse: {
@@ -517,7 +661,7 @@ export interface components {
             name: string;
             description: string;
             isSystem: boolean;
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run")[];
             userCount: number;
             /** Format: date-time */
             createdAt: string;
@@ -568,6 +712,83 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        VulnerabilitySource: {
+            id: string;
+            displayName: string;
+            enabled: boolean;
+            baseUrl: string;
+            scopes: string[];
+            recordCount: number;
+            /** Format: date-time */
+            lastIncrementalAt: string | null;
+            /** Format: date-time */
+            lastFullAt: string | null;
+            /** Format: date-time */
+            lastSuccessAt: string | null;
+            lastError: string | null;
+            /** Format: date-time */
+            nextIncrementalAt: string | null;
+            /** Format: date-time */
+            nextFullAt: string | null;
+            running: {
+                /** Format: uuid */
+                id: string;
+                sourceId: string;
+                /** @enum {string} */
+                mode: "incremental" | "full";
+                /** @enum {string} */
+                trigger: "schedule" | "manual" | "cli";
+                /** @enum {string} */
+                status: "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+                /** Format: date-time */
+                startedAt: string;
+                /** Format: date-time */
+                finishedAt: string | null;
+                stats: {
+                    upserted: number;
+                    unchanged: number;
+                    withdrawn: number;
+                    swept: number;
+                    matchesAdded: number;
+                    matchesRetracted: number;
+                    matchesReactivated: number;
+                };
+                error: string | null;
+            } | null;
+            pendingRequest: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: "sync" | "full_sync" | "rematch";
+                sourceId: string | null;
+                /** Format: date-time */
+                createdAt: string;
+            } | null;
+        };
+        VulnerabilityJobRequest: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "sync" | "full_sync" | "rematch";
+            sourceId: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        PackageMapping: {
+            /** Format: uuid */
+            id: string;
+            cpeVendor: string;
+            cpeProduct: string;
+            ecosystem: string;
+            packageName: string;
+            /** Format: date-time */
+            createdAt: string;
+            createdBy: {
+                /** Format: uuid */
+                id: string;
+                displayName: string;
+            } | null;
         };
         NmapJob: {
             job_id: string;
@@ -1153,7 +1374,7 @@ export interface operations {
                             name: string;
                             description: string;
                             isSystem: boolean;
-                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run")[];
                             userCount: number;
                             /** Format: date-time */
                             createdAt: string;
@@ -1195,7 +1416,7 @@ export interface operations {
                 "application/json": {
                     name: string;
                     description: string;
-                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run")[];
                 };
             };
         };
@@ -1272,7 +1493,7 @@ export interface operations {
                         name: string;
                         description: string;
                         isSystem: boolean;
-                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run")[];
                         userCount: number;
                         /** Format: date-time */
                         createdAt: string;
@@ -1390,7 +1611,7 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     description?: string;
-                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run")[];
                 };
             };
         };
@@ -1623,6 +1844,7 @@ export interface operations {
                 q?: string;
                 triage?: "unreviewed" | "reviewed" | "important" | "false_positive";
                 change?: "any" | "new" | "gone" | "changed" | "unknown";
+                vulnerability?: "any" | "critical" | "high" | "kev";
             };
             header?: never;
             path: {
@@ -1656,6 +1878,13 @@ export interface operations {
                             triage: "unreviewed" | "reviewed" | "important" | "false_positive";
                             tags: string[];
                             note: string;
+                            vulnerabilities: {
+                                confirmed: number;
+                                potential: number;
+                                kev: number;
+                                /** @enum {string|null} */
+                                maxSeverity: "critical" | "high" | "medium" | "low" | "none" | "unknown" | null;
+                            };
                             services: {
                                 /** Format: uuid */
                                 id: string;
@@ -1689,6 +1918,13 @@ export interface operations {
                                 triage: "unreviewed" | "reviewed" | "important" | "false_positive";
                                 tags: string[];
                                 note: string;
+                                vulnerabilities: {
+                                    confirmed: number;
+                                    potential: number;
+                                    kev: number;
+                                    /** @enum {string|null} */
+                                    maxSeverity: "critical" | "high" | "medium" | "low" | "none" | "unknown" | null;
+                                };
                             }[];
                         }[];
                         total: number;
@@ -1770,6 +2006,13 @@ export interface operations {
                         triage: "unreviewed" | "reviewed" | "important" | "false_positive";
                         tags: string[];
                         note: string;
+                        vulnerabilities: {
+                            confirmed: number;
+                            potential: number;
+                            kev: number;
+                            /** @enum {string|null} */
+                            maxSeverity: "critical" | "high" | "medium" | "low" | "none" | "unknown" | null;
+                        };
                         services: {
                             /** Format: uuid */
                             id: string;
@@ -1873,6 +2116,13 @@ export interface operations {
                             triage: "unreviewed" | "reviewed" | "important" | "false_positive";
                             tags: string[];
                             note: string;
+                            vulnerabilities: {
+                                confirmed: number;
+                                potential: number;
+                                kev: number;
+                                /** @enum {string|null} */
+                                maxSeverity: "critical" | "high" | "medium" | "low" | "none" | "unknown" | null;
+                            };
                             reason: string | null;
                             extraInfo: string | null;
                             cpe: string[];
@@ -1892,6 +2142,50 @@ export interface operations {
                             firstSeenAt: string;
                             /** Format: date-time */
                             lastSeenAt: string;
+                            vulnerabilityMatches: {
+                                canonicalId: string;
+                                title: string | null;
+                                description: string | null;
+                                /** @enum {string} */
+                                severity: "critical" | "high" | "medium" | "low" | "none" | "unknown";
+                                cvssScore: number | null;
+                                cvssVector: string | null;
+                                /** Format: date-time */
+                                kevAddedAt: string | null;
+                                /** Format: date-time */
+                                publishedAt: string | null;
+                                /** @enum {string} */
+                                confidence: "confirmed" | "potential";
+                                reasons: ("version_unknown" | "distro_backport_possible" | "fixed_by_backport" | "platform_condition")[];
+                                /** @enum {string} */
+                                status: "active" | "retracted";
+                                /** @enum {string|null} */
+                                retractReason: "source_withdrawn" | "criteria_changed" | "service_changed" | "source_disabled" | null;
+                                /** Format: date-time */
+                                retractedAt: string | null;
+                                /** Format: date-time */
+                                firstMatchedAt: string;
+                                /** Format: date-time */
+                                lastEvaluatedAt: string;
+                                basis: {
+                                    /** Format: uuid */
+                                    scanId: string | null;
+                                    cpe: string | null;
+                                    version: string | null;
+                                };
+                                evidence: {
+                                    sourceId: string;
+                                    externalId: string;
+                                    /** Format: uri */
+                                    url: string;
+                                    /** @enum {string} */
+                                    verdict: "affected" | "not_affected" | "unknown";
+                                }[];
+                                references: string[];
+                                /** @enum {string} */
+                                triage: "unreviewed" | "important" | "accepted_risk" | "false_positive";
+                                note: string;
+                            }[];
                         }[];
                         /** Format: date-time */
                         firstSeenAt: string;
@@ -2458,6 +2752,553 @@ export interface operations {
                 };
             };
             /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listVulnerabilitySources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sources */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            displayName: string;
+                            enabled: boolean;
+                            baseUrl: string;
+                            scopes: string[];
+                            recordCount: number;
+                            /** Format: date-time */
+                            lastIncrementalAt: string | null;
+                            /** Format: date-time */
+                            lastFullAt: string | null;
+                            /** Format: date-time */
+                            lastSuccessAt: string | null;
+                            lastError: string | null;
+                            /** Format: date-time */
+                            nextIncrementalAt: string | null;
+                            /** Format: date-time */
+                            nextFullAt: string | null;
+                            running: {
+                                /** Format: uuid */
+                                id: string;
+                                sourceId: string;
+                                /** @enum {string} */
+                                mode: "incremental" | "full";
+                                /** @enum {string} */
+                                trigger: "schedule" | "manual" | "cli";
+                                /** @enum {string} */
+                                status: "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+                                /** Format: date-time */
+                                startedAt: string;
+                                /** Format: date-time */
+                                finishedAt: string | null;
+                                stats: {
+                                    upserted: number;
+                                    unchanged: number;
+                                    withdrawn: number;
+                                    swept: number;
+                                    matchesAdded: number;
+                                    matchesRetracted: number;
+                                    matchesReactivated: number;
+                                };
+                                error: string | null;
+                            } | null;
+                            pendingRequest: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                kind: "sync" | "full_sync" | "rematch";
+                                sourceId: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                            } | null;
+                        }[];
+                        syncProcessActive: boolean;
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listVulnerabilitySyncRuns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sync runs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            sourceId: string;
+                            /** @enum {string} */
+                            mode: "incremental" | "full";
+                            /** @enum {string} */
+                            trigger: "schedule" | "manual" | "cli";
+                            /** @enum {string} */
+                            status: "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+                            /** Format: date-time */
+                            startedAt: string;
+                            /** Format: date-time */
+                            finishedAt: string | null;
+                            stats: {
+                                upserted: number;
+                                unchanged: number;
+                                withdrawn: number;
+                                swept: number;
+                                matchesAdded: number;
+                                matchesRetracted: number;
+                                matchesReactivated: number;
+                            };
+                            error: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    requestVulnerabilitySync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    mode: "incremental" | "full";
+                };
+            };
+        };
+        responses: {
+            /** @description The queued request */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VulnerabilityJobRequest"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The source is disabled (`SOURCE_DISABLED`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateVulnerabilitySource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    enabled: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description The source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VulnerabilitySource"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listPackageMappings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mappings, sorted by vendor and product */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            cpeVendor: string;
+                            cpeProduct: string;
+                            ecosystem: string;
+                            packageName: string;
+                            /** Format: date-time */
+                            createdAt: string;
+                            createdBy: {
+                                /** Format: uuid */
+                                id: string;
+                                displayName: string;
+                            } | null;
+                        }[];
+                        ecosystems: string[];
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createPackageMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    cpeVendor: string;
+                    cpeProduct: string;
+                    ecosystem: string;
+                    packageName: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The mapping */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageMapping"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The mapping already exists (`PACKAGE_MAPPING_EXISTS`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deletePackageMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateServiceVulnerability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serviceId: string;
+                canonicalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    triage?: "unreviewed" | "important" | "accepted_risk" | "false_positive";
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The triage */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        serviceId: string;
+                        canonicalId: string;
+                        /** @enum {string} */
+                        triage: "unreviewed" | "important" | "accepted_risk" | "false_positive";
+                        note: string;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such service, or it never matched this vulnerability */
             404: {
                 headers: {
                     [name: string]: unknown;
