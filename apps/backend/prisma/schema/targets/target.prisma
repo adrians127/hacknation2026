@@ -1,0 +1,23 @@
+/// One entry of the target inventory: an IPv4 address, a CIDR (at most /16) or a domain.
+model Target {
+  id          String     @id @default(uuid(7)) @db.Uuid
+  kind        TargetKind
+  /// Normalized by the shared parser (@hacknation/contracts/targets/target-input): the dedup key.
+  value       String     @unique
+  note        String     @default("")
+  tags        String[]   @default([])
+  createdById String     @db.Uuid
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  createdBy User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  scans     ScanTarget[]
+
+  @@index([createdById])
+}
+
+enum TargetKind {
+  ip
+  cidr
+  domain
+}
