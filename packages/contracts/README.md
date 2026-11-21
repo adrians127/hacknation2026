@@ -1,35 +1,35 @@
 # @hacknation/contracts
 
-Jedno źródło prawdy o API: schematy **zod 4** i typy z nich wyprowadzone, a z nich generowany `openapi.json` (OpenAPI 3.1). Z tego pliku korzystają frontend (przez `@hacknation/api-client`), backend (walidacja requestów, Swagger) i workery C++ (opis endpointów).
+The single source of truth for the API: **zod 4** schemas and the types derived from them, from which `openapi.json` (OpenAPI 3.1) is generated. That file is consumed by the frontend (through `@hacknation/api-client`), the backend (request validation, Swagger) and the C++ workers (endpoint definitions).
 
-Pakiet jest source-only. Nie ma kroku build, konsumenci kompilują go razem ze swoim kodem.
-
-```
-src/<feature>/<feature>.schema.ts    schematy + typy (bez importów OpenAPI, apki ich nie potrzebują)
-src/<feature>/<feature>.openapi.ts   rejestracja ścieżek i komponentów (side effect)
-src/common/common.schema.ts          wspólne prymitywy, ErrorResponse
-scripts/                             registry, import-registries (posortowany import), generate-openapi
-openapi.json                         WYGENEROWANY, commitowany
-```
-
-## Przepływ
+The package is source-only. There is no build step; consumers compile it together with their own code.
 
 ```
-*.schema.ts ──► *.openapi.ts ──► pnpm generate ──► openapi.json ──► api-client (typy) ──► frontend
-     │                                                  └──────────► backend /docs, workery
-     └──► backend validate() + typy kontrolerów
+src/<feature>/<feature>.schema.ts    schemas + types (no OpenAPI imports, apps don't need them)
+src/<feature>/<feature>.openapi.ts   path and component registration (side effect)
+src/common/common.schema.ts          shared primitives, ErrorResponse
+scripts/                             registry, import-registries (sorted import), generate-openapi
+openapi.json                         GENERATED, committed
 ```
 
-## Dodanie endpointu
+## Flow
 
-1. W `src/<feature>/<feature>.schema.ts` dodaj schematy z konwencją nazw `XParamsSchema`, `XQuerySchema`, `XBodySchema`, `XResponseSchema` oraz typy `z.infer` na końcu pliku.
-2. W `src/<feature>/<feature>.openapi.ts` dodaj `registry.registerPath({...})` z `operationId`. Chronione endpointy dostają `security: [{ bearerAuth: [] }]`.
-3. Uruchom `pnpm generate` z roota. Regeneruje `openapi.json` i typy w `api-client`, w podanej kolejności.
-4. Zacommituj wygenerowane pliki. CI sprawdza, czy są aktualne.
+```
+*.schema.ts ──► *.openapi.ts ──► pnpm generate ──► openapi.json ──► api-client (types) ──► frontend
+     │                                                  └──────────► backend /docs, workers
+     └──► backend validate() + controller types
+```
 
-Import w apkach: `import { HealthResponseSchema } from "@hacknation/contracts/health/health.schema"`.
+## Adding an endpoint
 
-## Uwagi
+1. In `src/<feature>/<feature>.schema.ts`, add schemas following the `XParamsSchema`, `XQuerySchema`, `XBodySchema`, `XResponseSchema` naming convention, plus `z.infer` types at the end of the file.
+2. In `src/<feature>/<feature>.openapi.ts`, add `registry.registerPath({...})` with an `operationId`. Protected endpoints get `security: [{ bearerAuth: [] }]`.
+3. Run `pnpm generate` from the repo root. It regenerates `openapi.json` and then the `api-client` types, in that order.
+4. Commit the generated files. CI checks that they are up to date.
 
-- Kolejność rejestracji decyduje o kolejności w `openapi.json`. Dlatego `import-registries.ts` importuje pliki posortowane i po kolei, a każda regeneracja daje identyczny plik.
-- Unikaj transformacji (`.trim()`, `.transform()`) w schematach requestów. Backend wywołuje `parse` bez przypisania wyniku, więc przetransformowana wartość nie dotrze do handlera.
+Importing in apps: `import { HealthResponseSchema } from "@hacknation/contracts/health/health.schema"`.
+
+## Notes
+
+- Registration order determines the order in `openapi.json`. That is why `import-registries.ts` imports the files sorted and one by one, so every regeneration produces an identical file.
+- Avoid transformations (`.trim()`, `.transform()`) in request schemas. The backend calls `parse` without assigning the result, so a transformed value never reaches the handler.

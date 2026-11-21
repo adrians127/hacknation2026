@@ -1,96 +1,100 @@
 # CLAUDE.md
 
-Ten plik zawiera wskazówki dla Claude Code przy pracy w tym repozytorium. Celowo jest krótki: szczegóły każdej aplikacji są w jej `README.md` i **to one są źródłem prawdy**.
+This file guides Claude Code when working in this repository. It is deliberately short: the details of each app live in its `README.md`, and **those are the source of truth**.
 
-## Do czego jest to repozytorium
+## What this repository is
 
-Prototyp **Attack Surface Intelligence** na hackathon HackNation 2026. Zadanie zleciło Centrum Bezpieczeństwa Informacji AGH. System cyklicznie skanuje rozległe sieci (>10 000 IP), wykrywa aktywne hosty i usługi, robi fingerprinting HTTP/HTTPS (tytuł, kod, nagłówki, ciasteczka, TLS, przekierowania), rozpoznaje technologie i CMS-y, obsługuje własne sygnatury detekcyjne i pokazuje zmiany między skanami. Do tego dochodzą RBAC, szyfrowanie danych at rest, import/eksport CSV/JSON i integracja z DefectDojo.
+An **Attack Surface Intelligence** prototype for the HackNation 2026 hackathon. The task was set by the AGH Information Security Center (Centrum Bezpieczeństwa Informacji AGH). The system periodically scans large networks (>10,000 IPs), detects live hosts and services, fingerprints HTTP/HTTPS (title, status code, headers, cookies, TLS, redirects), recognizes technologies and CMSs, supports custom detection signatures and shows changes between scans. On top of that come RBAC, encryption of data at rest, CSV/JSON import/export and DefectDojo integration.
 
-## Kontekst zadania: zawsze dołączaj PDF
+## Task context: always include the PDF
 
-**Przed każdą nietrywialną pracą dołącz do kontekstu plik `hackathon-zadanie.pdf` (w roocie repo) i przeczytaj go.** To jedyne źródło prawdy o wymaganiach, kryteriach oceny i ograniczeniach. Bez niego łatwo zbudować coś, co działa, ale nie spełnia zadania. Gdy cokolwiek w repo przeczy PDF-owi, wygrywa PDF.
+**Before any non-trivial work, add `hackathon-zadanie.pdf` (repo root) to the context and read it.** It is written in Polish and is the only source of truth for requirements, evaluation criteria and constraints. Without it, it is easy to build something that works but does not meet the task. When anything in the repo contradicts the PDF, the PDF wins.
 
-Najczęściej potrzebne fragmenty (numery jak w PDF):
+Most frequently needed parts (numbering as in the PDF):
 
-- **Sekcja 2, pkt 1–16**: wymagania funkcjonalne, m.in. import IP/CIDR/domen (formularz, CSV, JSON), diff skanów, własne sygnatury, RBAC z **czterema rolami** (pkt 13), edycja danych zachowywana między skanami (pkt 14), szyfrowanie at rest (pkt 16).
-- **Moduł sygnatur**: **tylko bezpieczna detekcja**, bez eksploatacji i bez prób logowania.
-- **Skanowanie**: wielowątkowe (nmap), pomiar czasu, adaptacyjny podział na podgrupy, okna czasowe i częstotliwość, przerwanie i wznowienie w kolejnym oknie, ograniczanie tempa.
-- **Sekcja 3**: minimalny i „mile widziany” zakres. **Sekcja 6**: jak będzie testowane (co najmniej dwa przebiegi skanu, role, import, edycja). **Sekcja 8**: wagi kryteriów oceny.
+- **Section 2, items 1–16**: functional requirements, including importing IPs/CIDRs/domains (form, CSV, JSON), scan diffs, custom signatures, RBAC with **four roles** (item 13), edits preserved across scans (item 14), encryption at rest (item 16).
+- **Signature module**: **safe detection only**, no exploitation and no login attempts.
+- **Scanning**: multithreaded (nmap), duration measurement, adaptive splitting into subgroups, time windows and frequency, stopping and resuming in the next window, rate limiting.
+- **Section 3**: minimum and "nice to have" scope. **Section 6**: how it will be tested (at least two scan runs, roles, import, editing). **Section 8**: evaluation criteria weights.
 
-## Zanim zaczniesz
+## Before you start
 
-- Zmieniasz kod, zmienne env albo komendy apki → najpierw przeczytaj jej `README.md`.
-- Komendy per apka są w README. Poniżej są tylko komendy roota.
+- Changing code, env variables or an app's commands → read its `README.md` first.
+- Per-app commands are in the READMEs. Only root commands are listed below.
 
-## Dokumentacja i tłumaczenia w tej samej zmianie
+## Language
 
-- Zmiana stacku, komend, zmiennych env albo struktury apki → zaktualizuj jej `README.md`.
-- Zmiana konwencji, komend monorepo albo struktury repo → zaktualizuj ten plik.
-- Gdy tworzysz **nowy** `README.md` albo plik w `docs/`, zapytaj użytkownika, czy dopisać go do tabeli „Gdzie szukać”.
-- Każdy tekst widoczny w UI dodajesz **od razu po polsku i po angielsku** (`apps/frontend/src/lib/i18n/locales/{pl,en}`). Nie kopiuj angielskiego tekstu do pliku polskiego. `pnpm test` sprawdza tylko zgodność kluczy, nie jakość tłumaczenia.
+English is the project's default language: documentation, code comments, commit messages, PR descriptions and the frontend's default (reference) locale. Polish appears only in the Polish UI translations (`locales/pl`) and in the task PDF.
 
-## Gdzie szukać
+## Docs and translations in the same change
 
-| Temat | Źródło |
+- Changing an app's stack, commands, env variables or structure → update its `README.md`.
+- Changing conventions, monorepo commands or repo structure → update this file.
+- When you create a **new** `README.md` or a file in `docs/`, ask the user whether to add it to the "Where to look" table.
+- Every UI-facing string is added **right away in both English and Polish** (`apps/frontend/src/lib/i18n/locales/{en,pl}`). Do not copy English text into the Polish file. `pnpm test` only checks that the keys match, not the quality of the translation.
+
+## Where to look
+
+| Topic | Source |
 |---|---|
-| Wymagania, kryteria oceny, ograniczenia | `hackathon-zadanie.pdf` (root repo) |
-| Frontend (stack, struktura bulletproof-react, data fetching, i18n) | [`apps/frontend/README.md`](apps/frontend/README.md) |
-| Backend (stack, moduły, Prisma, env, walidacja) | [`apps/backend/README.md`](apps/backend/README.md) |
-| Workery C++ (konwencja, protokół HTTP pull, bezpieczeństwo skanu) | [`apps/workers/README.md`](apps/workers/README.md) |
-| nmap-worker (build CMake/Docker, uprawnienia sieciowe) | [`apps/workers/nmap-worker/README.md`](apps/workers/nmap-worker/README.md) |
-| Kontrakt (schematy zod, generowanie OpenAPI, dodawanie endpointu) | [`packages/contracts/README.md`](packages/contracts/README.md) |
-| Typowany klient API (i dlaczego ma TS 6) | [`packages/api-client/README.md`](packages/api-client/README.md) |
-| Lokalna infrastruktura (PostgreSQL, worker w compose) | [`docker/README.md`](docker/README.md) |
-| Dokumentacja techniczna i prezentacja | [`docs/`](docs/) |
+| Requirements, evaluation criteria, constraints | `hackathon-zadanie.pdf` (repo root, in Polish) |
+| Frontend (stack, bulletproof-react structure, data fetching, i18n) | [`apps/frontend/README.md`](apps/frontend/README.md) |
+| Backend (stack, modules, Prisma, env, validation) | [`apps/backend/README.md`](apps/backend/README.md) |
+| C++ workers (conventions, HTTP pull protocol, scan safety) | [`apps/workers/README.md`](apps/workers/README.md) |
+| nmap-worker (CMake/Docker build, network capabilities) | [`apps/workers/nmap-worker/README.md`](apps/workers/nmap-worker/README.md) |
+| Contract (zod schemas, OpenAPI generation, adding an endpoint) | [`packages/contracts/README.md`](packages/contracts/README.md) |
+| Typed API client (and why it uses TS 6) | [`packages/api-client/README.md`](packages/api-client/README.md) |
+| Local infrastructure (PostgreSQL, worker in compose) | [`docker/README.md`](docker/README.md) |
+| Technical documentation and presentation | [`docs/`](docs/) |
 
-## Struktura repozytorium
+## Repository structure
 
-Monorepo pnpm + turbo. Workspace'y to `apps/*` i `packages/*`.
+A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 
-- `apps/frontend`: React 19 + Vite 8 + React Router 8 (tryb data) + Tailwind 4 + shadcn/ui + TanStack Query.
-- `apps/backend`: Express 5 + TS (build tsdown, dev tsx). Rozmawia z PostgreSQL przez Prisma 7. **Jedyny komponent, który pisze do bazy.**
-- `apps/workers/<name>`: workery C++23 + CMake + nmap, budowane i uruchamiane w Dockerze. **Nie są workspace'em pnpm** (brak `package.json`), żeby `pnpm build` nie wymagał lokalnego kompilatora C++.
-- `packages/contracts`: `@hacknation/contracts`, schematy zod i typy. Generuje commitowany `openapi.json`. Pakiet źródłowy, bez builda.
-- `packages/api-client`: `@hacknation/api-client`, typy generowane z `openapi.json` + `openapi-fetch`. **Jedyny workspace z TypeScript 6** (`openapi-typescript` potrzebuje JS API, którego TS 7 nie ma).
-- `docker/`: Docker Compose (PostgreSQL 19, worker pod profilem `workers`). Nie jest workspace'em.
-- `docs/`: dokumentacja techniczna i prezentacja.
+- `apps/frontend`: React 19 + Vite 8 + React Router 8 (data mode) + Tailwind 4 + shadcn/ui + TanStack Query.
+- `apps/backend`: Express 5 + TS (built with tsdown, dev with tsx). Talks to PostgreSQL through Prisma 7. **The only component that writes to the database.**
+- `apps/workers/<name>`: C++23 + CMake + nmap workers, built and run in Docker. **Not pnpm workspaces** (no `package.json`), so `pnpm build` does not need a local C++ compiler.
+- `packages/contracts`: `@hacknation/contracts`, zod schemas and types. Generates the committed `openapi.json`. A source-only package with no build step.
+- `packages/api-client`: `@hacknation/api-client`, types generated from `openapi.json` + `openapi-fetch`. **The only workspace on TypeScript 6** (`openapi-typescript` needs the JS API that TS 7 no longer ships).
+- `docker/`: Docker Compose (PostgreSQL 19, worker under the `workers` profile). Not a workspace.
+- `docs/`: technical documentation and the presentation.
 
-## Architektura (ustalona)
+## Architecture (settled)
 
-- **Kontrakt:** `contracts/*.schema.ts` (zod) → `pnpm generate` → `openapi.json` → `api-client` (typy) → frontend (`api.useQuery("get", "/path")`). Backend waliduje requesty tymi samymi schematami. Workery C++ biorą opis endpointów z tego samego `openapi.json`.
-- **Workery ↔ backend:** HTTP pull. Worker pobiera porcję pracy (lease + heartbeat) i odsyła wyniki przez REST. Workery nie mają dostępu do bazy.
-- **Auth/RBAC:** lokalne konta (argon2) i JWT w ciasteczku httpOnly. Cztery role z PDF (pkt 13). Jeszcze niezaimplementowane.
-- **Dane wrażliwe:** szyfrowane at rest na poziomie aplikacji. Do zaprojektowania razem z modelami.
+- **Contract:** `contracts/*.schema.ts` (zod) → `pnpm generate` → `openapi.json` → `api-client` (types) → frontend (`api.useQuery("get", "/path")`). The backend validates requests with the same schemas. The C++ workers take their endpoint definitions from the same `openapi.json`.
+- **Workers ↔ backend:** HTTP pull. A worker takes a batch of work (lease + heartbeat) and sends results back over REST. Workers have no database access.
+- **Auth/RBAC:** local accounts (argon2) and a JWT in an httpOnly cookie. The four roles from the PDF (item 13). Not implemented yet.
+- **Sensitive data:** encrypted at rest at the application level. To be designed together with the models.
 
-## Komendy monorepo
+## Monorepo commands
 
-Tylko komendy roota. Komendy per apka są w ich README.
+Root commands only. Per-app commands are in their READMEs.
 
 ```bash
-pnpm install        # zależności całego monorepo (+ prisma generate)
-pnpm project:setup  # kopiuje każdy .env*.example do .env (nie nadpisuje; --force robi backup)
+pnpm install        # dependencies for the whole monorepo (+ prisma generate)
+pnpm project:setup  # copies every .env*.example to .env (never overwrites; --force makes a backup)
 pnpm dev            # turbo dev: backend :3001 (+ /docs), frontend :3000
 pnpm build          # turbo build
-pnpm lint           # oxlint type-aware we wszystkich workspace'ach
+pnpm lint           # type-aware oxlint in every workspace
 pnpm check-types    # tsc (TS 7; api-client: TS 6)
 pnpm test           # vitest
-pnpm generate       # contracts -> openapi.json -> api-client/src/generated (commituj wynik)
+pnpm generate       # contracts -> openapi.json -> api-client/src/generated (commit the output)
 pnpm clean
-pnpm db:up          # PostgreSQL w Dockerze (pnpm db:logs)
-pnpm db:reset       # drop + migracje + seed
-pnpm infra:up       # wszystkie domyślne serwisy compose (infra:down, infra:logs)
-pnpm workers:build  # build obrazów workerów (workers:up, workers:down, workers:logs)
+pnpm db:up          # PostgreSQL in Docker (pnpm db:logs)
+pnpm db:reset       # drop + migrations + seed
+pnpm infra:up       # all default compose services (infra:down, infra:logs)
+pnpm workers:build  # build worker images (workers:up, workers:down, workers:logs)
 ```
 
-## Konwencje
+## Conventions
 
-- **Po każdej zmianie w `packages/contracts` uruchom `pnpm generate`** i zacommituj `openapi.json` oraz `api-client/src/generated`. CI odrzuca nieaktualne pliki wygenerowane.
-- Aliasy importów: `@/*` → `apps/frontend/src/*`, `~backend/*` → `apps/backend/src/*`.
-- Każdy workspace ma własny `tsconfig.json` i `.oxlintrc.json` (ten drugi rozszerza root `.oxlintrc.json`). TS 6+ domyślnie ustawia `types: []`, więc `types` (np. `["node"]`, `["vite/client"]`) wpisuj jawnie.
-- **Dodawanie zależności:** przed dodaniem paczki sprawdź jej najnowszą wersję na npm (`npm view <pkg> version`). Nigdy nie wpisuj wersji z pamięci. `pnpm-workspace.yaml` ma `minimumReleaseAge: 2880` (48 h). Jeśli najnowsza wersja jest młodsza, wpisz najnowszą, która ma już ponad 48 h. Nie wyłączaj tego zabezpieczenia.
-- **Bezpieczeństwo skanera** (PDF, sekcja 2): tylko detekcja, bez eksploatacji i bez prób logowania. Tempo zawsze ograniczone. Skanujemy tylko dozwolone porty i zakresy. Po przekroczeniu okna czasowego skan się zatrzymuje.
-- **Komentarze tylko dla rzeczy nieoczywistych i krótkie:**
-  - Pisz je tylko dla ograniczenia, które zaskoczy następną osobę, dla odrzuconej oczywistej alternatywy albo dla czegoś, co wygląda na błąd, a nim nie jest.
-  - Jedna linia albo kilka punktów, nigdy akapity.
-  - Nie powtarzaj tego, co mówi nazwa albo typ. Bez docblocków na każdej funkcji.
-  - Opis tego, jak moduł się składa, należy do `README.md` apki.
+- **After every change in `packages/contracts`, run `pnpm generate`** and commit `openapi.json` and `api-client/src/generated`. CI rejects stale generated files.
+- Import aliases: `@/*` → `apps/frontend/src/*`, `~backend/*` → `apps/backend/src/*`.
+- Every workspace has its own `tsconfig.json` and `.oxlintrc.json` (the latter extends the root `.oxlintrc.json`). TS 6+ defaults to `types: []`, so list `types` (e.g. `["node"]`, `["vite/client"]`) explicitly.
+- **Adding dependencies:** before adding a package, check its latest version on npm (`npm view <pkg> version`). Never write a version from memory. `pnpm-workspace.yaml` sets `minimumReleaseAge: 2880` (48 h). If the latest version is younger than that, use the newest version that is more than 48 h old. Do not disable this safeguard.
+- **Scanner safety** (PDF, section 2): detection only, no exploitation and no login attempts. The rate is always limited. Only allowed ports and ranges are scanned. When the time window is exceeded, the scan stops.
+- **Comments only for non-obvious things, and short:**
+  - Write them only for a constraint that will surprise the next person, a rejected obvious alternative, or something that looks like a bug but is not.
+  - One line or a few bullet points, never paragraphs.
+  - Do not repeat what the name or type already says. No docblocks on every function.
+  - How a module fits together belongs in the app's `README.md`.
