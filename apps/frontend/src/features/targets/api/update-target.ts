@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { IdParams } from "@hacknation/contracts/common/common.schema";
-import type { Target, UpdateTargetBody } from "@hacknation/contracts/targets/targets.schema";
+import type { IdParams } from "@subsurf/contracts/common/common.schema";
+import type { Target, UpdateTargetBody } from "@subsurf/contracts/targets/targets.schema";
 
 import { mockError, mockResponse } from "@/api/mock";
 import { mockTargets } from "@/features/targets/api/mocks";

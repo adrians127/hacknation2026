@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-import type { HealthResponse } from "@hacknation/contracts/health/health.schema";
+import type { HealthResponse } from "@subsurf/contracts/health/health.schema";
 
 import { healthService } from "~backend/modules/health/health.service";
 

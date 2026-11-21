@@ -188,15 +188,15 @@ importers:
 
   apps/backend:
     dependencies:
-      '@hacknation/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
       '@prisma/adapter-pg':
         specifier: ^7.10.1
         version: 7.10.1
       '@prisma/client':
         specifier: ^7.10.1
         version: 7.10.1(prisma@7.10.1(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@7.0.2))(typescript@7.0.2)
+      '@subsurf/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -270,10 +270,10 @@ importers:
       '@fontsource-variable/geist':
         specifier: ^5.3.0
         version: 5.3.0
-      '@hacknation/api-client':
+      '@subsurf/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
-      '@hacknation/contracts':
+      '@subsurf/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@tanstack/react-query':
@@ -365,7 +365,7 @@ importers:
         specifier: ^0.17.0
         version: 0.17.0
     devDependencies:
-      '@hacknation/contracts':
+      '@subsurf/contracts':
         specifier: workspace:*
         version: link:../contracts
       openapi-typescript:
@@ -396,6 +396,9 @@ importers:
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+      vitest:
+        specifier: ^5.1.1
+        version: 5.1.1(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
 packages:
 

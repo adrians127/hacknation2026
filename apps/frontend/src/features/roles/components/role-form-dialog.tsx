@@ -2,8 +2,8 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import type { Permission } from "@hacknation/contracts/auth/permissions";
-import type { Role } from "@hacknation/contracts/roles/roles.schema";
+import type { Permission } from "@subsurf/contracts/auth/permissions";
+import type { Role } from "@subsurf/contracts/roles/roles.schema";
 
 import { Button } from "@/components/ui/button";
 import {

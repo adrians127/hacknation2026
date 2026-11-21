@@ -1,4 +1,4 @@
-import type { Scan, ScanListResponse } from "@hacknation/contracts/scans/scans.schema";
+import type { Scan, ScanListResponse } from "@subsurf/contracts/scans/scans.schema";
 
 const HOUR = 60 * 60_000;
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();

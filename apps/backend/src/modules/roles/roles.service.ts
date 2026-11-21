@@ -1,11 +1,11 @@
-import { SYSTEM_ROLE_KEYS } from "@hacknation/contracts/auth/permissions";
+import { SYSTEM_ROLE_KEYS } from "@subsurf/contracts/auth/permissions";
 import type {
   CreateRoleBody,
   DeleteRoleQuery,
   Role,
   RoleDetailResponse,
   UpdateRoleBody,
-} from "@hacknation/contracts/roles/roles.schema";
+} from "@subsurf/contracts/roles/roles.schema";
 
 import type { Role as RoleRow } from "~backend/generated/prisma/client";
 import { assertHoldsAll, toPermissions, type AuthContext } from "~backend/lib/auth-context";

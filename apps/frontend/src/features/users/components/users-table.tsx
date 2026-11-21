@@ -2,7 +2,7 @@ import { KeyRound, Pencil, UserCheck, UserX } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { User } from "@hacknation/contracts/users/users.schema";
+import type { User } from "@subsurf/contracts/users/users.schema";
 
 import { DataTable } from "@/components/data-table";
 import { IconAction } from "@/components/icon-action";

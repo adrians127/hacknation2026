@@ -1,4 +1,4 @@
-# @hacknation/frontend
+# @subsurf/frontend
 
 The interface for the security team: a dashboard with findings, targets, scans, diffs, signatures and role administration.
 
@@ -6,7 +6,7 @@ The interface for the security team: a dashboard with findings, targets, scans, 
 
 - **React 19** + **Vite 8** + **TypeScript 7**
 - **React Router 8** in data mode (`createBrowserRouter` in `src/app/router.tsx`)
-- **TanStack Query 5** + **openapi-react-query**: hooks generated from the typed `@hacknation/api-client`
+- **TanStack Query 5** + **openapi-react-query**: hooks generated from the typed `@subsurf/api-client`
 - **TanStack Table 9**: sortable data tables (`components/data-table.tsx`)
 - **Tailwind 4** (Vite plugin, no config file) + **shadcn/ui** (`radix-nova` style, `components.json`)
 - **i18next**: EN (default) + PL
@@ -15,10 +15,10 @@ The interface for the security team: a dashboard with findings, targets, scans, 
 ## Commands
 
 ```bash
-pnpm --filter @hacknation/frontend dev       # :3000
-pnpm --filter @hacknation/frontend build     # vite build -> dist/
-pnpm --filter @hacknation/frontend test      # vitest (incl. en/pl key parity)
-pnpm --filter @hacknation/frontend exec shadcn add <component>
+pnpm --filter @subsurf/frontend dev       # :3000
+pnpm --filter @subsurf/frontend build     # vite build -> dist/
+pnpm --filter @subsurf/frontend test      # vitest (incl. en/pl key parity)
+pnpm --filter @subsurf/frontend exec shadcn add <component>
 ```
 
 ## `src/` structure (bulletproof-react)
@@ -36,6 +36,8 @@ lib/auth/                useMe, useCan/usePermissions, role and permission label
 lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin}.json, parity test
 ```
 
+Outside `src/`, `public/` is served as-is; `public/samples/targets.{csv,json}` are the sample files linked from the target import page.
+
 Imports flow shared → features → app. Shared code must not import from `features/` or `app/`, and a feature must not import from `app/`. oxlint enforces this (`no-restricted-imports` in `.oxlintrc.json`).
 
 ## Data fetching
@@ -49,9 +51,9 @@ const health = api.useQuery("get", "/health");
 const create = api.useMutation("post", "/targets");   // once the endpoint exists
 ```
 
-Query keys are built from the method, path and parameters, so there is no separate key registry to maintain. Forms can use the zod schemas from `@hacknation/contracts`, the same ones the backend validates with.
+Query keys are built from the method, path and parameters, so there is no separate key registry to maintain. Forms can use the zod schemas from `@subsurf/contracts`, the same ones the backend validates with.
 
-A feature's data goes through hooks in `features/<name>/api/`, one file per endpoint (`get-targets.ts` → `useTargets`, `create-target.ts` → `useCreateTarget`). Components call those hooks, never `api.*` directly. A one-off call outside a feature, such as `/health` on the public `/status` page, may use `api.useQuery` directly.
+A feature's data goes through hooks in `features/<name>/api/`, one file per endpoint (`get-targets.ts` → `useTargets`, `import-targets.ts` → `useImportTargets`). Components call those hooks, never `api.*` directly. A one-off call outside a feature, such as `/health` on the public `/status` page, may use `api.useQuery` directly.
 
 ## Mocking endpoints the backend doesn't have yet
 
@@ -65,13 +67,14 @@ Rules:
 - **Mutations take `{ body, params }`**, like `api.useMutation`, so the `mutate(...)` calls in components don't change.
 - **Fixtures live in `features/<name>/api/mocks.ts`** as in-memory data. Mocked mutations modify that data, so lists refresh after invalidation as they will with the backend. A page reload resets it.
 - **Mark every mock with `// MOCK: <target api call>`.** `grep -rn "MOCK:" apps/frontend/src` lists what is still left to integrate.
+- **Mark the page too:** a route whose data still comes from mocks passes `mocked` to `PageHeader`, which shows a "Mock data" badge next to the title, so nobody mistakes sample data for scan results.
 - `mockResponse(data)` and `mockError(status, message, code?)` from `@/api/mock` add a short delay, return a copy of the fixture and reject with the same `ErrorResponse` body as a real non-2xx response (with `code`, the UI shows the translated `errors.<code>` message).
 
 A mocked query and a mocked mutation:
 
 ```ts
 // features/targets/api/get-targets.ts
-import type { TargetListResponse } from "@hacknation/contracts/targets/targets.schema";
+import type { TargetListResponse } from "@subsurf/contracts/targets/targets.schema";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
 import { mockResponse } from "@/api/mock";
@@ -116,7 +119,7 @@ Swap checklist:
 
 1. The endpoint is registered in contracts and `pnpm generate` has run.
 2. Replace the mocked `queryFn`/`mutationFn` with `api.*`. Keep the hook's name and signature.
-3. Delete the fixture from `mocks.ts` (and the file once it's empty) and the `// MOCK:` line.
+3. Delete the fixture from `mocks.ts` (and the file once it's empty) and the `// MOCK:` line. Once a page has no mocked data left, drop `mocked` from its `PageHeader`.
 4. `pnpm check-types` shows any place where the mock's shape differed from the backend's.
 
 ## Auth and permissions
@@ -138,7 +141,7 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 ## Pages and tables
 
 - A page starts with `PageHeader` (title, description, page-level buttons in `actions`) and puts its content in `Card`s.
-- Lists use `DataTable` (`components/data-table.tsx`), a sortable table on TanStack Table v9. Define columns with `createDataTableColumns<T>().columns([...])` from `lib/data-table.ts`, inside `useMemo`: v9 rebuilds the table whenever `columns` or `data` change identity. `meta: { className }` styles a column's header and cells (e.g. `text-right`). Dates go through `lib/format.ts`.
+- Lists use `DataTable` (`components/data-table.tsx`), a sortable table on TanStack Table v9. Define columns with `createDataTableColumns<T>().columns([...])` from `lib/data-table.ts`, inside `useMemo`: v9 rebuilds the table whenever `columns` or `data` change identity. `meta: { className }` styles a column's header and cells (e.g. `text-right`). Dates and numbers go through `lib/format.ts`.
 - The app is dark-only (`class="dark"` in `index.html`); `brand` is the accent color (`text-brand`, `bg-brand/15`).
 
 ## Translations

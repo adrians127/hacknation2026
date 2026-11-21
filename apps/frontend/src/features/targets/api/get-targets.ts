@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-import type { TargetListResponse } from "@hacknation/contracts/targets/targets.schema";
+import type { TargetListResponse } from "@subsurf/contracts/targets/targets.schema";
 
 import { mockResponse } from "@/api/mock";
 import { mockTargets } from "@/features/targets/api/mocks";

@@ -3,8 +3,8 @@ import type { CookieOptions, Response } from "express";
 import { env } from "~backend/config/env";
 import { ACCESS_TOKEN_TTL_SECONDS, REFRESH_TOKEN_TTL_MS } from "~backend/lib/tokens";
 
-export const ACCESS_COOKIE = "asi_access";
-export const REFRESH_COOKIE = "asi_refresh";
+export const ACCESS_COOKIE = "subsurf_access";
+export const REFRESH_COOKIE = "subsurf_refresh";
 
 // Only the refresh/logout endpoints ever see the refresh token.
 const REFRESH_COOKIE_PATH = "/v1/auth";

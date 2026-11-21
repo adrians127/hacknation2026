@@ -11,6 +11,6 @@ export default defineConfig({
   dts: false,
   deps: {
     // Contracts ship raw TS (no build), so they must be bundled in, not left as imports.
-    alwaysBundle: [/^@hacknation\//],
+    alwaysBundle: [/^@subsurf\//],
   },
 });

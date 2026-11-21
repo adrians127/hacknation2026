@@ -1,6 +1,6 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import express, { type Express } from "express";
+import express, { type Express, type RequestHandler } from "express";
 import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
 
@@ -12,6 +12,15 @@ import { notFound } from "~backend/middleware/not-found";
 import { trustedOrigin } from "~backend/middleware/trusted-origin";
 import { apiRouter } from "~backend/routes";
 
+// Routes that parse their (larger) JSON body themselves, after authentication.
+const OWN_BODY_PARSER_PATHS = new Set(["/v1/targets/import"]);
+
+const jsonBody = express.json({ limit: "1mb" });
+const defaultJsonBody: RequestHandler = (req, res, next) => {
+  if (OWN_BODY_PARSER_PATHS.has(req.path)) next();
+  else jsonBody(req, res, next);
+};
+
 export function buildApp(): Express {
   const app = express();
 
@@ -22,13 +31,13 @@ export function buildApp(): Express {
     app.use(
       "/docs",
       swaggerUi.serve,
-      swaggerUi.setup(buildApiDocs(), { customSiteTitle: "Attack Surface Intelligence API" }),
+      swaggerUi.setup(buildApiDocs(), { customSiteTitle: "SubSurf API" }),
     );
   }
 
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
-  app.use(express.json({ limit: "1mb" }));
+  app.use(defaultJsonBody);
   app.use(cookieParser());
   app.use(requestLogger);
   app.use(trustedOrigin);

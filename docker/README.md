@@ -67,7 +67,7 @@ Every default is for local development only. Override them in your shell or in `
 
 ### Smoke test
 
-`pnpm dojo:smoke` ([`defectdojo/smoke-test.mjs`](defectdojo/smoke-test.mjs), plain Node, no dependencies) authenticates with the token (`GET /api/v2/user_profile/`) and calls `POST /api/v2/import-scan/` twice with `auto_create_context=true`. That creates the product type *Attack Surface Intelligence*, the product *ASI smoke test* and a new engagement per run:
+`pnpm dojo:smoke` ([`defectdojo/smoke-test.mjs`](defectdojo/smoke-test.mjs), plain Node, no dependencies) authenticates with the token (`GET /api/v2/user_profile/`) and calls `POST /api/v2/import-scan/` twice with `auto_create_context=true`. That creates the product type *SubSurf*, the product *SubSurf smoke test* and a new engagement per run:
 
 1. `scan_type=Nmap Scan` with [`fixtures/nmap-sample.xml`](defectdojo/fixtures/nmap-sample.xml): one Info finding per open port.
 2. `scan_type=Generic Findings Import` with [`fixtures/generic-findings.json`](defectdojo/fixtures/generic-findings.json): one Info finding in the shape the backend will export observations in.

@@ -1,4 +1,4 @@
-import type { Change, DashboardResponse } from "@hacknation/contracts/dashboard/dashboard.schema";
+import type { Change, DashboardResponse } from "@subsurf/contracts/dashboard/dashboard.schema";
 
 const HOUR = 60 * 60_000;
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();

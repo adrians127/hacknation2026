@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link, Outlet } from "react-router";
 
-import type { Permission } from "@hacknation/contracts/auth/permissions";
+import type { Permission } from "@subsurf/contracts/auth/permissions";
 
 import { Button } from "@/components/ui/button";
 import { usePermissionLabel } from "@/lib/auth/labels";

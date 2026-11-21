@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { SystemRoleKey } from "@hacknation/contracts/auth/permissions";
+import type { SystemRoleKey } from "@subsurf/contracts/auth/permissions";
 
 import { hashPassword } from "~backend/lib/password";
 import { prisma } from "~backend/lib/prisma";

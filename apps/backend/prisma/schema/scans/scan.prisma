@@ -1,0 +1,34 @@
+/// One scan run. Its addresses are split into ScanJob batches that workers lease.
+model Scan {
+  id            String     @id @default(uuid(7)) @db.Uuid
+  status        ScanStatus @default(queued)
+  /// Parameters snapshotted from the backend's defaults when the scan was queued.
+  ports         String
+  maxRate       Int
+  batchSize     Int
+  targetCount   Int
+  addressCount  Int
+  jobCount      Int
+  /// ImportWarning[] from @subsurf/contracts (domains that could not be scanned).
+  warnings      Json       @default("[]")
+  requestedById String     @db.Uuid
+  createdAt     DateTime   @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  updatedAt     DateTime   @updatedAt
+
+  requestedBy User         @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+  targets     ScanTarget[]
+  jobs        ScanJob[]
+
+  @@index([requestedById])
+  @@index([status, createdAt])
+}
+
+enum ScanStatus {
+  queued
+  running
+  completed
+  stopped
+  failed
+}

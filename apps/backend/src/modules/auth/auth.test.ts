@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { MeResponseSchema } from "@hacknation/contracts/auth/auth.schema";
+import { MeResponseSchema } from "@subsurf/contracts/auth/auth.schema";
 
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "~backend/lib/auth-cookies";
 import { prisma } from "~backend/lib/prisma";
@@ -42,8 +42,8 @@ describe("POST /v1/auth/login", () => {
     expect(client.cookies.has(REFRESH_COOKIE)).toBe(true);
 
     const cookies = res.headers.getSetCookie().join("\n");
-    expect(cookies).toMatch(/asi_access=[^;]+;.*HttpOnly/i);
-    expect(cookies).toMatch(/asi_refresh=[^;]+;.*Path=\/v1\/auth/i);
+    expect(cookies).toMatch(/subsurf_access=[^;]+;.*HttpOnly/i);
+    expect(cookies).toMatch(/subsurf_refresh=[^;]+;.*Path=\/v1\/auth/i);
   });
 
   it("answers identically for a wrong password and an unknown email", async () => {

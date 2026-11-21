@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 
-import type { Permission } from "@hacknation/contracts/auth/permissions";
+import type { Permission } from "@subsurf/contracts/auth/permissions";
 
 import { GuardedButton } from "@/components/guarded-button";
 import { useBlockedReason } from "@/lib/auth/use-blocked-reason";

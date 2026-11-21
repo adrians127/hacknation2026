@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-import type { ScanListResponse } from "@hacknation/contracts/scans/scans.schema";
+import type { ScanListResponse } from "@subsurf/contracts/scans/scans.schema";
 
 import { mockResponse } from "@/api/mock";
 import { mockScans } from "@/features/scans/api/mocks";

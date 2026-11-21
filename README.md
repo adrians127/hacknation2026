@@ -1,6 +1,6 @@
-# Attack Surface Intelligence
+# SubSurf
 
-A prototype tool for recurring discovery scans of large infrastructure (>10,000 IP addresses): detecting live hosts, services, web technologies, CMSs, headers and cookies, and tracking changes between scans. Built for HackNation 2026 on a task set by the AGH Information Security Center ([`hackathon-zadanie.pdf`](hackathon-zadanie.pdf), in Polish).
+SubSurf is an attack surface intelligence prototype for recurring discovery scans of large infrastructure (>10,000 IP addresses): detecting live hosts, services, web technologies, CMSs, headers and cookies, and tracking changes between scans. Built for HackNation 2026 on a task set by the AGH Information Security Center ([`hackathon-zadanie.pdf`](hackathon-zadanie.pdf), in Polish).
 
 ## Project structure
 

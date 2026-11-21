@@ -2,6 +2,8 @@ import { existsSync } from "node:fs";
 
 import { z } from "zod";
 
+import { PortSpecSchema } from "@subsurf/contracts/scans/scans.schema";
+
 import {
   buildDatabaseUrl,
   DB_SSL_MODES,
@@ -16,6 +18,12 @@ const blankAsAbsent = <T extends z.ZodType>(schema: T) =>
 // Must match .env.example; production refuses to start with these public values.
 const EXAMPLE_JWT_SECRET = "dev-only-jwt-secret-change-me-in-production";
 const EXAMPLE_ADMIN_PASSWORD = "admin-change-me-now";
+
+// Must match .env.example.
+const DEFAULT_SCAN_PORTS =
+  "21,22,23,25,53,80,110,111,135,139,143,443,445,993,995,1433,1521,2049,3306,3389,5432,5900,6379,8000,8080,8443,9200,27017";
+
+const isPowerOfTwo = (value: number) => Number.isInteger(Math.log2(value));
 
 // Real environment variables win over `.env` (Node does not override them).
 if (existsSync(".env")) {
@@ -45,6 +53,20 @@ const envSchema = z
     // First admin, created at startup while there are no users (and by the seed).
     ADMIN_EMAIL: blankAsAbsent(z.email().optional()),
     ADMIN_PASSWORD: blankAsAbsent(z.string().min(12).max(128).optional()),
+
+    // Snapshotted onto every queued scan (src/modules/scans).
+    SCAN_DEFAULT_PORTS: blankAsAbsent(PortSpecSchema.default(DEFAULT_SCAN_PORTS)),
+    SCAN_DEFAULT_MAX_RATE: blankAsAbsent(z.coerce.number().int().positive().max(100_000).default(100)),
+    // At most 1024: the Nmap job contract caps a job at 1024 targets.
+    SCAN_BATCH_SIZE: blankAsAbsent(
+      z.coerce
+        .number()
+        .int()
+        .min(16)
+        .max(1024)
+        .refine(isPowerOfTwo, "SCAN_BATCH_SIZE must be a power of two")
+        .default(256),
+    ),
   })
   .refine((value) => value.NODE_ENV !== "production" || value.JWT_SECRET !== EXAMPLE_JWT_SECRET, {
     path: ["JWT_SECRET"],

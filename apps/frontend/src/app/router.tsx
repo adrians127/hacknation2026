@@ -16,6 +16,7 @@ import { RouteError } from "@/app/routes/route-error";
 import { ScansRoute } from "@/app/routes/scans";
 import { StatusRoute } from "@/app/routes/status";
 import { TargetsRoute } from "@/app/routes/targets";
+import { TargetsNewRoute } from "@/app/routes/targets-new";
 
 /**
  * - `/` (landing), `/status` (API health) and `/login` are public; signed-in users are
@@ -44,7 +45,14 @@ export const router = createBrowserRouter([
           {
             path: "targets",
             element: <RequirePermission permission="targets:read" />,
-            children: [{ index: true, Component: TargetsRoute }],
+            children: [
+              { index: true, Component: TargetsRoute },
+              {
+                path: "new",
+                element: <RequirePermission permission="targets:create" />,
+                children: [{ index: true, Component: TargetsNewRoute }],
+              },
+            ],
           },
           {
             path: "scans",

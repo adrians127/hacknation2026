@@ -19,6 +19,28 @@ Workers have no database access. Only the backend writes to it (Prisma). Each wo
 
 The Nmap worker sends `WORKER_TOKEN` as a bearer machine token to JSON endpoints described in `packages/contracts` (tag `Workers`). Machine-token validation is separate from user authentication and still needs to be implemented with the backend lease, heartbeat, and result handlers.
 
+## Scan jobs in the database
+
+The work a lease hands out already exists: `POST /targets/import` with `startScan` (see [the backend README](../backend/README.md#targets-and-scan-jobs)) queues a `Scan` and splits its addresses into `ScanJob` rows (`apps/backend/prisma/schema/scans/`). The lease, heartbeat and result handlers read and update those rows.
+
+| `ScanJob` field | Meaning |
+|---|---|
+| `scanId`, `sequence` | The run it belongs to and its position (1..`Scan.jobCount`, in address order) |
+| `kind` | `discovery` (created by the import) or `service`; see the open questions below |
+| `status` | `queued` → `leased` → `completed` / `failed`, or `stopped`; an expired lease goes back to `queued` |
+| `subnet` | The smallest aligned IPv4 CIDR containing the whole batch, ready for `NmapJob.subnet` |
+| `targets` | IPv4 addresses and CIDRs inside `subnet`, at most `Scan.batchSize` addresses in total (256 by default, never above 1024, the `NmapJob` limit) |
+| `hosts` | `[{ ip, domain }]` for domains the backend resolved into this batch (one IP may appear under several domains) |
+| `attempts`, `leaseId`, `leasedBy`, `leaseExpiresAt`, `heartbeatAt` | Lease bookkeeping; the `(status, leaseExpiresAt)` index serves the lease query |
+| `startedAt`, `finishedAt`, `durationMs`, `error` | Timing for adaptive batch sizing, and the last failure |
+
+Scan parameters live on the parent `Scan`, snapshotted from the backend's env when it was queued: `ports` (a TCP port spec such as `22,80,8000-8100`), `maxRate` (packets per second) and `batchSize`.
+
+Open questions for the lease implementation:
+
+- Which worker consumes the `discovery` jobs: Masscan over `targets` with `Scan.ports`, followed by `service` jobs built from its hits, or Nmap directly (every address of `targets` × `Scan.ports`)?
+- `NmapJob.targets` rejects duplicate IPs, but `hosts` can list one IP under two domains: pick one domain per IP or send several jobs.
+
 ## Scan safety (PDF requirement)
 
 Scans must be **safe**: detection only, no exploitation and no login attempts. The rate must be limited (`--max-rate`, `--scan-delay`, timing), a scan may only cover the ports and ranges allowed by the configuration, and it is stopped once the time window is exceeded.

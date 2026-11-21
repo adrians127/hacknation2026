@@ -2,7 +2,7 @@ import {
   SYSTEM_ROLE_KEYS,
   SYSTEM_ROLE_PERMISSIONS,
   type SystemRoleKey,
-} from "@hacknation/contracts/auth/permissions";
+} from "@subsurf/contracts/auth/permissions";
 
 import { toPermissions } from "~backend/lib/auth-context";
 import { prisma } from "~backend/lib/prisma";

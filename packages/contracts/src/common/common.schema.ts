@@ -21,7 +21,6 @@ export const ErrorCodeSchema = z.enum([
   "ROLE_IN_USE",
   "EMAIL_TAKEN",
   "ROLE_NAME_TAKEN",
-  "TARGET_EXISTS",
 ]);
 
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;

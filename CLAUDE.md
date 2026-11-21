@@ -4,7 +4,7 @@ This file guides Claude Code when working in this repository. It is deliberately
 
 ## What this repository is
 
-An **Attack Surface Intelligence** prototype for the HackNation 2026 hackathon. The task was set by the AGH Information Security Center (Centrum Bezpieczeństwa Informacji AGH). The system periodically scans large networks (>10,000 IPs), detects live hosts and services, fingerprints HTTP/HTTPS (title, status code, headers, cookies, TLS, redirects), recognizes technologies and CMSs, supports custom detection signatures and shows changes between scans. On top of that come RBAC, encryption of data at rest, CSV/JSON import/export and DefectDojo integration.
+**SubSurf**, an Attack Surface Intelligence prototype for the HackNation 2026 hackathon. The task was set by the AGH Information Security Center (Centrum Bezpieczeństwa Informacji AGH). The system periodically scans large networks (>10,000 IPs), detects live hosts and services, fingerprints HTTP/HTTPS (title, status code, headers, cookies, TLS, redirects), recognizes technologies and CMSs, supports custom detection signatures and shows changes between scans. On top of that come RBAC, encryption of data at rest, CSV/JSON import/export and DefectDojo integration.
 
 ## Task context: always include the PDF
 
@@ -54,8 +54,8 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - `apps/frontend`: React 19 + Vite 8 + React Router 8 (data mode) + Tailwind 4 + shadcn/ui + TanStack Query + TanStack Table.
 - `apps/backend`: Express 5 + TS (built with tsdown, dev with tsx). Talks to PostgreSQL through Prisma 7. **The only component that writes to the database.**
 - `apps/workers/<name>`: C++23 + CMake + nmap workers, built and run in Docker. **Not pnpm workspaces** (no `package.json`), so `pnpm build` does not need a local C++ compiler.
-- `packages/contracts`: `@hacknation/contracts`, zod schemas and types. Generates the committed `openapi.json`. A source-only package with no build step.
-- `packages/api-client`: `@hacknation/api-client`, types generated from `openapi.json` + `openapi-fetch`. **The only workspace on TypeScript 6** (`openapi-typescript` needs the JS API that TS 7 no longer ships).
+- `packages/contracts`: `@subsurf/contracts`, zod schemas and types. Generates the committed `openapi.json`. A source-only package with no build step.
+- `packages/api-client`: `@subsurf/api-client`, types generated from `openapi.json` + `openapi-fetch`. **The only workspace on TypeScript 6** (`openapi-typescript` needs the JS API that TS 7 no longer ships).
 - `docker/`: Docker Compose (PostgreSQL 19, local DefectDojo, worker under the `workers` profile). Not a workspace.
 - `docs/`: technical documentation and the presentation.
 
@@ -64,6 +64,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - **Contract:** `contracts/*.schema.ts` (zod) → `pnpm generate` → `openapi.json` → `api-client` (types) → frontend (`api.useQuery("get", "/path")`). The backend validates requests with the same schemas. The C++ workers take their endpoint definitions from the same `openapi.json`.
 - **Frontend mocks:** an endpoint the backend doesn't have yet is mocked only in the feature's `api/` hooks (TanStack Query), never in components, so switching to the backend changes one function. See [`apps/frontend/README.md`](apps/frontend/README.md#mocking-endpoints-the-backend-doesnt-have-yet).
 - **Workers ↔ backend:** HTTP pull. A worker takes a batch of work (lease + heartbeat) and sends results back over REST. Workers have no database access.
+- **Targets → scan jobs:** the import (`POST /targets/import`; manual, CSV and JSON all go through the shared parser in `contracts/src/targets/target-input.ts`) fills the `Target` inventory and can queue a `Scan` split into `ScanJob` batches. Workers lease those rows; the lease endpoints are not implemented yet. Details: [`apps/backend/README.md`](apps/backend/README.md#targets-and-scan-jobs).
 - **Auth/RBAC (implemented):**
   - local accounts (argon2id) and a 15-minute access JWT plus a rotating refresh token, both in httpOnly cookies;
   - roles are database rows built from the `resource:action` catalog in `contracts/src/auth/permissions.ts`;

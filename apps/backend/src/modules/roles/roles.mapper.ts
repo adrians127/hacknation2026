@@ -1,5 +1,5 @@
-import { SystemRoleKeySchema } from "@hacknation/contracts/auth/permissions";
-import type { Role, RoleSummary } from "@hacknation/contracts/roles/roles.schema";
+import { SystemRoleKeySchema } from "@subsurf/contracts/auth/permissions";
+import type { Role, RoleSummary } from "@subsurf/contracts/roles/roles.schema";
 
 import type { Role as RoleRow } from "~backend/generated/prisma/client";
 import { toPermissions } from "~backend/lib/auth-context";

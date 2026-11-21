@@ -1,7 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import { z, ZodError } from "zod";
 
-import type { ErrorResponse } from "@hacknation/contracts/common/common.schema";
+import type { ErrorResponse } from "@subsurf/contracts/common/common.schema";
 
 import { isDevelopment } from "~backend/config/env";
 import { HttpError } from "~backend/lib/http-error";

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 
-import type { User } from "@hacknation/contracts/users/users.schema";
+import type { User } from "@subsurf/contracts/users/users.schema";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { GuardedButton } from "@/components/guarded-button";

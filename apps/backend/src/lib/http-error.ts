@@ -1,4 +1,4 @@
-import type { ErrorCode } from "@hacknation/contracts/common/common.schema";
+import type { ErrorCode } from "@subsurf/contracts/common/common.schema";
 
 export interface HttpErrorOptions extends ErrorOptions {
   /** Machine-readable reason, sent as `error.code` so the frontend can translate it. */

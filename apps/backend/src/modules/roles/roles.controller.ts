@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-import type { IdParams } from "@hacknation/contracts/common/common.schema";
+import type { IdParams } from "@subsurf/contracts/common/common.schema";
 import type {
   CreateRoleBody,
   DeleteRoleQuery,
@@ -8,7 +8,7 @@ import type {
   RoleDetailResponse,
   RoleListResponse,
   UpdateRoleBody,
-} from "@hacknation/contracts/roles/roles.schema";
+} from "@subsurf/contracts/roles/roles.schema";
 
 import { getAuth } from "~backend/lib/auth-context";
 import { rolesService } from "~backend/modules/roles/roles.service";

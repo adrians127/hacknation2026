@@ -4,8 +4,8 @@ import {
   SYSTEM_ROLE_KEYS,
   SYSTEM_ROLE_PERMISSIONS,
   type Permission,
-} from "@hacknation/contracts/auth/permissions";
-import { ErrorResponseSchema } from "@hacknation/contracts/common/common.schema";
+} from "@subsurf/contracts/auth/permissions";
+import { ErrorResponseSchema } from "@subsurf/contracts/common/common.schema";
 
 import { prisma } from "~backend/lib/prisma";
 import { createUser, signInAs } from "~backend/test/auth";
@@ -34,7 +34,7 @@ const someUserPath = async (suffix = "") => `/v1/users/${(await createUser()).id
 const customRolePath = async () =>
   `/v1/roles/${(await prisma.role.create({ data: { name: `Custom ${Math.random()}`, permissions: [] } })).id}`;
 
-// Every protected users/roles endpoint, with a request that succeeds for an authorized caller.
+// Every protected endpoint, with a request that succeeds for an authorized caller.
 const ENDPOINTS: Endpoint[] = [
   { permission: "users:read", method: "GET", path: async () => "/v1/users" },
   { permission: "users:read", method: "GET", path: () => someUserPath() },
@@ -72,6 +72,12 @@ const ENDPOINTS: Endpoint[] = [
     body: async () => ({ description: "Changed" }),
   },
   { permission: "roles:delete", method: "DELETE", path: customRolePath },
+  {
+    permission: "targets:create",
+    method: "POST",
+    path: async () => "/v1/targets/import",
+    body: async () => ({ entries: [{ value: "192.0.2.10" }], startScan: false }),
+  },
 ];
 
 describe.each(SYSTEM_ROLE_KEYS)("system role %s", (roleKey) => {

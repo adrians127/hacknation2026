@@ -5,7 +5,7 @@ import {
   PERMISSION_RESOURCES,
   PERMISSIONS,
   type Permission,
-} from "@hacknation/contracts/auth/permissions";
+} from "@subsurf/contracts/auth/permissions";
 
 import {
   buildPermissionMatrix,

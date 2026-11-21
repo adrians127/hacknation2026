@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import type { Role } from "@hacknation/contracts/roles/roles.schema";
+import type { Role } from "@subsurf/contracts/roles/roles.schema";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Label } from "@/components/ui/label";

@@ -1,6 +1,6 @@
 import type { ComponentProps, MouseEvent } from "react";
 
-import type { Permission } from "@hacknation/contracts/auth/permissions";
+import type { Permission } from "@subsurf/contracts/auth/permissions";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

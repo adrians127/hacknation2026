@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { HealthResponseSchema } from "@hacknation/contracts/health/health.schema";
+import { HealthResponseSchema } from "@subsurf/contracts/health/health.schema";
 
 import { prisma } from "~backend/lib/prisma";
 import { startTestServer, type TestServer } from "~backend/test/http";

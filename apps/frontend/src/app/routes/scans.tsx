@@ -20,6 +20,7 @@ export function ScansRoute() {
   return (
     <div className="grid gap-6">
       <PageHeader
+        mocked
         title={t("scans.title")}
         description={t("scans.subtitle")}
         actions={

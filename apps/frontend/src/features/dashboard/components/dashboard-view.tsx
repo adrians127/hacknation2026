@@ -2,7 +2,7 @@ import { Activity, MinusCircle, PlusCircle, RefreshCcw } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Change } from "@hacknation/contracts/dashboard/dashboard.schema";
+import type { Change } from "@subsurf/contracts/dashboard/dashboard.schema";
 
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";

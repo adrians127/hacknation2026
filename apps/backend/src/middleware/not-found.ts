@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-import type { ErrorResponse } from "@hacknation/contracts/common/common.schema";
+import type { ErrorResponse } from "@subsurf/contracts/common/common.schema";
 
 /** Terminal 404 for unmatched routes; separate from the error handler because it is not an error. */
 export function notFound(req: Request, res: Response<ErrorResponse>): void {

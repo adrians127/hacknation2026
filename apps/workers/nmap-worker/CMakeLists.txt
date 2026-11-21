@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 project(nmap-worker
   VERSION 0.0.0
-  DESCRIPTION "Attack Surface Intelligence scan worker (nmap)"
+  DESCRIPTION "SubSurf scan worker (nmap)"
   LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)

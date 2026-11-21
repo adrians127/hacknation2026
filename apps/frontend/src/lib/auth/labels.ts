@@ -8,7 +8,7 @@ import {
   type PermissionAction,
   type PermissionResource,
   type SystemRoleKey,
-} from "@hacknation/contracts/auth/permissions";
+} from "@subsurf/contracts/auth/permissions";
 
 export function splitPermission(permission: Permission): {
   resource: PermissionResource;

@@ -1,4 +1,4 @@
-import type { SystemRoleKey } from "@hacknation/contracts/auth/permissions";
+import type { SystemRoleKey } from "@subsurf/contracts/auth/permissions";
 
 import { env } from "~backend/config/env";
 import { hashPassword } from "~backend/lib/password";

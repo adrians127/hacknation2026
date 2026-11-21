@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { MeResponseSchema } from "@hacknation/contracts/auth/auth.schema";
-import { SYSTEM_ROLE_PERMISSIONS } from "@hacknation/contracts/auth/permissions";
+import { MeResponseSchema } from "@subsurf/contracts/auth/auth.schema";
+import { SYSTEM_ROLE_PERMISSIONS } from "@subsurf/contracts/auth/permissions";
 import {
   UserListResponseSchema,
   UserSchema,
   UserWithTemporaryPasswordResponseSchema,
-} from "@hacknation/contracts/users/users.schema";
+} from "@subsurf/contracts/users/users.schema";
 
 import { prisma } from "~backend/lib/prisma";
 import { createUser, signIn, signInAs, TEST_PASSWORD } from "~backend/test/auth";
