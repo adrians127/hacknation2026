@@ -3,10 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { prisma } from "~backend/lib/prisma";
 import { acquireLease } from "~backend/modules/vulnerabilities/sync/lease";
-import {
-  dueMode,
-  VulnerabilityScheduler,
-} from "~backend/modules/vulnerabilities/sync/scheduler";
+import { dueMode } from "~backend/modules/vulnerabilities/sync/schedule";
+import { VulnerabilityScheduler } from "~backend/modules/vulnerabilities/sync/scheduler";
 import { FakeFetcher } from "~backend/modules/vulnerabilities/test/fixtures";
 
 const HOUR = 60 * 60 * 1000;
