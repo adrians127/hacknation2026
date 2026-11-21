@@ -9,6 +9,7 @@ import type {
   SyncRun,
   UpdateServiceVulnerabilityBody,
   VulnerabilitySource,
+  VulnerabilityFilter,
   VulnerabilitySourceListResponse,
   VulnerabilitySummary,
 } from "@subsurf/contracts/vulnerabilities/vulnerabilities.schema";
@@ -231,18 +232,49 @@ export const vulnerabilitiesService = {
     return { serviceId, canonicalId, triage: triage.triage, note: decryptText(triage.note) };
   },
 
-  /** Per service, for the scan views: counted per CVE, false positives left out. */
-  async summaries(serviceIds: readonly string[]): Promise<Map<string, VulnerabilitySummary>> {
-    const matches = await countedMatches(serviceIds);
-    const byService = Map.groupBy(matches, (match) => match.serviceId);
-    return new Map(
-      serviceIds.map((id) => [id, summarize(byService.get(id) ?? [])] as const),
-    );
+  /**
+   * For the scan views: a summary per service and per group of services (a host, where a CVE
+   * found on two services counts once). False positives are left out.
+   */
+  async summaries(groups: ReadonlyMap<string, readonly string[]>): Promise<{
+    services: Map<string, VulnerabilitySummary>;
+    groups: Map<string, VulnerabilitySummary>;
+  }> {
+    const serviceIds = [...new Set([...groups.values()].flat())];
+    const byService = Map.groupBy(await countedMatches(serviceIds), (match) => match.serviceId);
+    return {
+      services: new Map(serviceIds.map((id) => [id, summarize(byService.get(id) ?? [])])),
+      groups: new Map(
+        [...groups].map(([key, ids]) => [
+          key,
+          ids.length === 0
+            ? EMPTY_SUMMARY
+            : summarize(ids.flatMap((id) => byService.get(id) ?? [])),
+        ]),
+      ),
+    };
   },
 
-  /** One summary over several services (a host), each CVE counted once. */
-  async summaryOf(serviceIds: readonly string[]): Promise<VulnerabilitySummary> {
-    return serviceIds.length === 0 ? EMPTY_SUMMARY : summarize(await countedMatches(serviceIds));
+  /** Hosts with a counted, confirmed vulnerability matching the scan list's filter. */
+  async hostIdsWith(filter: VulnerabilityFilter): Promise<string[]> {
+    const severity =
+      filter === "critical"
+        ? Prisma.sql`AND m."severity" = 'critical'`
+        : filter === "high"
+          ? Prisma.sql`AND m."severity" IN ('critical', 'high')`
+          : filter === "kev"
+            ? Prisma.sql`AND m."kev"`
+            : Prisma.empty;
+    const rows = await prisma.$queryRaw<{ hostId: string }[]>`
+      SELECT DISTINCT s."hostId"
+      FROM "VulnerabilityMatch" m JOIN "Service" s ON s.id = m."serviceId"
+      WHERE m."status" = 'active' AND m."confidence" = 'confirmed' ${severity}
+        AND NOT EXISTS (
+          SELECT 1 FROM "ServiceVulnerabilityTriage" t
+          WHERE t."serviceId" = m."serviceId" AND t."canonicalId" = m."canonicalId"
+            AND t."triage" = 'false_positive'
+        )`;
+    return rows.map((row) => row.hostId);
   },
 
   /** Per service: active matches, then ones retracted recently, most severe first. */

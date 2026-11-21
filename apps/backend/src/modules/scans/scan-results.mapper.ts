@@ -6,11 +6,16 @@ import type {
   HostHistoryEntry,
 } from "@subsurf/contracts/scans/scan-results.schema";
 import type { Scan, ScanHostCounts } from "@subsurf/contracts/scans/scans.schema";
+import type {
+  ServiceVulnerability,
+  VulnerabilitySummary,
+} from "@subsurf/contracts/vulnerabilities/vulnerabilities.schema";
 
 import type { Prisma, Scan as ScanRow } from "~backend/generated/prisma/client";
 import { decryptText } from "~backend/lib/crypto";
 import { httpSummaries, openPortDetails } from "~backend/modules/results/details";
 import type { HostDiff, ServiceDiff } from "~backend/modules/scans/scan-diff";
+import { EMPTY_SUMMARY } from "~backend/modules/vulnerabilities/vulnerabilities.mapper";
 
 export const OBSERVATION_INCLUDE = {
   hostnames: { select: { name: true, source: true } },
@@ -30,6 +35,11 @@ export interface HostInScan {
   current: ObservationRow;
   /** The base scan's `up` observation, if any. */
   base: ObservationRow | undefined;
+  /** Of the Service assets (their newest observation), whatever scan is viewed. */
+  vulnerabilities: {
+    host: VulnerabilitySummary;
+    services: ReadonlyMap<string, VulnerabilitySummary>;
+  };
 }
 
 export function toScan(scan: ScanRow, hosts: ScanHostCounts, openPorts: number): Scan {
@@ -76,7 +86,10 @@ function resolveServices(entry: HostInScan): ResolvedService[] {
   });
 }
 
-function serviceFields({ diff, service, port }: ResolvedService) {
+function serviceFields(
+  { diff, service, port }: ResolvedService,
+  summaries: ReadonlyMap<string, VulnerabilitySummary>,
+) {
   return {
     id: service.id,
     protocol: service.protocol,
@@ -91,6 +104,7 @@ function serviceFields({ diff, service, port }: ResolvedService) {
     triage: service.triage,
     tags: service.tags,
     note: decryptText(service.note),
+    vulnerabilities: summaries.get(service.id) ?? EMPTY_SUMMARY,
   };
 }
 
@@ -108,6 +122,7 @@ function hostFields(entry: HostInScan) {
     triage: host.triage,
     tags: host.tags,
     note: decryptText(host.note),
+    vulnerabilities: entry.vulnerabilities.host,
   };
 }
 
@@ -116,14 +131,18 @@ export function toScanHost(entry: HostInScan): ScanHost {
     ...hostFields(entry),
     services: resolveServices(entry).map(
       (resolved): ScanService => ({
-        ...serviceFields(resolved),
+        ...serviceFields(resolved, entry.vulnerabilities.services),
         http: httpSummaries(resolved.port.details),
       }),
     ),
   };
 }
 
-export function toScanHostDetail(entry: HostInScan, history: HostHistoryEntry[]): ScanHostDetail {
+export function toScanHostDetail(
+  entry: HostInScan,
+  history: HostHistoryEntry[],
+  matches: ReadonlyMap<string, ServiceVulnerability[]>,
+): ScanHostDetail {
   return {
     ...hostFields(entry),
     firstSeenAt: entry.host.firstSeenAt.toISOString(),
@@ -133,7 +152,7 @@ export function toScanHostDetail(entry: HostInScan, history: HostHistoryEntry[])
       const { port, service } = resolved;
       const details = openPortDetails(port.details);
       return {
-        ...serviceFields(resolved),
+        ...serviceFields(resolved, entry.vulnerabilities.services),
         http: details.http,
         reason: port.reason,
         extraInfo: port.serviceExtraInfo,
@@ -145,6 +164,7 @@ export function toScanHostDetail(entry: HostInScan, history: HostHistoryEntry[])
         scripts: details.scripts,
         firstSeenAt: service.firstSeenAt.toISOString(),
         lastSeenAt: service.lastSeenAt.toISOString(),
+        vulnerabilityMatches: matches.get(service.id) ?? [],
       };
     }),
   };
