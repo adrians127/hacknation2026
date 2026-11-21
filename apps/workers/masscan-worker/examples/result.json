@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "job_id": "example-001",
+  "status": "completed",
+  "stop_reason": null,
+  "error": null,
+  "worker": {
+    "name": "masscan-worker",
+    "version": "0.1.0",
+    "scanner": "masscan",
+    "scanner_version": "1.3.2"
+  },
+  "scan": {
+    "targets": [
+      "10.0.0.0/23"
+    ],
+    "exclude": [],
+    "effective_ranges": [
+      "10.0.0.0-10.0.1.255"
+    ],
+    "address_count": 512,
+    "ports": "1-65535",
+    "port_count": 65535,
+    "probe_count": 33553920,
+    "rate": 50000,
+    "wait_seconds": 3,
+    "retries": 0,
+    "max_duration_seconds": 1800,
+    "seed": 4410972713377181,
+    "shard": null,
+    "resume_index": 0
+  },
+  "timing": {
+    "started_at": "2026-11-21T16:20:00.000Z",
+    "finished_at": "2026-11-21T16:31:20.512Z",
+    "duration_ms": 680512,
+    "progress": 1.0,
+    "addresses_per_second": 0.7524,
+    "probes_per_second": 49306.6
+  },
+  "resume": null,
+  "summary": {
+    "hosts_up": 2,
+    "open_ports": 3,
+    "subnets": 2
+  },
+  "topology": {
+    "group_prefix": 24,
+    "subnets": [
+      {
+        "cidr": "10.0.0.0/24",
+        "hosts_up": 1,
+        "open_ports": 2,
+        "hosts": [
+          {
+            "ip": "10.0.0.5",
+            "open_ports": [
+              {
+                "port": 22,
+                "protocol": "tcp"
+              },
+              {
+                "port": 443,
+                "protocol": "tcp"
+              }
+            ],
+            "ttl": 62,
+            "estimated_hops": 2,
+            "os_family_hint": "unix-like"
+          }
+        ]
+      },
+      {
+        "cidr": "10.0.1.0/24",
+        "hosts_up": 1,
+        "open_ports": 1,
+        "hosts": [
+          {
+            "ip": "10.0.1.9",
+            "open_ports": [
+              {
+                "port": 3389,
+                "protocol": "tcp"
+              }
+            ],
+            "ttl": 127,
+            "estimated_hops": 1,
+            "os_family_hint": "windows"
+          }
+        ]
+      }
+    ],
+    "hop_distribution": [
+      {
+        "estimated_hops": 1,
+        "hosts": 1
+      },
+      {
+        "estimated_hops": 2,
+        "hosts": 1
+      }
+    ]
+  },
+  "warnings": []
+}

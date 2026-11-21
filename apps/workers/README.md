@@ -7,6 +7,7 @@ This directory is **not a pnpm workspace** (it has no `package.json`), so turbo 
 | Worker | Description |
 |---|---|
 | [`nmap-worker`](nmap-worker/README.md) | Host and service discovery via nmap (skeleton only for now) |
+| [`masscan-worker`](masscan-worker/README.md) | High-speed TCP SYN sweep across subnets or all 65,535 ports via masscan. JSON job in, JSON topology of live hosts out |
 
 ## Backend protocol: HTTP pull (settled, not implemented yet)
 

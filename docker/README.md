@@ -6,6 +6,7 @@ Local infrastructure in Docker Compose. You run the backend and frontend with `p
 |---|---|---|
 | `postgres` | default | PostgreSQL 19 (alpine), port bound to `127.0.0.1:5432` only |
 | `nmap-worker` | `workers` | C++ worker from `apps/workers/nmap-worker` |
+| `masscan-worker` | `workers` | One-shot C++ masscan sweep from `apps/workers/masscan-worker` (`run --rm -T` with a job on stdin) |
 
 ## Commands (from the repo root)
 
@@ -30,3 +31,7 @@ pnpm workers:down
 ## nmap-worker
 
 By default it connects to the backend on the host via `host.docker.internal:3001`. It has `cap_add: [NET_RAW, NET_ADMIN]`. Details are in [`apps/workers/nmap-worker/README.md`](../apps/workers/nmap-worker/README.md).
+
+## masscan-worker
+
+A one-shot CLI rather than a long-running service. Its default command only prints usage, so `pnpm workers:up` does not start a scan. Run a job with `docker compose -f docker/docker-compose.yml --profile workers run --rm -T masscan-worker < job.json`. It has `cap_add: [NET_RAW, NET_ADMIN]`. Details are in [`apps/workers/masscan-worker/README.md`](../apps/workers/masscan-worker/README.md).
