@@ -1,5 +1,5 @@
 // Shared by vitest.config.ts (worker env) and global-setup.ts (database bootstrap).
-// Connection defaults match docker/docker-compose.yml; CI overrides them through the environment.
+// Connection defaults match docker/docker-compose.yml; DB_* env variables override them.
 export const TEST_DATABASE_NAME = "hacknation_test";
 
 export const TEST_ENV = {

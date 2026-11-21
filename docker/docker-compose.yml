@@ -1,9 +1,10 @@
 # Local infrastructure for SubSurf. See docker/README.md.
 #
 #   pnpm db:up          PostgreSQL only
-#   pnpm infra:up       every default service (PostgreSQL + DefectDojo)
+#   pnpm infra:up       every service (PostgreSQL + DefectDojo)
 #   pnpm dojo:up        DefectDojo only (UI + API on http://localhost:8080)
-#   pnpm workers:up     also build + start the nmap worker (profile: workers)
+#
+# Scan workers live in docker-compose.workers.yml.
 #
 # Defaults match apps/backend/.env.example. Override them via the shell
 # environment or an optional docker/.env. Every DefectDojo default is dev-only.
@@ -50,23 +51,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  nmap-worker:
-    profiles: ["workers"]
-    build:
-      context: ../apps/workers/nmap-worker
-    image: hacknation/nmap-worker:local
-    container_name: hacknation-nmap-worker
-    environment:
-      # The backend runs on the host via `pnpm dev`.
-      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:3001/v1}
-      WORKER_TOKEN: ${WORKER_TOKEN:-}
-      NMAP_SCAN_TYPE: syn
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    cap_add:
-      - NET_RAW
-      - NET_ADMIN
 
   # DefectDojo: the upstream compose (django-DefectDojo/docker-compose.yml) with our
   # service names, docker.io images, healthchecks and a loopback-only port.

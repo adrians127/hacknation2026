@@ -2,11 +2,12 @@
 
 Scanning workers written in **C++**. One directory is one worker: `apps/workers/<name>/` with its own `CMakeLists.txt`, `CMakePresets.json`, `Dockerfile` and `README.md`.
 
-This directory is **not a pnpm workspace** (it has no `package.json`), so turbo skips it and `pnpm build` does not need a local C++ compiler. Workers are built and run in Docker (`pnpm workers:build`, `pnpm workers:up`), and CI compiles every image.
+This directory is **not a pnpm workspace** (it has no `package.json`), so turbo skips it and `pnpm build` does not need a local C++ compiler. Workers are built and run in Docker (`pnpm workers:build`, `pnpm workers:masscan`, both masscan-worker only for now).
 
 | Worker | Description |
 |---|---|
 | [`nmap-worker`](nmap-worker/README.md) | TCP service and version detection on Masscan hits |
+| [`masscan-worker`](masscan-worker/README.md) | High-speed TCP SYN sweep across subnets or all 65,535 ports via masscan. JSON job in, JSON topology of live hosts out |
 
 ## Backend protocol: HTTP pull
 

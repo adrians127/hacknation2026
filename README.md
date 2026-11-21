@@ -38,7 +38,7 @@ Sign in at `http://localhost:3000` with the accounts from `apps/backend/.env.exa
 | `admin@hacknation.local` | Administrator | `ADMIN_PASSWORD` (`admin-change-me-now`) |
 | `editor@hacknation.local`, `analyst@hacknation.local`, `viewer@hacknation.local` | Editor, Analyst, Viewer | `DEMO_USER_PASSWORD` (`demo-password-2026`) |
 
-nmap worker: `pnpm workers:up` (builds the image and starts it).
+Workers have their own compose file (`docker/docker-compose.workers.yml`): `pnpm workers:build` builds the masscan worker, `pnpm workers:masscan < job.json` runs one sweep. The nmap worker is opt-in (see [`docker/README.md`](docker/README.md)).
 
 ### Other commands
 

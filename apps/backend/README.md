@@ -117,7 +117,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Tests
 
-Backend tests are integration tests against a real PostgreSQL (`pnpm db:up` locally, a service container in CI). `src/test/global-setup.ts` creates and migrates a separate `hacknation_test` database; every test starts from truncated tables with the system roles synced. `rbac-matrix.test.ts` checks every system role against every users/roles endpoint.
+Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `src/test/global-setup.ts` creates and migrates a separate `hacknation_test` database; every test starts from truncated tables with the system roles synced. `rbac-matrix.test.ts` checks every system role against every users/roles endpoint.
 
 ## Prisma
 
