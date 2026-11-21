@@ -50,6 +50,8 @@ Example `job.json`:
 
 The worker validates that every target is an IPv4 address within `subnet` and that each port is in `1..65535`. Duplicate IPs are rejected; duplicate ports are removed. Job limits may lower the worker's configured maxima but cannot raise them. `domain` is metadata retained in the result; Nmap receives only the numeric IP.
 
+The output described below is the current implementation. The target format is [`docs/worker-result-format.md`](../../../docs/worker-result-format.md) (locked source of truth); the worker should move towards it.
+
 Results contain `job_id`, `lease_id`, `status`, `duration_ms`, and one record per target. Each host has `status` (`scanned`, `pending`, `failed`, `timeout`, or `cancelled`), its reported ports, service name/product/version/CPE when available, scripts, and an optional error. A requested port absent from explicit Nmap XML port entries is marked `not_reported` rather than assumed closed. A job is `partial` if any host is not `scanned`.
 
 ## HTTP pull mode

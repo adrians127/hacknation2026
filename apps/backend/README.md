@@ -129,6 +129,10 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up` loca
 
 Jobs start as `queued` with `kind = discovery`. Leasing them (`/workers/*`, machine token) is the workers team's part; see [`apps/workers/README.md`](../workers/README.md#scan-jobs-in-the-database).
 
+## Scan results
+
+The result a worker sends for a job is fixed in [`docs/worker-result-format.md`](../../docs/worker-result-format.md) (locked). It is the backend's single input for scan data. Results storage, diffs between scans, the dashboard, signatures, export/import and DefectDojo all build on it. That document also lists what the backend derives itself: target membership, detections, coverage, new/gone/changed and host lifecycle.
+
 ## Environment variables
 
 `.env.example` documents every variable. `pnpm project:setup` copies it to `.env`. Real environment variables take precedence over `.env`. A missing or invalid variable stops the process at startup with a readable error.

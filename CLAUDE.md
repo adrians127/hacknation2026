@@ -42,6 +42,7 @@ English is the project's default language: documentation, code comments, commit 
 | Backend (stack, modules, Prisma, env, validation) | [`apps/backend/README.md`](apps/backend/README.md) |
 | C++ workers (conventions, HTTP pull protocol, scan safety) | [`apps/workers/README.md`](apps/workers/README.md) |
 | nmap-worker (CMake/Docker build, network capabilities) | [`apps/workers/nmap-worker/README.md`](apps/workers/nmap-worker/README.md) |
+| Worker result format (locked source of truth for scan data) | [`docs/worker-result-format.md`](docs/worker-result-format.md) |
 | Contract (zod schemas, OpenAPI generation, adding an endpoint) | [`packages/contracts/README.md`](packages/contracts/README.md) |
 | Typed API client (and why it uses TS 6) | [`packages/api-client/README.md`](packages/api-client/README.md) |
 | Local infrastructure (PostgreSQL, DefectDojo, worker in compose) | [`docker/README.md`](docker/README.md) |
@@ -64,6 +65,10 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - **Contract:** `contracts/*.schema.ts` (zod) → `pnpm generate` → `openapi.json` → `api-client` (types) → frontend (`api.useQuery("get", "/path")`). The backend validates requests with the same schemas. The C++ workers take their endpoint definitions from the same `openapi.json`.
 - **Frontend mocks:** an endpoint the backend doesn't have yet is mocked only in the feature's `api/` hooks (TanStack Query), never in components, so switching to the backend changes one function. See [`apps/frontend/README.md`](apps/frontend/README.md#mocking-endpoints-the-backend-doesnt-have-yet).
 - **Workers ↔ backend:** HTTP pull. A worker takes a batch of work (lease + heartbeat) and sends results back over REST. Workers have no database access.
+- **Worker result format (locked):** [`docs/worker-result-format.md`](docs/worker-result-format.md) is the source of truth for the `{ scan, hosts[] }` JSON a worker returns for one job.
+  - Workers work towards producing exactly that structure.
+  - The backend builds every scan-data feature on it: storing observations, diffs, dashboard, signatures/detections, export/import, DefectDojo.
+  - **Read it before designing any such feature.** Change the document first (with the user's agreement), then the code. The current `NmapResultSchema` still differs; the document lists the gap.
 - **Targets → scan jobs:** the import (`POST /targets/import`; manual, CSV and JSON all go through the shared parser in `contracts/src/targets/target-input.ts`) fills the `Target` inventory and can queue a `Scan` split into `ScanJob` batches. Workers lease those rows; the lease endpoints are not implemented yet. Details: [`apps/backend/README.md`](apps/backend/README.md#targets-and-scan-jobs).
 - **Auth/RBAC (implemented):**
   - local accounts (argon2id) and a 15-minute access JWT plus a rotating refresh token, both in httpOnly cookies;
