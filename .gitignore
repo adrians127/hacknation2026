@@ -11,6 +11,9 @@ out/
 apps/workers/**/build/
 cmake-build-*/
 compile_commands.json
+# worker-manager output (pnpm workers:manager)
+worker-results/*
+!worker-results/.gitkeep
 
 # Prisma Client is generated on install (postinstall); api-client's src/generated IS committed
 apps/backend/src/generated/

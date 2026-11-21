@@ -1,0 +1,4 @@
+# The build context is apps/workers; BuildKit reads this file for worker-manager/Dockerfile.
+**/build/
+**/cmake-build-*/
+nmap-worker/

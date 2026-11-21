@@ -98,6 +98,7 @@ pnpm db:reset       # drop + migrations + seed (system roles, admin, demo accoun
 pnpm infra:up       # all infrastructure compose services, DefectDojo included (infra:down, infra:logs)
 pnpm dojo:up        # DefectDojo only, :8080 (dojo:logs, dojo:smoke)
 pnpm workers:build  # build the masscan-worker image (run a sweep: pnpm workers:masscan < job.json)
+pnpm workers:manager  # build + run worker-manager on its example job list; results in worker-results/
 ```
 
 ## Conventions
