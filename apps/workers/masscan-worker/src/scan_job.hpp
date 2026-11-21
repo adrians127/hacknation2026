@@ -21,6 +21,8 @@ struct Shard {
 
 struct ScanJob {
     std::string job_id;
+    std::optional<std::string> scan_id;  // echoed back; null in the result when not given
+    std::optional<std::string> lease_id;
     std::vector<std::string> target_specs;  // as received, echoed back in the result
     std::vector<std::string> exclude_specs;
     std::vector<Ipv4Range> ranges;  // targets minus excludes, merged

@@ -137,6 +137,12 @@ std::expected<ScanJob, Error> parse_scan_job(const json& input, const Config& co
     const auto job_id = optional_string(input, "job_id");
     if (!job_id) return std::unexpected(job_id.error());
     job.job_id = job_id->value_or("");
+    const auto scan_id = optional_string(input, "scan_id");
+    if (!scan_id) return std::unexpected(scan_id.error());
+    job.scan_id = *scan_id;
+    const auto lease_id = optional_string(input, "lease_id");
+    if (!lease_id) return std::unexpected(lease_id.error());
+    job.lease_id = *lease_id;
 
     const auto targets_it = input.find("targets");
     if (targets_it == input.end()) {

@@ -7,16 +7,17 @@ namespace masscan_worker {
 
 enum class ErrorCode { kInvalidInput, kScannerUnavailable, kScannerFailed, kIo };
 
+// Kebab-case, as docs/worker-result-format.md requires for error codes.
 [[nodiscard]] constexpr std::string_view to_string(ErrorCode code) noexcept {
     switch (code) {
         case ErrorCode::kInvalidInput:
-            return "invalid_input";
+            return "invalid-input";
         case ErrorCode::kScannerUnavailable:
-            return "scanner_unavailable";
+            return "scanner-unavailable";
         case ErrorCode::kScannerFailed:
-            return "scanner_failed";
+            return "scanner-failed";
         case ErrorCode::kIo:
-            return "io_error";
+            return "io-error";
     }
     return "unknown";
 }

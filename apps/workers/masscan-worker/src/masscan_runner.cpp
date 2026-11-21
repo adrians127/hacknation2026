@@ -295,8 +295,25 @@ std::optional<Finding> parse_finding(std::string_view line) {
     if (const auto it = data->find("ttl"); it != data->end() && it->is_number_unsigned()) {
         ttl = std::min<std::uint64_t>(it->get<std::uint64_t>(), 255);
     }
-    return Finding{*address, static_cast<std::uint16_t>(port_number),
-                   static_cast<std::uint8_t>(ttl)};
+    Finding finding{*address, static_cast<std::uint16_t>(port_number),
+                    static_cast<std::uint8_t>(ttl)};
+    if (const auto it = data->find("reason"); it != data->end() && it->is_string()) {
+        finding.reason = it->get<std::string>();
+    }
+    // masscan writes the timestamp as a string of Unix seconds ("1795277913").
+    if (const auto it = record.find("timestamp"); it != record.end()) {
+        if (it->is_number_integer()) {
+            finding.timestamp = it->get<std::int64_t>();
+        } else if (it->is_string()) {
+            const std::string& text = it->get_ref<const std::string&>();
+            std::int64_t seconds = 0;
+            const auto [end, ec] = std::from_chars(text.data(), text.data() + text.size(), seconds);
+            if (ec == std::errc{} && end == text.data() + text.size() && seconds > 0) {
+                finding.timestamp = seconds;
+            }
+        }
+    }
+    return finding;
 }
 
 std::optional<MasscanStatus> parse_masscan_status(std::string_view line) {

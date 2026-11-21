@@ -1,4 +1,5 @@
-// masscan-worker: one JSON job in (targets, ports, limits), one JSON topology out.
+// masscan-worker: one JSON job in (targets, ports, limits), one JSON result out: the live hosts
+// in the format of docs/worker-result-format.md.
 // See README.md for the input/output contract.
 
 #include <unistd.h>
@@ -231,20 +232,20 @@ int run(const CliOptions& cli, const Config& config, const Logger& logger) {
                      {"exit_code", exit_code}});
         return exit_code;
     };
-    const auto fail = [&](std::string job_id, Error error, int exit_code) {
+    const auto fail = [&](ReportInput report, Error error, int exit_code) {
         logger.error("job.failed", error.message, {{"code", to_string(error.code)}});
-        return finish(
-            {.status = ScanStatus::kFailed, .job_id = std::move(job_id), .error = std::move(error)},
-            exit_code);
+        report.status = ScanStatus::kFailed;
+        report.error = std::move(error);
+        return finish(std::move(report), exit_code);
     };
 
     const auto input_text = read_input(cli.input_path);
     if (!input_text) {
-        return fail("", input_text.error(), kExitInvalidInput);
+        return fail({}, input_text.error(), kExitInvalidInput);
     }
     const auto input = nlohmann::json::parse(*input_text, nullptr, /*allow_exceptions=*/false);
     if (input.is_discarded()) {
-        return fail("", {ErrorCode::kInvalidInput, "input is not valid JSON"}, kExitInvalidInput);
+        return fail({}, {ErrorCode::kInvalidInput, "input is not valid JSON"}, kExitInvalidInput);
     }
 
     std::vector<std::string> job_warnings;
@@ -253,18 +254,25 @@ int run(const CliOptions& cli, const Config& config, const Logger& logger) {
         add_warning(std::move(warning));
     }
     if (!job) {
-        std::string job_id;
-        if (const auto it = input.find("job_id");
-            input.is_object() && it != input.end() && it->is_string()) {
-            job_id = it->get<std::string>();
-        }
-        return fail(std::move(job_id), job.error(), kExitInvalidInput);
+        // Echo whatever identifiers are readable, so the backend can match the failure to its job.
+        const auto string_field = [&input](std::string_view key) -> std::optional<std::string> {
+            if (!input.is_object()) {
+                return std::nullopt;
+            }
+            const auto it = input.find(key);
+            return it != input.end() && it->is_string() ? std::optional{it->get<std::string>()}
+                                                        : std::nullopt;
+        };
+        return fail({.job_id = string_field("job_id").value_or(""),
+                     .scan_id = string_field("scan_id"),
+                     .lease_id = string_field("lease_id")},
+                    job.error(), kExitInvalidInput);
     }
     log_job(logger, *job);
 
     const auto version = detect_masscan_version(config);
     if (!version) {
-        return fail(job->job_id,
+        return fail({.job_id = job->job_id, .job = &*job},
                     {ErrorCode::kScannerUnavailable,
                      std::format("'{}' not found or not runnable", config.masscan_binary)},
                     kExitFailed);
@@ -289,9 +297,14 @@ int run(const CliOptions& cli, const Config& config, const Logger& logger) {
         .on_progress =
             [&](const ScanProgress& progress) { log_progress(logger, progress, topology); },
     };
+    const auto scan_started = Clock::now();
     const auto outcome = run_masscan(*job, config, logger, callbacks);
+    const auto scan_duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - scan_started);
     if (!outcome) {
-        return fail(job->job_id, outcome.error(), kExitFailed);
+        ReportInput failed{.job_id = job->job_id, .job = &*job};
+        failed.timing.scan_duration = scan_duration;
+        return fail(std::move(failed), outcome.error(), kExitFailed);
     }
     topology.finalize();
 
@@ -305,6 +318,7 @@ int run(const CliOptions& cli, const Config& config, const Logger& logger) {
                        .outcome = &*outcome,
                        .topology = &topology,
                        .scanner_version = version};
+    report.timing.scan_duration = scan_duration;
     int exit_code = EXIT_SUCCESS;
     if (outcome->stop_reason != StopReason::kNone) {
         report.status = ScanStatus::kPartial;

@@ -12,7 +12,9 @@ namespace {
 
 using json = nlohmann::ordered_json;
 
-constexpr int kSchemaVersion = 1;
+// Version of the `masscan` block; the rest follows docs/worker-result-format.md.
+constexpr int kSchemaVersion = 2;
+constexpr std::string_view kWorkerId = "masscan-worker";
 
 std::string_view to_string(ScanStatus status) {
     switch (status) {
@@ -26,16 +28,22 @@ std::string_view to_string(ScanStatus status) {
     return "failed";
 }
 
-json to_json(StopReason reason) {
-    switch (reason) {
-        case StopReason::kNone:
-            return nullptr;
-        case StopReason::kTimeWindow:
-            return "time_window";
-        case StopReason::kSignal:
-            return "signal";
+json stop_reason_json(ScanStatus status, const ScanOutcome* outcome) {
+    if (outcome != nullptr) {
+        switch (outcome->stop_reason) {
+            case StopReason::kTimeWindow:
+                return "deadline";
+            case StopReason::kSignal:
+                return "stop-requested";
+            case StopReason::kNone:
+                break;
+        }
     }
-    return nullptr;
+    return status == ScanStatus::kFailed ? json("error") : json(nullptr);
+}
+
+json nullable(const std::optional<std::string>& text) {
+    return text && !text->empty() ? json(*text) : json(nullptr);
 }
 
 std::string iso8601(std::chrono::system_clock::time_point time) {
@@ -49,7 +57,68 @@ json shard_json(const std::optional<Shard>& shard) {
     return {{"index", shard->index}, {"total", shard->total}};
 }
 
-json scan_json(const ScanJob& job) {
+// The job's single CIDR, or null when its ranges are not exactly one aligned subnet.
+json subnet_json(const ScanJob& job) {
+    if (job.ranges.size() != 1) {
+        return nullptr;
+    }
+    const Ipv4Range& range = job.ranges.front();
+    const std::uint64_t size = range.size();
+    if ((size & (size - 1)) != 0 || (range.first & (size - 1)) != 0) {
+        return nullptr;
+    }
+    int prefix = 32;
+    for (std::uint64_t block = 1; block < size; block <<= 1U) {
+        --prefix;
+    }
+    return format_subnet(range.first, prefix);
+}
+
+json params_json(const ScanJob* job) {
+    return {
+        {"subnet", job ? subnet_json(*job) : json(nullptr)},
+        {"ports", job ? json(format_port_ranges(job->ports)) : json(nullptr)},
+        {"maxParallel", job ? json(1) : json(nullptr)},  // one masscan process per job
+        {"maxRatePerProcess", job ? json(job->rate) : json(nullptr)},
+        {"hostTimeoutMs", nullptr},  // masscan has no per-host timeout
+        {"httpTimeoutMs", nullptr},  // no HTTP in a SYN sweep
+        {"maxBodyBytes", nullptr},
+        {"maxRedirects", nullptr},
+        {"nmapArgs", json::array()},
+    };
+}
+
+// hosts[] lists only live hosts: a masscan job can cover millions of addresses. `down` and
+// `cancelled` are known only for a completed, unsharded scan that started from index 0.
+json counts_json(const ReportInput& input) {
+    const std::size_t up = input.topology ? input.topology->host_count() : 0;
+    const std::size_t open_ports = input.topology ? input.topology->open_port_count() : 0;
+    json addresses = nullptr;
+    json down = nullptr;
+    json cancelled = nullptr;
+    if (input.job != nullptr) {
+        const std::uint64_t total = count_addresses(input.job->ranges);
+        addresses = total;
+        if (input.status == ScanStatus::kCompleted && !input.job->shard &&
+            input.job->resume_index == 0) {
+            down = total - up;
+            cancelled = 0;
+        }
+    }
+    return {
+        {"addresses", std::move(addresses)},
+        {"up", up},
+        {"down", std::move(down)},
+        {"timeout", 0},
+        {"cancelled", std::move(cancelled)},
+        {"failed", 0},
+        {"openPorts", open_ports},
+        {"httpEndpoints", 0},
+        {"httpRequests", 0},
+    };
+}
+
+json job_json(const ScanJob& job) {
     json ranges = json::array();
     for (const Ipv4Range& range : job.ranges) {
         ranges.push_back(format_ipv4_range(range));
@@ -59,19 +128,17 @@ json scan_json(const ScanJob& job) {
     return {
         {"targets", job.target_specs},
         {"exclude", job.exclude_specs},
-        {"effective_ranges", std::move(ranges)},
-        {"address_count", address_count},
-        {"ports", format_port_ranges(job.ports)},
-        {"port_count", port_count},
-        {"probe_count", address_count * port_count},
+        {"effectiveRanges", std::move(ranges)},
+        {"portCount", port_count},
+        {"probeCount", address_count * port_count},
         {"rate", job.rate},
-        {"wait_seconds", job.wait.count()},
+        {"waitSeconds", job.wait.count()},
         {"retries", job.retries},
-        {"max_duration_seconds",
-         job.max_duration ? json(job.max_duration->count()) : json(nullptr)},
+        {"maxDurationSeconds", job.max_duration ? json(job.max_duration->count()) : json(nullptr)},
+        {"groupPrefix", job.group_prefix},
         {"seed", job.seed},
         {"shard", shard_json(job.shard)},
-        {"resume_index", job.resume_index},
+        {"resumeIndex", job.resume_index},
     };
 }
 
@@ -89,63 +156,78 @@ std::optional<double> progress(ScanStatus status, const ScanJob* job, const Scan
                      : std::optional<double>{};
 }
 
-}  // namespace
-
-json build_report(const ReportInput& input) {
+json masscan_json(const ReportInput& input) {
     const ReportTiming& timing = input.timing;
     const auto done = progress(input.status, input.job, input.outcome);
 
-    json timing_json{
-        {"started_at", iso8601(timing.started_at)},
-        {"finished_at", iso8601(timing.finished_at)},
-        {"duration_ms", timing.duration.count()},
-        {"progress", done ? json(*done) : json(nullptr)},
-        {"addresses_per_second", nullptr},
-        {"probes_per_second", nullptr},
-    };
     // Measured throughput lets the orchestrator size the next subgroups.
+    json addresses_per_second = nullptr;
+    json probes_per_second = nullptr;
     if (done && input.job != nullptr && timing.duration.count() > 0) {
         const double seconds = std::chrono::duration<double>(timing.duration).count();
         const auto addresses = static_cast<double>(count_addresses(input.job->ranges));
         const auto ports = static_cast<double>(count_ports(input.job->ports));
-        timing_json["addresses_per_second"] = addresses * *done / seconds;
-        timing_json["probes_per_second"] = addresses * ports * *done / seconds;
+        addresses_per_second = addresses * *done / seconds;
+        probes_per_second = addresses * ports * *done / seconds;
     }
 
     json resume = nullptr;
     if (input.status == ScanStatus::kPartial && input.job != nullptr && input.outcome != nullptr &&
         input.outcome->resume_index) {
         resume = {{"seed", input.job->seed},
-                  {"resume_index", *input.outcome->resume_index},
+                  {"resumeIndex", *input.outcome->resume_index},
                   {"shard", shard_json(input.job->shard)}};
     }
+
+    return {
+        {"schemaVersion", kSchemaVersion},
+        {"scannerVersion", nullable(input.scanner_version)},
+        {"job", input.job ? job_json(*input.job) : json(nullptr)},
+        {"progress", done ? json(*done) : json(nullptr)},
+        {"addressesPerSecond", std::move(addresses_per_second)},
+        {"probesPerSecond", std::move(probes_per_second)},
+        {"resume", std::move(resume)},
+        {"topology", input.topology ? input.topology->to_json() : json(nullptr)},
+        {"warnings", input.warnings},
+    };
+}
+
+}  // namespace
+
+json build_report(const ReportInput& input) {
+    const ReportTiming& timing = input.timing;
 
     json error = nullptr;
     if (input.error) {
         error = {{"code", to_string(input.error->code)}, {"message", input.error->message}};
     }
 
-    return {
-        {"schema_version", kSchemaVersion},
-        {"job_id", input.job_id},
-        {"status", to_string(input.status)},
-        {"stop_reason", input.outcome ? to_json(input.outcome->stop_reason) : json(nullptr)},
-        {"error", std::move(error)},
+    json scan{
+        {"jobId", nullable(input.job_id)},
+        {"leaseId", nullable(input.job ? input.job->lease_id : input.lease_id)},
+        {"scanId", nullable(input.job ? input.job->scan_id : input.scan_id)},
         {"worker",
-         {{"name", "masscan-worker"},
-          {"version", MASSCAN_WORKER_VERSION},
-          {"scanner", "masscan"},
-          {"scanner_version",
-           input.scanner_version ? json(*input.scanner_version) : json(nullptr)}}},
-        {"scan", input.job ? scan_json(*input.job) : json(nullptr)},
-        {"timing", std::move(timing_json)},
-        {"resume", std::move(resume)},
-        {"summary",
-         {{"hosts_up", input.topology ? input.topology->host_count() : 0},
-          {"open_ports", input.topology ? input.topology->open_port_count() : 0},
-          {"subnets", input.topology ? input.topology->subnet_count() : 0}}},
-        {"topology", input.topology ? input.topology->to_json() : json(nullptr)},
-        {"warnings", input.warnings},
+         {{"id", kWorkerId}, {"version", MASSCAN_WORKER_VERSION}, {"nmapVersion", nullptr}}},
+        {"status", to_string(input.status)},
+        {"stopReason", stop_reason_json(input.status, input.outcome)},
+        {"startedAt", iso8601(timing.started_at)},
+        {"finishedAt", iso8601(timing.finished_at)},
+        {"durationMs", timing.duration.count()},
+        // A SYN sweep finds hosts and ports in the same pass; it is counted as the port scan.
+        {"phasesMs",
+         {{"hostDiscovery", 0},
+          {"portScan", timing.scan_duration.count()},
+          {"serviceDetection", 0},
+          {"http", 0}}},
+        {"params", params_json(input.job)},
+        {"counts", counts_json(input)},
+        {"error", std::move(error)},
+    };
+
+    return {
+        {"scan", std::move(scan)},
+        {"hosts", input.topology ? input.topology->hosts_json() : json::array()},
+        {"masscan", masscan_json(input)},
     };
 }
 

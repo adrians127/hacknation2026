@@ -1,6 +1,6 @@
 # masscan-worker
 
-A **C++23** worker for fast, wide TCP SYN sweeps (whole subnets, up to all 65,535 ports) built on **masscan**. You give it one JSON job with ranges, ports and limits. It runs one masscan process, streams masscan's NDJSON output, and writes one JSON result: the live hosts and their open ports, grouped into subnets (the network topology).
+A **C++23** worker for fast, wide TCP SYN sweeps (whole subnets, up to all 65,535 ports) built on **masscan**. You give it one JSON job with ranges, ports and limits. It runs one masscan process, streams masscan's NDJSON output, and writes one JSON result: the list of live hosts and their open ports, in the format of [`docs/worker-result-format.md`](../../../docs/worker-result-format.md), plus the hosts grouped into subnets (the network topology).
 
 The worker runs one job and exits. It does not talk to the backend. An orchestration layer starts it per job, reads the result and decides what comes next (resume, re-shard, hand hosts to `nmap-worker` for service detection). Wrapping it in the HTTP pull loop from [`../README.md`](../README.md) is a separate step.
 
@@ -39,7 +39,9 @@ See [`examples/`](examples/). Only `targets` is required. For a first smoke test
 
 | Field | Default | Description |
 |---|---|---|
-| `job_id` | `""` | Echoed back in the result |
+| `job_id` | none | Echoed back as `scan.jobId` (`null` when not given) |
+| `scan_id` | none | Echoed back as `scan.scanId` (`null` when not given) |
+| `lease_id` | none | Echoed back as `scan.leaseId` (`null` when not given) |
 | `targets` | required | IPv4 address, CIDR (`10.0.0.0/16`) or range (`10.0.0.1-10.0.0.50`). An array, or a comma-separated string |
 | `exclude` | `[]` | Same formats as `targets`. Subtracted before scanning |
 | `ports` | `"1-65535"` | `"22,80,8000-8100"` or `[22, "8000-8100"]`. TCP only, ports 1–65535 |
@@ -53,29 +55,54 @@ See [`examples/`](examples/). Only `targets` is required. For a first smoke test
 | `resume_index` | `0` | Continue an interrupted scan. Copy it from the previous result's `resume` |
 | `adapter`, `adapter_ip`, `router_mac` | auto | masscan `--adapter`, `--adapter-ip`, `--router-mac`. Only needed when auto-detection fails (e.g. some container networks) |
 
-**Resuming in the next window:** send the **same** `targets`, `exclude`, `ports` and `shard`, plus `seed` and `resume_index` from `result.resume`. masscan's index refers to the randomized (address × port) space, so any change to those fields makes it point somewhere else.
+**Resuming in the next window:** send the **same** `targets`, `exclude`, `ports` and `shard`, plus `seed` and `resume_index` from `masscan.resume` (`seed`, `resumeIndex`). masscan's index refers to the randomized (address × port) space, so any change to those fields makes it point somewhere else.
 
 ## Output
 
-See [`examples/result.json`](examples/result.json). Top-level fields:
+See [`examples/result.json`](examples/result.json). The result follows [`docs/worker-result-format.md`](../../../docs/worker-result-format.md): camelCase keys, every key always present, `null` for anything masscan does not know, `[]` for empty lists. It has three top-level keys:
+
+| Key | Description |
+|---|---|
+| `scan` | The job envelope of the format: `jobId`, `leaseId`, `scanId`, `worker`, `status`, `stopReason`, timestamps, `phasesMs`, `params`, `counts`, `error` |
+| `hosts` | **The list of available hosts**: one entry per live host, sorted numerically |
+| `masscan` | Data specific to masscan that the format has no place for: the resume point, the topology, throughput, warnings |
+
+How masscan's data fills the format:
+
+| Field | Value |
+|---|---|
+| `scan.status` | `completed`, `partial` (stopped by the time window or a signal) or `failed` |
+| `scan.stopReason` | `deadline` (time window), `stop-requested` (`SIGINT`/`SIGTERM`), `error` (a `failed` result) or `null` |
+| `scan.error` | `{code, message}` or `null`. Codes: `invalid-input`, `scanner-unavailable`, `scanner-failed`, `io-error` |
+| `scan.worker` | `{ id: "masscan-worker", version, nmapVersion: null }` |
+| `scan.phasesMs` | `portScan` is the masscan run (a SYN sweep finds hosts and ports in one pass); `hostDiscovery`, `serviceDetection` and `http` are `0` |
+| `scan.params` | `subnet` is the job's CIDR when its ranges are exactly one subnet, otherwise `null`. `ports` is the normalized port spec, `maxParallel` is `1`, `maxRatePerProcess` is the rate actually used. `hostTimeoutMs`, `httpTimeoutMs`, `maxBodyBytes` and `maxRedirects` are `null` (masscan has none of them), and `nmapArgs` is `[]` |
+| `scan.counts` | `addresses` (in the job), `up` (= `hosts.length`), `openPorts`. `down` (= `addresses − up`) and `cancelled` (= `0`) only for a `completed` scan without `shard` and with `resume_index` 0, otherwise `null`. `timeout`, `failed`, `httpEndpoints` and `httpRequests` are always `0` |
+| `hosts[]` | `{ip, status: "up", reason, observedAt, latencyMs: null, hostnames: [], error: null, ports[]}`. `reason` is masscan's (`syn-ack`), `observedAt` is the first reply from that host |
+| `hosts[].ports[]` | `{port, protocol: "tcp", state: "open", reason, service: null, identity: {ttl, sshHostKeySha256: null, tlsCertSha256: null}, banner: null, scripts: [], http: []}`. `identity.ttl` is the SYN-ACK TTL of that port |
+
+`hosts[]` lists **live hosts only**, not every address of the job: a masscan job can cover millions of addresses, while the format caps `hosts[]` at 1024 entries and expects every address. Addresses that are not listed did not answer on any scanned port.
+
+The `masscan` block:
 
 | Field | Description |
 |---|---|
-| `status` | `completed`, `partial` or `failed` |
-| `stop_reason` | `time_window`, `signal` or `null` |
-| `error` | `{code, message}` or `null`. Codes: `invalid_input`, `scanner_unavailable`, `scanner_failed`, `io_error` |
-| `scan` | The normalized job: `effective_ranges`, `address_count`, `port_count`, `probe_count`, the rate actually used, `seed`, … |
-| `timing` | `started_at`, `finished_at`, `duration_ms`, `progress` (0–1, `null` when unknown, e.g. for shards), `addresses_per_second`, `probes_per_second`. The orchestrator uses these to size the next subgroups |
-| `resume` | `{seed, resume_index, shard}` on a `partial` result. Pass it into the next job |
-| `summary` | `hosts_up`, `open_ports`, `subnets` |
-| `topology.subnets[]` | `{cidr, hosts_up, open_ports, hosts[]}`, sorted numerically |
-| `topology.subnets[].hosts[]` | `{ip, open_ports[{port, protocol}], ttl, estimated_hops, os_family_hint}` |
-| `topology.hop_distribution` | Host count per estimated hop distance |
+| `schemaVersion` | Version of this block (`2`) |
+| `scannerVersion` | masscan's version, or `null` if it was not found |
+| `job` | The normalized job: `targets`, `exclude`, `effectiveRanges`, `portCount`, `probeCount`, the `rate` actually used, `waitSeconds`, `retries`, `maxDurationSeconds`, `groupPrefix`, `seed`, `shard`, `resumeIndex`. `null` for invalid input |
+| `progress` | 0–1, `null` when unknown (e.g. for shards) |
+| `addressesPerSecond`, `probesPerSecond` | Measured throughput, used to size the next subgroups; `null` when unknown |
+| `resume` | `{seed, resumeIndex, shard}` on a `partial` result. Pass it into the next job as `seed` and `resume_index` |
+| `topology.subnets[]` | `{cidr, hostsUp, openPorts, hosts[]}`, sorted numerically |
+| `topology.subnets[].hosts[]` | `{ip, openPorts, ttl, estimatedHops, osFamilyHint}` |
+| `topology.hopDistribution` | Host count per estimated hop distance |
 | `warnings` | e.g. a clamped rate, or a resume point that was lost |
 
-`estimated_hops` and `os_family_hint` are heuristics based on the SYN-ACK TTL. The common initial TTLs are 64 (unix-like), 128 (windows) and 255 (network devices), and hops = initial − observed. Use them as layout hints, not as fingerprinting. Service and OS detection belong to `nmap-worker`.
+`estimatedHops` and `osFamilyHint` are heuristics based on the SYN-ACK TTL. The common initial TTLs are 64 (unix-like), 128 (windows) and 255 (network devices), and hops = initial − observed. Use them as layout hints, not as fingerprinting. Service and OS detection belong to `nmap-worker`.
 
 A `failed` result still contains whatever masscan reported before it failed.
+
+**Differences from the contract** (`WorkerResultSchema` in `packages/contracts`): `params.hostTimeoutMs`, `httpTimeoutMs`, `maxBodyBytes` and `maxRedirects` are `null`, which the contract does not accept yet. `jobId` and `scanId` must be UUIDs there, so the job has to carry them. The contract strips the extra `masscan` key.
 
 ## Logging
 
@@ -157,8 +184,8 @@ masscan cannot scan the IP address of the machine it runs on: it bypasses the ke
 | `src/address.*` | IPv4 / port parsing, range merge and subtraction |
 | `src/masscan_runner.*` | Builds masscan's argv, polls masscan's stdout (`-oD` results) and stderr (status line → progress), time window and signal thread, `paused.conf` |
 | `src/process.*` | RAII file descriptors, `fork`/`execvp` with its own process group |
-| `src/topology.*` | Groups findings into subnets, TTL heuristics |
-| `src/report.*` | Result JSON |
+| `src/topology.*` | Collects live hosts and their ports (`hosts[]`), groups them into subnets, TTL heuristics |
+| `src/report.*` | Result JSON (`scan`, `hosts`, `masscan`) |
 | `src/config.*` | Environment variables |
 | `src/logger.*` | Leveled text or JSON-lines logging to stderr |
 | `tests/unit_tests.cpp` | Framework-free unit tests (`ctest`) |

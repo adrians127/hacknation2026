@@ -23,6 +23,8 @@ struct Finding {
     std::uint32_t ip;
     std::uint16_t port;
     std::uint8_t ttl;
+    std::string reason{};                     // masscan's "reason" ("syn-ack"); empty if absent
+    std::optional<std::int64_t> timestamp{};  // Unix seconds when masscan saw the reply
 };
 
 struct ScanOutcome {

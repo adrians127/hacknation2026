@@ -1,4 +1,5 @@
-// Dependency-free unit tests: input validation, range math, masscan output parsing, topology.
+// Dependency-free unit tests: input validation, range math, masscan output parsing, topology,
+// result document.
 
 #include <chrono>
 #include <cstdlib>
@@ -13,6 +14,7 @@
 #include "config.hpp"
 #include "logger.hpp"
 #include "masscan_runner.hpp"
+#include "report.hpp"
 #include "scan_job.hpp"
 #include "topology.hpp"
 
@@ -124,6 +126,8 @@ void test_parse_finding() {
     const auto open = parse_finding(
         R"({"ip":"10.16.11.1","timestamp":"1795277913","port":53,"proto":"tcp","rec_type":"status","data":{"status":"open","reason":"syn-ack","ttl":64}})");
     check(open && open->ip == 0x0A100B01U && open->port == 53 && open->ttl == 64, "open record");
+    check(open && open->reason == "syn-ack" && open->timestamp == 1795277913,
+          "reason and timestamp");
     check(!parse_finding(
               R"({"ip":"10.0.0.1","port":80,"proto":"tcp","rec_type":"banner","data":{}})"),
           "banner ignored");
@@ -159,11 +163,11 @@ void test_masscan_status() {
 
 void test_topology() {
     TopologyBuilder topology{24};
-    topology.add({0x0A000105U, 443, 61});
-    topology.add({0x0A000105U, 22, 61});
-    topology.add({0x0A000105U, 443, 61});  // retry duplicate
-    topology.add({0x0A000101U, 3389, 128});
-    topology.add({0x0A000201U, 80, 250});
+    topology.add({0x0A000105U, 443, 61, "syn-ack", 1795277915});
+    topology.add({0x0A000105U, 22, 61, "syn-ack", 1795277913});
+    topology.add({0x0A000105U, 443, 62, "", std::nullopt});  // retry duplicate
+    topology.add({0x0A000101U, 3389, 128, "syn-ack", std::nullopt});
+    topology.add({0x0A000201U, 80, 250, "", std::nullopt});
     topology.finalize();
     check(topology.host_count() == 3 && topology.open_port_count() == 4 &&
               topology.subnet_count() == 2,
@@ -171,13 +175,78 @@ void test_topology() {
 
     const auto out = topology.to_json();
     const auto& first = out["subnets"][0];
-    check(first["cidr"] == "10.0.1.0/24" && first["hosts_up"] == 2, "subnet grouping");
+    check(first["cidr"] == "10.0.1.0/24" && first["hostsUp"] == 2, "subnet grouping");
     check(first["hosts"][0]["ip"] == "10.0.1.1", "hosts sorted numerically");
     const auto& linux_host = first["hosts"][1];
-    check(linux_host["estimated_hops"] == 3 && linux_host["os_family_hint"] == "unix-like" &&
-              linux_host["open_ports"].size() == 2 && linux_host["open_ports"][0]["port"] == 22,
+    check(linux_host["estimatedHops"] == 2 && linux_host["osFamilyHint"] == "unix-like" &&
+              linux_host["openPorts"] == 2,
           "ttl hints and port dedupe");
-    check(out["subnets"][1]["hosts"][0]["os_family_hint"] == "network-device", "ttl 250");
+    check(out["subnets"][1]["hosts"][0]["osFamilyHint"] == "network-device", "ttl 250");
+
+    const auto hosts = topology.hosts_json();
+    check(hosts.size() == 3 && hosts[0]["ip"] == "10.0.1.1" && hosts[2]["ip"] == "10.0.2.1",
+          "hosts[] sorted numerically");
+    const auto& host = hosts[1];
+    check(host["status"] == "up" && host["reason"] == "syn-ack" &&
+              host["observedAt"] == "2026-11-21T16:18:33Z" && host["latencyMs"].is_null() &&
+              host["hostnames"].empty() && host["error"].is_null(),
+          "host entry");
+    const auto& https = host["ports"][1];
+    check(host["ports"].size() == 2 && host["ports"][0]["port"] == 22 && https["port"] == 443 &&
+              https["protocol"] == "tcp" && https["state"] == "open" &&
+              https["reason"] == "syn-ack" && https["service"].is_null() &&
+              https["identity"]["ttl"] == 62 && https["identity"]["tlsCertSha256"].is_null() &&
+              https["banner"].is_null() && https["scripts"].empty() && https["http"].empty(),
+          "port entry, duplicate merged with highest ttl");
+    check(hosts[0]["observedAt"].is_null() && hosts[2]["reason"].is_null() &&
+              hosts[2]["ports"][0]["reason"].is_null(),
+          "missing data is null");
+}
+
+void test_report() {
+    std::vector<std::string> warnings;
+    const auto job = parse_scan_job(json::parse(R"({
+        "job_id": "0193a1aa-0000-7000-8000-000000000001", "scan_id": "s1",
+        "targets": "10.0.1.0/24", "ports": "22,443"
+    })"),
+                                    kConfig, warnings);
+    check(job.has_value(), "report job parses");
+    if (!job) return;
+    TopologyBuilder topology{24};
+    topology.add({0x0A000105U, 22, 61, "syn-ack", 1795277913});
+    topology.finalize();
+    const ScanOutcome outcome{};
+    ReportInput input{.status = ScanStatus::kCompleted,
+                      .job_id = job->job_id,
+                      .job = &*job,
+                      .outcome = &outcome,
+                      .topology = &topology,
+                      .scanner_version = "1.3.2"};
+    input.timing.duration = std::chrono::milliseconds{2000};
+    input.timing.scan_duration = std::chrono::milliseconds{1500};
+    const auto report = build_report(input);
+    const auto& scan = report["scan"];
+    check(scan["jobId"] == job->job_id && scan["scanId"] == "s1" && scan["leaseId"].is_null() &&
+              scan["worker"]["nmapVersion"].is_null() && scan["status"] == "completed" &&
+              scan["stopReason"].is_null() && scan["phasesMs"]["portScan"] == 1500,
+          "report envelope");
+    check(scan["params"]["subnet"] == "10.0.1.0/24" && scan["params"]["ports"] == "22,443" &&
+              scan["params"]["hostTimeoutMs"].is_null() && scan["params"]["nmapArgs"].empty(),
+          "report params");
+    check(scan["counts"]["addresses"] == 256 && scan["counts"]["up"] == 1 &&
+              scan["counts"]["down"] == 255 && scan["counts"]["openPorts"] == 1,
+          "report counts");
+    check(report["hosts"].size() == 1 && report["masscan"]["resume"].is_null() &&
+              report["masscan"]["topology"]["subnets"].size() == 1,
+          "report hosts and masscan block");
+
+    const auto failed = build_report(
+        {.status = ScanStatus::kFailed, .error = Error{ErrorCode::kInvalidInput, "bad"}});
+    check(failed["scan"]["jobId"].is_null() && failed["scan"]["stopReason"] == "error" &&
+              failed["scan"]["error"]["code"] == "invalid-input" &&
+              failed["scan"]["counts"]["addresses"].is_null() && failed["hosts"].empty() &&
+              failed["scan"]["params"]["subnet"].is_null(),
+          "failed report");
 }
 
 }  // namespace
@@ -188,6 +257,7 @@ int main() {
     test_parse_finding();
     test_masscan_status();
     test_topology();
+    test_report();
     if (g_failures > 0) {
         std::println(stderr, "{} check(s) failed", g_failures);
         return EXIT_FAILURE;
