@@ -246,6 +246,9 @@ std::vector<std::string> build_masscan_args(const ScanJob& job, const Config& co
         "-oD",
         "-",  // NDJSON on stdout, parsed as it streams
     };
+    if (config.log_level == LogLevel::kDebug) {
+        args.emplace_back("-v");  // masscan then prints its interface, source IP and router MAC
+    }
     if (job.resume_index > 0) {
         args.insert(args.end(), {"--resume-index", std::to_string(job.resume_index)});
     }

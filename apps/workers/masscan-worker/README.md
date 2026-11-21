@@ -95,7 +95,7 @@ The worker logs every step to stderr, one line per event. The level is `info` by
 
 | Level | What you see |
 |---|---|
-| `debug` | Everything below, plus the full masscan command line, masscan's own messages, and every host and open port as it is found |
+| `debug` | Everything below, plus the full masscan command line, masscan's own messages (run with `-v`: chosen interface, source IP, router IP and MAC), and every host and open port as it is found |
 | `info` | Start, accepted job (addresses, ports, probes, rate, estimated duration), masscan start and exit, progress every `MASSCAN_WORKER_PROGRESS_INTERVAL` seconds (% done, rate, ETA, hosts up so far), summary, result written |
 | `warn` | Clamped rate, an estimated duration longer than the time window, a time-window or signal stop, masscan warnings (`masscan: FAIL: …`) |
 | `error` | Invalid job, masscan failures, masscan killed after ignoring the stop, a result that could not be written |
