@@ -35,18 +35,22 @@ Swagger UI is at `http://localhost:3001/docs` (only when `NODE_ENV=development`)
 app.ts                 buildApp(): middleware -> /v1 -> notFound -> errorHandler
 index.ts               listen, DB connection check, graceful shutdown
 config/                env.ts (zod + process.loadEnvFile), database-url.ts (DB_* -> URL)
-lib/                   prisma, logger, http-error, api-docs, password, tokens, auth-cookies, auth-context
+lib/                   prisma, logger, http-error, api-docs, password, tokens, auth-cookies, auth-context, chunks
 middleware/            validate, authenticate (requireAuth/requireSession), authorize (requirePermission),
                        trusted-origin (CSRF), error-handler, not-found
 routes/index.ts        apiRouter: one apiRouter.use("/x", ...) line per module
 modules/<feature>/     <feature>.routes.ts | .controller.ts | .service.ts | .test.ts
 modules/auth|users|roles   sign-in and sessions, user accounts, roles (+ system-roles sync, first-admin bootstrap)
+modules/targets        target inventory: POST /targets/import (manual, CSV and JSON all arrive as one JSON body)
+modules/scans          no routes yet: queues a Scan and its ScanJob batches (dns.ts, batching.ts)
 test/                  integration test setup: test database, TestClient (fetch + cookie jar), sign-in helpers
 types/express.d.ts     req.auth
 generated/prisma       Prisma Client (gitignored, generated in postinstall)
 ```
 
 **New module:** schemas in `packages/contracts/src/<feature>/` (+ `pnpm generate`), then `src/modules/<feature>/` and one line in `routes/index.ts`. A route declares its contract with `validate({ params, query, body })`, and when a request does not match, the `ZodError` is turned into a 400 automatically. Protected routes start with `requireAuth` and `requirePermission(...)` (see [Auth and RBAC](#auth-and-rbac)).
+
+Request bodies: `app.ts` parses JSON with a 1 MB limit, except for the paths in `OWN_BODY_PARSER_PATHS`, which parse their own larger body in the route, after `requireAuth`/`requirePermission` (`POST /targets/import`: 10 MB, up to 100k entries).
 
 Controllers are objects of arrow functions (oxlint's `unbound-method` rejects methods passed to the router). Errors carry an optional machine-readable `code` (`HttpError.forbidden(message, "LAST_ADMIN")`), sent as `error.code` and translated by the frontend; the codes are listed in `contracts/src/common/common.schema.ts`.
 
@@ -69,7 +73,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Permissions and roles
 
-- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*` and `scans:read|run`. Targets and scans have no endpoints yet; the frontend gates its mocked screens with them. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
+- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*` and `scans:read|run`. Of these, only `targets:create` (and `scans:run` for `startScan`) guard an endpoint so far; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
 - A route checks permissions with `requirePermission("users:read")` after `requireAuth`. Services that act on other accounts or roles also call `assertHoldsAll` (below).
 - **System roles** (`admin`, `editor`, `analyst`, `viewer`) are read-only. `syncSystemRoles()` (`modules/roles/system-roles.ts`) runs at startup and in the seed: it gives them exactly `SYSTEM_ROLE_PERMISSIONS` and drops permissions that no longer exist from custom roles.
 - **Custom roles** are rows with a `permissions` array. Deleting a role that users still have needs `reassignToRoleId` (and `users:update`); the users move and the role is deleted in one transaction.
@@ -113,7 +117,17 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up` loca
 - `prisma.config.ts`: schema path, migrations, seed and the URL built from `DB_*`. A placeholder URL lets `prisma generate` run on a fresh clone without a database.
 - `prisma/schema/schema.prisma`: only the generator and the datasource. Models live in `prisma/schema/<module>/<model>.prisma` (one file per model, in a folder named after the module in `src/modules/` that owns the table).
 - Every relation field needs an `@@index`, because Prisma does not create indexes on foreign keys in Postgres.
-- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF), e.g. AES-256-GCM in a Prisma Client extension. Not designed yet: the auth tables hold only hashes (passwords, refresh secrets), emails and display names.
+- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF), e.g. AES-256-GCM in a Prisma Client extension. Not designed yet: the auth tables hold only hashes (passwords, refresh secrets), emails and display names. To cover once it is: `Target.value` and `note`, `ScanJob.targets` and `hosts` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
+
+## Targets and scan jobs
+
+`POST /targets/import` takes entries from the import form (manual, CSV or JSON, parsed in the browser by the shared parser in `@hacknation/contracts/targets/target-input`) and runs the same parser again: `validate()` rejects what it rejects, the service normalizes and deduplicates.
+
+1. New values go into `Target` (`createMany` with `skipDuplicates`); values already in the inventory are counted as `skipped` and left unchanged.
+2. With `startScan` (also requires `scans:run`): domains are resolved to A records **before** the transaction (`modules/scans/dns.ts`: 50 lookups at a time, 2 s timeout, 2 tries). Failures and reserved addresses become `warnings`; the import still succeeds.
+3. In one transaction: a `Scan` with `SCAN_DEFAULT_PORTS`, `SCAN_DEFAULT_MAX_RATE` and `SCAN_BATCH_SIZE` snapshotted, a `ScanTarget` row per entry and the `ScanJob` batches from `planScanJobs` (`modules/scans/batching.ts`): addresses merged, split in address order into batches of at most `SCAN_BATCH_SIZE`, never across two /16 blocks. Each job has a `subnet` (the smallest aligned CIDR around it), its `targets` (CIDRs/IPs) and `hosts` (resolved domain → IP pairs).
+
+Jobs start as `queued` with `kind = discovery`. Leasing them (`/workers/*`, machine token) is the workers team's part; see [`apps/workers/README.md`](../workers/README.md#scan-jobs-in-the-database).
 
 ## Environment variables
 
@@ -129,6 +143,9 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up` loca
 | `JWT_SECRET` | — | HS256 key for access tokens, ≥ 32 characters. Production refuses the `.env.example` value |
 | `ADMIN_EMAIL` `ADMIN_PASSWORD` | — | First admin (startup while there are no users, and the seed). Production refuses the example password |
 | `SEED_DEMO_USERS` `DEMO_USER_PASSWORD` | `false` | Seed only: demo accounts for the editor, analyst and viewer roles |
+| `SCAN_DEFAULT_PORTS` | 28 common TCP ports | Ports snapshotted onto every queued scan (`22,80,8000-8100` syntax) |
+| `SCAN_DEFAULT_MAX_RATE` | `100` | Packets per second a worker may send for one job |
+| `SCAN_BATCH_SIZE` | `256` | Addresses per scan job, a power of two from 16 to 1024 |
 
 ## Docker
 
