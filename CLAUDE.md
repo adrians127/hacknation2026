@@ -54,7 +54,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - `apps/frontend`: React 19 + Vite 8 + React Router 8 (data mode) + Tailwind 4 + shadcn/ui + TanStack Query + TanStack Table.
 - `apps/backend`: Express 5 + TS (built with tsdown, dev with tsx). Talks to PostgreSQL through Prisma 7. **The only component that writes to the database.**
 - `apps/workers/<name>`: C++23 + CMake + nmap workers, built and run in Docker. **Not pnpm workspaces** (no `package.json`), so `pnpm build` does not need a local C++ compiler.
-- `packages/contracts`: `@subsurf/contracts`, zod schemas and types. Generates the committed `openapi.json`. A source-only package with no build step.
+- `packages/contracts`: `@subsurf/contracts`, zod schemas and types. Generates the committed `openapi.json` and `result.schema.json` (the scan result document). A source-only package with no build step.
 - `packages/api-client`: `@subsurf/api-client`, types generated from `openapi.json` + `openapi-fetch`. **The only workspace on TypeScript 6** (`openapi-typescript` needs the JS API that TS 7 no longer ships).
 - `docker/`: Docker Compose (PostgreSQL 19, local DefectDojo, worker under the `workers` profile). Not a workspace.
 - `docs/`: technical documentation and the presentation.
@@ -96,7 +96,7 @@ pnpm workers:build  # build worker images (workers:up, workers:down, workers:log
 
 ## Conventions
 
-- **After every change in `packages/contracts`, run `pnpm generate`** and commit `openapi.json` and `api-client/src/generated`. CI rejects stale generated files.
+- **After every change in `packages/contracts`, run `pnpm generate`** and commit `openapi.json`, `result.schema.json` and `api-client/src/generated`. CI rejects stale generated files.
 - Import aliases: `@/*` → `apps/frontend/src/*`, `~backend/*` → `apps/backend/src/*`.
 - Every workspace has its own `tsconfig.json` and `.oxlintrc.json` (the latter extends the root `.oxlintrc.json`). TS 6+ defaults to `types: []`, so list `types` (e.g. `["node"]`, `["vite/client"]`) explicitly.
 - **Adding dependencies:** before adding a package, check its latest version on npm (`npm view <pkg> version`). Never write a version from memory. `pnpm-workspace.yaml` sets `minimumReleaseAge: 2880` (48 h). If the latest version is younger than that, use the newest version that is more than 48 h old. Do not disable this safeguard.
