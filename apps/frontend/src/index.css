@@ -129,3 +129,28 @@
     @apply font-sans;
     }
 }
+
+@keyframes wave-drift-0 {
+  to { transform: translate(90px, -40px) scaleY(1.12); }
+}
+@keyframes wave-drift-1 {
+  to { transform: translate(-110px, 35px) scaleY(0.9); }
+}
+@keyframes wave-drift-2 {
+  to { transform: translate(60px, 55px) scaleY(1.2); }
+}
+
+.wave-ribbon {
+  animation-direction: alternate;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  transform-origin: center;
+  will-change: transform;
+}
+.wave-ribbon-0 { animation-name: wave-drift-0; animation-duration: 11s; }
+.wave-ribbon-1 { animation-name: wave-drift-1; animation-duration: 14s; }
+.wave-ribbon-2 { animation-name: wave-drift-2; animation-duration: 17s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wave-ribbon { animation: none; }
+}

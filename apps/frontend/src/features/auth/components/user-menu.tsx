@@ -37,7 +37,7 @@ export function UserMenu() {
           <span className="text-xs font-normal text-muted-foreground">{roleLabels.name(me.role)}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => void navigate("/change-password")}>
+        <DropdownMenuItem onSelect={() => void navigate("/app/change-password")}>
           <KeyRound />
           {t("userMenu.changePassword")}
         </DropdownMenuItem>

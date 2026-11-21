@@ -18,6 +18,26 @@
   "language": {
     "switchTo": "English"
   },
+  "landing": {
+    "logoAlt": "SubSurf",
+    "signIn": "Zaloguj się",
+    "getStarted": "Zacznij teraz",
+    "nav": {
+      "label": "Główna",
+      "features": "Funkcje",
+      "about": "O nas"
+    },
+    "headline": {
+      "line1": "Wiesz, co jest w Twojej sieci.",
+      "line2": "Zachowaj kontrolę."
+    },
+    "features": {
+      "discover": "Odkrywaj zasoby sieciowe",
+      "ports": "Monitoruj otwarte porty",
+      "dojo": "Synchronizuj z DefectDojo",
+      "insights": "Zyskaj czytelny obraz"
+    }
+  },
   "nav": {
     "label": "Nawigacja główna",
     "dashboard": "Pulpit",

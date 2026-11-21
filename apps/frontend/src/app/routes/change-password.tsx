@@ -23,7 +23,7 @@ export function ChangePasswordRoute() {
         <ChangePasswordForm
           onSuccess={() => {
             toast.success(t("changePassword.success"));
-            void navigate("/", { replace: true });
+            void navigate("/app", { replace: true });
           }}
         />
       </CardContent>

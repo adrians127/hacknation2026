@@ -31,7 +31,7 @@ export function RoleDetailRoute() {
 
   const back = (
     <Button asChild variant="ghost" size="sm" className="w-fit">
-      <Link to="/admin/roles">
+      <Link to="/app/admin/roles">
         <ArrowLeft />
         {t("roles.detail.back")}
       </Link>
@@ -113,7 +113,7 @@ export function RoleDetailRoute() {
             <ul className="divide-y">
               {detail.users.map((user) => (
                 <li key={user.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                  <Link to={`/admin/users?edit=${user.id}`} className="hover:underline">
+                  <Link to={`/app/admin/users?edit=${user.id}`} className="hover:underline">
                     <span className="font-medium">{user.displayName}</span>{" "}
                     <span className="text-sm text-muted-foreground">{user.email}</span>
                   </Link>
@@ -133,7 +133,7 @@ export function RoleDetailRoute() {
           role={detail}
           roles={roles.data?.items ?? []}
           onClose={() => setDialog(null)}
-          onDeleted={() => void navigate("/admin/roles", { replace: true })}
+          onDeleted={() => void navigate("/app/admin/roles", { replace: true })}
         />
       )}
     </div>

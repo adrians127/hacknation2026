@@ -123,7 +123,7 @@ Swap checklist:
 Sign-in, sessions and RBAC are enforced by the backend ([backend README](../backend/README.md#auth-and-rbac)). The frontend only decides what to show.
 
 - **Session:** two httpOnly cookies the frontend never reads. `api/client.ts` has an openapi-fetch middleware: on a 401 (except from `/auth/login|refresh|logout`) it calls `POST /auth/refresh` once, shared by parallel requests, and retries the request. If the refresh fails, the handler registered in `app/provider.tsx` clears the cache and sends the user to `/login?redirectTo=…`.
-- **Routes** (`app/router.tsx`): `/login` is public (`guestLoader` sends signed-in users away). Everything else sits under the protected layout, whose `requireAuthLoader` loads `/auth/me`, redirects to `/login` on a 401 and to `/change-password` while `mustChangePassword` is set. `redirectTo` only accepts same-app paths (`lib/auth/safe-redirect.ts`).
+- **Routes** (`app/router.tsx`): the landing page `/` and `/login` are public (`guestLoader` sends signed-in users to `/app`). The app sits under `/app`, in the protected layout whose `requireAuthLoader` loads `/auth/me`, redirects to `/login` on a 401 and to `/app/change-password` while `mustChangePassword` is set. `redirectTo` only accepts same-app paths (`lib/auth/safe-redirect.ts`).
 - **Current user:** `useMe()` (`lib/auth/me-query.ts`) inside the protected layout; the loader guarantees the data. Update the `/auth/me` cache yourself when a mutation changes what a loader reads (see `features/auth/api/change-password.ts`).
 - **Permissions in the UI:**
   - `useCan("users:create")` / `usePermissions()` from `lib/auth/use-can.ts`.

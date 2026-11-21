@@ -18,6 +18,26 @@
   "language": {
     "switchTo": "Polski"
   },
+  "landing": {
+    "logoAlt": "SubSurf",
+    "signIn": "Sign In",
+    "getStarted": "Get Started",
+    "nav": {
+      "label": "Main",
+      "features": "Features",
+      "about": "About"
+    },
+    "headline": {
+      "line1": "Know what’s on your network.",
+      "line2": "Stay in control."
+    },
+    "features": {
+      "discover": "Discover Network Assets",
+      "ports": "Monitor Open Ports",
+      "dojo": "Sync with DefectDojo",
+      "insights": "Get Clear Insights"
+    }
+  },
   "nav": {
     "label": "Main navigation",
     "dashboard": "Dashboard",

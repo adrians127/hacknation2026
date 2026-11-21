@@ -54,7 +54,7 @@ export function RolesTable({ roles, onEdit, onDuplicate, onDelete }: RolesTableP
               <TableRow key={role.id}>
                 <TableCell>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link to={`/admin/roles/${role.id}`} className="font-medium hover:underline">
+                    <Link to={`/app/admin/roles/${role.id}`} className="font-medium hover:underline">
                       {name}
                     </Link>
                     <Badge variant={role.isSystem ? "secondary" : "outline"}>
@@ -72,7 +72,7 @@ export function RolesTable({ roles, onEdit, onDuplicate, onDelete }: RolesTableP
                     <IconAction
                       label={t("roles.actions.view", { name })}
                       icon={<Eye />}
-                      to={`/admin/roles/${role.id}`}
+                      to={`/app/admin/roles/${role.id}`}
                     />
                     <IconAction
                       label={t("roles.actions.edit", { name })}

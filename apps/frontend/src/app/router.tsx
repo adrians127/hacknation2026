@@ -7,6 +7,7 @@ import { UsersRoute } from "@/app/routes/admin/users";
 import { AppLayout } from "@/app/routes/app-layout";
 import { ChangePasswordRoute } from "@/app/routes/change-password";
 import { HomeRoute } from "@/app/routes/home";
+import { LandingRoute } from "@/app/routes/landing";
 import { LoginRoute } from "@/app/routes/login";
 import { NotFoundRoute } from "@/app/routes/not-found";
 import { RequirePermission } from "@/app/routes/require-permission";
@@ -14,8 +15,8 @@ import { RootLayout } from "@/app/routes/root-layout";
 import { RouteError } from "@/app/routes/route-error";
 
 /**
- * - `/login` is public (signed-in users are redirected away).
- * - Everything else sits under the protected layout, whose loader loads `/auth/me`
+ * - `/` (landing) and `/login` are public; signed-in users are sent from `/login` to `/app`.
+ * - The app sits under `/app`, in the protected layout whose loader loads `/auth/me`
  *   and enforces a pending password change.
  * - Admin pages check their permission in `RequirePermission` (403 page, no redirect).
  *   The backend checks every permission again; this is only what the UI shows.
@@ -25,8 +26,10 @@ export const router = createBrowserRouter([
     Component: RootLayout,
     ErrorBoundary: RouteError,
     children: [
+      { index: true, Component: LandingRoute },
       { path: "login", loader: guestLoader, Component: LoginRoute },
       {
+        path: "app",
         loader: requireAuthLoader,
         Component: AppLayout,
         ErrorBoundary: RouteError,
@@ -49,6 +52,7 @@ export const router = createBrowserRouter([
           { path: "*", Component: NotFoundRoute },
         ],
       },
+      { path: "*", Component: NotFoundRoute },
     ],
   },
 ]);

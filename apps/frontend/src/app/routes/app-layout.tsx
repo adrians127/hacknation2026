@@ -10,9 +10,9 @@ import { usePermissions } from "@/lib/auth/use-can";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS: { to: string; label: "nav.dashboard" | "nav.users" | "nav.roles"; permission?: Permission }[] = [
-  { to: "/", label: "nav.dashboard" },
-  { to: "/admin/users", label: "nav.users", permission: "users:read" },
-  { to: "/admin/roles", label: "nav.roles", permission: "roles:read" },
+  { to: "/app", label: "nav.dashboard" },
+  { to: "/app/admin/users", label: "nav.users", permission: "users:read" },
+  { to: "/app/admin/roles", label: "nav.roles", permission: "roles:read" },
 ];
 
 export function AppLayout() {
@@ -25,7 +25,7 @@ export function AppLayout() {
     <div className="flex min-h-svh flex-col">
       <header className="border-b">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-          <NavLink to="/" className="flex items-center gap-2 font-semibold">
+          <NavLink to="/app" className="flex items-center gap-2 font-semibold">
             <Logo variant="icon" label="" className="h-8 w-auto" />
             <span>{t("appName")}</span>
           </NavLink>
@@ -34,7 +34,7 @@ export function AppLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === "/"}
+                end={item.to === "/app"}
                 className={({ isActive }) =>
                   cn(
                     "rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground",

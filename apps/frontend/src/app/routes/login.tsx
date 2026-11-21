@@ -24,7 +24,7 @@ export function LoginRoute() {
         <CardContent>
           <LoginForm
             onSuccess={() =>
-              void navigate(safeRedirectPath(searchParams.get("redirectTo")), { replace: true })
+              void navigate(safeRedirectPath(searchParams.get("redirectTo"), "/app"), { replace: true })
             }
           />
         </CardContent>
