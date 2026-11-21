@@ -163,7 +163,7 @@ The result a worker sends for a job is fixed in [`docs/worker-result-format.md`]
 
 ## Environment variables
 
-`.env.example` documents every variable. `pnpm project:setup` copies it to `.env`. Real environment variables take precedence over `.env`. A missing or invalid variable stops the process at startup with a readable error.
+`.env.example` documents every variable. `pnpm project:setup` copies it to `.env`; when `.env` already exists, it appends only the variables it lacks and leaves existing values alone, so re-run it after pulling a change that adds one. Real environment variables take precedence over `.env`. A missing or invalid variable stops the process at startup with a readable error.
 
 | Variable | Default | Description |
 |---|---|---|

@@ -85,7 +85,7 @@ Root commands only. Per-app commands are in their READMEs.
 
 ```bash
 pnpm install        # dependencies for the whole monorepo (+ prisma generate)
-pnpm project:setup  # copies every .env*.example to .env (never overwrites; --force makes a backup)
+pnpm project:setup  # .env*.example -> .env; on an existing .env adds only missing keys (--force: replace + backup)
 pnpm dev            # turbo dev: backend :3001 (+ /docs), frontend :3000
 pnpm build          # turbo build
 pnpm lint           # type-aware oxlint in every workspace
