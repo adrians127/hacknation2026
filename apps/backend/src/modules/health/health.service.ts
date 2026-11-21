@@ -1,4 +1,4 @@
-import type { HealthResponse } from "@hacknation/contracts/health/health.schema";
+import type { HealthResponse } from "@subsurf/contracts/health/health.schema";
 
 import { prisma } from "~backend/lib/prisma";
 

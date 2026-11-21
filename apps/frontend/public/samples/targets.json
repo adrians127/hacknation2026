@@ -1,0 +1,10 @@
+{
+  "targets": [
+    { "target": "192.0.2.0/24", "note": "Documentation network (RFC 5737)" },
+    { "target": "198.51.100.10", "note": "Web server" },
+    { "target": "198.51.100.11", "note": "Mail server; relay" },
+    { "target": "203.0.113.0/28", "note": "DMZ" },
+    { "target": "portal.campus.example", "note": "Student portal" },
+    "intranet.campus.example"
+  ]
+}

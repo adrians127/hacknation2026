@@ -1,7 +1,10 @@
 import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 import { api } from "@/api/client";
+import { LanguageToggle } from "@/components/language-toggle";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -9,25 +12,17 @@ function StatusDot({ up }: { up: boolean }) {
   return <span className={`inline-block size-2 rounded-full ${up ? "bg-emerald-500" : "bg-destructive"}`} />;
 }
 
-export function HomeRoute() {
-  const { t, i18n } = useTranslation();
+/** Public API and database health (`GET /health` needs no session). */
+export function StatusRoute() {
+  const { t } = useTranslation();
   const health = api.useQuery("get", "/health");
 
-  const nextLanguage = i18n.resolvedLanguage === "pl" ? "en" : "pl";
-
   return (
-    <main className="mx-auto flex min-h-svh max-w-2xl flex-col gap-6 p-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t("appName")}</h1>
-          <p className="text-muted-foreground">{t("tagline")}</p>
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => void i18n.changeLanguage(nextLanguage)}>
-          {t("language.switchTo")}
-        </Button>
-      </header>
-
-      <Card>
+    <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-6">
+      <Link to="/">
+        <Logo variant="full" label={t("appName")} className="w-48" />
+      </Link>
+      <Card className="w-full max-w-sm">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{t("health.title")}</CardTitle>
           <Button
@@ -59,6 +54,7 @@ export function HomeRoute() {
           )}
         </CardContent>
       </Card>
+      <LanguageToggle />
     </main>
   );
 }

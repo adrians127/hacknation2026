@@ -1,0 +1,17 @@
+{
+  "findings": [
+    {
+      "title": "Admin panel detected",
+      "severity": "Info",
+      "description": "SubSurf observation (sample). HTTP 200 for /wp-admin/ (WordPress admin panel) on a host whose PTR record suggests a staging environment. Detected by a passive signature; no login attempt was made.",
+      "date": "2026-11-21",
+      "active": true,
+      "verified": false,
+      "dynamic_finding": true,
+      "static_finding": false,
+      "unique_id_from_tool": "subsurf-sample-admin-panel-192.0.2.10-443",
+      "tags": ["subsurf", "admin-panel", "staging"],
+      "endpoints": ["https://192.0.2.10:443/wp-admin/"]
+    }
+  ]
+}

@@ -1,13 +1,34 @@
-# Local infrastructure for Attack Surface Intelligence. See docker/README.md.
+# Local infrastructure for SubSurf. See docker/README.md.
 #
 #   pnpm db:up          PostgreSQL only
-#   pnpm infra:up       every service (today: PostgreSQL)
+#   pnpm infra:up       every service (PostgreSQL + DefectDojo)
+#   pnpm dojo:up        DefectDojo only (UI + API on http://localhost:8080)
 #
 # Scan workers live in docker-compose.workers.yml.
 #
 # Defaults match apps/backend/.env.example. Override them via the shell
-# environment or an optional docker/.env.
+# environment or an optional docker/.env. Every DefectDojo default is dev-only.
 name: hacknation
+
+# Shared by the DefectDojo Django containers (initializer, uwsgi, celery).
+x-defectdojo-env: &defectdojo-env
+  DD_DATABASE_URL: postgresql://${DD_DATABASE_USER:-defectdojo}:${DD_DATABASE_PASSWORD:-defectdojo}@defectdojo-postgres:5432/${DD_DATABASE_NAME:-defectdojo}
+  DD_CELERY_BROKER_URL: redis://defectdojo-valkey:6379/0
+  DD_CACHE_URL: redis://defectdojo-valkey:6379/1
+  DD_SECRET_KEY: ${DD_SECRET_KEY:-CEXfVyuxa3X39HlmLSKSJl0j1kn2wuUf98SYPKrP7dbHi7yY}
+  DD_CREDENTIAL_AES_256_KEY: ${DD_CREDENTIAL_AES_256_KEY:-b5ba2eac13e07feb0269da04b20d5e06}
+  DD_DATABASE_READINESS_TIMEOUT: "30"
+
+x-defectdojo-django: &defectdojo-django
+  # docker.io, not upstream's default registry.defectdojo.com (it logs and follows up on pulls).
+  image: docker.io/defectdojo/defectdojo-django:${DD_VERSION:-3.5.201}
+  depends_on:
+    defectdojo-initializer:
+      condition: service_completed_successfully
+    defectdojo-postgres:
+      condition: service_healthy
+    defectdojo-valkey:
+      condition: service_healthy
 
 services:
   postgres:
@@ -31,5 +52,103 @@ services:
       timeout: 5s
       retries: 5
 
+  # DefectDojo: the upstream compose (django-DefectDojo/docker-compose.yml) with our
+  # service names, docker.io images, healthchecks and a loopback-only port.
+  defectdojo-postgres:
+    # The version upstream pins and tests; deliberately not our postgres:19.
+    image: postgres:18.6-alpine
+    container_name: hacknation-defectdojo-postgres
+    environment:
+      POSTGRES_USER: ${DD_DATABASE_USER:-defectdojo}
+      POSTGRES_PASSWORD: ${DD_DATABASE_PASSWORD:-defectdojo}
+      POSTGRES_DB: ${DD_DATABASE_NAME:-defectdojo}
+    volumes:
+      - defectdojo-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DD_DATABASE_USER:-defectdojo} -d ${DD_DATABASE_NAME:-defectdojo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  defectdojo-valkey:
+    image: valkey/valkey:9.1.2-alpine
+    container_name: hacknation-defectdojo-valkey
+    volumes:
+      - defectdojo-valkey-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  defectdojo-initializer:
+    <<: *defectdojo-django
+    container_name: hacknation-defectdojo-initializer
+    depends_on:
+      defectdojo-postgres:
+        condition: service_healthy
+    # No /wait-for-it.sh wrapper (unlike upstream): it execs only the first word after `--`,
+    # dropping `command`. The script waits for the database itself.
+    entrypoint: ["/entrypoint-initializer.sh"]
+    # entrypoint-initializer.sh ends with `exec "$@"`, so this runs after migrations + admin creation.
+    command: ["sh", "-c", "python manage.py shell < /bootstrap/set-api-token.py"]
+    environment:
+      <<: *defectdojo-env
+      DD_INITIALIZE: "true"
+      DD_ADMIN_USER: ${DD_ADMIN_USER:-admin}
+      DD_ADMIN_PASSWORD: ${DD_ADMIN_PASSWORD:-hacknation}
+      DD_ADMIN_MAIL: ${DD_ADMIN_MAIL:-admin@defectdojo.local}
+      DD_ADMIN_FIRST_NAME: Admin
+      DD_ADMIN_LAST_NAME: User
+      DD_API_TOKEN: ${DD_API_TOKEN:-943acbe9baff8da06895e4349f3d06ee293189e8}
+    volumes:
+      - ./defectdojo:/bootstrap:ro
+
+  defectdojo-uwsgi:
+    <<: *defectdojo-django
+    container_name: hacknation-defectdojo-uwsgi
+    entrypoint: ["/wait-for-it.sh", "defectdojo-postgres:5432", "-t", "30", "--", "/entrypoint-uwsgi.sh"]
+    environment:
+      <<: *defectdojo-env
+      DD_DEBUG: "False"
+      DD_ALLOWED_HOSTS: "*"
+    volumes:
+      - defectdojo-media:/app/media
+
+  defectdojo-celerybeat:
+    <<: *defectdojo-django
+    container_name: hacknation-defectdojo-celerybeat
+    entrypoint: ["/wait-for-it.sh", "defectdojo-postgres:5432", "-t", "30", "--", "/entrypoint-celery-beat.sh"]
+    environment:
+      <<: *defectdojo-env
+
+  defectdojo-celeryworker:
+    <<: *defectdojo-django
+    container_name: hacknation-defectdojo-celeryworker
+    entrypoint: ["/wait-for-it.sh", "defectdojo-postgres:5432", "-t", "30", "--", "/entrypoint-celery-worker.sh"]
+    environment:
+      <<: *defectdojo-env
+    volumes:
+      - defectdojo-media:/app/media
+
+  defectdojo-nginx:
+    image: docker.io/defectdojo/defectdojo-nginx:${DD_VERSION:-3.5.201}
+    container_name: hacknation-defectdojo-nginx
+    depends_on:
+      defectdojo-uwsgi:
+        condition: service_started
+    environment:
+      DD_UWSGI_HOST: defectdojo-uwsgi
+      DD_UWSGI_PORT: "3031"
+      NGINX_METRICS_ENABLED: "false"
+    ports:
+      # Loopback only, like PostgreSQL: the backend reaches it via localhost.
+      - "127.0.0.1:${DD_PORT:-8080}:8080"
+    volumes:
+      - defectdojo-media:/usr/share/nginx/html/media
+
 volumes:
   hacknation-postgres-data:
+  defectdojo-postgres-data:
+  defectdojo-valkey-data:
+  defectdojo-media:

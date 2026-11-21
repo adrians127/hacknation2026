@@ -1,4 +1,4 @@
-import type { ErrorResponse } from "@hacknation/contracts/common/common.schema";
+import type { ErrorCode, ErrorResponse } from "@subsurf/contracts/common/common.schema";
 
 const DEFAULT_LATENCY_MS = 300;
 
@@ -14,8 +14,13 @@ export async function mockResponse<T>(data: T, latencyMs = DEFAULT_LATENCY_MS): 
 }
 
 /** Rejects with the same `ErrorResponse` body that openapi-react-query throws for a non-2xx response. */
-export async function mockError(status: number, message: string, latencyMs = DEFAULT_LATENCY_MS): Promise<never> {
+export async function mockError(
+  status: number,
+  message: string,
+  code?: ErrorCode,
+  latencyMs = DEFAULT_LATENCY_MS,
+): Promise<never> {
   await delay(latencyMs);
-  const body: ErrorResponse = { error: { status, message } };
+  const body: ErrorResponse = { error: { status, message, ...(code && { code }) } };
   throw body;
 }

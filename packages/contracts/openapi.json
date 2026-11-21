@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Attack Surface Intelligence API",
+    "title": "SubSurf API",
     "version": "0.0.0",
-    "description": "Generated from @hacknation/contracts zod schemas. Do not edit by hand."
+    "description": "Generated from @subsurf/contracts zod schemas. Do not edit by hand."
   },
   "servers": [
     {
@@ -13,19 +13,164 @@
   ],
   "tags": [
     {
+      "name": "Auth",
+      "description": "Sign-in, session and the current user"
+    },
+    {
       "name": "Health",
       "description": "Service health checks"
+    },
+    {
+      "name": "Roles",
+      "description": "System and custom roles (RBAC)"
+    },
+    {
+      "name": "Targets",
+      "description": "IP addresses, CIDR ranges and domains to scan"
+    },
+    {
+      "name": "Users",
+      "description": "User accounts, managed by administrators"
+    },
+    {
+      "name": "Workers",
+      "description": "Scanning worker lease and result protocol"
     }
   ],
   "components": {
     "securitySchemes": {
-      "bearerAuth": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "subsurf_access",
+        "description": "Access JWT set by `POST /auth/login`, refreshed through `POST /auth/refresh`."
+      },
+      "workerToken": {
         "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "scheme": "bearer"
       }
     },
     "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "status": {
+                "type": "integer"
+              },
+              "code": {
+                "type": "string",
+                "enum": [
+                  "UNAUTHENTICATED",
+                  "INVALID_CREDENTIALS",
+                  "PASSWORD_CHANGE_REQUIRED",
+                  "FORBIDDEN",
+                  "UNTRUSTED_ORIGIN",
+                  "PERMISSION_ESCALATION",
+                  "SELF_MODIFICATION",
+                  "LAST_ADMIN",
+                  "SYSTEM_ROLE_READ_ONLY",
+                  "ROLE_IN_USE",
+                  "EMAIL_TAKEN",
+                  "ROLE_NAME_TAKEN"
+                ]
+              },
+              "details": {}
+            },
+            "required": [
+              "message",
+              "status"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "Me": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "key": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "admin",
+                  "editor",
+                  "analyst",
+                  "viewer",
+                  null
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "key",
+              "name"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "users:read",
+                "users:create",
+                "users:update",
+                "users:delete",
+                "roles:read",
+                "roles:create",
+                "roles:update",
+                "roles:delete",
+                "targets:read",
+                "targets:create",
+                "targets:update",
+                "targets:delete",
+                "scans:read",
+                "scans:run"
+              ]
+            }
+          },
+          "mustChangePassword": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "role",
+          "permissions",
+          "mustChangePassword"
+        ]
+      },
       "HealthResponse": {
         "type": "object",
         "properties": {
@@ -62,11 +207,1500 @@
           "uptime",
           "timestamp"
         ]
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "admin",
+              "editor",
+              "analyst",
+              "viewer",
+              null
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isSystem": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "users:read",
+                "users:create",
+                "users:update",
+                "users:delete",
+                "roles:read",
+                "roles:create",
+                "roles:update",
+                "roles:delete",
+                "targets:read",
+                "targets:create",
+                "targets:update",
+                "targets:delete",
+                "scans:read",
+                "scans:run"
+              ]
+            }
+          },
+          "userCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "description",
+          "isSystem",
+          "permissions",
+          "userCount",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ImportTargetsResponse": {
+        "type": "object",
+        "properties": {
+          "received": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "created": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "scan": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "running",
+                  "completed",
+                  "stopped",
+                  "failed"
+                ]
+              },
+              "targetCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "addressCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "jobCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ports": {
+                "type": "string",
+                "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+              },
+              "maxRate": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "targetCount",
+              "addressCount",
+              "jobCount",
+              "ports",
+              "maxRate"
+            ]
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "dns_not_found",
+                    "dns_no_addresses",
+                    "dns_timeout",
+                    "dns_failed",
+                    "resolves_to_reserved",
+                    "no_scannable_targets"
+                  ]
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "value"
+              ]
+            }
+          }
+        },
+        "required": [
+          "received",
+          "created",
+          "skipped",
+          "scan",
+          "warnings"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "key": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "admin",
+                  "editor",
+                  "analyst",
+                  "viewer",
+                  null
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "key",
+              "name"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "mustChangePassword": {
+            "type": "boolean"
+          },
+          "lockedUntil": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastLoginAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "role",
+          "isActive",
+          "mustChangePassword",
+          "lockedUntil",
+          "lastLoginAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "NmapJob": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "lease_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "subnet": {
+            "type": "string",
+            "format": "ipv4-cidr"
+          },
+          "deadline": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "max_parallel": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "max_rate_per_process": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "host_timeout_ms": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            }
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ip": {
+                  "type": "string",
+                  "format": "ip"
+                },
+                "domain": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 253
+                },
+                "tcp_ports": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  "minItems": 1,
+                  "maxItems": 4096
+                }
+              },
+              "required": [
+                "ip",
+                "tcp_ports"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 1024
+          }
+        },
+        "required": [
+          "job_id",
+          "lease_id",
+          "subnet",
+          "deadline",
+          "targets"
+        ]
+      },
+      "WorkerResult": {
+        "type": "object",
+        "properties": {
+          "scan": {
+            "type": "object",
+            "properties": {
+              "jobId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "leaseId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "scanId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "worker": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "nmapVersion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "nmapVersion"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "completed",
+                  "partial",
+                  "failed"
+                ]
+              },
+              "stopReason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "deadline",
+                  "stop-requested",
+                  "lease-lost",
+                  "error",
+                  null
+                ]
+              },
+              "startedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "finishedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "durationMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "phasesMs": {
+                "type": "object",
+                "properties": {
+                  "hostDiscovery": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "portScan": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "serviceDetection": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "http": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "hostDiscovery",
+                  "portScan",
+                  "serviceDetection",
+                  "http"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "properties": {
+                  "subnet": {
+                    "type": "string",
+                    "format": "ipv4-cidr"
+                  },
+                  "ports": {
+                    "type": "string",
+                    "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+                  },
+                  "maxParallel": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "maxRatePerProcess": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "hostTimeoutMs": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "httpTimeoutMs": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "maxBodyBytes": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "maxRedirects": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "nmapArgs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "subnet",
+                  "ports",
+                  "maxParallel",
+                  "maxRatePerProcess",
+                  "hostTimeoutMs",
+                  "httpTimeoutMs",
+                  "maxBodyBytes",
+                  "maxRedirects",
+                  "nmapArgs"
+                ]
+              },
+              "counts": {
+                "type": "object",
+                "properties": {
+                  "addresses": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "up": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "down": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "timeout": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "cancelled": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "failed": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "openPorts": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "httpEndpoints": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "httpRequests": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "addresses",
+                  "up",
+                  "down",
+                  "timeout",
+                  "cancelled",
+                  "failed",
+                  "openPorts",
+                  "httpEndpoints",
+                  "httpRequests"
+                ]
+              },
+              "error": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ]
+              }
+            },
+            "required": [
+              "jobId",
+              "leaseId",
+              "scanId",
+              "worker",
+              "status",
+              "stopReason",
+              "startedAt",
+              "finishedAt",
+              "durationMs",
+              "phasesMs",
+              "params",
+              "counts",
+              "error"
+            ]
+          },
+          "hosts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ip": {
+                  "type": "string",
+                  "format": "ip"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "up",
+                    "down",
+                    "timeout",
+                    "cancelled",
+                    "failed"
+                  ]
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "observedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "latencyMs": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "hostnames": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 253
+                      },
+                      "source": {
+                        "type": "string",
+                        "enum": [
+                          "job",
+                          "ptr",
+                          "tls-san"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "source"
+                    ]
+                  }
+                },
+                "error": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "ports": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "port": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      },
+                      "protocol": {
+                        "type": "string",
+                        "enum": [
+                          "tcp"
+                        ]
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "open"
+                        ]
+                      },
+                      "reason": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "service": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "product": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "version": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "extraInfo": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "cpe": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "probed",
+                              "table"
+                            ]
+                          },
+                          "confidence": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "product",
+                          "version",
+                          "extraInfo",
+                          "cpe",
+                          "method",
+                          "confidence"
+                        ]
+                      },
+                      "identity": {
+                        "type": "object",
+                        "properties": {
+                          "ttl": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          "sshHostKeySha256": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[0-9a-f]{64}$"
+                          },
+                          "tlsCertSha256": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[0-9a-f]{64}$"
+                          }
+                        },
+                        "required": [
+                          "ttl",
+                          "sshHostKeySha256",
+                          "tlsCertSha256"
+                        ]
+                      },
+                      "banner": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "scripts": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "output": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "output"
+                          ]
+                        }
+                      },
+                      "http": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "scheme": {
+                              "type": "string",
+                              "enum": [
+                                "http",
+                                "https"
+                              ]
+                            },
+                            "vhost": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "minLength": 1,
+                              "maxLength": 253
+                            },
+                            "url": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "finalUrl": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "statusCode": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 100,
+                              "maximum": 599
+                            },
+                            "title": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "headers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "value": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "value"
+                                ]
+                              }
+                            },
+                            "cookies": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "valueSha256": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  },
+                                  "secure": {
+                                    "type": "boolean"
+                                  },
+                                  "httpOnly": {
+                                    "type": "boolean"
+                                  },
+                                  "sameSite": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "enum": [
+                                      "Strict",
+                                      "Lax",
+                                      "None",
+                                      null
+                                    ]
+                                  },
+                                  "domain": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "path": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "expires": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "valueSha256",
+                                  "secure",
+                                  "httpOnly",
+                                  "sameSite",
+                                  "domain",
+                                  "path",
+                                  "expires"
+                                ]
+                              }
+                            },
+                            "redirects": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "url": {
+                                    "type": "string",
+                                    "format": "uri"
+                                  },
+                                  "statusCode": {
+                                    "type": "integer",
+                                    "minimum": 300,
+                                    "maximum": 399
+                                  },
+                                  "location": {
+                                    "type": "string"
+                                  },
+                                  "followed": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "url",
+                                  "statusCode",
+                                  "location",
+                                  "followed"
+                                ]
+                              }
+                            },
+                            "body": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "sha256": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{64}$"
+                                },
+                                "size": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "contentType": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "content": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "truncated": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "sha256",
+                                "size",
+                                "contentType",
+                                "content",
+                                "truncated"
+                              ]
+                            },
+                            "favicon": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "url": {
+                                  "type": "string",
+                                  "format": "uri"
+                                },
+                                "mmh3": {
+                                  "type": "integer",
+                                  "minimum": -2147483648,
+                                  "maximum": 2147483647
+                                },
+                                "sha256": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{64}$"
+                                }
+                              },
+                              "required": [
+                                "url",
+                                "mmh3",
+                                "sha256"
+                              ]
+                            },
+                            "tls": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "version": {
+                                  "type": "string"
+                                },
+                                "cipher": {
+                                  "type": "string"
+                                },
+                                "alpn": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "cert": {
+                                  "type": "object",
+                                  "properties": {
+                                    "subjectCn": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "san": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "issuer": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "notBefore": {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    },
+                                    "notAfter": {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    },
+                                    "serial": {
+                                      "type": "string"
+                                    },
+                                    "sha256": {
+                                      "type": "string",
+                                      "pattern": "^[0-9a-f]{64}$"
+                                    },
+                                    "selfSigned": {
+                                      "type": "boolean"
+                                    },
+                                    "keyAlgorithm": {
+                                      "type": "string"
+                                    },
+                                    "keyBits": {
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ],
+                                      "exclusiveMinimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "subjectCn",
+                                    "san",
+                                    "issuer",
+                                    "notBefore",
+                                    "notAfter",
+                                    "serial",
+                                    "sha256",
+                                    "selfSigned",
+                                    "keyAlgorithm",
+                                    "keyBits"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "version",
+                                "cipher",
+                                "alpn",
+                                "cert"
+                              ]
+                            },
+                            "probes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string"
+                                  },
+                                  "statusCode": {
+                                    "type": [
+                                      "integer",
+                                      "null"
+                                    ],
+                                    "minimum": 100,
+                                    "maximum": 599
+                                  },
+                                  "location": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "title": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "size": {
+                                    "type": [
+                                      "integer",
+                                      "null"
+                                    ],
+                                    "minimum": 0
+                                  },
+                                  "bodySha256": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  },
+                                  "error": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "properties": {
+                                      "code": {
+                                        "type": "string",
+                                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                      },
+                                      "message": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "code",
+                                      "message"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "statusCode",
+                                  "location",
+                                  "title",
+                                  "size",
+                                  "bodySha256",
+                                  "error"
+                                ]
+                              }
+                            },
+                            "error": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                },
+                                "message": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "message"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "scheme",
+                            "vhost",
+                            "url",
+                            "finalUrl",
+                            "statusCode",
+                            "title",
+                            "headers",
+                            "cookies",
+                            "redirects",
+                            "body",
+                            "favicon",
+                            "tls",
+                            "probes",
+                            "error"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "port",
+                      "protocol",
+                      "state",
+                      "reason",
+                      "service",
+                      "identity",
+                      "banner",
+                      "scripts",
+                      "http"
+                    ]
+                  },
+                  "maxItems": 65535
+                }
+              },
+              "required": [
+                "ip",
+                "status",
+                "reason",
+                "observedAt",
+                "latencyMs",
+                "hostnames",
+                "error",
+                "ports"
+              ]
+            },
+            "maxItems": 1024
+          }
+        },
+        "required": [
+          "scan",
+          "hosts"
+        ]
       }
     },
     "parameters": {}
   },
   "paths": {
+    "/auth/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "Sign in with email and password",
+        "description": "Sets two httpOnly cookies: `subsurf_access` (15 min JWT) and `subsurf_refresh` (7 days, path `/v1/auth`). Five failed attempts in a row lock the account for 15 minutes. Every failure (unknown email, wrong password, locked or deactivated account) returns the same 401.",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials (`INVALID_CREDENTIALS`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "refreshSession",
+        "summary": "Rotate the refresh token and issue a new access token",
+        "description": "Reads the `subsurf_refresh` cookie. Presenting an already rotated refresh token revokes the whole session.",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "204": {
+            "description": "New cookies set"
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "summary": "Sign out",
+        "description": "Revokes the current session and clears both cookies. Always succeeds.",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "204": {
+            "description": "Signed out"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "getMe",
+        "summary": "The signed-in user, their role and permissions",
+        "description": "Also works while `mustChangePassword` is true.",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "operationId": "changePassword",
+        "summary": "Change the signed-in user's password",
+        "description": "Signs out every other session of this user and clears `mustChangePassword`.",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Password changed"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current password is wrong (`INVALID_CREDENTIALS`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "operationId": "getHealth",
@@ -80,44 +1714,2667 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles": {
+      "get": {
+        "operationId": "listRoles",
+        "summary": "List roles",
+        "description": "Requires `roles:read`. System roles first, then custom roles by name.",
+        "tags": [
+          "Roles"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All roles",
+            "content": {
+              "application/json": {
+                "schema": {
                   "type": "object",
                   "properties": {
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "ok",
-                        "degraded"
-                      ]
-                    },
-                    "database": {
-                      "type": "string",
-                      "enum": [
-                        "up",
-                        "down"
-                      ]
-                    },
-                    "version": {
-                      "type": "string"
-                    },
-                    "uptime": {
-                      "type": "number",
-                      "minimum": 0
-                    },
-                    "timestamp": {
-                      "type": "string",
-                      "format": "date-time"
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "key": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "admin",
+                              "editor",
+                              "analyst",
+                              "viewer",
+                              null
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "isSystem": {
+                            "type": "boolean"
+                          },
+                          "permissions": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "users:read",
+                                "users:create",
+                                "users:update",
+                                "users:delete",
+                                "roles:read",
+                                "roles:create",
+                                "roles:update",
+                                "roles:delete",
+                                "targets:read",
+                                "targets:create",
+                                "targets:update",
+                                "targets:delete",
+                                "scans:read",
+                                "scans:run"
+                              ]
+                            }
+                          },
+                          "userCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "key",
+                          "name",
+                          "description",
+                          "isSystem",
+                          "permissions",
+                          "userCount",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
                     }
                   },
                   "required": [
-                    "status",
-                    "database",
-                    "version",
-                    "uptime",
-                    "timestamp"
+                    "items"
                   ]
                 }
               }
             }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createRole",
+        "summary": "Create a custom role",
+        "description": "Requires `roles:create`. You can only grant permissions you hold yourself.",
+        "tags": [
+          "Roles"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "\\S"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "permissions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "users:read",
+                        "users:create",
+                        "users:update",
+                        "users:delete",
+                        "roles:read",
+                        "roles:create",
+                        "roles:update",
+                        "roles:delete",
+                        "targets:read",
+                        "targets:create",
+                        "targets:update",
+                        "targets:delete",
+                        "scans:read",
+                        "scans:run"
+                      ]
+                    },
+                    "maxItems": 14
+                  }
+                },
+                "required": [
+                  "name",
+                  "description",
+                  "permissions"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or grants more than you hold",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Name already taken (`ROLE_NAME_TAKEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles/{id}": {
+      "get": {
+        "operationId": "getRole",
+        "summary": "Get a role with its users",
+        "description": "Requires `roles:read`.",
+        "tags": [
+          "Roles"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The role and the users who have it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "key": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "admin",
+                        "editor",
+                        "analyst",
+                        "viewer",
+                        null
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "isSystem": {
+                      "type": "boolean"
+                    },
+                    "permissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "users:read",
+                          "users:create",
+                          "users:update",
+                          "users:delete",
+                          "roles:read",
+                          "roles:create",
+                          "roles:update",
+                          "roles:delete",
+                          "targets:read",
+                          "targets:create",
+                          "targets:update",
+                          "targets:delete",
+                          "scans:read",
+                          "scans:run"
+                        ]
+                      }
+                    },
+                    "userCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "email": {
+                            "type": "string",
+                            "format": "email"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "email",
+                          "displayName",
+                          "isActive"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "key",
+                    "name",
+                    "description",
+                    "isSystem",
+                    "permissions",
+                    "userCount",
+                    "createdAt",
+                    "updatedAt",
+                    "users"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateRole",
+        "summary": "Update a custom role",
+        "description": "Requires `roles:update`. System roles are read-only. You cannot edit your own role or grant permissions you do not hold.",
+        "tags": [
+          "Roles"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "\\S"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "permissions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "users:read",
+                        "users:create",
+                        "users:update",
+                        "users:delete",
+                        "roles:read",
+                        "roles:create",
+                        "roles:update",
+                        "roles:delete",
+                        "targets:read",
+                        "targets:create",
+                        "targets:update",
+                        "targets:delete",
+                        "scans:read",
+                        "scans:run"
+                      ]
+                    },
+                    "maxItems": 14
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Name already taken (`ROLE_NAME_TAKEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteRole",
+        "summary": "Delete a custom role",
+        "description": "Requires `roles:delete`. If users still have the role, pass `reassignToRoleId` (also requires `users:update`): they move to that role and the role is deleted in one transaction.",
+        "tags": [
+          "Roles"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "reassignToRoleId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Role deleted"
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Users still have this role (`ROLE_IN_USE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/targets/import": {
+      "post": {
+        "operationId": "importTargets",
+        "summary": "Import IP addresses, CIDR ranges and domains",
+        "description": "Requires `targets:create`; with `startScan: true` also `scans:run`. Adds the entries to the target inventory; values already there are counted as `skipped`. With `startScan`, queues a scan of every entry: domains are resolved to IPv4 addresses and the addresses are split into scan jobs. Accepts IPv4, CIDRs up to /16 and domains; the body may be up to 10 MB.",
+        "tags": [
+          "Targets"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "entries": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2048,
+                          "pattern": "\\S"
+                        },
+                        "note": {
+                          "type": "string",
+                          "maxLength": 500
+                        }
+                      },
+                      "required": [
+                        "value"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 100000
+                  },
+                  "startScan": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "entries",
+                  "startScan"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Entries imported (and a scan queued)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportTargetsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body larger than 10 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "operationId": "listUsers",
+        "summary": "List users",
+        "description": "Requires `users:read`.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All users, active first, then by display name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "email": {
+                            "type": "string",
+                            "format": "email"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "key": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "admin",
+                                  "editor",
+                                  "analyst",
+                                  "viewer",
+                                  null
+                                ]
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "key",
+                              "name"
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "mustChangePassword": {
+                            "type": "boolean"
+                          },
+                          "lockedUntil": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "lastLoginAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "email",
+                          "displayName",
+                          "role",
+                          "isActive",
+                          "mustChangePassword",
+                          "lockedUntil",
+                          "lastLoginAt",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createUser",
+        "summary": "Create a user",
+        "description": "Requires `users:create`. The server generates a temporary password and returns it once; the user must change it at first sign-in. You can only assign a role whose permissions you hold yourself.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email"
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "\\S"
+                  },
+                  "roleId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "email",
+                  "displayName",
+                  "roleId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The user and a one-time temporary password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "key": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "admin",
+                                "editor",
+                                "analyst",
+                                "viewer",
+                                null
+                              ]
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "key",
+                            "name"
+                          ]
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "mustChangePassword": {
+                          "type": "boolean"
+                        },
+                        "lockedUntil": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "lastLoginAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "displayName",
+                        "role",
+                        "isActive",
+                        "mustChangePassword",
+                        "lockedUntil",
+                        "lastLoginAt",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "temporaryPassword": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "temporaryPassword"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the role grants more than you hold",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already taken (`EMAIL_TAKEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "operationId": "getUser",
+        "summary": "Get a user",
+        "description": "Requires `users:read`.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateUser",
+        "summary": "Rename a user or change their role",
+        "description": "Requires `users:update`. You cannot change your own role, assign a role with permissions you do not hold, or take the admin role from the last active admin.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "\\S"
+                  },
+                  "roleId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Would leave no active admin (`LAST_ADMIN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/reset-password": {
+      "post": {
+        "operationId": "resetUserPassword",
+        "summary": "Issue a new temporary password",
+        "description": "Requires `users:update`. Signs the user out everywhere, clears a lockout and forces a password change at next sign-in.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The user and a one-time temporary password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "key": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "admin",
+                                "editor",
+                                "analyst",
+                                "viewer",
+                                null
+                              ]
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "key",
+                            "name"
+                          ]
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "mustChangePassword": {
+                          "type": "boolean"
+                        },
+                        "lockedUntil": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "lastLoginAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "displayName",
+                        "role",
+                        "isActive",
+                        "mustChangePassword",
+                        "lockedUntil",
+                        "lastLoginAt",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "temporaryPassword": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "temporaryPassword"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/deactivate": {
+      "post": {
+        "operationId": "deactivateUser",
+        "summary": "Deactivate a user",
+        "description": "Requires `users:delete`. Users are never hard-deleted. Signs the user out everywhere. You cannot deactivate yourself or the last active admin.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Would leave no active admin (`LAST_ADMIN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/reactivate": {
+      "post": {
+        "operationId": "reactivateUser",
+        "summary": "Reactivate a user",
+        "description": "Requires `users:delete`.",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workers/nmap/lease": {
+      "post": {
+        "operationId": "leaseNmapJob",
+        "tags": [
+          "Workers"
+        ],
+        "security": [
+          {
+            "workerToken": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Leased Nmap job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "lease_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "subnet": {
+                      "type": "string",
+                      "format": "ipv4-cidr"
+                    },
+                    "deadline": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+                    },
+                    "limits": {
+                      "type": "object",
+                      "properties": {
+                        "max_parallel": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "max_rate_per_process": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "host_timeout_ms": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        }
+                      }
+                    },
+                    "targets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "domain": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 253
+                          },
+                          "tcp_ports": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 65535
+                            },
+                            "minItems": 1,
+                            "maxItems": 4096
+                          }
+                        },
+                        "required": [
+                          "ip",
+                          "tcp_ports"
+                        ]
+                      },
+                      "minItems": 1,
+                      "maxItems": 1024
+                    }
+                  },
+                  "required": [
+                    "job_id",
+                    "lease_id",
+                    "subnet",
+                    "deadline",
+                    "targets"
+                  ]
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Nmap job is available"
+          }
+        }
+      }
+    },
+    "/workers/nmap/heartbeat": {
+      "post": {
+        "operationId": "heartbeatNmapJob",
+        "tags": [
+          "Workers"
+        ],
+        "security": [
+          {
+            "workerToken": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "job_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "lease_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "job_id",
+                  "lease_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Lease extended"
+          }
+        }
+      }
+    },
+    "/workers/nmap/results": {
+      "post": {
+        "operationId": "submitNmapResult",
+        "tags": [
+          "Workers"
+        ],
+        "security": [
+          {
+            "workerToken": []
+          }
+        ],
+        "description": "The locked result format in docs/worker-result-format.md.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scan": {
+                    "type": "object",
+                    "properties": {
+                      "jobId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "leaseId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      "scanId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "worker": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          },
+                          "version": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "nmapVersion": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1,
+                            "maxLength": 64
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "version",
+                          "nmapVersion"
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "completed",
+                          "partial",
+                          "failed"
+                        ]
+                      },
+                      "stopReason": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "deadline",
+                          "stop-requested",
+                          "lease-lost",
+                          "error",
+                          null
+                        ]
+                      },
+                      "startedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "finishedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "durationMs": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "phasesMs": {
+                        "type": "object",
+                        "properties": {
+                          "hostDiscovery": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "portScan": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "serviceDetection": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "http": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "hostDiscovery",
+                          "portScan",
+                          "serviceDetection",
+                          "http"
+                        ]
+                      },
+                      "params": {
+                        "type": "object",
+                        "properties": {
+                          "subnet": {
+                            "type": "string",
+                            "format": "ipv4-cidr"
+                          },
+                          "ports": {
+                            "type": "string",
+                            "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+                          },
+                          "maxParallel": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "maxRatePerProcess": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "hostTimeoutMs": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "httpTimeoutMs": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "maxBodyBytes": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "maxRedirects": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "nmapArgs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "subnet",
+                          "ports",
+                          "maxParallel",
+                          "maxRatePerProcess",
+                          "hostTimeoutMs",
+                          "httpTimeoutMs",
+                          "maxBodyBytes",
+                          "maxRedirects",
+                          "nmapArgs"
+                        ]
+                      },
+                      "counts": {
+                        "type": "object",
+                        "properties": {
+                          "addresses": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "up": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "down": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "timeout": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "cancelled": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "failed": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "openPorts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "httpEndpoints": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "httpRequests": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "addresses",
+                          "up",
+                          "down",
+                          "timeout",
+                          "cancelled",
+                          "failed",
+                          "openPorts",
+                          "httpEndpoints",
+                          "httpRequests"
+                        ]
+                      },
+                      "error": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "message"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "jobId",
+                      "leaseId",
+                      "scanId",
+                      "worker",
+                      "status",
+                      "stopReason",
+                      "startedAt",
+                      "finishedAt",
+                      "durationMs",
+                      "phasesMs",
+                      "params",
+                      "counts",
+                      "error"
+                    ]
+                  },
+                  "hosts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ip": {
+                          "type": "string",
+                          "format": "ip"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "up",
+                            "down",
+                            "timeout",
+                            "cancelled",
+                            "failed"
+                          ]
+                        },
+                        "reason": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "observedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "latencyMs": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "minimum": 0
+                        },
+                        "hostnames": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 253
+                              },
+                              "source": {
+                                "type": "string",
+                                "enum": [
+                                  "job",
+                                  "ptr",
+                                  "tls-san"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "source"
+                            ]
+                          }
+                        },
+                        "error": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message"
+                          ]
+                        },
+                        "ports": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "port": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 65535
+                              },
+                              "protocol": {
+                                "type": "string",
+                                "enum": [
+                                  "tcp"
+                                ]
+                              },
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "open"
+                                ]
+                              },
+                              "reason": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "service": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "product": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "version": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "extraInfo": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "cpe": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "method": {
+                                    "type": "string",
+                                    "enum": [
+                                      "probed",
+                                      "table"
+                                    ]
+                                  },
+                                  "confidence": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 10
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "product",
+                                  "version",
+                                  "extraInfo",
+                                  "cpe",
+                                  "method",
+                                  "confidence"
+                                ]
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "ttl": {
+                                    "type": [
+                                      "integer",
+                                      "null"
+                                    ],
+                                    "minimum": 0,
+                                    "maximum": 255
+                                  },
+                                  "sshHostKeySha256": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  },
+                                  "tlsCertSha256": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  }
+                                },
+                                "required": [
+                                  "ttl",
+                                  "sshHostKeySha256",
+                                  "tlsCertSha256"
+                                ]
+                              },
+                              "banner": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "scripts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "output": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "output"
+                                  ]
+                                }
+                              },
+                              "http": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "scheme": {
+                                      "type": "string",
+                                      "enum": [
+                                        "http",
+                                        "https"
+                                      ]
+                                    },
+                                    "vhost": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "minLength": 1,
+                                      "maxLength": 253
+                                    },
+                                    "url": {
+                                      "type": "string",
+                                      "format": "uri"
+                                    },
+                                    "finalUrl": {
+                                      "type": "string",
+                                      "format": "uri"
+                                    },
+                                    "statusCode": {
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ],
+                                      "minimum": 100,
+                                      "maximum": 599
+                                    },
+                                    "title": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "headers": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "value": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "name",
+                                          "value"
+                                        ]
+                                      }
+                                    },
+                                    "cookies": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "valueSha256": {
+                                            "type": "string",
+                                            "pattern": "^[0-9a-f]{64}$"
+                                          },
+                                          "secure": {
+                                            "type": "boolean"
+                                          },
+                                          "httpOnly": {
+                                            "type": "boolean"
+                                          },
+                                          "sameSite": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "enum": [
+                                              "Strict",
+                                              "Lax",
+                                              "None",
+                                              null
+                                            ]
+                                          },
+                                          "domain": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "path": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "expires": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "name",
+                                          "valueSha256",
+                                          "secure",
+                                          "httpOnly",
+                                          "sameSite",
+                                          "domain",
+                                          "path",
+                                          "expires"
+                                        ]
+                                      }
+                                    },
+                                    "redirects": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "url": {
+                                            "type": "string",
+                                            "format": "uri"
+                                          },
+                                          "statusCode": {
+                                            "type": "integer",
+                                            "minimum": 300,
+                                            "maximum": 399
+                                          },
+                                          "location": {
+                                            "type": "string"
+                                          },
+                                          "followed": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "url",
+                                          "statusCode",
+                                          "location",
+                                          "followed"
+                                        ]
+                                      }
+                                    },
+                                    "body": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "sha256": {
+                                          "type": "string",
+                                          "pattern": "^[0-9a-f]{64}$"
+                                        },
+                                        "size": {
+                                          "type": "integer",
+                                          "minimum": 0
+                                        },
+                                        "contentType": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "content": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "truncated": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "sha256",
+                                        "size",
+                                        "contentType",
+                                        "content",
+                                        "truncated"
+                                      ]
+                                    },
+                                    "favicon": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "url": {
+                                          "type": "string",
+                                          "format": "uri"
+                                        },
+                                        "mmh3": {
+                                          "type": "integer",
+                                          "minimum": -2147483648,
+                                          "maximum": 2147483647
+                                        },
+                                        "sha256": {
+                                          "type": "string",
+                                          "pattern": "^[0-9a-f]{64}$"
+                                        }
+                                      },
+                                      "required": [
+                                        "url",
+                                        "mmh3",
+                                        "sha256"
+                                      ]
+                                    },
+                                    "tls": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "version": {
+                                          "type": "string"
+                                        },
+                                        "cipher": {
+                                          "type": "string"
+                                        },
+                                        "alpn": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "cert": {
+                                          "type": "object",
+                                          "properties": {
+                                            "subjectCn": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "san": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "issuer": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "notBefore": {
+                                              "type": "string",
+                                              "format": "date-time"
+                                            },
+                                            "notAfter": {
+                                              "type": "string",
+                                              "format": "date-time"
+                                            },
+                                            "serial": {
+                                              "type": "string"
+                                            },
+                                            "sha256": {
+                                              "type": "string",
+                                              "pattern": "^[0-9a-f]{64}$"
+                                            },
+                                            "selfSigned": {
+                                              "type": "boolean"
+                                            },
+                                            "keyAlgorithm": {
+                                              "type": "string"
+                                            },
+                                            "keyBits": {
+                                              "type": [
+                                                "integer",
+                                                "null"
+                                              ],
+                                              "exclusiveMinimum": 0
+                                            }
+                                          },
+                                          "required": [
+                                            "subjectCn",
+                                            "san",
+                                            "issuer",
+                                            "notBefore",
+                                            "notAfter",
+                                            "serial",
+                                            "sha256",
+                                            "selfSigned",
+                                            "keyAlgorithm",
+                                            "keyBits"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "version",
+                                        "cipher",
+                                        "alpn",
+                                        "cert"
+                                      ]
+                                    },
+                                    "probes": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "path": {
+                                            "type": "string"
+                                          },
+                                          "statusCode": {
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ],
+                                            "minimum": 100,
+                                            "maximum": 599
+                                          },
+                                          "location": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "title": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "size": {
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ],
+                                            "minimum": 0
+                                          },
+                                          "bodySha256": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "pattern": "^[0-9a-f]{64}$"
+                                          },
+                                          "error": {
+                                            "type": [
+                                              "object",
+                                              "null"
+                                            ],
+                                            "properties": {
+                                              "code": {
+                                                "type": "string",
+                                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                              },
+                                              "message": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": [
+                                              "code",
+                                              "message"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "path",
+                                          "statusCode",
+                                          "location",
+                                          "title",
+                                          "size",
+                                          "bodySha256",
+                                          "error"
+                                        ]
+                                      }
+                                    },
+                                    "error": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "code": {
+                                          "type": "string",
+                                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                        },
+                                        "message": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "code",
+                                        "message"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "scheme",
+                                    "vhost",
+                                    "url",
+                                    "finalUrl",
+                                    "statusCode",
+                                    "title",
+                                    "headers",
+                                    "cookies",
+                                    "redirects",
+                                    "body",
+                                    "favicon",
+                                    "tls",
+                                    "probes",
+                                    "error"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "port",
+                              "protocol",
+                              "state",
+                              "reason",
+                              "service",
+                              "identity",
+                              "banner",
+                              "scripts",
+                              "http"
+                            ]
+                          },
+                          "maxItems": 65535
+                        }
+                      },
+                      "required": [
+                        "ip",
+                        "status",
+                        "reason",
+                        "observedAt",
+                        "latencyMs",
+                        "hostnames",
+                        "error",
+                        "ports"
+                      ]
+                    },
+                    "maxItems": 1024
+                  }
+                },
+                "required": [
+                  "scan",
+                  "hosts"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Result accepted"
           }
         }
       }

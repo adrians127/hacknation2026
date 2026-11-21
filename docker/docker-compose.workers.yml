@@ -1,4 +1,4 @@
-# Scan workers for Attack Surface Intelligence. See docker/README.md.
+# Scan workers for SubSurf. See docker/README.md.
 #
 #   pnpm workers:build    build the masscan-worker image
 #   pnpm workers:masscan  one-shot masscan sweep: pnpm workers:masscan < job.json
@@ -20,6 +20,8 @@ services:
     environment:
       # The backend runs on the host via `pnpm dev`.
       BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:3001/v1}
+      WORKER_TOKEN: ${WORKER_TOKEN:-}
+      NMAP_SCAN_TYPE: syn
     extra_hosts:
       - "host.docker.internal:host-gateway"
     cap_add:

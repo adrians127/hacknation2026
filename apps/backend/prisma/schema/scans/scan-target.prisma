@@ -1,0 +1,11 @@
+/// Which inventory targets a scan covered.
+model ScanTarget {
+  scanId   String @db.Uuid
+  targetId String @db.Uuid
+
+  scan   Scan   @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  target Target @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@id([scanId, targetId])
+  @@index([targetId])
+}

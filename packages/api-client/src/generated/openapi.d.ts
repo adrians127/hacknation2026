@@ -4,6 +4,106 @@
  */
 
 export interface paths {
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with email and password
+         * @description Sets two httpOnly cookies: `subsurf_access` (15 min JWT) and `subsurf_refresh` (7 days, path `/v1/auth`). Five failed attempts in a row lock the account for 15 minutes. Every failure (unknown email, wrong password, locked or deactivated account) returns the same 401.
+         */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate the refresh token and issue a new access token
+         * @description Reads the `subsurf_refresh` cookie. Presenting an already rotated refresh token revokes the whole session.
+         */
+        post: operations["refreshSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out
+         * @description Revokes the current session and clears both cookies. Always succeeds.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The signed-in user, their role and permissions
+         * @description Also works while `mustChangePassword` is true.
+         */
+        get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change the signed-in user's password
+         * @description Signs out every other session of this user and clears `mustChangePassword`.
+         */
+        post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -21,10 +121,264 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List roles
+         * @description Requires `roles:read`. System roles first, then custom roles by name.
+         */
+        get: operations["listRoles"];
+        put?: never;
+        /**
+         * Create a custom role
+         * @description Requires `roles:create`. You can only grant permissions you hold yourself.
+         */
+        post: operations["createRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/roles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a role with its users
+         * @description Requires `roles:read`.
+         */
+        get: operations["getRole"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a custom role
+         * @description Requires `roles:delete`. If users still have the role, pass `reassignToRoleId` (also requires `users:update`): they move to that role and the role is deleted in one transaction.
+         */
+        delete: operations["deleteRole"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a custom role
+         * @description Requires `roles:update`. System roles are read-only. You cannot edit your own role or grant permissions you do not hold.
+         */
+        patch: operations["updateRole"];
+        trace?: never;
+    };
+    "/targets/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import IP addresses, CIDR ranges and domains
+         * @description Requires `targets:create`; with `startScan: true` also `scans:run`. Adds the entries to the target inventory; values already there are counted as `skipped`. With `startScan`, queues a scan of every entry: domains are resolved to IPv4 addresses and the addresses are split into scan jobs. Accepts IPv4, CIDRs up to /16 and domains; the body may be up to 10 MB.
+         */
+        post: operations["importTargets"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List users
+         * @description Requires `users:read`.
+         */
+        get: operations["listUsers"];
+        put?: never;
+        /**
+         * Create a user
+         * @description Requires `users:create`. The server generates a temporary password and returns it once; the user must change it at first sign-in. You can only assign a role whose permissions you hold yourself.
+         */
+        post: operations["createUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a user
+         * @description Requires `users:read`.
+         */
+        get: operations["getUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Rename a user or change their role
+         * @description Requires `users:update`. You cannot change your own role, assign a role with permissions you do not hold, or take the admin role from the last active admin.
+         */
+        patch: operations["updateUser"];
+        trace?: never;
+    };
+    "/users/{id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a new temporary password
+         * @description Requires `users:update`. Signs the user out everywhere, clears a lockout and forces a password change at next sign-in.
+         */
+        post: operations["resetUserPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deactivate a user
+         * @description Requires `users:delete`. Users are never hard-deleted. Signs the user out everywhere. You cannot deactivate yourself or the last active admin.
+         */
+        post: operations["deactivateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate a user
+         * @description Requires `users:delete`.
+         */
+        post: operations["reactivateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workers/nmap/lease": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["leaseNmapJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workers/nmap/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["heartbeatNmapJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workers/nmap/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The locked result format in docs/worker-result-format.md. */
+        post: operations["submitNmapResult"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ErrorResponse: {
+            error: {
+                message: string;
+                status: number;
+                /** @enum {string} */
+                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN";
+                details?: unknown;
+            };
+        };
+        Me: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            displayName: string;
+            role: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string|null} */
+                key: "admin" | "editor" | "analyst" | "viewer" | null;
+                name: string;
+            };
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+            mustChangePassword: boolean;
+        };
         HealthResponse: {
             /** @enum {string} */
             status: "ok" | "degraded";
@@ -35,6 +389,268 @@ export interface components {
             /** Format: date-time */
             timestamp: string;
         };
+        Role: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string|null} */
+            key: "admin" | "editor" | "analyst" | "viewer" | null;
+            name: string;
+            description: string;
+            isSystem: boolean;
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+            userCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ImportTargetsResponse: {
+            received: number;
+            created: number;
+            skipped: number;
+            scan: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                status: "queued" | "running" | "completed" | "stopped" | "failed";
+                targetCount: number;
+                addressCount: number;
+                jobCount: number;
+                ports: string;
+                maxRate: number;
+            } | null;
+            warnings: {
+                /** @enum {string} */
+                code: "dns_not_found" | "dns_no_addresses" | "dns_timeout" | "dns_failed" | "resolves_to_reserved" | "no_scannable_targets";
+                value: string;
+            }[];
+        };
+        User: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            displayName: string;
+            role: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string|null} */
+                key: "admin" | "editor" | "analyst" | "viewer" | null;
+                name: string;
+            };
+            isActive: boolean;
+            mustChangePassword: boolean;
+            /** Format: date-time */
+            lockedUntil: string | null;
+            /** Format: date-time */
+            lastLoginAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        NmapJob: {
+            job_id: string;
+            lease_id: string;
+            /** Format: ipv4-cidr */
+            subnet: string;
+            deadline: string;
+            limits?: {
+                max_parallel?: number;
+                max_rate_per_process?: number;
+                host_timeout_ms?: number;
+            };
+            targets: {
+                /** Format: ip */
+                ip: string;
+                domain?: string | null;
+                tcp_ports: number[];
+            }[];
+        };
+        WorkerResult: {
+            scan: {
+                /** Format: uuid */
+                jobId: string;
+                leaseId: string;
+                /** Format: uuid */
+                scanId: string;
+                worker: {
+                    id: string;
+                    version: string;
+                    nmapVersion: string | null;
+                };
+                /** @enum {string} */
+                status: "completed" | "partial" | "failed";
+                /** @enum {string|null} */
+                stopReason: "deadline" | "stop-requested" | "lease-lost" | "error" | null;
+                /** Format: date-time */
+                startedAt: string;
+                /** Format: date-time */
+                finishedAt: string;
+                durationMs: number;
+                phasesMs: {
+                    hostDiscovery: number;
+                    portScan: number;
+                    serviceDetection: number;
+                    http: number;
+                };
+                params: {
+                    /** Format: ipv4-cidr */
+                    subnet: string;
+                    ports: string;
+                    maxParallel: number;
+                    maxRatePerProcess: number;
+                    hostTimeoutMs: number;
+                    httpTimeoutMs: number;
+                    maxBodyBytes: number;
+                    maxRedirects: number;
+                    nmapArgs: string[];
+                };
+                counts: {
+                    addresses: number;
+                    up: number;
+                    down: number;
+                    timeout: number;
+                    cancelled: number;
+                    failed: number;
+                    openPorts: number;
+                    httpEndpoints: number;
+                    httpRequests: number;
+                };
+                error: {
+                    code: string;
+                    message: string;
+                } | null;
+            };
+            hosts: {
+                /** Format: ip */
+                ip: string;
+                /** @enum {string} */
+                status: "up" | "down" | "timeout" | "cancelled" | "failed";
+                reason: string | null;
+                /** Format: date-time */
+                observedAt: string | null;
+                latencyMs: number | null;
+                hostnames: {
+                    name: string;
+                    /** @enum {string} */
+                    source: "job" | "ptr" | "tls-san";
+                }[];
+                error: {
+                    code: string;
+                    message: string;
+                } | null;
+                ports: {
+                    port: number;
+                    /** @enum {string} */
+                    protocol: "tcp";
+                    /** @enum {string} */
+                    state: "open";
+                    reason: string | null;
+                    service: {
+                        name: string;
+                        product: string | null;
+                        version: string | null;
+                        extraInfo: string | null;
+                        cpe: string[];
+                        /** @enum {string} */
+                        method: "probed" | "table";
+                        confidence: number;
+                    } | null;
+                    identity: {
+                        ttl: number | null;
+                        sshHostKeySha256: string | null;
+                        tlsCertSha256: string | null;
+                    };
+                    banner: string | null;
+                    scripts: {
+                        id: string;
+                        output: string;
+                    }[];
+                    http: {
+                        /** @enum {string} */
+                        scheme: "http" | "https";
+                        vhost: string | null;
+                        /** Format: uri */
+                        url: string;
+                        /** Format: uri */
+                        finalUrl: string;
+                        statusCode: number | null;
+                        title: string | null;
+                        headers: {
+                            name: string;
+                            value: string;
+                        }[];
+                        cookies: {
+                            name: string;
+                            valueSha256: string;
+                            secure: boolean;
+                            httpOnly: boolean;
+                            /** @enum {string|null} */
+                            sameSite: "Strict" | "Lax" | "None" | null;
+                            domain: string | null;
+                            path: string | null;
+                            expires: string | null;
+                        }[];
+                        redirects: {
+                            /** Format: uri */
+                            url: string;
+                            statusCode: number;
+                            location: string;
+                            followed: boolean;
+                        }[];
+                        body: {
+                            sha256: string;
+                            size: number;
+                            contentType: string | null;
+                            content: string | null;
+                            truncated: boolean;
+                        } | null;
+                        favicon: {
+                            /** Format: uri */
+                            url: string;
+                            mmh3: number;
+                            sha256: string;
+                        } | null;
+                        tls: {
+                            version: string;
+                            cipher: string;
+                            alpn: string | null;
+                            cert: {
+                                subjectCn: string | null;
+                                san: string[];
+                                issuer: string | null;
+                                /** Format: date-time */
+                                notBefore: string;
+                                /** Format: date-time */
+                                notAfter: string;
+                                serial: string;
+                                sha256: string;
+                                selfSigned: boolean;
+                                keyAlgorithm: string;
+                                keyBits: number | null;
+                            };
+                        } | null;
+                        probes: {
+                            path: string;
+                            statusCode: number | null;
+                            location: string | null;
+                            title: string | null;
+                            size: number | null;
+                            bodySha256: string | null;
+                            error: {
+                                code: string;
+                                message: string;
+                            } | null;
+                        }[];
+                        error: {
+                            code: string;
+                            message: string;
+                        } | null;
+                    }[];
+                }[];
+            }[];
+        };
     };
     responses: never;
     parameters: never;
@@ -44,6 +660,178 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Signed in */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid credentials (`INVALID_CREDENTIALS`) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    refreshSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description New cookies set */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed out */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    currentPassword: string;
+                    newPassword: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Password changed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Current password is wrong (`INVALID_CREDENTIALS`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -59,17 +847,1135 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    listRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All roles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": {
-                        /** @enum {string} */
-                        status: "ok" | "degraded";
-                        /** @enum {string} */
-                        database: "up" | "down";
-                        version: string;
-                        uptime: number;
-                        /** Format: date-time */
-                        timestamp: string;
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string|null} */
+                            key: "admin" | "editor" | "analyst" | "viewer" | null;
+                            name: string;
+                            description: string;
+                            isSystem: boolean;
+                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+                            userCount: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
                     };
                 };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description: string;
+                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+                };
+            };
+        };
+        responses: {
+            /** @description The role */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or grants more than you hold */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Name already taken (`ROLE_NAME_TAKEN`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The role and the users who have it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** @enum {string|null} */
+                        key: "admin" | "editor" | "analyst" | "viewer" | null;
+                        name: string;
+                        description: string;
+                        isSystem: boolean;
+                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+                        userCount: number;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                        users: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: email */
+                            email: string;
+                            displayName: string;
+                            isActive: boolean;
+                        }[];
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteRole: {
+        parameters: {
+            query?: {
+                reassignToRoleId?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Role deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Users still have this role (`ROLE_IN_USE`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run")[];
+                };
+            };
+        };
+        responses: {
+            /** @description The role */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Name already taken (`ROLE_NAME_TAKEN`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    importTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    entries: {
+                        value: string;
+                        note?: string;
+                    }[];
+                    startScan: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Entries imported (and a scan queued) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportTargetsResponse"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request body larger than 10 MB */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All users, active first, then by display name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: email */
+                            email: string;
+                            displayName: string;
+                            role: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string|null} */
+                                key: "admin" | "editor" | "analyst" | "viewer" | null;
+                                name: string;
+                            };
+                            isActive: boolean;
+                            mustChangePassword: boolean;
+                            /** Format: date-time */
+                            lockedUntil: string | null;
+                            /** Format: date-time */
+                            lastLoginAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    displayName: string;
+                    /** Format: uuid */
+                    roleId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The user and a one-time temporary password */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: email */
+                            email: string;
+                            displayName: string;
+                            role: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string|null} */
+                                key: "admin" | "editor" | "analyst" | "viewer" | null;
+                                name: string;
+                            };
+                            isActive: boolean;
+                            mustChangePassword: boolean;
+                            /** Format: date-time */
+                            lockedUntil: string | null;
+                            /** Format: date-time */
+                            lastLoginAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                        temporaryPassword: string;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the role grants more than you hold */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Email already taken (`EMAIL_TAKEN`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    displayName?: string;
+                    /** Format: uuid */
+                    roleId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Would leave no active admin (`LAST_ADMIN`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resetUserPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The user and a one-time temporary password */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: email */
+                            email: string;
+                            displayName: string;
+                            role: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string|null} */
+                                key: "admin" | "editor" | "analyst" | "viewer" | null;
+                                name: string;
+                            };
+                            isActive: boolean;
+                            mustChangePassword: boolean;
+                            /** Format: date-time */
+                            lockedUntil: string | null;
+                            /** Format: date-time */
+                            lastLoginAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                        temporaryPassword: string;
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deactivateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Would leave no active admin (`LAST_ADMIN`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reactivateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    leaseNmapJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Leased Nmap job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        job_id: string;
+                        lease_id: string;
+                        /** Format: ipv4-cidr */
+                        subnet: string;
+                        deadline: string;
+                        limits?: {
+                            max_parallel?: number;
+                            max_rate_per_process?: number;
+                            host_timeout_ms?: number;
+                        };
+                        targets: {
+                            /** Format: ip */
+                            ip: string;
+                            domain?: string | null;
+                            tcp_ports: number[];
+                        }[];
+                    };
+                };
+            };
+            /** @description No Nmap job is available */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    heartbeatNmapJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    job_id: string;
+                    lease_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Lease extended */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    submitNmapResult: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    scan: {
+                        /** Format: uuid */
+                        jobId: string;
+                        leaseId: string;
+                        /** Format: uuid */
+                        scanId: string;
+                        worker: {
+                            id: string;
+                            version: string;
+                            nmapVersion: string | null;
+                        };
+                        /** @enum {string} */
+                        status: "completed" | "partial" | "failed";
+                        /** @enum {string|null} */
+                        stopReason: "deadline" | "stop-requested" | "lease-lost" | "error" | null;
+                        /** Format: date-time */
+                        startedAt: string;
+                        /** Format: date-time */
+                        finishedAt: string;
+                        durationMs: number;
+                        phasesMs: {
+                            hostDiscovery: number;
+                            portScan: number;
+                            serviceDetection: number;
+                            http: number;
+                        };
+                        params: {
+                            /** Format: ipv4-cidr */
+                            subnet: string;
+                            ports: string;
+                            maxParallel: number;
+                            maxRatePerProcess: number;
+                            hostTimeoutMs: number;
+                            httpTimeoutMs: number;
+                            maxBodyBytes: number;
+                            maxRedirects: number;
+                            nmapArgs: string[];
+                        };
+                        counts: {
+                            addresses: number;
+                            up: number;
+                            down: number;
+                            timeout: number;
+                            cancelled: number;
+                            failed: number;
+                            openPorts: number;
+                            httpEndpoints: number;
+                            httpRequests: number;
+                        };
+                        error: {
+                            code: string;
+                            message: string;
+                        } | null;
+                    };
+                    hosts: {
+                        /** Format: ip */
+                        ip: string;
+                        /** @enum {string} */
+                        status: "up" | "down" | "timeout" | "cancelled" | "failed";
+                        reason: string | null;
+                        /** Format: date-time */
+                        observedAt: string | null;
+                        latencyMs: number | null;
+                        hostnames: {
+                            name: string;
+                            /** @enum {string} */
+                            source: "job" | "ptr" | "tls-san";
+                        }[];
+                        error: {
+                            code: string;
+                            message: string;
+                        } | null;
+                        ports: {
+                            port: number;
+                            /** @enum {string} */
+                            protocol: "tcp";
+                            /** @enum {string} */
+                            state: "open";
+                            reason: string | null;
+                            service: {
+                                name: string;
+                                product: string | null;
+                                version: string | null;
+                                extraInfo: string | null;
+                                cpe: string[];
+                                /** @enum {string} */
+                                method: "probed" | "table";
+                                confidence: number;
+                            } | null;
+                            identity: {
+                                ttl: number | null;
+                                sshHostKeySha256: string | null;
+                                tlsCertSha256: string | null;
+                            };
+                            banner: string | null;
+                            scripts: {
+                                id: string;
+                                output: string;
+                            }[];
+                            http: {
+                                /** @enum {string} */
+                                scheme: "http" | "https";
+                                vhost: string | null;
+                                /** Format: uri */
+                                url: string;
+                                /** Format: uri */
+                                finalUrl: string;
+                                statusCode: number | null;
+                                title: string | null;
+                                headers: {
+                                    name: string;
+                                    value: string;
+                                }[];
+                                cookies: {
+                                    name: string;
+                                    valueSha256: string;
+                                    secure: boolean;
+                                    httpOnly: boolean;
+                                    /** @enum {string|null} */
+                                    sameSite: "Strict" | "Lax" | "None" | null;
+                                    domain: string | null;
+                                    path: string | null;
+                                    expires: string | null;
+                                }[];
+                                redirects: {
+                                    /** Format: uri */
+                                    url: string;
+                                    statusCode: number;
+                                    location: string;
+                                    followed: boolean;
+                                }[];
+                                body: {
+                                    sha256: string;
+                                    size: number;
+                                    contentType: string | null;
+                                    content: string | null;
+                                    truncated: boolean;
+                                } | null;
+                                favicon: {
+                                    /** Format: uri */
+                                    url: string;
+                                    mmh3: number;
+                                    sha256: string;
+                                } | null;
+                                tls: {
+                                    version: string;
+                                    cipher: string;
+                                    alpn: string | null;
+                                    cert: {
+                                        subjectCn: string | null;
+                                        san: string[];
+                                        issuer: string | null;
+                                        /** Format: date-time */
+                                        notBefore: string;
+                                        /** Format: date-time */
+                                        notAfter: string;
+                                        serial: string;
+                                        sha256: string;
+                                        selfSigned: boolean;
+                                        keyAlgorithm: string;
+                                        keyBits: number | null;
+                                    };
+                                } | null;
+                                probes: {
+                                    path: string;
+                                    statusCode: number | null;
+                                    location: string | null;
+                                    title: string | null;
+                                    size: number | null;
+                                    bodySha256: string | null;
+                                    error: {
+                                        code: string;
+                                        message: string;
+                                    } | null;
+                                }[];
+                                error: {
+                                    code: string;
+                                    message: string;
+                                } | null;
+                            }[];
+                        }[];
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Result accepted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

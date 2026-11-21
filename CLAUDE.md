@@ -4,7 +4,7 @@ This file guides Claude Code when working in this repository. It is deliberately
 
 ## What this repository is
 
-An **Attack Surface Intelligence** prototype for the HackNation 2026 hackathon. The task was set by the AGH Information Security Center (Centrum Bezpieczeństwa Informacji AGH). The system periodically scans large networks (>10,000 IPs), detects live hosts and services, fingerprints HTTP/HTTPS (title, status code, headers, cookies, TLS, redirects), recognizes technologies and CMSs, supports custom detection signatures and shows changes between scans. On top of that come RBAC, encryption of data at rest, CSV/JSON import/export and DefectDojo integration.
+**SubSurf**, an Attack Surface Intelligence prototype for the HackNation 2026 hackathon. The task was set by the AGH Information Security Center (Centrum Bezpieczeństwa Informacji AGH). The system periodically scans large networks (>10,000 IPs), detects live hosts and services, fingerprints HTTP/HTTPS (title, status code, headers, cookies, TLS, redirects), recognizes technologies and CMSs, supports custom detection signatures and shows changes between scans. On top of that come RBAC, encryption of data at rest, CSV/JSON import/export and DefectDojo integration.
 
 ## Task context: always include the PDF
 
@@ -42,21 +42,22 @@ English is the project's default language: documentation, code comments, commit 
 | Backend (stack, modules, Prisma, env, validation) | [`apps/backend/README.md`](apps/backend/README.md) |
 | C++ workers (conventions, HTTP pull protocol, scan safety) | [`apps/workers/README.md`](apps/workers/README.md) |
 | nmap-worker (CMake/Docker build, network capabilities) | [`apps/workers/nmap-worker/README.md`](apps/workers/nmap-worker/README.md) |
+| Worker result format (locked source of truth for scan data) | [`docs/worker-result-format.md`](docs/worker-result-format.md) |
 | Contract (zod schemas, OpenAPI generation, adding an endpoint) | [`packages/contracts/README.md`](packages/contracts/README.md) |
 | Typed API client (and why it uses TS 6) | [`packages/api-client/README.md`](packages/api-client/README.md) |
-| Docker Compose (infrastructure: PostgreSQL; workers: separate compose file) | [`docker/README.md`](docker/README.md) |
+| Local infrastructure (PostgreSQL, DefectDojo; workers: separate compose file) | [`docker/README.md`](docker/README.md) |
 | Technical documentation and presentation | [`docs/`](docs/) |
 
 ## Repository structure
 
 A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 
-- `apps/frontend`: React 19 + Vite 8 + React Router 8 (data mode) + Tailwind 4 + shadcn/ui + TanStack Query.
+- `apps/frontend`: React 19 + Vite 8 + React Router 8 (data mode) + Tailwind 4 + shadcn/ui + TanStack Query + TanStack Table.
 - `apps/backend`: Express 5 + TS (built with tsdown, dev with tsx). Talks to PostgreSQL through Prisma 7. **The only component that writes to the database.**
 - `apps/workers/<name>`: C++23 + CMake + nmap workers, built and run in Docker. **Not pnpm workspaces** (no `package.json`), so `pnpm build` does not need a local C++ compiler.
-- `packages/contracts`: `@hacknation/contracts`, zod schemas and types. Generates the committed `openapi.json`. A source-only package with no build step.
-- `packages/api-client`: `@hacknation/api-client`, types generated from `openapi.json` + `openapi-fetch`. **The only workspace on TypeScript 6** (`openapi-typescript` needs the JS API that TS 7 no longer ships).
-- `docker/`: Docker Compose. `docker-compose.yml` is infrastructure (PostgreSQL 19), `docker-compose.workers.yml` is the scan workers. Not a workspace.
+- `packages/contracts`: `@subsurf/contracts`, zod schemas and types. Generates the committed `openapi.json`. A source-only package with no build step.
+- `packages/api-client`: `@subsurf/api-client`, types generated from `openapi.json` + `openapi-fetch`. **The only workspace on TypeScript 6** (`openapi-typescript` needs the JS API that TS 7 no longer ships).
+- `docker/`: Docker Compose. `docker-compose.yml` is infrastructure (PostgreSQL 19, local DefectDojo), `docker-compose.workers.yml` is the scan workers. Not a workspace.
 - `docs/`: technical documentation and the presentation.
 
 ## Architecture (settled)
@@ -64,8 +65,19 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - **Contract:** `contracts/*.schema.ts` (zod) → `pnpm generate` → `openapi.json` → `api-client` (types) → frontend (`api.useQuery("get", "/path")`). The backend validates requests with the same schemas. The C++ workers take their endpoint definitions from the same `openapi.json`.
 - **Frontend mocks:** an endpoint the backend doesn't have yet is mocked only in the feature's `api/` hooks (TanStack Query), never in components, so switching to the backend changes one function. See [`apps/frontend/README.md`](apps/frontend/README.md#mocking-endpoints-the-backend-doesnt-have-yet).
 - **Workers ↔ backend:** HTTP pull. A worker takes a batch of work (lease + heartbeat) and sends results back over REST. Workers have no database access.
-- **Auth/RBAC:** local accounts (argon2) and a JWT in an httpOnly cookie. The four roles from the PDF (item 13). Not implemented yet.
-- **Sensitive data:** encrypted at rest at the application level. To be designed together with the models.
+- **Worker result format (locked):** [`docs/worker-result-format.md`](docs/worker-result-format.md) is the source of truth for the `{ scan, hosts[] }` JSON a worker returns for one job.
+  - Workers work towards producing exactly that structure.
+  - The backend builds every scan-data feature on it: storing observations, diffs, dashboard, signatures/detections, export/import, DefectDojo.
+  - **Read it before designing any such feature.** Change the document first (with the user's agreement), then the code. The contract (`WorkerResultSchema`) matches it; the `nmap-worker` output does not yet (the document lists the gap).
+- **Worker results → database:** `resultsService.ingest()` writes observations per scan (`ScanJobResult`, `HostObservation`, `HostnameObservation`, `PortObservation` with protocol details as JSONB in `details`) and the `Host`/`Service` assets that live across scans and hold user edits. Details: [`apps/backend/README.md`](apps/backend/README.md#scan-results).
+- **Targets → scan jobs:** the import (`POST /targets/import`; manual, CSV and JSON all go through the shared parser in `contracts/src/targets/target-input.ts`) fills the `Target` inventory and can queue a `Scan` split into `ScanJob` batches. Workers lease those rows; the lease endpoints are not implemented yet. Details: [`apps/backend/README.md`](apps/backend/README.md#targets-and-scan-jobs).
+- **Auth/RBAC (implemented):**
+  - local accounts (argon2id) and a 15-minute access JWT plus a rotating refresh token, both in httpOnly cookies;
+  - roles are database rows built from the `resource:action` catalog in `contracts/src/auth/permissions.ts`;
+  - the PDF's four roles (item 13) are locked system roles, and admins create custom roles (item 12);
+  - details and the rules for mapping new permissions onto system roles: [`apps/backend/README.md`](apps/backend/README.md#auth-and-rbac).
+- **Sensitive data:** encrypted at rest at the application level (AES-256-GCM, `DATA_ENCRYPTION_KEY`, `apps/backend/src/lib/crypto.ts`). Scan results store sensitive JSON fields as `{ "$enc": "v1.…" }`; the other tables are still to be covered (see the backend README).
+- **DefectDojo:** a local instance runs in `docker/` (`http://localhost:8080`, fixed dev API token). The backend will push findings through `/api/v2/import-scan/`. Not implemented yet.
 
 ## Monorepo commands
 
@@ -73,17 +85,18 @@ Root commands only. Per-app commands are in their READMEs.
 
 ```bash
 pnpm install        # dependencies for the whole monorepo (+ prisma generate)
-pnpm project:setup  # copies every .env*.example to .env (never overwrites; --force makes a backup)
+pnpm project:setup  # .env*.example -> .env; on an existing .env adds only missing keys (--force: replace + backup)
 pnpm dev            # turbo dev: backend :3001 (+ /docs), frontend :3000
 pnpm build          # turbo build
 pnpm lint           # type-aware oxlint in every workspace
 pnpm check-types    # tsc (TS 7; api-client: TS 6)
-pnpm test           # vitest
+pnpm test           # vitest (backend tests need `pnpm db:up`: they use a separate hacknation_test database)
 pnpm generate       # contracts -> openapi.json -> api-client/src/generated (commit the output)
 pnpm clean
 pnpm db:up          # PostgreSQL in Docker (pnpm db:logs)
-pnpm db:reset       # drop + migrations + seed
-pnpm infra:up       # all infrastructure compose services (infra:down, infra:logs)
+pnpm db:reset       # drop + migrations + seed (system roles, admin, demo accounts)
+pnpm infra:up       # all infrastructure compose services, DefectDojo included (infra:down, infra:logs)
+pnpm dojo:up        # DefectDojo only, :8080 (dojo:logs, dojo:smoke)
 pnpm workers:build  # build the masscan-worker image (run a sweep: pnpm workers:masscan < job.json)
 ```
 
@@ -93,6 +106,7 @@ pnpm workers:build  # build the masscan-worker image (run a sweep: pnpm workers:
 - Import aliases: `@/*` → `apps/frontend/src/*`, `~backend/*` → `apps/backend/src/*`.
 - Every workspace has its own `tsconfig.json` and `.oxlintrc.json` (the latter extends the root `.oxlintrc.json`). TS 6+ defaults to `types: []`, so list `types` (e.g. `["node"]`, `["vite/client"]`) explicitly.
 - **Adding dependencies:** before adding a package, check its latest version on npm (`npm view <pkg> version`). Never write a version from memory. `pnpm-workspace.yaml` sets `minimumReleaseAge: 2880` (48 h). If the latest version is younger than that, use the newest version that is more than 48 h old. Do not disable this safeguard.
+- **Every protected endpoint:** `requireAuth` + `requirePermission("<resource>:<action>")` in its routes file, `security: cookieAuth` in its contract registration, and the permission named in the description. A new permission goes into the catalog and `SYSTEM_ROLE_PERMISSIONS` (see the backend README). The frontend hides or blocks the matching UI with `useCan` / `GuardedButton`, which is a hint only.
 - **Scanner safety** (PDF, section 2): detection only, no exploitation and no login attempts. The rate is always limited. Only allowed ports and ranges are scanned. When the time window is exceeded, the scan stops.
 - **Comments only for non-obvious things, and short:**
   - Write them only for a constraint that will surprise the next person, a rejected obvious alternative, or something that looks like a bug but is not.

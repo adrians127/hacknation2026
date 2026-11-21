@@ -1,0 +1,49 @@
+/// A batch of a scan that one worker leases: at most `Scan.batchSize` addresses inside `subnet`.
+/// The lease, heartbeat and result endpoints (workers team) map it onto the worker contracts.
+model ScanJob {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  scanId         String        @db.Uuid
+  /// 1..Scan.jobCount, in address order.
+  sequence       Int
+  kind           ScanJobKind   @default(discovery)
+  status         ScanJobStatus @default(queued)
+  /// The smallest aligned CIDR containing every address of the batch.
+  subnet         String
+  /// IPv4 addresses and CIDRs inside `subnet`.
+  targets        String[]
+  /// ScanJobHost[]: domains resolved into this batch, kept for HTTP Host/SNI.
+  hosts          Json          @default("[]")
+  addressCount   Int
+  attempts       Int           @default(0)
+  leaseId        String?       @unique
+  leasedBy       String?
+  leaseExpiresAt DateTime?
+  heartbeatAt    DateTime?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  durationMs     Int?
+  /// { code, message } of the last failed attempt.
+  error          Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  scan    Scan            @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  results ScanJobResult[]
+
+  @@unique([scanId, sequence])
+  @@index([scanId])
+  @@index([status, leaseExpiresAt])
+}
+
+enum ScanJobKind {
+  discovery
+  service
+}
+
+enum ScanJobStatus {
+  queued
+  leased
+  completed
+  failed
+  stopped
+}

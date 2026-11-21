@@ -1,0 +1,24 @@
+/// A port that has been open on a host in at least one scan; it lives across scans. Ingest only
+/// moves `firstSeenAt`/`lastSeenAt`. `note` and `tags` belong to users (PDF item 14).
+model Service {
+  id          String            @id @default(uuid(7)) @db.Uuid
+  hostId      String            @db.Uuid
+  protocol    TransportProtocol
+  port        Int
+  firstSeenAt DateTime
+  lastSeenAt  DateTime
+  note        String            @default("")
+  tags        String[]          @default([])
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  host         Host              @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  observations PortObservation[]
+
+  /// Also serves lookups by hostId.
+  @@unique([hostId, protocol, port])
+}
+
+enum TransportProtocol {
+  tcp
+}

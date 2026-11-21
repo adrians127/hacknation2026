@@ -28,4 +28,15 @@ describe("api mocks", () => {
 
     expect(await pending).toEqual({ error: { status: 404, message: "Target not found" } });
   });
+
+  it("mockError adds the error code when given", async () => {
+    const pending = mockError(409, "Email already taken", "EMAIL_TAKEN").catch(
+      (error: unknown) => error,
+    );
+    await vi.runAllTimersAsync();
+
+    expect(await pending).toEqual({
+      error: { status: 409, message: "Email already taken", code: "EMAIL_TAKEN" },
+    });
+  });
 });

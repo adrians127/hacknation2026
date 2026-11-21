@@ -1,7 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import { z, ZodError } from "zod";
 
-import type { ErrorResponse } from "@hacknation/contracts/common/common.schema";
+import type { ErrorResponse } from "@subsurf/contracts/common/common.schema";
 
 import { isDevelopment } from "~backend/config/env";
 import { HttpError } from "~backend/lib/http-error";
@@ -42,6 +42,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
       // 5xx messages may leak internals; only show them on a laptop.
       message: status >= 500 && !isDevelopment ? "Internal Server Error" : message,
       status,
+      ...(err instanceof HttpError && err.code ? { code: err.code } : {}),
       ...(isDevelopment && err instanceof Error ? { stack: err.stack } : {}),
     },
   };

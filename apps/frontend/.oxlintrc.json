@@ -8,6 +8,7 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "warn",
+    "react/no-unstable-nested-components": ["warn", { "allowAsProps": true }],
     "react/only-export-components": ["warn", { "allowConstantExport": true }],
     "react/react-in-jsx-scope": "off"
   },

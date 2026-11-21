@@ -1,0 +1,24 @@
+model User {
+  id                 String    @id @default(uuid(7)) @db.Uuid
+  /// Stored lowercased; the service normalizes before every lookup.
+  email              String    @unique
+  displayName        String
+  /// argon2id in PHC format (src/lib/password.ts).
+  passwordHash       String
+  roleId             String    @db.Uuid
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  failedLoginCount   Int       @default(0)
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
+  passwordChangedAt  DateTime  @default(now())
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  role     Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  sessions Session[]
+  targets  Target[]
+  scans    Scan[]
+
+  @@index([roleId])
+}

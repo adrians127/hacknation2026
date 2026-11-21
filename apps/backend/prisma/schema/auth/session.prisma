@@ -1,0 +1,18 @@
+/// One signed-in device. The refresh token is `<id>.<secret>`; only sha256(secret) is stored.
+model Session {
+  id                String    @id @default(uuid(7)) @db.Uuid
+  userId            String    @db.Uuid
+  tokenHash         String    @unique
+  /// The hash before the last rotation, accepted for a short grace window (parallel requests).
+  previousTokenHash String?
+  rotatedAt         DateTime?
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  userAgent         String?
+  createdAt         DateTime  @default(now())
+  lastUsedAt        DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

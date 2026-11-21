@@ -1,6 +1,5 @@
 {
-  "appName": "Attack Surface Intelligence",
-  "tagline": "Cykliczny discovery scan dużej infrastruktury sieciowej",
+  "appName": "SubSurf",
   "health": {
     "title": "Stan systemu",
     "api": "API",
@@ -11,11 +10,287 @@
     "down": "niedostępna",
     "refresh": "Odśwież"
   },
+  "dashboard": {
+    "title": "Pulpit",
+    "subtitle": "Najważniejsze znaleziska z ostatnich skanów",
+    "stats": {
+      "activeHosts": "Aktywne hosty",
+      "newServices": "Nowe usługi",
+      "disappeared": "Zniknięte usługi",
+      "changed": "Zmienione usługi"
+    },
+    "recent": {
+      "title": "Ostatnie zmiany",
+      "kind": "Zmiana",
+      "host": "Host",
+      "service": "Usługa",
+      "detail": "Szczegóły",
+      "detected": "Wykryto",
+      "kinds": {
+        "new": "Nowa",
+        "disappeared": "Zniknęła",
+        "changed": "Zmieniona"
+      }
+    }
+  },
+  "targets": {
+    "title": "Cele",
+    "subtitle": "Adresy IP, zakresy CIDR i domeny objęte skanowaniem",
+    "add": "Dodaj cele",
+    "never": "Nigdy",
+    "columns": {
+      "value": "Cel",
+      "kind": "Typ",
+      "note": "Notatka",
+      "tags": "Tagi",
+      "activeHosts": "Aktywne hosty",
+      "lastScan": "Ostatni skan",
+      "actions": "Akcje"
+    },
+    "kinds": {
+      "ip": "IP",
+      "cidr": "CIDR",
+      "domain": "Domena"
+    },
+    "actions": {
+      "edit": "Edytuj {{value}}",
+      "delete": "Usuń {{value}}"
+    },
+    "form": {
+      "editTitle": "Edytuj cel",
+      "value": "IP, zakres CIDR lub domena",
+      "note": "Notatka",
+      "noteTooLong": "Użyj najwyżej 500 znaków.",
+      "tags": "Tagi",
+      "tagsHint": "oddzielone, przecinkami",
+      "tagsInvalid": "Najwyżej 20 tagów, każdy do 50 znaków.",
+      "submit": "Zapisz",
+      "submitting": "Zapisywanie…"
+    },
+    "confirmDelete": {
+      "title": "Usunąć {{value}}?",
+      "description": "Ten cel nie będzie już skanowany.",
+      "confirm": "Usuń"
+    },
+    "toast": {
+      "updated": "Zapisano cel.",
+      "deleted": "Usunięto cel."
+    },
+    "import": {
+      "title": "Dodaj cele",
+      "subtitle": "Wpisz adresy IP, zakresy CIDR (do /16) i domeny ręcznie albo wczytaj je z pliku CSV lub JSON.",
+      "back": "Wróć do celów",
+      "tabs": {
+        "manual": "Ręcznie",
+        "csv": "Plik CSV",
+        "json": "Plik JSON"
+      },
+      "manual": {
+        "label": "Cele",
+        "placeholder": "10.0.0.0/24, Sieć kampusu\n192.0.2.15\nexample.com",
+        "hint": "Jeden cel w wierszu, opcjonalnie z notatką po przecinku. Wiersze zaczynające się od # są pomijane."
+      },
+      "csv": {
+        "hint": "Jeden cel w wierszu i opcjonalna notatka w następnej kolumnie. Wiersz nagłówka (target, note) nie jest wymagany; kolumny można rozdzielać przecinkiem, średnikiem lub tabulatorem.",
+        "sample": "Pobierz przykładowy CSV"
+      },
+      "json": {
+        "hint": "Tablica adresów albo obiektów z polami target i note, opcjonalnie pod kluczem targets.",
+        "sample": "Pobierz przykładowy JSON"
+      },
+      "file": {
+        "label": "Plik",
+        "selected": "{{name}} ({{size}} kB)",
+        "tooLarge": "Plik jest większy niż 10 MB.",
+        "unreadable": "Nie udało się odczytać pliku."
+      },
+      "preview": {
+        "title": "Podgląd",
+        "empty": "Wpisz cele albo wybierz plik, aby zobaczyć, co zostanie zaimportowane.",
+        "ready_one": "{{count, number}} cel gotowy do importu",
+        "ready_few": "{{count, number}} cele gotowe do importu",
+        "ready_many": "{{count, number}} celów gotowych do importu",
+        "ready_other": "{{count, number}} celu gotowego do importu",
+        "breakdown": "IP: {{ip, number}} · CIDR: {{cidr, number}} · Domeny: {{domain, number}}",
+        "addresses_one": "Łącznie {{count, number}} adres IP",
+        "addresses_few": "Łącznie {{count, number}} adresy IP",
+        "addresses_many": "Łącznie {{count, number}} adresów IP",
+        "addresses_other": "Łącznie {{count, number}} adresu IP",
+        "skipped_one": "{{count, number}} wpis zostanie pominięty.",
+        "skipped_few": "{{count, number}} wpisy zostaną pominięte.",
+        "skipped_many": "{{count, number}} wpisów zostanie pominiętych.",
+        "skipped_other": "{{count, number}} wpisu zostanie pominiętego.",
+        "issuesTitle": "Problemy i zmiany",
+        "line": "Wiersz",
+        "item": "Element",
+        "value": "Wartość",
+        "problem": "Problem",
+        "changed": "Zmieniono",
+        "rejected": "Pominięto",
+        "more_one": "…i jeszcze {{count, number}}",
+        "more_few": "…i jeszcze {{count, number}}",
+        "more_many": "…i jeszcze {{count, number}}",
+        "more_other": "…i jeszcze {{count, number}}"
+      },
+      "issues": {
+        "invalid_format": "To nie jest adres IPv4, zakres CIDR ani domena",
+        "ipv6_unsupported": "IPv6 nie jest obsługiwane",
+        "reserved_range": "Zakres zarezerwowany (loopback, link-local, multicast lub broadcast)",
+        "cidr_too_large": "Zakres większy niż /16",
+        "value_too_long": "Za długa wartość",
+        "note_too_long": "Notatka dłuższa niż 500 znaków",
+        "duplicate": "Powtarza wcześniejszy wpis",
+        "cidr_normalized": "Bity hosta wyzerowane do adresu sieci",
+        "single_host_cidr": "Zakres /32 jest importowany jako pojedynczy adres",
+        "url_stripped": "Z adresu URL pozostawiono samą nazwę hosta"
+      },
+      "listErrors": {
+        "empty": "Nie ma nic do zaimportowania.",
+        "invalid_json": "Plik nie jest poprawnym JSON-em.",
+        "unsupported_json_shape": "Oczekiwano tablicy celów albo obiektu z tablicą targets.",
+        "too_many_entries": "Ponad 100 000 celów w jednym imporcie.",
+        "too_many_addresses": "Ponad 1 048 576 adresów IP w jednym imporcie.",
+        "too_many_domains": "Ponad 1000 domen w jednym imporcie."
+      },
+      "startScan": {
+        "label": "Od razu uruchom skan",
+        "hint": "Domeny zostaną zamienione na adresy IP, a wszystkie adresy podzielone na zadania skanowania dla workerów."
+      },
+      "submit_one": "Importuj {{count, number}} cel",
+      "submit_few": "Importuj {{count, number}} cele",
+      "submit_many": "Importuj {{count, number}} celów",
+      "submit_other": "Importuj {{count, number}} celu",
+      "submitting": "Importowanie…",
+      "toast": "Zaimportowano cele.",
+      "result": {
+        "title": "Import zakończony",
+        "created_one": "Dodano {{count, number}} cel",
+        "created_few": "Dodano {{count, number}} cele",
+        "created_many": "Dodano {{count, number}} celów",
+        "created_other": "Dodano {{count, number}} celu",
+        "skipped_one": "{{count, number}} cel był już na liście",
+        "skipped_few": "{{count, number}} cele były już na liście",
+        "skipped_many": "{{count, number}} celów było już na liście",
+        "skipped_other": "{{count, number}} celu było już na liście",
+        "scanTitle": "Skan w kolejce",
+        "noScan": "Nie uruchomiono skanu.",
+        "addresses": "Adresy IP",
+        "jobs": "Zadania skanowania",
+        "ports": "Porty",
+        "maxRate": "Limit tempa",
+        "maxRateValue": "{{rate, number}} pakietów/s na zadanie",
+        "warningsTitle": "Pominięte w skanie",
+        "importMore": "Importuj kolejne",
+        "toTargets": "Przejdź do celów"
+      },
+      "warnings": {
+        "dns_not_found": "Domena nie istnieje",
+        "dns_no_addresses": "Domena nie ma adresu IPv4 (rekordu A)",
+        "dns_timeout": "Przekroczono czas zapytania DNS",
+        "dns_failed": "Zapytanie DNS się nie powiodło",
+        "resolves_to_reserved": "Wskazuje na adres zarezerwowany, który pominięto",
+        "no_scannable_targets": "Nie zostało nic do skanowania, więc skan nie został uruchomiony."
+      }
+    }
+  },
+  "scans": {
+    "title": "Skany",
+    "subtitle": "Historia skanów discovery",
+    "start": "Uruchom skan",
+    "starting": "Uruchamianie…",
+    "columns": {
+      "id": "Skan",
+      "status": "Status",
+      "targets": "Cele",
+      "hosts": "Hosty",
+      "services": "Usługi",
+      "started": "Rozpoczęto",
+      "duration": "Czas trwania"
+    },
+    "statuses": {
+      "queued": "W kolejce",
+      "running": "W toku",
+      "completed": "Zakończony",
+      "stopped": "Zatrzymany",
+      "failed": "Błąd"
+    },
+    "toast": {
+      "started": "Uruchomiono skan."
+    }
+  },
   "language": {
     "switchTo": "English"
+  },
+  "landing": {
+    "logoAlt": "SubSurf",
+    "signIn": "Zaloguj się",
+    "getStarted": "Zacznij teraz",
+    "nav": {
+      "label": "Główna",
+      "features": "Funkcje",
+      "about": "O nas"
+    },
+    "headline": {
+      "line1": "Wiesz, co jest w Twojej sieci.",
+      "line2": "Zachowaj kontrolę."
+    },
+    "features": {
+      "discover": "Odkrywaj zasoby sieciowe",
+      "ports": "Monitoruj otwarte porty",
+      "dojo": "Synchronizuj z DefectDojo",
+      "insights": "Zyskaj czytelny obraz"
+    }
+  },
+  "nav": {
+    "label": "Nawigacja główna",
+    "dashboard": "Pulpit",
+    "targets": "Cele",
+    "scans": "Skany",
+    "users": "Użytkownicy",
+    "roles": "Role"
   },
   "notFound": {
     "title": "Nie znaleziono strony",
     "back": "Wróć na stronę główną"
+  },
+  "forbidden": {
+    "title": "Brak dostępu",
+    "description": "Twoja rola nie ma uprawnienia wymaganego przez tę stronę: {{permission}}.",
+    "back": "Wróć na pulpit"
+  },
+  "routeError": {
+    "title": "Coś poszło nie tak",
+    "retry": "Spróbuj ponownie"
+  },
+  "actions": {
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "copy": "Kopiuj",
+    "copied": "Skopiowano"
+  },
+  "table": {
+    "empty": "Nic tu jeszcze nie ma"
+  },
+  "mock": {
+    "badge": "Dane przykładowe",
+    "tooltip": "Ta strona pokazuje przykładowe dane generowane w przeglądarce. Backend jeszcze ich nie udostępnia, więc zmiany wprowadzone tutaj nie są zapisywane."
+  },
+  "errors": {
+    "generic": "Coś poszło nie tak. Spróbuj ponownie.",
+    "network": "Brak połączenia z serwerem.",
+    "validation": "Niektóre pola są niepoprawne.",
+    "notFound": "Ten element już nie istnieje.",
+    "UNAUTHENTICATED": "Sesja wygasła. Zaloguj się ponownie.",
+    "INVALID_CREDENTIALS": "Nieprawidłowy email lub hasło.",
+    "PASSWORD_CHANGE_REQUIRED": "Zmień hasło, aby kontynuować.",
+    "FORBIDDEN": "Twoja rola na to nie pozwala.",
+    "UNTRUSTED_ORIGIN": "Żądanie pochodzi z niezaufanej strony.",
+    "PERMISSION_ESCALATION": "Nie możesz nadawać ani zarządzać uprawnieniami, których sam nie masz.",
+    "SELF_MODIFICATION": "Nie możesz tego zrobić z własnym kontem ani własną rolą.",
+    "LAST_ADMIN": "Musi zostać co najmniej jeden aktywny administrator.",
+    "SYSTEM_ROLE_READ_ONLY": "Ról systemowych nie można zmieniać.",
+    "ROLE_IN_USE": "Ta rola jest nadal przypisana użytkownikom. Najpierw przenieś ich do innej roli.",
+    "EMAIL_TAKEN": "Użytkownik z tym adresem email już istnieje.",
+    "ROLE_NAME_TAKEN": "Rola o tej nazwie już istnieje."
   }
 }

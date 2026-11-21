@@ -1,7 +1,7 @@
 import { registry } from "../../scripts/registry";
 import { HealthResponseSchema } from "./health.schema";
 
-registry.register("HealthResponse", HealthResponseSchema);
+const HealthResponse = registry.register("HealthResponse", HealthResponseSchema);
 
 registry.registerPath({
   method: "get",
@@ -12,7 +12,7 @@ registry.registerPath({
   responses: {
     200: {
       description: "Service is up; `database` tells whether PostgreSQL answered",
-      content: { "application/json": { schema: HealthResponseSchema } },
+      content: { "application/json": { schema: HealthResponse } },
     },
   },
 });

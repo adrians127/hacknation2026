@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hand-written sample in nmap -oX format. Addresses are from TEST-NET-1 (RFC 5737). -->
+<nmaprun scanner="nmap" args="nmap -sV -oX - 192.0.2.10" start="1795262400" startstr="Sat Nov 21 12:00:00 2026" version="7.95" xmloutputversion="1.05">
+  <host starttime="1795262400" endtime="1795262460">
+    <status state="up" reason="syn-ack"/>
+    <address addr="192.0.2.10" addrtype="ipv4"/>
+    <hostnames>
+      <hostname name="staging.example.test" type="PTR"/>
+    </hostnames>
+    <ports>
+      <port protocol="tcp" portid="22">
+        <state state="open" reason="syn-ack"/>
+        <service name="ssh" product="OpenSSH" version="9.6p1" extrainfo="Ubuntu Linux; protocol 2.0" method="probed" conf="10"/>
+      </port>
+      <port protocol="tcp" portid="80">
+        <state state="open" reason="syn-ack"/>
+        <service name="http" product="nginx" version="1.24.0" method="probed" conf="10"/>
+      </port>
+      <port protocol="tcp" portid="443">
+        <state state="open" reason="syn-ack"/>
+        <service name="https" product="nginx" version="1.24.0" tunnel="ssl" method="probed" conf="10"/>
+      </port>
+      <port protocol="tcp" portid="3306">
+        <state state="closed" reason="reset"/>
+        <service name="mysql" method="table" conf="3"/>
+      </port>
+    </ports>
+  </host>
+</nmaprun>

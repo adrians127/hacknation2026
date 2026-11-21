@@ -1,0 +1,130 @@
+{
+  "users": {
+    "title": "Users",
+    "description": "Accounts and their roles. Users are never deleted, only deactivated.",
+    "create": "New user",
+    "empty": "No users yet.",
+    "you": "you",
+    "neverSignedIn": "Never",
+    "columns": {
+      "user": "User",
+      "role": "Role",
+      "status": "Status",
+      "lastLogin": "Last sign-in",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "locked": "Locked",
+      "mustChangePassword": "Temporary password"
+    },
+    "actions": {
+      "edit": "Edit {{name}}",
+      "resetPassword": "Reset the password of {{name}}",
+      "deactivate": "Deactivate {{name}}",
+      "reactivate": "Reactivate {{name}}"
+    },
+    "form": {
+      "createTitle": "New user",
+      "editTitle": "Edit user",
+      "createDescription": "The user gets a temporary password and must change it at first sign-in.",
+      "email": "Email",
+      "displayName": "Display name",
+      "role": "Role",
+      "rolePlaceholder": "Choose a role",
+      "roleNotGrantable": "has permissions you do not have",
+      "ownRoleLocked": "You cannot change your own role.",
+      "rolesUnavailable": "Choosing a role requires the “Roles: Read” permission.",
+      "invalidEmail": "Enter a valid email address.",
+      "displayNameRequired": "Enter a display name.",
+      "roleRequired": "Choose a role.",
+      "submitCreate": "Create user",
+      "submitEdit": "Save changes",
+      "submitting": "Saving…"
+    },
+    "temporaryPassword": {
+      "title": "Temporary password",
+      "description": "Give this password to {{email}}. It is shown only once, and the user must change it at first sign-in.",
+      "done": "Done"
+    },
+    "confirmReset": {
+      "title": "Reset the password of {{name}}?",
+      "description": "They will be signed out everywhere and get a new temporary password.",
+      "confirm": "Reset password"
+    },
+    "confirmDeactivate": {
+      "title": "Deactivate {{name}}?",
+      "description": "They will be signed out and cannot sign in until reactivated. Their data stays.",
+      "confirm": "Deactivate"
+    },
+    "toast": {
+      "created": "User created.",
+      "updated": "User updated.",
+      "deactivated": "User deactivated.",
+      "reactivated": "User reactivated."
+    }
+  },
+  "roles": {
+    "title": "Roles",
+    "description": "The four system roles follow the task and cannot be changed. Create custom roles for any other set of permissions.",
+    "create": "New role",
+    "system": "System",
+    "custom": "Custom",
+    "columns": {
+      "name": "Role",
+      "users": "Users",
+      "permissions": "Permissions",
+      "actions": "Actions"
+    },
+    "permissionCount_one": "{{count}} permission",
+    "permissionCount_other": "{{count}} permissions",
+    "actions": {
+      "view": "Details of {{name}}",
+      "edit": "Edit {{name}}",
+      "duplicate": "Duplicate {{name}}",
+      "delete": "Delete {{name}}"
+    },
+    "copyOf": "Copy of {{name}}",
+    "form": {
+      "createTitle": "New role",
+      "editTitle": "Edit role",
+      "duplicateTitle": "Duplicate role",
+      "name": "Name",
+      "description": "Description",
+      "permissions": "Permissions",
+      "nameRequired": "Enter a name.",
+      "submitCreate": "Create role",
+      "submitEdit": "Save changes",
+      "submitting": "Saving…"
+    },
+    "matrix": {
+      "resource": "Resource",
+      "toggleRow": "Every {{resource}} permission",
+      "toggleColumn": "{{action}} on every resource",
+      "notAvailable": "Not available",
+      "notGrantable": "You do not have this permission yourself"
+    },
+    "detail": {
+      "back": "All roles",
+      "permissions": "Permissions",
+      "members": "Users with this role",
+      "noMembers": "Nobody has this role.",
+      "readOnly": "System role: its permissions are fixed.",
+      "inactive": "Inactive"
+    },
+    "delete": {
+      "title": "Delete the role {{name}}?",
+      "description": "This cannot be undone.",
+      "inUse_one": "{{count}} user has this role. Choose the role to move them to:",
+      "inUse_other": "{{count}} users have this role. Choose the role to move them to:",
+      "targetPlaceholder": "Choose a role",
+      "confirm": "Delete role"
+    },
+    "toast": {
+      "created": "Role created.",
+      "updated": "Role updated.",
+      "deleted": "Role deleted."
+    }
+  }
+}
