@@ -36,6 +36,8 @@ lib/auth/                useMe, useCan/usePermissions, role and permission label
 lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin}.json, parity test
 ```
 
+Outside `src/`, `public/` is served as-is; `public/samples/targets.{csv,json}` are the sample files linked from the target import page.
+
 Imports flow shared → features → app. Shared code must not import from `features/` or `app/`, and a feature must not import from `app/`. oxlint enforces this (`no-restricted-imports` in `.oxlintrc.json`).
 
 ## Data fetching
@@ -138,7 +140,7 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 ## Pages and tables
 
 - A page starts with `PageHeader` (title, description, page-level buttons in `actions`) and puts its content in `Card`s.
-- Lists use `DataTable` (`components/data-table.tsx`), a sortable table on TanStack Table v9. Define columns with `createDataTableColumns<T>().columns([...])` from `lib/data-table.ts`, inside `useMemo`: v9 rebuilds the table whenever `columns` or `data` change identity. `meta: { className }` styles a column's header and cells (e.g. `text-right`). Dates go through `lib/format.ts`.
+- Lists use `DataTable` (`components/data-table.tsx`), a sortable table on TanStack Table v9. Define columns with `createDataTableColumns<T>().columns([...])` from `lib/data-table.ts`, inside `useMemo`: v9 rebuilds the table whenever `columns` or `data` change identity. `meta: { className }` styles a column's header and cells (e.g. `text-right`). Dates and numbers go through `lib/format.ts`.
 - The app is dark-only (`class="dark"` in `index.html`); `brand` is the accent color (`text-brand`, `bg-brand/15`).
 
 ## Translations
