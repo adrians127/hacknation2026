@@ -99,3 +99,70 @@ pnpm workers:build  # build worker images (workers:up, workers:down, workers:log
   - One line or a few bullet points, never paragraphs.
   - Do not repeat what the name or type already says. No docblocks on every function.
   - How a module fits together belongs in the app's `README.md`.
+
+## C++ workers
+
+Applies to everything under `apps/workers/`. Follow the [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines) unless a rule below says otherwise.
+
+### Language standard
+
+- **ISO C++23, no compiler extensions** (`CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON`, `CMAKE_CXX_EXTENSIONS OFF`). No GNU-only syntax (VLAs, statement expressions, `__attribute__` where a standard attribute exists).
+- Code must build warning-free with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Werror`. Fix warnings; never silence them with pragmas or by dropping flags.
+- Format with the worker's `.clang-format` (Google base, 4-space indent, 100 columns) before committing.
+- Prefer the standard library over hand-rolled code and over third-party libraries when it covers the need.
+
+### Rules
+
+- **Resources:** RAII only. No naked `new`/`delete`, `malloc`/`free`. Use `std::unique_ptr` (with a custom deleter for C handles, as in `nmap-worker/src/main.cpp`), `std::shared_ptr` only for genuinely shared ownership.
+- **Types:** `enum class` over plain `enum`; `std::array`/`std::vector` over C arrays; `std::string_view` and `std::span` for non-owning parameters; `std::optional` for "may be absent". No C-style casts, use `static_cast` and friends. `reinterpret_cast`/`const_cast` need a comment saying why.
+- **Errors:** recoverable failures (network, nmap exit code, XML/JSON parsing) return `std::expected<T, Error>`. Exceptions are for programming errors and startup failures only; `main` catches everything and exits non-zero. No exception may escape a thread.
+- **Correctness helpers:** `const` by default (variables, member functions, references); `constexpr` where possible; `[[nodiscard]]` on functions whose result must not be ignored; `override`/`final` on virtual overrides; `explicit` on single-argument constructors; `noexcept` on moves and destructors.
+- **Output:** `std::print`/`std::println`/`std::format`, not `printf` or `iostream`.
+- **Time:** `std::chrono` types for every duration, deadline and timeout. No raw `int` seconds in interfaces.
+- **Concurrency:** `std::jthread` + `std::stop_token` (stopping on time-window expiry goes through the stop token). Shared state is guarded by a `std::mutex` with `std::scoped_lock`, or is `std::atomic`. No detached threads.
+- **Running processes (security):** never build a shell command from scan input (targets, ports, hostnames all come from users/the backend). Spawn nmap with an argument vector (`posix_spawn`/`execvp`), never `system()` or `popen()` with interpolated strings. Validate targets and ports before passing them on.
+- **Headers:** `#pragma once`; include what you use; no `using namespace` in headers (and never `using namespace std`). Order includes: own header, project headers, third-party, standard library — each group sorted.
+- **Globals:** no mutable globals; configuration is read once (from env) into a struct and passed down. Helpers private to a `.cpp` go in an anonymous namespace.
+
+### Naming conventions
+
+| Entity | Style | Example |
+|---|---|---|
+| Files | `snake_case`, `.hpp` / `.cpp` | `scan_job.hpp`, `scan_job.cpp` |
+| Namespaces | `snake_case`, one per worker | `nmap_worker`, `nmap_worker::http` |
+| Classes, structs, type aliases, concepts | `PascalCase` | `ScanJob`, `LeaseClient`, `HostList` |
+| Template parameters | `PascalCase` | `T`, `Callback` |
+| Functions and methods | `snake_case`, verb-first | `parse_nmap_xml()`, `send_heartbeat()` |
+| Local variables, parameters, public struct members | `snake_case` | `host_count`, `max_rate` |
+| Private/protected data members | `snake_case_` (trailing underscore) | `lease_id_` |
+| Constants (`constexpr`, `const` at namespace scope) | `kPascalCase` | `kDefaultTimeout` |
+| Enum types / enumerators | `PascalCase` / `kPascalCase` | `enum class ScanState { kPending, kRunning }` |
+| Macros (avoid; only for build-time defines) | `UPPER_SNAKE`, prefixed with the worker | `NMAP_WORKER_VERSION` |
+| Worker directory, CMake target, Docker service | `kebab-case`, ending in `-worker` | `http-worker` |
+
+Booleans read as a question (`is_expired`, `has_tls`). No Hungarian notation, no abbreviations beyond common ones (`url`, `ip`, `tls`, `id`).
+
+### Creating a new worker
+
+Copy the layout of `nmap-worker` (the reference skeleton) instead of starting from scratch:
+
+```
+apps/workers/<name>-worker/
+├── CMakeLists.txt        # cmake_minimum_required 3.28, C++23 settings above, warning flags, <NAME>_WORKER_VERSION define
+├── CMakePresets.json     # Ninja, debug + release, binaryDir build/<preset>
+├── Dockerfile            # multi-stage, same ubuntu base for build and runtime, runs as non-root `worker`
+├── .dockerignore         # build/, cmake-build-*/
+├── .clang-format         # copied unchanged from nmap-worker
+├── README.md             # purpose, build/run, configuration (env table), dependencies
+└── src/
+    ├── main.cpp          # reads config, wires components, returns EXIT_SUCCESS/EXIT_FAILURE
+    └── *.hpp / *.cpp     # one class or cohesive unit per file pair
+```
+
+Then, in the same change:
+
+1. Add the worker to the table in [`apps/workers/README.md`](apps/workers/README.md).
+2. Add a service under `profiles: ["workers"]` in `docker/docker-compose.yml` (grant only the capabilities it needs).
+3. Add a `docker build apps/workers/<name>-worker` step to `.github/workflows/ci.yml`.
+4. Add the worker's README to the "Where to look" table here (ask the user first, per the rule above).
+5. Dependencies: system packages in the Dockerfile or CMake `FetchContent` pinned to a release tag or commit hash, never a branch. Check the latest release before pinning; do not write a version from memory.
