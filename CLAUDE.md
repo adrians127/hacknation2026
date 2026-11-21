@@ -70,13 +70,15 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
   - The backend builds every scan-data feature on it: storing observations, diffs, dashboard, signatures/detections, export/import, DefectDojo.
   - **Read it before designing any such feature.** Change the document first (with the user's agreement), then the code. The contract (`WorkerResultSchema`) matches it; the `nmap-worker` output does not yet (the document lists the gap).
 - **Worker results → database:** `resultsService.ingest()` writes observations per scan (`ScanJobResult`, `HostObservation`, `HostnameObservation`, `PortObservation` with protocol details as JSONB in `details`) and the `Host`/`Service` assets that live across scans and hold user edits. Details: [`apps/backend/README.md`](apps/backend/README.md#scan-results).
+- **Scan results → users:** hosts are browsed per scan (`GET /scans/{id}/hosts`), with new/gone/changed/unknown computed against the base scan (the previous scan with results) by `modules/scans/scan-diff.ts`. Edits (`PATCH /hosts/...`: note, tags, triage, service corrections) go to the `Host`/`Service` assets, so they show in every scan and survive later ones. Details: [`apps/backend/README.md`](apps/backend/README.md#browsing-scan-results).
+- **Demo data:** `pnpm db:seed:hosts` seeds realistic results in the locked format (`apps/backend/src/demo/`). Build and try scan-data features on it. Details: [`apps/backend/README.md`](apps/backend/README.md#demo-data).
 - **Targets → scan jobs:** the import (`POST /targets/import`; manual, CSV and JSON all go through the shared parser in `contracts/src/targets/target-input.ts`) fills the `Target` inventory and can queue a `Scan` split into `ScanJob` batches. Workers lease those rows; the lease endpoints are not implemented yet. Details: [`apps/backend/README.md`](apps/backend/README.md#targets-and-scan-jobs).
 - **Auth/RBAC (implemented):**
   - local accounts (argon2id) and a 15-minute access JWT plus a rotating refresh token, both in httpOnly cookies;
   - roles are database rows built from the `resource:action` catalog in `contracts/src/auth/permissions.ts`;
   - the PDF's four roles (item 13) are locked system roles, and admins create custom roles (item 12);
   - details and the rules for mapping new permissions onto system roles: [`apps/backend/README.md`](apps/backend/README.md#auth-and-rbac).
-- **Sensitive data:** encrypted at rest at the application level (AES-256-GCM, `DATA_ENCRYPTION_KEY`, `apps/backend/src/lib/crypto.ts`). Scan results store sensitive JSON fields as `{ "$enc": "v1.…" }`; the other tables are still to be covered (see the backend README).
+- **Sensitive data:** encrypted at rest at the application level (AES-256-GCM, `DATA_ENCRYPTION_KEY`, `apps/backend/src/lib/crypto.ts`). Scan results store sensitive JSON fields as `{ "$enc": "v1.…" }`, and host/service notes are encrypted too; the other tables are still to be covered (see the backend README).
 - **DefectDojo:** a local instance runs in `docker/` (`http://localhost:8080`, fixed dev API token). The backend will push findings through `/api/v2/import-scan/`. Not implemented yet.
 
 ## Monorepo commands
@@ -95,6 +97,7 @@ pnpm generate       # contracts -> openapi.json -> api-client/src/generated (com
 pnpm clean
 pnpm db:up          # PostgreSQL in Docker (pnpm db:logs)
 pnpm db:reset       # drop + migrations + seed (system roles, admin, demo accounts)
+pnpm db:seed:hosts  # demo scan data: two scans of a /18 through the real ingest (--json <dir> also writes the results)
 pnpm infra:up       # all default compose services, DefectDojo included (infra:down, infra:logs)
 pnpm dojo:up        # DefectDojo only, :8080 (dojo:logs, dojo:smoke)
 pnpm workers:build  # build worker images (workers:up, workers:down, workers:logs)

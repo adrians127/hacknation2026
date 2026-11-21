@@ -142,6 +142,10 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 
 - A page starts with `PageHeader` (title, description, page-level buttons in `actions`) and puts its content in `Card`s.
 - Lists use `DataTable` (`components/data-table.tsx`), a sortable table on TanStack Table v9. Define columns with `createDataTableColumns<T>().columns([...])` from `lib/data-table.ts`, inside `useMemo`: v9 rebuilds the table whenever `columns` or `data` change identity. `meta: { className }` styles a column's header and cells (e.g. `text-right`). Dates and numbers go through `lib/format.ts`.
+  - `renderExpanded(row)` adds a full-width row under a row (return `null` while it is collapsed); the scan's host table uses it for each host's services.
+  - Lists the server pages (`page`, `pageSize`, `total` in the response) put `DataTablePagination` under the table and disable column sorting (`enableSorting: false`), since sorting one page would mislead.
+  - Filters, the page number and an open side panel live in the URL (`useSearchParams`), so a filtered view can be reloaded and shared (see `app/routes/scan-detail.tsx`).
+- Details that do not fit a row open in a `Sheet` (`components/ui/sheet.tsx`, a side panel on the Radix dialog). It was written by hand: `shadcn add sheet` also tried to add an unrelated npm package.
 - The app is dark-only (`class="dark"` in `index.html`); `brand` is the accent color (`text-brand`, `bg-brand/15`).
 
 ## Translations

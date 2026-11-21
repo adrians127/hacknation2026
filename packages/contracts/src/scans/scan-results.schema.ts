@@ -10,7 +10,7 @@ import {
   HttpEndpointSchema,
   OpenPortSchema,
 } from "../workers/worker-result.schema";
-import { ScanJobStatusSchema, ScanSchema } from "./scans.schema";
+import { ScanSchema, type ScanJobStatus } from "./scans.schema";
 
 // Separate from scans.schema.ts: worker-result.schema imports that file, so it cannot import back.
 
@@ -43,7 +43,7 @@ export const ScanDetailSchema = ScanSchema.extend({
     completed: CountSchema,
     failed: CountSchema,
     stopped: CountSchema,
-  }) satisfies z.ZodType<Record<z.infer<typeof ScanJobStatusSchema>, number>>,
+  }) satisfies z.ZodType<Record<ScanJobStatus, number>>,
   /** The scan this one is compared with; `null` for the first scan. */
   baseScan: z.object({ id: z.uuid(), startedAt: z.iso.datetime().nullable() }).nullable(),
   /** `null` without a base scan. */

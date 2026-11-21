@@ -24,6 +24,7 @@ pnpm --filter @subsurf/backend test         # vitest, integration tests: needs `
 pnpm --filter @subsurf/backend db:migrate   # prisma migrate dev (new migration)
 pnpm --filter @subsurf/backend db:studio    # Prisma Studio
 pnpm --filter @subsurf/backend db:seed      # system roles, admin, demo accounts (idempotent)
+pnpm --filter @subsurf/backend db:seed:hosts  # demo scan data: two scans of a /18 (see "Demo data")
 pnpm db:reset                                  # from the repo root: drop + all migrations + seed
 ```
 
@@ -43,10 +44,13 @@ routes/index.ts        apiRouter: one apiRouter.use("/x", ...) line per module
 modules/<feature>/     <feature>.routes.ts | .controller.ts | .service.ts | .test.ts
 modules/auth|users|roles   sign-in and sessions, user accounts, roles (+ system-roles sync, first-admin bootstrap)
 modules/targets        target inventory: POST /targets/import (manual, CSV and JSON all arrive as one JSON body)
-modules/scans          no routes yet: queues a Scan and its ScanJob batches (dns.ts, batching.ts)
+modules/scans          GET /scans… (scan results, hosts per scan, changes: scan-results.*, scan-diff.ts);
+                       queues a Scan and its ScanJob batches (scans.service.ts, dns.ts, batching.ts)
 modules/results        no routes yet: ingests worker results into observations (details.ts, fingerprint.ts, job-scope.ts)
-modules/hosts          no routes yet: Host and Service assets that live across scans
-test/                  integration test setup: test database, TestClient (fetch + cookie jar), sign-in helpers
+modules/hosts          PATCH /hosts…: edits of the Host and Service assets; ingest's helpers for those assets
+demo/                  deterministic demo scan data for `db:seed:hosts` (not part of the API build)
+test/                  integration test setup: test database, TestClient (fetch + cookie jar), sign-in helpers,
+                       ingestScan() (scans.ts)
 types/express.d.ts     req.auth
 generated/prisma       Prisma Client (gitignored, generated in postinstall)
 ```
@@ -76,7 +80,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Permissions and roles
 
-- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*` and `scans:read|run`. Of these, only `targets:create` (and `scans:run` for `startScan`) guard an endpoint so far; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
+- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|run` and `hosts:update`. `scans:read` guards the scan results (hosts included), `hosts:update` the edits of hosts and services; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
 - A route checks permissions with `requirePermission("users:read")` after `requireAuth`. Services that act on other accounts or roles also call `assertHoldsAll` (below).
 - **System roles** (`admin`, `editor`, `analyst`, `viewer`) are read-only. `syncSystemRoles()` (`modules/roles/system-roles.ts`) runs at startup and in the seed: it gives them exactly `SYSTEM_ROLE_PERMISSIONS` and drops permissions that no longer exist from custom roles.
 - **Custom roles** are rows with a `permissions` array. Deleting a role that users still have needs `reassignToRoleId` (and `users:update`); the users move and the role is deleted in one transaction.
@@ -120,7 +124,7 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up` loca
 - `prisma.config.ts`: schema path, migrations, seed and the URL built from `DB_*`. A placeholder URL lets `prisma generate` run on a fresh clone without a database.
 - `prisma/schema/schema.prisma`: only the generator and the datasource. Models live in `prisma/schema/<module>/<model>.prisma` (one file per model, in a folder named after the module in `src/modules/` that owns the table).
 - Every relation field needs an `@@index`, because Prisma does not create indexes on foreign keys in Postgres.
-- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF). `src/lib/crypto.ts` does it at the field level: AES-256-GCM with `DATA_ENCRYPTION_KEY`, a value becomes `{ "$enc": "v1.<base64(iv | tag | ciphertext)>" }`, and `decryptJson` returns `unknown`, so readers validate with zod. Scan results use it (see [Scan results](#scan-results)). The auth tables hold only hashes (passwords, refresh secrets), emails and display names. Still to cover: `Target.value` and `note`, `ScanJob.targets` and `hosts` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
+- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF). `src/lib/crypto.ts` does it at the field level: AES-256-GCM with `DATA_ENCRYPTION_KEY`, a value becomes `{ "$enc": "v1.<base64(iv | tag | ciphertext)>" }`, and `decryptJson` returns `unknown`, so readers validate with zod. Scan results use it (see [Scan results](#scan-results)). The auth tables hold only hashes (passwords, refresh secrets), emails and display names. `Host.note` and `Service.note` (free text from analysts) are encrypted with `encryptText`. Still to cover: `Target.value` and `note`, `ScanJob.targets` and `hosts` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
 
 ## Targets and scan jobs
 
@@ -146,8 +150,8 @@ The result a worker sends for a job is fixed in [`docs/worker-result-format.md`]
 | | `HostObservation` | scan + address | **Every** address of the job, `down` included, so a scan's coverage is known; `ipNumber` (BigInt) for CIDR range queries |
 | | `HostnameObservation` | observation + name + source | `job`, `ptr`, `tls_san` |
 | | `PortObservation` | observation + protocol + port | Service detection in columns, `fingerprint` for diffs, everything else in `details` (JSONB) |
-| Assets (`prisma/schema/hosts/`), live across scans | `Host` | address ever `up` | `firstSeenAt`/`lastSeenAt`; `note`/`tags` belong to users and ingest never writes them (PDF item 14) |
-| | `Service` | host + protocol + port | Same; every `PortObservation` points at its `Service`, so a service's history is one query |
+| Assets (`prisma/schema/hosts/`), live across scans | `Host` | address ever `up` | `firstSeenAt`/`lastSeenAt`; `note` (encrypted), `tags` and `triage` belong to users and ingest never writes them (PDF item 14) |
+| | `Service` | host + protocol + port | Same, plus the user's `*Override` corrections; every `PortObservation` points at its `Service`, so a service's history is one query |
 
 **`PortObservation.details`** holds the rest of the worker's port object: `identity`, `banner`, `scripts` and `http[]`. A new protocol is a new key there, without a migration, once the locked format has it.
 - `details.ts` encrypts the fields the format lists as sensitive: `banner`, `scripts`, `http[].headers`, `http[].cookies`, `http[].body.content`, `http[].tls.cert`, `http[].probes`. `openPortDetails()` decrypts and validates them back.
@@ -160,6 +164,34 @@ The result a worker sends for a job is fixed in [`docs/worker-result-format.md`]
 - **Seen window:** results may arrive out of order, so ingest only ever widens `firstSeenAt`/`lastSeenAt`.
 - **Fingerprint** (`fingerprint.ts`): SHA-256 over the service detection and, per HTTP endpoint, status, title, final path, software headers (`server`, `x-powered-by`, …), certificate and favicon hashes. Request-dependent values (dates, cookie values, body hashes, query strings) are left out so unchanged pages do not show up as changed.
 - `ScanJob` itself (status, timings) is not touched: its lifecycle belongs to the lease handlers.
+
+## Browsing scan results
+
+Users reach hosts through scans: `/scans` → a scan → the hosts it saw (`modules/scans/scan-results.service.ts`). All of it needs `scans:read`.
+
+| Endpoint | What it returns |
+|---|---|
+| `GET /scans` | Every scan, newest first: status, timing, hosts by status (`up`, `down`, `timeout`, `cancelled`, `failed`) and open ports |
+| `GET /scans/{id}` | The same plus parameters, jobs by status, the base scan and the change counts |
+| `GET /scans/{id}/hosts` | The scan's hosts with their services, as this scan saw them, paged in address order. Filters: `q` (IP prefix, hostname, tag, port, service name/product, HTTP title), `triage` (host or any service), `change` |
+| `GET /scans/{id}/hosts/{hostId}` | One host in that scan: decrypted HTTP details, banner, NSE scripts, and the address's scan history |
+
+**Changes** (`scan-diff.ts`, PDF items 8–9) compare a scan with its **base scan**, the previous scan (by `createdAt`) that has results. They follow the rules in [`docs/worker-result-format.md`](../../docs/worker-result-format.md#what-the-backend-derives):
+- Hosts are keyed by IP and services by IP + protocol + port. A service is `changed` when its `fingerprint` differs.
+- A host is `new` (up now, not before), `gone` (up before, `down` now), `changed` (a service is new, gone or changed), `unchanged`, or `unknown` (up before, `timeout`/`cancelled`/`failed` now). Unknown is never gone, and addresses outside this scan's coverage are left out.
+- The first scan has no base scan: every `change` is `null`.
+- The diff reads only IPs, statuses and fingerprints, so it runs over a whole scan per request; details are loaded for the requested page only. The list's plaintext HTTP summaries come from `httpSummaries()`, without decrypting anything.
+
+**Edits** (`modules/hosts/`, `hosts:update`): `PATCH /hosts/{id}` (note, tags, triage) and `PATCH /hosts/{id}/services/{serviceId}` (the same plus `nameOverride`/`productOverride`/`versionOverride`, `null` clears one). They write the `Host`/`Service` assets, which ingest never touches, so an edit made from any scan shows in every scan and survives later ones (PDF item 14). Triage is `unreviewed | reviewed | important | false_positive`.
+
+## Demo data
+
+`pnpm db:seed:hosts` (after `pnpm db:reset` or `pnpm db:seed`, which create the admin who owns the scans) fills the database with realistic scan results to build features on (`src/demo/`, entry `prisma/seed-hosts.ts`):
+- **Network:** 10.40.0.0/18 (16,384 addresses, 64 jobs of 256), about 250 live hosts with domains under `campus.example`: CMSs (WordPress, Joomla, Drupal, Moodle, MediaWiki), CI and admin panels (Jenkins, GitLab, Tomcat manager, phpMyAdmin, Grafana, Kibana, Zabbix), staging (`x-environment: staging`, Django debug page, Swagger UI), databases, Linux and Windows servers, cameras, printers, UPS, BMCs and NAS boxes. Certificates include self-signed, expired and expiring ones; cookies lack `Secure`/`HttpOnly` here and there.
+- **Two nightly runs** (2026-11-20 and 2026-11-21, 01:00 UTC) through the real `resultsService.ingest()`. The second run has new, gone and unstable hosts, upgraded software, opened and closed ports, a renewed certificate and a maintenance page, and its last job stops at the deadline (`partial`, `stopReason: "deadline"`, 128 addresses `cancelled`), so the scan ends `stopped`.
+- **Deterministic and idempotent:** fixed scan ids and lease ids, a seeded PRNG. Re-running skips what is already there; a fresh copy needs `pnpm db:reset` first. It takes about 10 s.
+- `pnpm db:seed:hosts --json <dir>` also writes every worker result as `run-N/job-NNN.json`, e.g. for testing an import of scan results.
+- The generator's tests (`src/demo/demo.test.ts`) check that every result passes `WorkerResultSchema` and that the second run really differs.
 
 ## Environment variables
 
