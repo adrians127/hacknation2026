@@ -7,7 +7,7 @@ A C++23 worker for TCP service and version detection on IP/port hits supplied by
 From the repository root:
 
 ```bash
-pnpm workers:build
+docker compose -f docker/docker-compose.workers.yml --profile nmap build
 ```
 
 The Docker image uses Ubuntu for both build and runtime. It installs Nmap, libcurl, pugixml, and nlohmann/json from system packages. The worker runs as a non-root user. Compose grants raw network capabilities and selects SYN scanning; local builds default to TCP connect scanning.

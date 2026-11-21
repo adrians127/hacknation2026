@@ -45,7 +45,7 @@ English is the project's default language: documentation, code comments, commit 
 | Worker result format (locked source of truth for scan data) | [`docs/worker-result-format.md`](docs/worker-result-format.md) |
 | Contract (zod schemas, OpenAPI generation, adding an endpoint) | [`packages/contracts/README.md`](packages/contracts/README.md) |
 | Typed API client (and why it uses TS 6) | [`packages/api-client/README.md`](packages/api-client/README.md) |
-| Local infrastructure (PostgreSQL, DefectDojo, worker in compose) | [`docker/README.md`](docker/README.md) |
+| Local infrastructure (PostgreSQL, DefectDojo; workers: separate compose file) | [`docker/README.md`](docker/README.md) |
 | Technical documentation and presentation | [`docs/`](docs/) |
 
 ## Repository structure
@@ -57,7 +57,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - `apps/workers/<name>`: C++23 + CMake + nmap workers, built and run in Docker. **Not pnpm workspaces** (no `package.json`), so `pnpm build` does not need a local C++ compiler.
 - `packages/contracts`: `@subsurf/contracts`, zod schemas and types. Generates the committed `openapi.json`. A source-only package with no build step.
 - `packages/api-client`: `@subsurf/api-client`, types generated from `openapi.json` + `openapi-fetch`. **The only workspace on TypeScript 6** (`openapi-typescript` needs the JS API that TS 7 no longer ships).
-- `docker/`: Docker Compose (PostgreSQL 19, local DefectDojo, worker under the `workers` profile). Not a workspace.
+- `docker/`: Docker Compose. `docker-compose.yml` is infrastructure (PostgreSQL 19, local DefectDojo), `docker-compose.workers.yml` is the scan workers. Not a workspace.
 - `docs/`: technical documentation and the presentation.
 
 ## Architecture (settled)
@@ -95,9 +95,9 @@ pnpm generate       # contracts -> openapi.json -> api-client/src/generated (com
 pnpm clean
 pnpm db:up          # PostgreSQL in Docker (pnpm db:logs)
 pnpm db:reset       # drop + migrations + seed (system roles, admin, demo accounts)
-pnpm infra:up       # all default compose services, DefectDojo included (infra:down, infra:logs)
+pnpm infra:up       # all infrastructure compose services, DefectDojo included (infra:down, infra:logs)
 pnpm dojo:up        # DefectDojo only, :8080 (dojo:logs, dojo:smoke)
-pnpm workers:build  # build worker images (workers:up, workers:down, workers:logs)
+pnpm workers:build  # build the masscan-worker image (run a sweep: pnpm workers:masscan < job.json)
 ```
 
 ## Conventions
@@ -176,7 +176,7 @@ apps/workers/<name>-worker/
 Then, in the same change:
 
 1. Add the worker to the table in [`apps/workers/README.md`](apps/workers/README.md).
-2. Add a service under `profiles: ["workers"]` in `docker/docker-compose.yml` (grant only the capabilities it needs).
+2. Add a service to `docker/docker-compose.workers.yml` (grant only the capabilities it needs; a one-shot CLI worker goes in the `cli` profile).
 3. Add a `docker build apps/workers/<name>-worker` step to `.github/workflows/ci.yml`.
 4. Add the worker's README to the "Where to look" table here (ask the user first, per the rule above).
 5. Dependencies: system packages in the Dockerfile or CMake `FetchContent` pinned to a release tag or commit hash, never a branch. Check the latest release before pinning; do not write a version from memory.

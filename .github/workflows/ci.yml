@@ -64,3 +64,6 @@ jobs:
 
       - name: nmap worker image
         run: docker build apps/workers/nmap-worker
+
+      - name: masscan worker image
+        run: docker build apps/workers/masscan-worker
