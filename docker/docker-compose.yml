@@ -1,0 +1,49 @@
+# Local infrastructure for Attack Surface Intelligence. See docker/README.md.
+#
+#   pnpm db:up          PostgreSQL only
+#   pnpm infra:up       every default service (today: PostgreSQL)
+#   pnpm workers:up     also build + start the nmap worker (profile: workers)
+#
+# Defaults match apps/backend/.env.example. Override them via the shell
+# environment or an optional docker/.env.
+name: hacknation
+
+services:
+  postgres:
+    image: postgres:19-alpine
+    container_name: hacknation-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hacknation}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hacknation}
+      POSTGRES_DB: ${POSTGRES_DB:-hacknation}
+    ports:
+      # Loopback only: the database must not be reachable from the scanned network.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Postgres 18+ images keep data in a versioned subdirectory of /var/lib/postgresql,
+      # so the volume mounts the parent (mounting .../data like older images breaks upgrades).
+      - hacknation-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hacknation} -d ${POSTGRES_DB:-hacknation}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nmap-worker:
+    profiles: ["workers"]
+    build:
+      context: ../apps/workers/nmap-worker
+    image: hacknation/nmap-worker:local
+    container_name: hacknation-nmap-worker
+    environment:
+      # The backend runs on the host via `pnpm dev`.
+      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:3001/v1}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
+volumes:
+  hacknation-postgres-data:

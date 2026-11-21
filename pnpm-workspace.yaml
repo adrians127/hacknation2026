@@ -1,0 +1,25 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  # apps/workers/ has no package.json on purpose, so pnpm/turbo skip it: C++ workers
+  # build with CMake inside Docker (see apps/workers/README.md), and `pnpm build`
+  # never needs a local C++ toolchain.
+
+# Required by `pnpm deploy`, which the backend Dockerfile uses to produce a
+# self-contained node_modules with no workspace symlinks.
+injectWorkspacePackages: true
+
+# Security: a dependency's install script is arbitrary code execution on dev
+# laptops and in CI, so pnpm runs one only if it is named here.
+allowBuilds:
+  # Bundler binary used by tsx (backend dev) and vite.
+  esbuild: true
+  # Prisma's schema engine, needed by `prisma migrate`. `prisma generate` works without it.
+  prisma: true
+  "@prisma/engines": true
+  # Telemetry phone-home pulled in by swagger-ui-dist; nothing the build needs.
+  "@scarf/scarf": false
+
+# Security: refuse versions published less than 48h ago, since most malicious
+# releases are caught and yanked within hours of publication. Minutes.
+minimumReleaseAge: 2880

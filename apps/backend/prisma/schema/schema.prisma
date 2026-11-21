@@ -1,0 +1,17 @@
+// Prisma merges every *.prisma under prisma/schema/ (see prisma.config.ts) into one schema.
+// - One file per model, in a folder named after the src/modules/ folder that owns (writes) it,
+//   e.g. prisma/schema/scans/scan.prisma.
+// - Prisma adds no FK indexes on Postgres: every relation scalar needs an @@index.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../../src/generated/prisma"
+  runtime      = "nodejs"
+  moduleFormat = "esm"
+}
+
+// No URL here (Prisma 7): the CLI reads it from prisma.config.ts, the app passes
+// it through the pg driver adapter in src/lib/prisma.ts.
+datasource db {
+  provider = "postgresql"
+}

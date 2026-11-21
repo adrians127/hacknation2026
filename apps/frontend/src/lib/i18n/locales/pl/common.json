@@ -1,0 +1,21 @@
+{
+  "appName": "Attack Surface Intelligence",
+  "tagline": "Cykliczny discovery scan dużej infrastruktury sieciowej",
+  "health": {
+    "title": "Stan systemu",
+    "api": "API",
+    "database": "Baza danych",
+    "loading": "Sprawdzanie…",
+    "unreachable": "Brak połączenia z API",
+    "up": "działa",
+    "down": "niedostępna",
+    "refresh": "Odśwież"
+  },
+  "language": {
+    "switchTo": "English"
+  },
+  "notFound": {
+    "title": "Nie znaleziono strony",
+    "back": "Wróć na stronę główną"
+  }
+}

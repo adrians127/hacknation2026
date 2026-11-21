@@ -1,0 +1,21 @@
+{
+  "appName": "Attack Surface Intelligence",
+  "tagline": "Recurring discovery scans of large network infrastructure",
+  "health": {
+    "title": "System status",
+    "api": "API",
+    "database": "Database",
+    "loading": "Checking…",
+    "unreachable": "Cannot reach the API",
+    "up": "up",
+    "down": "down",
+    "refresh": "Refresh"
+  },
+  "language": {
+    "switchTo": "Polski"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "back": "Back to the home page"
+  }
+}

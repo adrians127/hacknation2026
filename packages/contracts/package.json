@@ -1,0 +1,27 @@
+{
+  "name": "@hacknation/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared zod schemas + inferred types between frontend, backend and workers; source of openapi.json",
+  "exports": {
+    "./openapi.json": "./openapi.json",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "generate": "tsx scripts/generate-openapi.ts",
+    "lint": "oxlint",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf .turbo"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "@types/node": "^26.6.6",
+    "glob": "^14.0.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

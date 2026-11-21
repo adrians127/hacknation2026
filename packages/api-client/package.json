@@ -1,0 +1,24 @@
+{
+  "name": "@hacknation/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed HTTP client generated from @hacknation/contracts/openapi.json (openapi-typescript + openapi-fetch)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "openapi-typescript ../contracts/openapi.json -o src/generated/openapi.d.ts",
+    "lint": "oxlint",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf .turbo"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
+  },
+  "devDependencies": {
+    "@hacknation/contracts": "workspace:*",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "6.0.3"
+  }
+}

@@ -1,0 +1,27 @@
+# Build context is the repo root (backend image). Keep it small and force a clean in-image build.
+.git
+.github
+.turbo
+**/.turbo
+**/node_modules
+**/dist
+**/logs
+**/*.log
+
+# Prisma Client is regenerated inside the image; never ship the host's copy,
+# which may be built for a different platform.
+**/src/generated/prisma
+
+# Real secrets must never enter the build context.
+**/.env
+**/.env.*
+
+# Not part of the backend image.
+apps/frontend
+apps/workers
+docker
+docs
+scripts
+*.pdf
+**/README.md
+**/*.tsbuildinfo

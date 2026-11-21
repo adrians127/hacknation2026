@@ -1,0 +1,35 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": ["../../.oxlintrc.json"],
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "react", "jsx-a11y", "vitest"],
+  "env": {
+    "browser": true
+  },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "react/react-in-jsx-scope": "off"
+  },
+  "overrides": [
+    {
+      "files": ["src/components/**", "src/hooks/**", "src/lib/**", "src/stores/**", "src/types/**", "src/config/**", "src/api/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          { "patterns": [{ "group": ["@/features/*", "@/app/*"], "message": "Shared code must not import from features/ or app/ (bulletproof-react layering)." }] }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          { "patterns": [{ "group": ["@/app/*"], "message": "Features must not import from app/ (bulletproof-react layering)." }] }
+        ]
+      }
+    }
+  ],
+  "ignorePatterns": ["dist/**", "src/components/ui/**"]
+}

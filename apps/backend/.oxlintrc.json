@@ -1,0 +1,9 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": ["../../.oxlintrc.json"],
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "node", "vitest"],
+  "env": {
+    "node": true
+  },
+  "ignorePatterns": ["dist/**", "logs/**", "src/generated/**"]
+}
