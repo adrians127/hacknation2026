@@ -1,0 +1,134 @@
+{
+  "users": {
+    "title": "Użytkownicy",
+    "description": "Konta i ich role. Użytkowników się nie usuwa, tylko dezaktywuje.",
+    "create": "Nowy użytkownik",
+    "empty": "Nie ma jeszcze użytkowników.",
+    "you": "Ty",
+    "neverSignedIn": "Nigdy",
+    "columns": {
+      "user": "Użytkownik",
+      "role": "Rola",
+      "status": "Status",
+      "lastLogin": "Ostatnie logowanie",
+      "actions": "Akcje"
+    },
+    "status": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "locked": "Zablokowany",
+      "mustChangePassword": "Hasło tymczasowe"
+    },
+    "actions": {
+      "edit": "Edytuj: {{name}}",
+      "resetPassword": "Zresetuj hasło: {{name}}",
+      "deactivate": "Dezaktywuj: {{name}}",
+      "reactivate": "Aktywuj ponownie: {{name}}"
+    },
+    "form": {
+      "createTitle": "Nowy użytkownik",
+      "editTitle": "Edycja użytkownika",
+      "createDescription": "Użytkownik dostanie hasło tymczasowe i musi je zmienić przy pierwszym logowaniu.",
+      "email": "Email",
+      "displayName": "Wyświetlana nazwa",
+      "role": "Rola",
+      "rolePlaceholder": "Wybierz rolę",
+      "roleNotGrantable": "ma uprawnienia, których nie masz",
+      "ownRoleLocked": "Nie możesz zmienić własnej roli.",
+      "rolesUnavailable": "Wybór roli wymaga uprawnienia „Role: Odczyt”.",
+      "invalidEmail": "Podaj poprawny adres email.",
+      "displayNameRequired": "Podaj wyświetlaną nazwę.",
+      "roleRequired": "Wybierz rolę.",
+      "submitCreate": "Utwórz użytkownika",
+      "submitEdit": "Zapisz zmiany",
+      "submitting": "Zapisywanie…"
+    },
+    "temporaryPassword": {
+      "title": "Hasło tymczasowe",
+      "description": "Przekaż to hasło użytkownikowi {{email}}. Pokazujemy je tylko raz, a przy pierwszym logowaniu trzeba je zmienić.",
+      "done": "Gotowe"
+    },
+    "confirmReset": {
+      "title": "Zresetować hasło: {{name}}?",
+      "description": "Użytkownik zostanie wylogowany ze wszystkich urządzeń i dostanie nowe hasło tymczasowe.",
+      "confirm": "Zresetuj hasło"
+    },
+    "confirmDeactivate": {
+      "title": "Dezaktywować: {{name}}?",
+      "description": "Użytkownik zostanie wylogowany i nie zaloguje się do czasu ponownej aktywacji. Jego dane zostają.",
+      "confirm": "Dezaktywuj"
+    },
+    "toast": {
+      "created": "Utworzono użytkownika.",
+      "updated": "Zapisano zmiany użytkownika.",
+      "deactivated": "Dezaktywowano użytkownika.",
+      "reactivated": "Aktywowano użytkownika ponownie."
+    }
+  },
+  "roles": {
+    "title": "Role",
+    "description": "Cztery role systemowe wynikają z zadania i nie można ich zmieniać. Dla innego zestawu uprawnień utwórz własną rolę.",
+    "create": "Nowa rola",
+    "system": "Systemowa",
+    "custom": "Własna",
+    "columns": {
+      "name": "Rola",
+      "users": "Użytkownicy",
+      "permissions": "Uprawnienia",
+      "actions": "Akcje"
+    },
+    "permissionCount_one": "{{count}} uprawnienie",
+    "permissionCount_few": "{{count}} uprawnienia",
+    "permissionCount_many": "{{count}} uprawnień",
+    "permissionCount_other": "{{count}} uprawnienia",
+    "actions": {
+      "view": "Szczegóły: {{name}}",
+      "edit": "Edytuj: {{name}}",
+      "duplicate": "Duplikuj: {{name}}",
+      "delete": "Usuń: {{name}}"
+    },
+    "copyOf": "Kopia: {{name}}",
+    "form": {
+      "createTitle": "Nowa rola",
+      "editTitle": "Edycja roli",
+      "duplicateTitle": "Duplikowanie roli",
+      "name": "Nazwa",
+      "description": "Opis",
+      "permissions": "Uprawnienia",
+      "nameRequired": "Podaj nazwę.",
+      "submitCreate": "Utwórz rolę",
+      "submitEdit": "Zapisz zmiany",
+      "submitting": "Zapisywanie…"
+    },
+    "matrix": {
+      "resource": "Zasób",
+      "toggleRow": "Wszystkie uprawnienia: {{resource}}",
+      "toggleColumn": "{{action}} dla każdego zasobu",
+      "notAvailable": "Niedostępne",
+      "notGrantable": "Sam nie masz tego uprawnienia"
+    },
+    "detail": {
+      "back": "Wszystkie role",
+      "permissions": "Uprawnienia",
+      "members": "Użytkownicy z tą rolą",
+      "noMembers": "Nikt nie ma tej roli.",
+      "readOnly": "Rola systemowa: jej uprawnienia są stałe.",
+      "inactive": "Nieaktywny"
+    },
+    "delete": {
+      "title": "Usunąć rolę {{name}}?",
+      "description": "Tej operacji nie można cofnąć.",
+      "inUse_one": "{{count}} użytkownik ma tę rolę. Wybierz rolę, do której go przenieść:",
+      "inUse_few": "{{count}} użytkowników ma tę rolę. Wybierz rolę, do której ich przenieść:",
+      "inUse_many": "{{count}} użytkowników ma tę rolę. Wybierz rolę, do której ich przenieść:",
+      "inUse_other": "{{count}} użytkownika ma tę rolę. Wybierz rolę, do której ich przenieść:",
+      "targetPlaceholder": "Wybierz rolę",
+      "confirm": "Usuń rolę"
+    },
+    "toast": {
+      "created": "Utworzono rolę.",
+      "updated": "Zapisano zmiany roli.",
+      "deleted": "Usunięto rolę."
+    }
+  }
+}
