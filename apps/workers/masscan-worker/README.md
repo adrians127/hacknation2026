@@ -35,7 +35,7 @@ A result JSON is written **in every case**, including invalid input.
 
 ## Input
 
-See [`examples/`](examples/). Only `targets` is required.
+See [`examples/`](examples/). Only `targets` is required. For a first smoke test use [`examples/job-small.json`](examples/job-small.json) (16 addresses × 7 ports, done in a few seconds).
 
 | Field | Default | Description |
 |---|---|---|
