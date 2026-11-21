@@ -1,8 +1,8 @@
-import { ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
 import { LanguageToggle } from "@/components/language-toggle";
+import { Logo } from "@/components/logo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "@/features/auth/components/login-form";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
@@ -15,10 +15,7 @@ export function LoginRoute() {
 
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-4">
-      <div className="flex items-center gap-2 text-lg font-semibold">
-        <ShieldCheck className="size-6 text-primary" />
-        {t("appName")}
-      </div>
+      <Logo variant="full" label={t("appName")} className="w-48" />
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>{tAuth("login.title")}</CardTitle>

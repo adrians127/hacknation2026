@@ -1,10 +1,10 @@
-import { ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet } from "react-router";
 
 import type { Permission } from "@hacknation/contracts/auth/permissions";
 
 import { LanguageToggle } from "@/components/language-toggle";
+import { Logo } from "@/components/logo";
 import { UserMenu } from "@/features/auth/components/user-menu";
 import { usePermissions } from "@/lib/auth/use-can";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ export function AppLayout() {
       <header className="border-b">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <NavLink to="/" className="flex items-center gap-2 font-semibold">
-            <ShieldCheck className="size-5 text-primary" />
+            <Logo variant="icon" label="" className="h-8 w-auto" />
             <span>{t("appName")}</span>
           </NavLink>
           <nav aria-label={t("nav.label")} className="flex flex-1 flex-wrap gap-1">
