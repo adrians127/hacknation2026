@@ -1,0 +1,713 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-11-21T02:41:30Z",
+  "scan": {
+    "id": "6d0c4d1e-3f7a-4b8e-9a51-2c7f0e8b9a10",
+    "status": "completed",
+    "stop_reason": null,
+    "started_at": "2026-11-21T02:00:00Z",
+    "finished_at": "2026-11-21T02:41:12Z",
+    "duration_ms": 2472000,
+    "window": { "starts_at": "2026-11-21T02:00:00Z", "ends_at": "2026-11-21T06:00:00Z" },
+    "previous_scan_id": "0b8e2f4a-7c19-4d3e-b6a2-91f05c3d7e44",
+    "scanner": { "name": "subsurf-nmap-worker", "version": "0.1.0", "nmap_version": "7.95" },
+    "parameters": {
+      "ports": "21,22,80,443,8080",
+      "max_rate": 300,
+      "scan_type": "syn",
+      "service_detection": true,
+      "os_detection": false,
+      "http_probing": true,
+      "probed_paths": ["/login", "/admin", "/version"],
+      "signature_count": 42
+    }
+  },
+  "summary": {
+    "subnets": 2,
+    "addresses_total": 272,
+    "addresses_scanned": 272,
+    "hosts_up": 3,
+    "open_ports": 4,
+    "services_identified": 4,
+    "http_endpoints": 3,
+    "tls_endpoints": 1,
+    "technologies": 6,
+    "observations": 7,
+    "changes": { "new": 1, "reappeared": 0, "unchanged": 2, "changed": 1, "disappeared": 1 }
+  },
+  "subnets": [
+    {
+      "cidr": "192.0.2.0/24",
+      "summary": { "addresses_scanned": 256, "hosts_up": 2, "open_ports": 3 },
+      "hosts": [
+        {
+          "ip": "192.0.2.10",
+          "hostnames": [
+            { "name": "staging.example.org", "source": "input" },
+            { "name": "web-10.example.org", "source": "ptr" }
+          ],
+          "state": "up",
+          "state_reason": "syn-ack",
+          "scan_status": "scanned",
+          "error": null,
+          "observed_at": "2026-11-21T02:03:14Z",
+          "latency_ms": 1.8,
+          "probe_attempts": { "total": 1, "responded": 1 },
+          "mac": null,
+          "os": null,
+          "ports": [
+            {
+              "port": 22,
+              "protocol": "tcp",
+              "state": "open",
+              "state_reason": "syn-ack",
+              "observed_at": "2026-11-21T02:03:14Z",
+              "service": {
+                "name": "ssh",
+                "product": "OpenSSH",
+                "version": "9.6p1 Ubuntu 3ubuntu13.5",
+                "extra_info": "Ubuntu Linux; protocol 2.0",
+                "hostname": null,
+                "os_type": "Linux",
+                "device_type": null,
+                "cpe": ["cpe:/a:openbsd:openssh:9.6p1", "cpe:/o:linux:linux_kernel"],
+                "tunnel": null,
+                "method": "probed",
+                "confidence": 100,
+                "banner": "SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.5",
+                "fingerprint": null,
+                "scripts": []
+              },
+              "endpoints": [],
+              "technologies": [],
+              "observations": [],
+              "interest": { "score": 10, "reasons": ["Remote administration service"] },
+              "diff": {
+                "status": "unchanged",
+                "first_seen_at": "2026-11-14T02:02:51Z",
+                "last_seen_at": "2026-11-21T02:03:14Z",
+                "missed_scans": 0,
+                "is_unstable": false,
+                "changes": []
+              }
+            },
+            {
+              "port": 443,
+              "protocol": "tcp",
+              "state": "open",
+              "state_reason": "syn-ack",
+              "observed_at": "2026-11-21T02:03:16Z",
+              "service": {
+                "name": "http",
+                "product": "nginx",
+                "version": "1.24.0",
+                "extra_info": "Ubuntu",
+                "hostname": null,
+                "os_type": "Linux",
+                "device_type": null,
+                "cpe": ["cpe:/a:igor_sysoev:nginx:1.24.0"],
+                "tunnel": "ssl",
+                "method": "probed",
+                "confidence": 100,
+                "banner": null,
+                "fingerprint": null,
+                "scripts": []
+              },
+              "endpoints": [
+                {
+                  "hostname": "staging.example.org",
+                  "tls": {
+                    "version": "TLSv1.3",
+                    "cipher": "TLS_AES_256_GCM_SHA384",
+                    "alpn": "h2",
+                    "accepted_versions": ["TLSv1.2", "TLSv1.3"],
+                    "certificate": {
+                      "subject": {
+                        "raw": "CN=staging.example.org,O=Example",
+                        "common_name": "staging.example.org",
+                        "organization": "Example",
+                        "organizational_unit": null
+                      },
+                      "issuer": {
+                        "raw": "CN=staging.example.org,O=Example",
+                        "common_name": "staging.example.org",
+                        "organization": "Example",
+                        "organizational_unit": null
+                      },
+                      "serial_number": "4f2a9c01d3e5b7",
+                      "not_before": "2026-01-10T00:00:00Z",
+                      "not_after": "2027-01-10T00:00:00Z",
+                      "san_dns": ["staging.example.org", "*.staging.example.org"],
+                      "san_ip": [],
+                      "fingerprint_sha256": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+                      "public_key": { "algorithm": "RSA", "bits": 2048 },
+                      "signature_algorithm": "sha256WithRSAEncryption",
+                      "is_self_signed": true,
+                      "is_expired": false,
+                      "hostname_matches": true,
+                      "pem": null
+                    },
+                    "chain_length": 1,
+                    "is_trusted": false,
+                    "validation_error": "self-signed certificate"
+                  },
+                  "http": {
+                    "url": "https://staging.example.org/",
+                    "final_url": "https://staging.example.org/",
+                    "redirects": [],
+                    "redirect_stop_reason": null,
+                    "response_time_ms": 184,
+                    "response": {
+                      "protocol": "HTTP/2",
+                      "status_code": 200,
+                      "reason": null,
+                      "title": "Example Shop (STAGING)",
+                      "meta_generator": "WordPress 6.6.2",
+                      "content_type": "text/html; charset=UTF-8",
+                      "headers": [
+                        { "name": "server", "value": "nginx/1.24.0 (Ubuntu)" },
+                        { "name": "content-type", "value": "text/html; charset=UTF-8" },
+                        { "name": "x-powered-by", "value": "PHP/8.1.2-1ubuntu2.19" },
+                        { "name": "link", "value": "<https://staging.example.org/wp-json/>; rel=\"https://api.w.org/\"" }
+                      ],
+                      "body": {
+                        "size": 48213,
+                        "sha256": "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d",
+                        "truncated": true,
+                        "excerpt": null
+                      }
+                    },
+                    "cookies": [
+                      {
+                        "name": "wordpress_test_cookie",
+                        "value": null,
+                        "domain": null,
+                        "path": "/",
+                        "expires": null,
+                        "max_age": null,
+                        "secure": true,
+                        "http_only": false,
+                        "same_site": null,
+                        "set_by_url": "https://staging.example.org/"
+                      }
+                    ],
+                    "favicon": {
+                      "url": "https://staging.example.org/favicon.ico",
+                      "size": 5430,
+                      "sha256": "2e7d2c03a9507ae265ecf5b5356885a53393a2029d241394997265a1a25aefc6",
+                      "md5": "0cc175b9c0f1b6a831c399e269772661",
+                      "mmh3": -1293291467
+                    },
+                    "paths": [
+                      {
+                        "path": "/admin",
+                        "method": "GET",
+                        "status_code": 302,
+                        "title": null,
+                        "content_length": 0,
+                        "body_sha256": null,
+                        "location": "https://staging.example.org/wp-login.php?redirect_to=%2Fwp-admin%2F"
+                      },
+                      {
+                        "path": "/login",
+                        "method": "GET",
+                        "status_code": 404,
+                        "title": "Page not found - Example Shop (STAGING)",
+                        "content_length": 21877,
+                        "body_sha256": "18ac3e7343f016890c510e93f935261169d9e3f565436429830faf0934f4f8e4",
+                        "location": null
+                      }
+                    ]
+                  },
+                  "error": null
+                }
+              ],
+              "technologies": [
+                {
+                  "name": "WordPress",
+                  "category": "cms",
+                  "version": "6.6.2",
+                  "cpe": "cpe:2.3:a:wordpress:wordpress:6.6.2:*:*:*:*:*:*:*",
+                  "confidence": 100,
+                  "detected_by": { "kind": "builtin", "signature_id": null, "signature_name": null, "signature_version": null },
+                  "evidence": [
+                    { "source": "meta_generator", "hostname": "staging.example.org", "key": null, "value": "WordPress 6.6.2" },
+                    { "source": "header", "hostname": "staging.example.org", "key": "link", "value": "/wp-json/" }
+                  ]
+                },
+                {
+                  "name": "nginx",
+                  "category": "web_server",
+                  "version": "1.24.0",
+                  "cpe": "cpe:2.3:a:f5:nginx:1.24.0:*:*:*:*:*:*:*",
+                  "confidence": 100,
+                  "detected_by": { "kind": "nmap", "signature_id": null, "signature_name": null, "signature_version": null },
+                  "evidence": [
+                    { "source": "nmap_service", "hostname": null, "key": "product", "value": "nginx 1.24.0" },
+                    { "source": "header", "hostname": "staging.example.org", "key": "server", "value": "nginx/1.24.0 (Ubuntu)" }
+                  ]
+                },
+                {
+                  "name": "PHP",
+                  "category": "programming_language",
+                  "version": "8.1.2",
+                  "cpe": "cpe:2.3:a:php:php:8.1.2:*:*:*:*:*:*:*",
+                  "confidence": 90,
+                  "detected_by": { "kind": "builtin", "signature_id": null, "signature_name": null, "signature_version": null },
+                  "evidence": [
+                    { "source": "header", "hostname": "staging.example.org", "key": "x-powered-by", "value": "PHP/8.1.2-1ubuntu2.19" }
+                  ]
+                }
+              ],
+              "observations": [
+                {
+                  "key": "staging_environment:staging.example.org",
+                  "kind": "staging_environment",
+                  "title": "Staging environment exposed",
+                  "severity": "low",
+                  "confidence": 85,
+                  "detected_by": { "kind": "builtin", "signature_id": null, "signature_name": null, "signature_version": null },
+                  "evidence": [
+                    { "source": "url", "hostname": "staging.example.org", "key": null, "value": "staging.example.org" },
+                    { "source": "title", "hostname": "staging.example.org", "key": null, "value": "(STAGING)" }
+                  ]
+                },
+                {
+                  "key": "admin_panel:staging.example.org:/admin",
+                  "kind": "admin_panel",
+                  "title": "WordPress admin panel reachable",
+                  "severity": "info",
+                  "confidence": 95,
+                  "detected_by": {
+                    "kind": "signature",
+                    "signature_id": "wordpress-admin-redirect",
+                    "signature_name": "WordPress admin redirects to wp-login.php",
+                    "signature_version": 2
+                  },
+                  "evidence": [
+                    { "source": "path", "hostname": "staging.example.org", "key": "/admin", "value": "302 → /wp-login.php" }
+                  ]
+                },
+                {
+                  "key": "version_disclosure:staging.example.org:x-powered-by",
+                  "kind": "version_disclosure",
+                  "title": "PHP version disclosed in X-Powered-By",
+                  "severity": "info",
+                  "confidence": 100,
+                  "detected_by": { "kind": "builtin", "signature_id": null, "signature_name": null, "signature_version": null },
+                  "evidence": [
+                    { "source": "header", "hostname": "staging.example.org", "key": "x-powered-by", "value": "PHP/8.1.2-1ubuntu2.19" }
+                  ]
+                },
+                {
+                  "key": "tls_self_signed:staging.example.org",
+                  "kind": "tls_self_signed",
+                  "title": "Self-signed TLS certificate",
+                  "severity": "info",
+                  "confidence": 100,
+                  "detected_by": { "kind": "builtin", "signature_id": null, "signature_name": null, "signature_version": null },
+                  "evidence": [
+                    { "source": "tls_certificate", "hostname": "staging.example.org", "key": "issuer", "value": "CN=staging.example.org,O=Example" }
+                  ]
+                }
+              ],
+              "interest": {
+                "score": 80,
+                "reasons": ["Staging environment", "Admin panel", "CMS version known"]
+              },
+              "diff": {
+                "status": "changed",
+                "first_seen_at": "2026-11-14T02:02:53Z",
+                "last_seen_at": "2026-11-21T02:03:16Z",
+                "missed_scans": 0,
+                "is_unstable": false,
+                "changes": [{ "field": "service.version", "previous": "1.22.1", "current": "1.24.0" }]
+              }
+            }
+          ],
+          "interest": { "score": 80, "reasons": ["Staging environment on 443/tcp"] },
+          "diff": {
+            "status": "unchanged",
+            "first_seen_at": "2026-11-14T02:02:51Z",
+            "last_seen_at": "2026-11-21T02:03:14Z",
+            "missed_scans": 0,
+            "is_unstable": false,
+            "changes": []
+          }
+        },
+        {
+          "ip": "192.0.2.20",
+          "hostnames": [{ "name": "cam-01.example.org", "source": "ptr" }],
+          "state": "up",
+          "state_reason": "syn-ack",
+          "scan_status": "scanned",
+          "error": null,
+          "observed_at": "2026-11-21T02:05:40Z",
+          "latency_ms": 3.2,
+          "probe_attempts": { "total": 3, "responded": 2 },
+          "mac": null,
+          "os": null,
+          "ports": [
+            {
+              "port": 80,
+              "protocol": "tcp",
+              "state": "open",
+              "state_reason": "syn-ack",
+              "observed_at": "2026-11-21T02:05:40Z",
+              "service": {
+                "name": "http",
+                "product": "Hikvision IP camera httpd",
+                "version": null,
+                "extra_info": null,
+                "hostname": null,
+                "os_type": null,
+                "device_type": "webcam",
+                "cpe": [],
+                "tunnel": null,
+                "method": "probed",
+                "confidence": 100,
+                "banner": null,
+                "fingerprint": null,
+                "scripts": []
+              },
+              "endpoints": [
+                {
+                  "hostname": null,
+                  "tls": null,
+                  "http": {
+                    "url": "http://192.0.2.20/",
+                    "final_url": "http://192.0.2.20/doc/page/login.asp",
+                    "redirects": [
+                      { "url": "http://192.0.2.20/", "status_code": 302, "location": "/doc/page/login.asp" }
+                    ],
+                    "redirect_stop_reason": null,
+                    "response_time_ms": 412,
+                    "response": {
+                      "protocol": "HTTP/1.1",
+                      "status_code": 200,
+                      "reason": "OK",
+                      "title": "Login",
+                      "meta_generator": null,
+                      "content_type": "text/html",
+                      "headers": [
+                        { "name": "Server", "value": "App-webs/" },
+                        { "name": "Content-Type", "value": "text/html" }
+                      ],
+                      "body": {
+                        "size": 1764,
+                        "sha256": "3f79bb7b435b05321651daefd374cdc681dc06faa65e374e38337b88ca046dea",
+                        "truncated": false,
+                        "excerpt": null
+                      }
+                    },
+                    "cookies": [],
+                    "favicon": {
+                      "url": "http://192.0.2.20/favicon.ico",
+                      "size": 1150,
+                      "sha256": "252f10c83610ebca1a059c0bae8255eba2f95be4d1d7bcfa89d7248a82d9f111",
+                      "md5": "0cc175b9c0f1b6a831c399e269772661",
+                      "mmh3": 999357577
+                    },
+                    "paths": []
+                  },
+                  "error": null
+                }
+              ],
+              "technologies": [
+                {
+                  "name": "Hikvision IP camera",
+                  "category": "iot_device",
+                  "version": null,
+                  "cpe": null,
+                  "confidence": 95,
+                  "detected_by": {
+                    "kind": "signature",
+                    "signature_id": "hikvision-favicon",
+                    "signature_name": "Hikvision web UI favicon",
+                    "signature_version": 1
+                  },
+                  "evidence": [
+                    { "source": "favicon", "hostname": null, "key": "mmh3", "value": "999357577" },
+                    { "source": "header", "hostname": null, "key": "Server", "value": "App-webs/" }
+                  ]
+                }
+              ],
+              "observations": [
+                {
+                  "key": "cleartext_login:192.0.2.20:/doc/page/login.asp",
+                  "kind": "cleartext_login",
+                  "title": "IoT device login page over plain HTTP",
+                  "severity": "low",
+                  "confidence": 90,
+                  "detected_by": { "kind": "builtin", "signature_id": null, "signature_name": null, "signature_version": null },
+                  "evidence": [
+                    { "source": "redirect", "hostname": null, "key": "location", "value": "/doc/page/login.asp" },
+                    { "source": "title", "hostname": null, "key": null, "value": "Login" }
+                  ]
+                }
+              ],
+              "interest": { "score": 70, "reasons": ["IoT device", "Login over HTTP", "New since previous scan"] },
+              "diff": {
+                "status": "new",
+                "first_seen_at": "2026-11-21T02:05:40Z",
+                "last_seen_at": "2026-11-21T02:05:40Z",
+                "missed_scans": 0,
+                "is_unstable": false,
+                "changes": []
+              }
+            }
+          ],
+          "interest": { "score": 70, "reasons": ["IoT device on 80/tcp"] },
+          "diff": {
+            "status": "new",
+            "first_seen_at": "2026-11-21T02:05:40Z",
+            "last_seen_at": "2026-11-21T02:05:40Z",
+            "missed_scans": 0,
+            "is_unstable": true,
+            "changes": []
+          }
+        }
+      ]
+    },
+    {
+      "cidr": "198.51.100.0/28",
+      "summary": { "addresses_scanned": 16, "hosts_up": 1, "open_ports": 1 },
+      "hosts": [
+        {
+          "ip": "198.51.100.5",
+          "hostnames": [{ "name": "ci.example.org", "source": "input" }],
+          "state": "up",
+          "state_reason": "syn-ack",
+          "scan_status": "scanned",
+          "error": null,
+          "observed_at": "2026-11-21T02:30:02Z",
+          "latency_ms": 0.9,
+          "probe_attempts": { "total": 1, "responded": 1 },
+          "mac": null,
+          "os": null,
+          "ports": [
+            {
+              "port": 8080,
+              "protocol": "tcp",
+              "state": "open",
+              "state_reason": "syn-ack",
+              "observed_at": "2026-11-21T02:30:02Z",
+              "service": {
+                "name": "http",
+                "product": "Jetty",
+                "version": "10.0.20",
+                "extra_info": null,
+                "hostname": null,
+                "os_type": null,
+                "device_type": null,
+                "cpe": ["cpe:/a:eclipse:jetty:10.0.20"],
+                "tunnel": null,
+                "method": "probed",
+                "confidence": 100,
+                "banner": null,
+                "fingerprint": null,
+                "scripts": []
+              },
+              "endpoints": [
+                {
+                  "hostname": "ci.example.org",
+                  "tls": null,
+                  "http": {
+                    "url": "http://ci.example.org:8080/",
+                    "final_url": "http://ci.example.org:8080/login?from=%2F",
+                    "redirects": [
+                      { "url": "http://ci.example.org:8080/", "status_code": 302, "location": "http://ci.example.org:8080/login?from=%2F" }
+                    ],
+                    "redirect_stop_reason": null,
+                    "response_time_ms": 95,
+                    "response": {
+                      "protocol": "HTTP/1.1",
+                      "status_code": 200,
+                      "reason": "OK",
+                      "title": "Sign in [Jenkins]",
+                      "meta_generator": null,
+                      "content_type": "text/html;charset=utf-8",
+                      "headers": [
+                        { "name": "Server", "value": "Jetty(10.0.20)" },
+                        { "name": "X-Content-Type-Options", "value": "nosniff" },
+                        { "name": "X-Hudson", "value": "1.395" },
+                        { "name": "X-Jenkins", "value": "2.462.1" },
+                        { "name": "X-Jenkins-Session", "value": "7a1c3e5f" }
+                      ],
+                      "body": {
+                        "size": 2311,
+                        "sha256": "cd0aa9856147b6c5b4ff2b7dfee5da20aa38253099ef1b4a64aced233c9afe29",
+                        "truncated": false,
+                        "excerpt": null
+                      }
+                    },
+                    "cookies": [
+                      {
+                        "name": "JSESSIONID.4b2e91aa",
+                        "value": null,
+                        "domain": null,
+                        "path": "/",
+                        "expires": null,
+                        "max_age": null,
+                        "secure": false,
+                        "http_only": true,
+                        "same_site": "lax",
+                        "set_by_url": "http://ci.example.org:8080/"
+                      }
+                    ],
+                    "favicon": {
+                      "url": "http://ci.example.org:8080/favicon.ico",
+                      "size": 17542,
+                      "sha256": "aaa9402664f1a41f40ebbc52c9993eb66aeb366602958fdfaa283b71e64db123",
+                      "md5": "0cc175b9c0f1b6a831c399e269772661",
+                      "mmh3": 81586312
+                    },
+                    "paths": [
+                      {
+                        "path": "/login",
+                        "method": "GET",
+                        "status_code": 200,
+                        "title": "Sign in [Jenkins]",
+                        "content_length": 2311,
+                        "body_sha256": "cd0aa9856147b6c5b4ff2b7dfee5da20aa38253099ef1b4a64aced233c9afe29",
+                        "location": null
+                      }
+                    ]
+                  },
+                  "error": null
+                }
+              ],
+              "technologies": [
+                {
+                  "name": "Jenkins",
+                  "category": "web_application",
+                  "version": "2.462.1",
+                  "cpe": "cpe:2.3:a:jenkins:jenkins:2.462.1:*:*:*:lts:*:*:*",
+                  "confidence": 100,
+                  "detected_by": { "kind": "builtin", "signature_id": null, "signature_name": null, "signature_version": null },
+                  "evidence": [
+                    { "source": "header", "hostname": "ci.example.org", "key": "X-Jenkins", "value": "2.462.1" },
+                    { "source": "cookie", "hostname": "ci.example.org", "key": "JSESSIONID.4b2e91aa", "value": null }
+                  ]
+                },
+                {
+                  "name": "Jetty",
+                  "category": "app_server",
+                  "version": "10.0.20",
+                  "cpe": "cpe:2.3:a:eclipse:jetty:10.0.20:*:*:*:*:*:*:*",
+                  "confidence": 100,
+                  "detected_by": { "kind": "nmap", "signature_id": null, "signature_name": null, "signature_version": null },
+                  "evidence": [
+                    { "source": "nmap_service", "hostname": null, "key": "product", "value": "Jetty 10.0.20" },
+                    { "source": "header", "hostname": "ci.example.org", "key": "Server", "value": "Jetty(10.0.20)" }
+                  ]
+                }
+              ],
+              "observations": [
+                {
+                  "key": "interesting_header:ci.example.org:x-jenkins",
+                  "kind": "interesting_header",
+                  "title": "Jenkins version in X-Jenkins header",
+                  "severity": "info",
+                  "confidence": 100,
+                  "detected_by": { "kind": "builtin", "signature_id": null, "signature_name": null, "signature_version": null },
+                  "evidence": [
+                    { "source": "header", "hostname": "ci.example.org", "key": "X-Jenkins", "value": "2.462.1" }
+                  ]
+                },
+                {
+                  "key": "login_page:ci.example.org:/login",
+                  "kind": "login_page",
+                  "title": "Jenkins login page",
+                  "severity": "info",
+                  "confidence": 100,
+                  "detected_by": { "kind": "builtin", "signature_id": null, "signature_name": null, "signature_version": null },
+                  "evidence": [
+                    { "source": "path", "hostname": "ci.example.org", "key": "/login", "value": "200 Sign in [Jenkins]" }
+                  ]
+                }
+              ],
+              "interest": { "score": 75, "reasons": ["CI server", "Version disclosed"] },
+              "diff": {
+                "status": "unchanged",
+                "first_seen_at": "2026-11-07T02:29:47Z",
+                "last_seen_at": "2026-11-21T02:30:02Z",
+                "missed_scans": 0,
+                "is_unstable": false,
+                "changes": []
+              }
+            }
+          ],
+          "interest": { "score": 75, "reasons": ["CI server on 8080/tcp"] },
+          "diff": {
+            "status": "unchanged",
+            "first_seen_at": "2026-11-07T02:29:47Z",
+            "last_seen_at": "2026-11-21T02:30:02Z",
+            "missed_scans": 0,
+            "is_unstable": false,
+            "changes": []
+          }
+        },
+        {
+          "ip": "198.51.100.9",
+          "hostnames": [],
+          "state": "down",
+          "state_reason": "no-response",
+          "scan_status": "scanned",
+          "error": null,
+          "observed_at": "2026-11-21T02:31:10Z",
+          "latency_ms": null,
+          "probe_attempts": { "total": 3, "responded": 0 },
+          "mac": null,
+          "os": null,
+          "ports": [
+            {
+              "port": 21,
+              "protocol": "tcp",
+              "state": "filtered",
+              "state_reason": "no-response",
+              "observed_at": "2026-11-21T02:31:10Z",
+              "service": {
+                "name": "ftp",
+                "product": "vsftpd",
+                "version": "3.0.5",
+                "extra_info": null,
+                "hostname": null,
+                "os_type": "Unix",
+                "device_type": null,
+                "cpe": ["cpe:/a:vsftpd:vsftpd:3.0.5"],
+                "tunnel": null,
+                "method": "probed",
+                "confidence": 100,
+                "banner": "220 (vsFTPd 3.0.5)",
+                "fingerprint": null,
+                "scripts": []
+              },
+              "endpoints": [],
+              "technologies": [],
+              "observations": [],
+              "interest": null,
+              "diff": {
+                "status": "disappeared",
+                "first_seen_at": "2026-11-07T02:31:02Z",
+                "last_seen_at": "2026-11-14T02:30:58Z",
+                "missed_scans": 1,
+                "is_unstable": false,
+                "changes": [{ "field": "state", "previous": "open", "current": "filtered" }]
+              }
+            }
+          ],
+          "interest": null,
+          "diff": {
+            "status": "disappeared",
+            "first_seen_at": "2026-11-07T02:31:02Z",
+            "last_seen_at": "2026-11-14T02:30:58Z",
+            "missed_scans": 1,
+            "is_unstable": false,
+            "changes": [{ "field": "state", "previous": "up", "current": "down" }]
+          }
+        }
+      ]
+    }
+  ]
+}
