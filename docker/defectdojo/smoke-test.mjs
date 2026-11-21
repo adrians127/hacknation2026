@@ -15,8 +15,8 @@ const DD_URL = (process.env.DD_URL ?? "http://localhost:8080").replace(/\/+$/, "
 const DD_API_TOKEN = process.env.DD_API_TOKEN ?? "943acbe9baff8da06895e4349f3d06ee293189e8";
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 
-const PRODUCT_TYPE = "Attack Surface Intelligence";
-const PRODUCT = "ASI smoke test";
+const PRODUCT_TYPE = "SubSurf";
+const PRODUCT = "SubSurf smoke test";
 
 async function api(path, init = {}) {
   const method = init.method ?? "GET";

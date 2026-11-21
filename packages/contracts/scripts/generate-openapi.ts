@@ -16,7 +16,7 @@ async function main(): Promise<void> {
   registry.registerComponent("securitySchemes", "cookieAuth", {
     type: "apiKey",
     in: "cookie",
-    name: "asi_access",
+    name: "subsurf_access",
     description: "Access JWT set by `POST /auth/login`, refreshed through `POST /auth/refresh`.",
   });
   registry.registerComponent("securitySchemes", "workerToken", {
@@ -28,7 +28,7 @@ async function main(): Promise<void> {
   const document = generator.generateDocument({
     openapi: "3.1.0",
     info: {
-      title: "Attack Surface Intelligence API",
+      title: "SubSurf API",
       version: "0.0.0",
       description: "Generated from @hacknation/contracts zod schemas. Do not edit by hand.",
     },

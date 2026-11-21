@@ -31,7 +31,7 @@ export function buildApp(): Express {
     app.use(
       "/docs",
       swaggerUi.serve,
-      swaggerUi.setup(buildApiDocs(), { customSiteTitle: "Attack Surface Intelligence API" }),
+      swaggerUi.setup(buildApiDocs(), { customSiteTitle: "SubSurf API" }),
     );
   }
 

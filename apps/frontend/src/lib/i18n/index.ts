@@ -13,7 +13,7 @@ export const SUPPORTED_LANGUAGES = ["en", "pl"] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
 /** localStorage key the detector caches the chosen language under. */
-export const LANGUAGE_STORAGE_KEY = "asi.language";
+export const LANGUAGE_STORAGE_KEY = "subsurf.language";
 
 export const resources = {
   en: { common: commonEn, auth: authEn, admin: adminEn },

@@ -42,8 +42,8 @@ describe("POST /v1/auth/login", () => {
     expect(client.cookies.has(REFRESH_COOKIE)).toBe(true);
 
     const cookies = res.headers.getSetCookie().join("\n");
-    expect(cookies).toMatch(/asi_access=[^;]+;.*HttpOnly/i);
-    expect(cookies).toMatch(/asi_refresh=[^;]+;.*Path=\/v1\/auth/i);
+    expect(cookies).toMatch(/subsurf_access=[^;]+;.*HttpOnly/i);
+    expect(cookies).toMatch(/subsurf_refresh=[^;]+;.*Path=\/v1\/auth/i);
   });
 
   it("answers identically for a wrong password and an unknown email", async () => {

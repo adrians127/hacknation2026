@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in with email and password
-         * @description Sets two httpOnly cookies: `asi_access` (15 min JWT) and `asi_refresh` (7 days, path `/v1/auth`). Five failed attempts in a row lock the account for 15 minutes. Every failure (unknown email, wrong password, locked or deactivated account) returns the same 401.
+         * @description Sets two httpOnly cookies: `subsurf_access` (15 min JWT) and `subsurf_refresh` (7 days, path `/v1/auth`). Five failed attempts in a row lock the account for 15 minutes. Every failure (unknown email, wrong password, locked or deactivated account) returns the same 401.
          */
         post: operations["login"];
         delete?: never;
@@ -35,7 +35,7 @@ export interface paths {
         put?: never;
         /**
          * Rotate the refresh token and issue a new access token
-         * @description Reads the `asi_refresh` cookie. Presenting an already rotated refresh token revokes the whole session.
+         * @description Reads the `subsurf_refresh` cookie. Presenting an already rotated refresh token revokes the whole session.
          */
         post: operations["refreshSession"];
         delete?: never;

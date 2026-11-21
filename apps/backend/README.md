@@ -1,6 +1,6 @@
 # @hacknation/backend
 
-The REST API of the Attack Surface Intelligence system: it stores targets, configurations and scan results, hands out jobs to workers and serves data to the frontend. Only the backend writes to the database.
+The REST API of SubSurf: it stores targets, configurations and scan results, hands out jobs to workers and serves data to the frontend. Only the backend writes to the database.
 
 ## Stack
 
@@ -62,8 +62,8 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 - **Passwords:** argon2id through `node:crypto` (`crypto.argon2`, Node ≥ 24.7, so no native addon), stored as PHC strings (`lib/password.ts`). 12–128 characters, no composition rules (NIST 800-63B).
 - **Sign-in** (`POST /v1/auth/login`) sets two httpOnly cookies:
-  - `asi_access`: a 15-minute JWT (HS256, `JWT_SECRET`) carrying only `sub` (user) and `sid` (session). Path `/`, SameSite=Lax.
-  - `asi_refresh`: `<sessionId>.<secret>`, 7 days, sliding. Path `/v1/auth`, SameSite=Strict. The `Session` row keeps only sha256 of the secret.
+  - `subsurf_access`: a 15-minute JWT (HS256, `JWT_SECRET`) carrying only `sub` (user) and `sid` (session). Path `/`, SameSite=Lax.
+  - `subsurf_refresh`: `<sessionId>.<secret>`, 7 days, sliding. Path `/v1/auth`, SameSite=Strict. The `Session` row keeps only sha256 of the secret.
 - **Refresh** rotates the refresh token. Presenting an older one revokes the whole session (token theft), except within 30 s of the rotation, when it is a parallel request from another tab and only the access token is renewed.
 - **Every request** loads the session, user and role in one query (`middleware/authenticate.ts`), so a role change, deactivation or sign-out applies immediately rather than when the JWT expires.
 - **Lockout:** 5 failed sign-ins in a row lock the account for 15 minutes. Every failure (unknown email, wrong password, locked or inactive account) gets the same 401, and unknown emails still burn an argon2 verification, so neither the answer nor its timing reveals whether an account exists. There is no per-IP rate limit.

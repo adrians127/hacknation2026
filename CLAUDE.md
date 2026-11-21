@@ -4,7 +4,7 @@ This file guides Claude Code when working in this repository. It is deliberately
 
 ## What this repository is
 
-An **Attack Surface Intelligence** prototype for the HackNation 2026 hackathon. The task was set by the AGH Information Security Center (Centrum Bezpieczeństwa Informacji AGH). The system periodically scans large networks (>10,000 IPs), detects live hosts and services, fingerprints HTTP/HTTPS (title, status code, headers, cookies, TLS, redirects), recognizes technologies and CMSs, supports custom detection signatures and shows changes between scans. On top of that come RBAC, encryption of data at rest, CSV/JSON import/export and DefectDojo integration.
+**SubSurf**, an Attack Surface Intelligence prototype for the HackNation 2026 hackathon. The task was set by the AGH Information Security Center (Centrum Bezpieczeństwa Informacji AGH). The system periodically scans large networks (>10,000 IPs), detects live hosts and services, fingerprints HTTP/HTTPS (title, status code, headers, cookies, TLS, redirects), recognizes technologies and CMSs, supports custom detection signatures and shows changes between scans. On top of that come RBAC, encryption of data at rest, CSV/JSON import/export and DefectDojo integration.
 
 ## Task context: always include the PDF
 

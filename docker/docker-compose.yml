@@ -1,4 +1,4 @@
-# Local infrastructure for Attack Surface Intelligence. See docker/README.md.
+# Local infrastructure for SubSurf. See docker/README.md.
 #
 #   pnpm db:up          PostgreSQL only
 #   pnpm infra:up       every default service (PostgreSQL + DefectDojo)

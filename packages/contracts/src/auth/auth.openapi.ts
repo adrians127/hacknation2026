@@ -17,7 +17,7 @@ registry.registerPath({
   operationId: "login",
   summary: "Sign in with email and password",
   description:
-    "Sets two httpOnly cookies: `asi_access` (15 min JWT) and `asi_refresh` (7 days, path `/v1/auth`). Five failed attempts in a row lock the account for 15 minutes. Every failure (unknown email, wrong password, locked or deactivated account) returns the same 401.",
+    "Sets two httpOnly cookies: `subsurf_access` (15 min JWT) and `subsurf_refresh` (7 days, path `/v1/auth`). Five failed attempts in a row lock the account for 15 minutes. Every failure (unknown email, wrong password, locked or deactivated account) returns the same 401.",
   tags,
   request: { body: { content: { "application/json": { schema: LoginBodySchema } } } },
   responses: {
@@ -36,7 +36,7 @@ registry.registerPath({
   operationId: "refreshSession",
   summary: "Rotate the refresh token and issue a new access token",
   description:
-    "Reads the `asi_refresh` cookie. Presenting an already rotated refresh token revokes the whole session.",
+    "Reads the `subsurf_refresh` cookie. Presenting an already rotated refresh token revokes the whole session.",
   tags,
   responses: {
     204: { description: "New cookies set" },
