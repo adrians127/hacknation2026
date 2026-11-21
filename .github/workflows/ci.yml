@@ -17,6 +17,27 @@ jobs:
   verify:
     name: Lint, types, build, test
     runs-on: ubuntu-latest
+    # Backend tests are integration tests; they create and migrate `hacknation_test` here.
+    services:
+      postgres:
+        image: postgres:19-alpine
+        env:
+          POSTGRES_USER: hacknation
+          POSTGRES_PASSWORD: hacknation
+          POSTGRES_DB: hacknation
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hacknation"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: hacknation
+      DB_PASSWORD: hacknation
+      DB_SSLMODE: disable
     steps:
       - uses: actions/checkout@v7
 
