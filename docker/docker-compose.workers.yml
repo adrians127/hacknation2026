@@ -31,6 +31,10 @@ services:
   masscan-worker:
     build:
       context: ../apps/workers/masscan-worker
+      args:
+        # Docker Hub rate limit (429)? Use a mirror, e.g.
+        #   UBUNTU_IMAGE=public.ecr.aws/docker/library/ubuntu pnpm workers:build
+        UBUNTU_IMAGE: ${UBUNTU_IMAGE:-ubuntu}
     image: hacknation/masscan-worker:local
     restart: "no"
     # masscan sends raw packets and reads replies off the NIC itself; behind Docker NAT it would

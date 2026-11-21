@@ -1,13 +1,13 @@
-# syntax=docker/dockerfile:1
-#
 # Built from this directory: docker build -t masscan-worker apps/workers/masscan-worker
 # (or `pnpm workers:build` from the repo root).
 #
 # Build and runtime share one base so the binary's libstdc++ matches at runtime.
+# UBUNTU_IMAGE lets you pull the base from a Docker Hub mirror when Hub rate-limits you (429).
 
+ARG UBUNTU_IMAGE=ubuntu
 ARG UBUNTU_VERSION=26.04
 
-FROM ubuntu:${UBUNTU_VERSION} AS builder
+FROM ${UBUNTU_IMAGE}:${UBUNTU_VERSION} AS builder
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential cmake ninja-build nlohmann-json3-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -19,7 +19,7 @@ RUN cmake --preset release && cmake --build --preset release \
     && ctest --test-dir build/release --output-on-failure \
     && cmake --install build/release --prefix /out
 
-FROM ubuntu:${UBUNTU_VERSION} AS runner
+FROM ${UBUNTU_IMAGE}:${UBUNTU_VERSION} AS runner
 RUN apt-get update \
     && apt-get install -y --no-install-recommends masscan libcap2-bin \
     && rm -rf /var/lib/apt/lists/* \
