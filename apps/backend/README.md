@@ -1,70 +1,70 @@
 # @hacknation/backend
 
-REST API systemu Attack Surface Intelligence: przechowuje cele, konfiguracje i wyniki skanów, wydaje zadania workerom i serwuje dane frontendowi. Tylko backend pisze do bazy.
+The REST API of the Attack Surface Intelligence system: it stores targets, configurations and scan results, hands out jobs to workers and serves data to the frontend. Only the backend writes to the database.
 
 ## Stack
 
-- **Node 26** + **TypeScript 7** (`tsc` służy tylko do type-checku)
-- **Express 5**: async handlery, odrzucone promisy trafiają do error handlera
-- **Prisma 7.10** + `@prisma/adapter-pg`, **PostgreSQL 19** (z `docker/`)
-- **zod 4**: walidacja requestów schematami z `@hacknation/contracts`
-- **pino** / **pino-http**: logi
-- **tsdown** (build, rolldown) · **tsx** (dev, watch) · **Vitest** (testy) · **oxlint** (lint, type-aware)
+- **Node 26** + **TypeScript 7** (`tsc` is used for type-checking only)
+- **Express 5**: async handlers, rejected promises reach the error handler
+- **Prisma 7.10** + `@prisma/adapter-pg`, **PostgreSQL 19** (from `docker/`)
+- **zod 4**: request validation with schemas from `@hacknation/contracts`
+- **pino** / **pino-http**: logging
+- **tsdown** (build, rolldown) · **tsx** (dev, watch) · **Vitest** (tests) · **oxlint** (lint, type-aware)
 
-> Prisma 7.10.1 przy instalacji ostrzega, że oficjalnie wspiera Node 20/22/24. Na Node 26 `generate`, zapytania i obraz Dockera działają. Prisma 8 jest na razie w RC, więc zostajemy na 7.x.
+> Prisma 7.10.1 warns on install that it officially supports Node 20/22/24. On Node 26, `generate`, queries and the Docker image all work. Prisma 8 is still in RC, so we stay on 7.x.
 
-## Komendy
+## Commands
 
 ```bash
 pnpm --filter @hacknation/backend dev          # tsx watch, :3001
 pnpm --filter @hacknation/backend build        # tsdown -> dist/index.mjs
 pnpm --filter @hacknation/backend start        # node dist/index.mjs
-pnpm --filter @hacknation/backend test         # vitest (nie wymaga bazy)
-pnpm --filter @hacknation/backend db:migrate   # prisma migrate dev (nowa migracja)
+pnpm --filter @hacknation/backend test         # vitest (no database needed)
+pnpm --filter @hacknation/backend db:migrate   # prisma migrate dev (new migration)
 pnpm --filter @hacknation/backend db:studio    # Prisma Studio
-pnpm db:reset                                  # z roota: drop + wszystkie migracje + seed
+pnpm db:reset                                  # from the repo root: drop + all migrations + seed
 ```
 
-Swagger UI jest pod `http://localhost:3001/docs` (tylko gdy `NODE_ENV=development`) i serwuje commitowany `openapi.json` z kontraktu.
+Swagger UI is at `http://localhost:3001/docs` (only when `NODE_ENV=development`) and serves the committed `openapi.json` from the contract.
 
-## Struktura `src/`
+## `src/` structure
 
 ```
 app.ts                 buildApp(): middleware -> /v1 -> notFound -> errorHandler
-index.ts               listen, próba połączenia z DB, graceful shutdown
+index.ts               listen, DB connection check, graceful shutdown
 config/                env.ts (zod + process.loadEnvFile), database-url.ts (DB_* -> URL)
 lib/                   prisma, logger, http-error, api-docs
-middleware/            validate (zod z kontraktu), error-handler, not-found
-routes/index.ts        apiRouter: jedna linia apiRouter.use("/x", ...) na moduł
+middleware/            validate (zod from the contract), error-handler, not-found
+routes/index.ts        apiRouter: one apiRouter.use("/x", ...) line per module
 modules/<feature>/     <feature>.routes.ts | .controller.ts | .service.ts | .test.ts
-generated/prisma       Prisma Client (gitignored, generowany w postinstall)
+generated/prisma       Prisma Client (gitignored, generated in postinstall)
 ```
 
-**Nowy moduł:** schematy w `packages/contracts/src/<feature>/` (+ `pnpm generate`), potem `src/modules/<feature>/` i jedna linia w `routes/index.ts`. Route deklaruje kontrakt przez `validate({ params, query, body })`, a gdy request się nie zgadza, `ZodError` zamienia się w 400 automatycznie.
+**New module:** schemas in `packages/contracts/src/<feature>/` (+ `pnpm generate`), then `src/modules/<feature>/` and one line in `routes/index.ts`. A route declares its contract with `validate({ params, query, body })`, and when a request does not match, the `ZodError` is turned into a 400 automatically.
 
 ## Prisma
 
-- `prisma.config.ts`: ścieżka schematu, migracje, seed i URL z `DB_*`. Placeholder URL sprawia, że `prisma generate` działa na świeżym klonie bez bazy.
-- `prisma/schema/schema.prisma`: tylko generator i datasource. Modele leżą w `prisma/schema/<moduł>/<model>.prisma` (jeden plik na model, folder nazwany jak moduł w `src/modules/`, który jest właścicielem tabeli).
-- Każde pole relacji potrzebuje `@@index`, bo Prisma nie zakłada indeksów na FK w Postgresie.
-- Pola z danymi wrażliwymi muszą być szyfrowane at rest (wymóg 16 z PDF), np. AES-256-GCM w Prisma Client extension. Do zaprojektowania razem z pierwszymi modelami.
+- `prisma.config.ts`: schema path, migrations, seed and the URL built from `DB_*`. A placeholder URL lets `prisma generate` run on a fresh clone without a database.
+- `prisma/schema/schema.prisma`: only the generator and the datasource. Models live in `prisma/schema/<module>/<model>.prisma` (one file per model, in a folder named after the module in `src/modules/` that owns the table).
+- Every relation field needs an `@@index`, because Prisma does not create indexes on foreign keys in Postgres.
+- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF), e.g. AES-256-GCM in a Prisma Client extension. To be designed together with the first models.
 
-## Zmienne środowiskowe
+## Environment variables
 
-Plik `.env.example` opisuje każdą zmienną. `pnpm project:setup` kopiuje go do `.env`. Prawdziwe zmienne środowiskowe mają pierwszeństwo przed `.env`. Brakująca albo błędna zmienna zatrzymuje proces przy starcie z czytelnym błędem.
+`.env.example` documents every variable. `pnpm project:setup` copies it to `.env`. Real environment variables take precedence over `.env`. A missing or invalid variable stops the process at startup with a readable error.
 
-| Zmienna | Domyślnie | Opis |
+| Variable | Default | Description |
 |---|---|---|
-| `NODE_ENV` | `development` | `development` = ładne logi, Swagger, stack trace w odpowiedziach |
-| `PORT` | `3001` | port HTTP |
-| `LOG_LEVEL` | `info` | poziom pino |
-| `CORS_ORIGIN` | `http://localhost:3000` | dozwolony origin (z credentials) |
-| `DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASSWORD` `DB_SSLMODE` | — | Postgres w częściach, bez `DATABASE_URL` |
+| `NODE_ENV` | `development` | `development` = pretty logs, Swagger, stack traces in responses |
+| `PORT` | `3001` | HTTP port |
+| `LOG_LEVEL` | `info` | pino log level |
+| `CORS_ORIGIN` | `http://localhost:3000` | allowed origin (with credentials) |
+| `DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASSWORD` `DB_SSLMODE` | — | Postgres connection in parts, no `DATABASE_URL` |
 
 ## Docker
 
 ```bash
-docker build -f apps/backend/Dockerfile .      # z roota repo
+docker build -f apps/backend/Dockerfile .      # from the repo root
 ```
 
-Wieloetapowy build na `node:26.13.1-slim` z `pnpm deploy`, proces działa jako `USER node`. Ten sam obraz uruchamia migracje: `node_modules/.bin/prisma migrate deploy`.
+A multi-stage build on `node:26.13.1-slim` using `pnpm deploy`; the process runs as `USER node`. The same image runs migrations: `node_modules/.bin/prisma migrate deploy`.

@@ -1,7 +1,7 @@
 # docs/
 
-Dokumentacja techniczna projektu. Organizatorzy wymagają jej formalnie (sekcja 4 w `hackathon-zadanie.pdf`): repozytorium kodu, dokumentacja techniczna i prezentacja do 10 slajdów z działającym demo.
+The project's technical documentation. The organizers formally require it (section 4 of `hackathon-zadanie.pdf`): a source code repository, technical documentation and a presentation of up to 10 slides with a working demo.
 
-Konwencja nazw plików: kebab-case, np. `architecture.md`, `scan-pipeline.md`, `rbac.md`, `defectdojo-integration.md`.
+File naming convention: kebab-case, e.g. `architecture.md`, `scan-pipeline.md`, `rbac.md`, `defectdojo-integration.md`.
 
-Opis poszczególnych aplikacji jest w ich `README.md`, a ustalona architektura w `CLAUDE.md`.
+Each app is described in its own `README.md`, and the settled architecture is in `CLAUDE.md`.
