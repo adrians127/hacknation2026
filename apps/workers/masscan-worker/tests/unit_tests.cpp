@@ -1,5 +1,6 @@
 // Dependency-free unit tests: input validation, range math, masscan output parsing, topology.
 
+#include <chrono>
 #include <cstdlib>
 #include <nlohmann/json.hpp>
 #include <print>
@@ -10,6 +11,7 @@
 
 #include "address.hpp"
 #include "config.hpp"
+#include "logger.hpp"
 #include "masscan_runner.hpp"
 #include "scan_job.hpp"
 #include "topology.hpp"
@@ -32,7 +34,10 @@ void check(bool condition, std::string_view what,
 const Config kConfig{.masscan_binary = "masscan",
                      .default_rate = 10'000,
                      .max_rate = 50'000,
-                     .max_target_addresses = 1U << 20};
+                     .max_target_addresses = 1U << 20,
+                     .log_level = LogLevel::kInfo,
+                     .log_format = LogFormat::kText,
+                     .progress_interval = std::chrono::seconds{5}};
 
 void test_addresses() {
     check(parse_ipv4("10.1.2.3") == 0x0A010203U, "parse ipv4");
@@ -129,6 +134,29 @@ void test_parse_finding() {
     check(!parse_finding("not json") && !parse_finding("{\"finished\": 1}"), "garbage ignored");
 }
 
+void test_masscan_status() {
+    const auto running =
+        parse_masscan_status("rate:  9.98-kpps, 42.10% done,   1:02:03 remaining, found=17       ");
+    check(running && running->rate_pps > 9979 && running->rate_pps < 9981 &&
+              running->percent_done > 42.09 && running->remaining == std::chrono::seconds{3723} &&
+              !running->waiting && running->found == 17,
+          "running status line");
+    const auto early =
+        parse_masscan_status("rate:  0.00-kpps,  0.10% done,48085:35:47 remaining, found=0");
+    check(early && early->remaining == std::chrono::seconds{48085 * 3600 + 35 * 60 + 47},
+          "status without space after comma");
+    const auto waiting =
+        parse_masscan_status("rate:  0.00-kpps, 100.00% done, waiting 2-secs, found=3");
+    check(waiting && waiting->waiting == std::chrono::seconds{2} && !waiting->remaining &&
+              waiting->found == 3,
+          "waiting status line");
+    check(!parse_masscan_status("Starting masscan 1.3.2") && !parse_masscan_status("rate: x"),
+          "non-status lines");
+    check(parse_log_level("debug") == LogLevel::kDebug && !parse_log_level("loud") &&
+              parse_log_format("json") == LogFormat::kJson,
+          "log settings");
+}
+
 void test_topology() {
     TopologyBuilder topology{24};
     topology.add({0x0A000105U, 443, 61});
@@ -158,6 +186,7 @@ int main() {
     test_addresses();
     test_scan_job();
     test_parse_finding();
+    test_masscan_status();
     test_topology();
     if (g_failures > 0) {
         std::println(stderr, "{} check(s) failed", g_failures);

@@ -4,13 +4,18 @@ A **C++23** worker for fast, wide TCP SYN sweeps (whole subnets, up to all 65,53
 
 The worker runs one job and exits. It does not talk to the backend. An orchestration layer starts it per job, reads the result and decides what comes next (resume, re-shard, hand hosts to `nmap-worker` for service detection). Wrapping it in the HTTP pull loop from [`../README.md`](../README.md) is a separate step.
 
-## Usage
+## Run (Docker only)
+
+The worker is built and run only in Docker. From the repo root:
 
 ```bash
-masscan-worker [--input FILE] [--output FILE] [--pretty]
-masscan-worker --input examples/job.json --output result.json
-echo '{"targets":["10.0.0.0/24"],"ports":[22,443]}' | masscan-worker
+pnpm workers:build                                                  # build the image; runs the unit tests
+pnpm workers:masscan < apps/workers/masscan-worker/examples/job.json > result.json
+echo '{"targets":["192.168.1.1"],"ports":[22,80,443]}' | pnpm workers:masscan --pretty
+MASSCAN_WORKER_LOG_LEVEL=debug pnpm workers:masscan < job.json > result.json
 ```
+
+`pnpm workers:masscan` is `docker compose -f docker/docker-compose.workers.yml run --rm -T masscan-worker`. Anything after it is passed to the worker as flags. The job goes in on stdin, the result JSON comes out on stdout, and the logs go to stderr, so `> result.json` captures only the result and the logs stay on your terminal.
 
 | Flag | Default | Description |
 |---|---|---|
@@ -18,7 +23,7 @@ echo '{"targets":["10.0.0.0/24"],"ports":[22,443]}' | masscan-worker
 | `--output` | `-` (stdout) | Result JSON. A file is written atomically (temp file + rename) |
 | `--pretty` | off | Indent the output |
 
-Logs go to stderr. A result JSON is written **in every case**, including invalid input.
+A result JSON is written **in every case**, including invalid input.
 
 | Exit code | Meaning |
 |---|---|
@@ -26,7 +31,7 @@ Logs go to stderr. A result JSON is written **in every case**, including invalid
 | `1` | `failed`: masscan missing or exited with an error |
 | `2` | `failed`: invalid input or invalid usage |
 
-`SIGINT`/`SIGTERM` stop the scan gracefully. The worker passes the stop on to masscan, waits for in-flight replies, and writes a `partial` result with a resume point.
+`SIGINT`/`SIGTERM` (Ctrl+C, `docker stop`) stop the scan gracefully. The worker passes the stop on to masscan, waits for in-flight replies, and writes a `partial` result with a resume point.
 
 ## Input
 
@@ -72,6 +77,33 @@ See [`examples/result.json`](examples/result.json). Top-level fields:
 
 A `failed` result still contains whatever masscan reported before it failed.
 
+## Logging
+
+The worker logs every step to stderr, one line per event. The level is `info` by default:
+
+```
+2026-11-21T17:21:40.560Z info  masscan-worker starting version=0.1.0 input=stdin output=stdout max_rate_pps=100000
+2026-11-21T17:21:40.561Z info  job accepted job_id=demo targets=10.0.0.0-10.0.1.255 addresses=512 ports=22,443,3389 port_count=3 probes=1536 rate_pps=5000 estimated_s=3 max_duration_s=null seed=1978539184939333
+2026-11-21T17:21:40.562Z info  masscan found version=1.3.2 binary=masscan
+2026-11-21T17:21:40.563Z info  masscan started pid=16729
+2026-11-21T17:21:41.668Z info  35.00% done rate_pps=9980 hosts_up=1 open_ports=2 elapsed_s=1 eta_s=6
+2026-11-21T17:21:42.873Z info  85.00% done rate_pps=9980 hosts_up=1 open_ports=2 elapsed_s=2 eta_s=1
+2026-11-21T17:21:43.766Z info  masscan exited exit_code=0 elapsed_s=3 open_ports_reported=4
+2026-11-21T17:21:43.766Z info  scan finished status=completed hosts_up=2 open_ports=3 subnets=2 duration_s=3
+2026-11-21T17:21:43.767Z info  result written output=stdout bytes=1282 exit_code=0
+```
+
+| Level | What you see |
+|---|---|
+| `debug` | Everything below, plus the full masscan command line, masscan's own messages, and every host and open port as it is found |
+| `info` | Start, accepted job (addresses, ports, probes, rate, estimated duration), masscan start and exit, progress every `MASSCAN_WORKER_PROGRESS_INTERVAL` seconds (% done, rate, ETA, hosts up so far), summary, result written |
+| `warn` | Clamped rate, an estimated duration longer than the time window, a time-window or signal stop, masscan warnings (`masscan: FAIL: …`) |
+| `error` | Invalid job, masscan failures, masscan killed after ignoring the stop, a result that could not be written |
+
+`MASSCAN_WORKER_LOG_FORMAT=json` emits one JSON object per line instead (`ts`, `level`, `event`, `msg`, plus the fields), for an orchestrator or a log collector. The `event` names are stable: `worker.start`, `job.accepted`, `job.warning`, `job.window`, `scanner.detected`, `masscan.command`, `scan.started`, `scan.progress`, `masscan.message`, `host.up`, `port.open`, `scan.stopping`, `scan.killing`, `masscan.exited`, `scan.failed`, `scan.finished`, `job.failed`, `result.written`.
+
+Progress comes from masscan's own status line, so `% done` covers masscan's full index space, including the part skipped by `resume_index`.
+
 ## Speed
 
 - masscan is the bottleneck, and the worker adds almost nothing on top. Results are parsed as a stream, so memory grows with the number of live hosts, not the number of probes.
@@ -95,25 +127,17 @@ A `failed` result still contains whatever masscan reported before it failed.
 | `MASSCAN_WORKER_DEFAULT_RATE` | `10000` | Rate for jobs that do not set one (pps) |
 | `MASSCAN_WORKER_MAX_RATE` | `100000` | Hard cap on any job's rate (pps) |
 | `MASSCAN_WORKER_MAX_TARGETS` | `16777216` | Maximum addresses per job (a /8) |
+| `MASSCAN_WORKER_LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error` |
+| `MASSCAN_WORKER_LOG_FORMAT` | `text` | `text` or `json` (one object per line) |
+| `MASSCAN_WORKER_PROGRESS_INTERVAL` | `5` | Seconds between progress lines |
 
-## Build and run (Docker, recommended)
+[`docker-compose.workers.yml`](../../../docker/docker-compose.workers.yml) passes all `MASSCAN_WORKER_*` variables from your shell into the container, e.g. `MASSCAN_WORKER_LOG_LEVEL=debug pnpm workers:masscan < job.json`.
 
-```bash
-pnpm workers:build                                     # from the repo root
-pnpm workers:masscan < apps/workers/masscan-worker/examples/job.json
-# = docker compose -f docker/docker-compose.workers.yml run --rm -T masscan-worker < job.json
-```
+## Docker image
 
-The image is built and runs on `ubuntu:26.04`, with the distribution's `masscan` and `nlohmann-json3-dev`. The unit tests run during the image build. masscan has `setcap cap_net_raw,cap_net_admin`, so the worker runs as the non-root `worker` user. The container needs `NET_RAW` / `NET_ADMIN`. On a bridge network, masscan's replies go through Docker NAT. For real sweeps, use `network_mode: host` on a Linux host.
+The image is built and runs on `ubuntu:26.04`, with the distribution's `masscan` and `nlohmann-json3-dev`. The image build compiles with the strict warning flags and runs the unit tests (`ctest`), so `pnpm workers:build` fails if a test fails. CI builds the same image.
 
-## Local build
-
-```bash
-sudo apt install g++-14 cmake ninja-build nlohmann-json3-dev masscan   # GCC >= 14 for <print>
-CXX=g++-14 cmake --preset debug && cmake --build --preset debug
-ctest --test-dir build/debug --output-on-failure
-sudo ./build/debug/masscan-worker --input examples/job.json --pretty   # or setcap masscan
-```
+masscan has `setcap cap_net_raw,cap_net_admin`, so the worker runs as the non-root `worker` user. The container needs `NET_RAW` / `NET_ADMIN`, which compose grants. On the default bridge network, masscan's traffic goes through Docker NAT. For real LAN sweeps, use `network_mode: host` on a Linux host.
 
 ## Source layout
 
@@ -122,11 +146,12 @@ sudo ./build/debug/masscan-worker --input examples/job.json --pretty   # or setc
 | `src/main.cpp` | CLI, reads input, wires everything together, writes the result and exit code |
 | `src/scan_job.*` | Validates the input JSON into a `ScanJob` and applies the config limits |
 | `src/address.*` | IPv4 / port parsing, range merge and subtraction |
-| `src/masscan_runner.*` | Builds masscan's argv, streams and parses `-oD`, time window and signal thread, `paused.conf` |
+| `src/masscan_runner.*` | Builds masscan's argv, polls masscan's stdout (`-oD` results) and stderr (status line → progress), time window and signal thread, `paused.conf` |
 | `src/process.*` | RAII file descriptors, `fork`/`execvp` with its own process group |
 | `src/topology.*` | Groups findings into subnets, TTL heuristics |
 | `src/report.*` | Result JSON |
 | `src/config.*` | Environment variables |
+| `src/logger.*` | Leveled text or JSON-lines logging to stderr |
 | `tests/unit_tests.cpp` | Framework-free unit tests (`ctest`) |
 
 ## Dependencies

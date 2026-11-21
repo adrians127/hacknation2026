@@ -33,6 +33,14 @@ services:
       context: ../apps/workers/masscan-worker
     image: hacknation/masscan-worker:local
     restart: "no"
+    environment:
+      # Logs go to stderr, the result JSON to stdout. See the worker's README.
+      MASSCAN_WORKER_LOG_LEVEL: ${MASSCAN_WORKER_LOG_LEVEL:-info}
+      MASSCAN_WORKER_LOG_FORMAT: ${MASSCAN_WORKER_LOG_FORMAT:-text}
+      MASSCAN_WORKER_PROGRESS_INTERVAL: ${MASSCAN_WORKER_PROGRESS_INTERVAL:-5}
+      MASSCAN_WORKER_DEFAULT_RATE: ${MASSCAN_WORKER_DEFAULT_RATE:-10000}
+      MASSCAN_WORKER_MAX_RATE: ${MASSCAN_WORKER_MAX_RATE:-100000}
+      MASSCAN_WORKER_MAX_TARGETS: ${MASSCAN_WORKER_MAX_TARGETS:-16777216}
     cap_add:
       - NET_RAW
       - NET_ADMIN

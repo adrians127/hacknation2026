@@ -1,7 +1,10 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <string>
+
+#include "logger.hpp"
 
 namespace masscan_worker {
 
@@ -11,6 +14,9 @@ struct Config {
     std::uint32_t default_rate;
     std::uint32_t max_rate;
     std::uint64_t max_target_addresses;
+    LogLevel log_level;
+    LogFormat log_format;
+    std::chrono::seconds progress_interval;
 };
 
 // Throws std::runtime_error on a malformed variable (startup failure).

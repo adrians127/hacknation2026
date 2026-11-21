@@ -1,6 +1,7 @@
 #include "masscan_runner.hpp"
 
 #include <fcntl.h>
+#include <poll.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -10,14 +11,15 @@
 #include <charconv>
 #include <chrono>
 #include <csignal>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <deque>
 #include <format>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <span>
-#include <sstream>
 #include <stop_token>
 #include <system_error>
 #include <thread>
@@ -35,6 +37,8 @@ constexpr std::size_t kReadChunk = 64 * 1024;
 constexpr auto kSupervisorTick = 200ms;
 // After SIGINT masscan keeps listening for --wait seconds; beyond this extra it gets SIGKILL.
 constexpr auto kKillGrace = 10s;
+constexpr int kPollTimeoutMs = 250;
+constexpr std::size_t kKeptMessages = 6;
 
 class TempDir {
 public:
@@ -85,13 +89,6 @@ std::expected<void, Error> write_target_file(const std::filesystem::path& path,
     return {};
 }
 
-std::string read_file(const std::filesystem::path& path) {
-    std::ifstream file{path, std::ios::binary};
-    std::ostringstream content;
-    content << file.rdbuf();
-    return std::move(content).str();
-}
-
 // masscan writes paused.conf into its working directory when a scan is interrupted.
 std::optional<std::uint64_t> read_resume_index(const std::filesystem::path& paused_conf) {
     std::ifstream file{paused_conf};
@@ -120,27 +117,65 @@ std::optional<std::uint64_t> read_resume_index(const std::filesystem::path& paus
     return std::nullopt;
 }
 
-// Drops the \r-separated progress lines masscan prints to stderr; keeps the last few real ones.
-std::string summarize_stderr(std::string_view log) {
-    std::vector<std::string_view> lines;
-    while (!log.empty()) {
-        const std::size_t end = log.find_first_of("\r\n");
-        const std::string_view line = log.substr(0, end);
-        if (!line.empty() && !line.starts_with("rate:") &&
-            line.find_first_not_of(' ') != line.npos) {
-            lines.push_back(line);
-        }
-        log = end == std::string_view::npos ? std::string_view{} : log.substr(end + 1);
+std::string_view trim(std::string_view text) {
+    const std::size_t begin = text.find_first_not_of(' ');
+    if (begin == std::string_view::npos) {
+        return {};
     }
-    constexpr std::size_t kKeep = 6;
-    std::string out;
-    for (std::size_t i = lines.size() > kKeep ? lines.size() - kKeep : 0; i < lines.size(); ++i) {
-        if (!out.empty()) {
-            out += " | ";
-        }
-        out += lines[i];
+    return text.substr(begin, text.find_last_not_of(' ') - begin + 1);
+}
+
+template <typename T>
+std::optional<T> parse_number(std::string_view text) {
+    T value{};
+    const auto [end, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
+    if (ec != std::errc{} || end != text.data() + text.size()) {
+        return std::nullopt;
     }
-    return out;
+    return value;
+}
+
+// Calls `on_line` for each complete line in `pending` and keeps the unfinished tail.
+template <typename OnLine>
+void drain_lines(std::string& pending, std::string_view delimiters, OnLine&& on_line) {
+    std::size_t start = 0;
+    for (std::size_t end = pending.find_first_of(delimiters); end != std::string::npos;
+         end = pending.find_first_of(delimiters, start)) {
+        if (end > start) {
+            on_line(std::string_view{pending}.substr(start, end - start));
+        }
+        start = end + 1;
+    }
+    pending.erase(0, start);
+}
+
+// false on EOF or a read error: either way the stream is done.
+bool read_available(int fd, std::string& pending) {
+    std::array<char, kReadChunk> buffer{};
+    while (true) {
+        const ssize_t count = ::read(fd, buffer.data(), buffer.size());
+        if (count > 0) {
+            pending.append(buffer.data(), static_cast<std::size_t>(count));
+            return true;
+        }
+        if (count < 0 && errno == EINTR) {
+            continue;
+        }
+        return false;
+    }
+}
+
+bool looks_like_problem(std::string_view line) {
+    for (const std::string_view marker : {"FAIL", "ERROR", "error", "WARN", "warning"}) {
+        if (line.find(marker) != std::string_view::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string_view signal_name(int signal) {
+    return signal == SIGINT ? "SIGINT" : signal == SIGTERM ? "SIGTERM" : "signal";
 }
 
 }  // namespace
@@ -261,44 +296,114 @@ std::optional<Finding> parse_finding(std::string_view line) {
                    static_cast<std::uint8_t>(ttl)};
 }
 
+std::optional<MasscanStatus> parse_masscan_status(std::string_view line) {
+    // "rate:  1.00-kpps, 85.70% done,   0:00:01 remaining, found=3"
+    // "rate:  0.00-kpps, 100.00% done, waiting 2-secs, found=3"
+    if (!line.starts_with("rate:")) {
+        return std::nullopt;
+    }
+    std::vector<std::string_view> parts;
+    for (std::string_view rest = line.substr(5); !rest.empty();) {
+        const std::size_t comma = rest.find(',');
+        parts.push_back(trim(rest.substr(0, comma)));
+        rest = comma == std::string_view::npos ? std::string_view{} : rest.substr(comma + 1);
+    }
+    if (parts.size() < 4) {
+        return std::nullopt;
+    }
+
+    MasscanStatus status{};
+    const std::size_t dash = parts[0].find('-');
+    const auto rate = parse_number<double>(parts[0].substr(0, dash));
+    if (!rate || dash == std::string_view::npos) {
+        return std::nullopt;
+    }
+    const std::string_view unit = parts[0].substr(dash + 1);
+    status.rate_pps = *rate * (unit == "kpps" ? 1e3 : unit == "Mpps" ? 1e6 : 1.0);
+
+    const std::size_t percent_sign = parts[1].find('%');
+    const auto percent = parse_number<double>(parts[1].substr(0, percent_sign));
+    if (!percent || percent_sign == std::string_view::npos) {
+        return std::nullopt;
+    }
+    status.percent_done = *percent;
+
+    const std::string_view timing = parts[2];
+    if (timing.starts_with("waiting ")) {
+        const std::string_view value = timing.substr(8);
+        if (const auto seconds = parse_number<std::int64_t>(value.substr(0, value.find('-')))) {
+            status.waiting = std::chrono::seconds{*seconds};
+        }
+    } else if (timing.ends_with(" remaining")) {
+        // H:MM:SS, where H can be large early in a scan.
+        std::int64_t total = 0;
+        bool is_valid = true;
+        std::string_view rest = timing.substr(0, timing.size() - 10);
+        while (!rest.empty() && is_valid) {
+            const std::size_t colon = rest.find(':');
+            const auto value = parse_number<std::int64_t>(rest.substr(0, colon));
+            is_valid = value.has_value();
+            total = total * 60 + value.value_or(0);
+            rest = colon == std::string_view::npos ? std::string_view{} : rest.substr(colon + 1);
+        }
+        if (is_valid) {
+            status.remaining = std::chrono::seconds{total};
+        }
+    }
+
+    const std::string_view found = parts.back();
+    if (found.starts_with("found=")) {
+        status.found = parse_number<std::uint64_t>(found.substr(6)).value_or(0);
+    }
+    return status;
+}
+
 std::expected<ScanOutcome, Error> run_masscan(const ScanJob& job, const Config& config,
-                                              const FindingSink& on_finding) {
+                                              const Logger& logger,
+                                              const ScanCallbacks& callbacks) {
     auto work_dir = TempDir::create();
     if (!work_dir) return std::unexpected(work_dir.error());
     const auto target_file = work_dir->path() / "targets.txt";
-    const auto log_file = work_dir->path() / "masscan.log";
     if (auto written = write_target_file(target_file, job.ranges); !written) {
         return std::unexpected(written.error());
     }
 
-    auto pipe = make_pipe();
-    if (!pipe) return std::unexpected(pipe.error());
-    const UniqueFd log_fd{::open(log_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600)};
-    if (!log_fd.is_valid()) {
-        return std::unexpected(Error{
-            ErrorCode::kIo, std::format("open {}: {}", log_file.string(), std::strerror(errno))});
-    }
+    auto stdout_pipe = make_pipe();
+    if (!stdout_pipe) return std::unexpected(stdout_pipe.error());
+    auto stderr_pipe = make_pipe();
+    if (!stderr_pipe) return std::unexpected(stderr_pipe.error());
 
     const auto args = build_masscan_args(job, config, target_file);
+    if (logger.is_enabled(LogLevel::kDebug)) {
+        std::string command;
+        for (const std::string& arg : args) {
+            command += command.empty() ? arg : " " + arg;
+        }
+        logger.debug("masscan.command", "masscan command line", {{"argv", command}});
+    }
+    const auto started = std::chrono::steady_clock::now();
     auto child = spawn_process({.argv = args,
                                 .working_directory = work_dir->path(),
-                                .stdout_fd = pipe->write_end.get(),
-                                .stderr_fd = log_fd.get()});
+                                .stdout_fd = stdout_pipe->write_end.get(),
+                                .stderr_fd = stderr_pipe->write_end.get()});
     if (!child) return std::unexpected(child.error());
-    pipe->write_end.reset();
+    stdout_pipe->write_end.reset();
+    stderr_pipe->write_end.reset();
+    logger.info("scan.started", "masscan started", {{"pid", child->pid()}});
 
     std::optional<std::chrono::steady_clock::time_point> deadline;
     if (job.max_duration) {
-        deadline = std::chrono::steady_clock::now() + *job.max_duration;
+        deadline = started + *job.max_duration;
     }
     std::atomic<StopReason> stop_reason{StopReason::kNone};
     std::atomic<bool> was_killed{false};
     const auto kill_after = job.wait + kKillGrace;
+    const auto max_duration = job.max_duration;
 
     // The child is reaped only after this thread is joined, so its pid cannot be recycled
     // while the thread may still signal it.
-    std::jthread supervisor{[&child, &stop_reason, &was_killed, deadline,
-                             kill_after](const std::stop_token& token) noexcept {
+    std::jthread supervisor{[&child, &stop_reason, &was_killed, &logger, deadline, kill_after,
+                             max_duration](const std::stop_token& token) noexcept {
         sigset_t signals{};
         sigemptyset(&signals);
         sigaddset(&signals, SIGINT);
@@ -310,18 +415,24 @@ std::expected<ScanOutcome, Error> run_masscan(const ScanJob& job, const Config& 
             const int signal = ::sigtimedwait(&signals, nullptr, &kTick);
             const auto now = std::chrono::steady_clock::now();
             if (!interrupted_at) {
-                StopReason reason = StopReason::kNone;
                 if (signal == SIGINT || signal == SIGTERM) {
-                    reason = StopReason::kSignal;
+                    stop_reason = StopReason::kSignal;
+                    logger.warn("scan.stopping", "stop signal received, stopping masscan",
+                                {{"signal", signal_name(signal)}});
                 } else if (deadline && now >= *deadline) {
-                    reason = StopReason::kTimeWindow;
+                    stop_reason = StopReason::kTimeWindow;
+                    logger.warn("scan.stopping", "time window reached, stopping masscan",
+                                {{"max_duration_s", max_duration ? max_duration->count() : 0}});
                 }
-                if (reason != StopReason::kNone) {
-                    stop_reason = reason;
+                if (stop_reason != StopReason::kNone) {
                     child->send_signal(SIGINT);  // graceful: masscan writes paused.conf
                     interrupted_at = now;
                 }
             } else if (!has_killed && (signal > 0 || now - *interrupted_at >= kill_after)) {
+                logger.error("scan.killing",
+                             signal > 0 ? "second stop signal, killing masscan"
+                                        : "masscan did not stop in time, killing it",
+                             {{"grace_s", kill_after.count()}});
                 child->send_signal(SIGKILL);
                 was_killed = true;
                 has_killed = true;
@@ -330,30 +441,67 @@ std::expected<ScanOutcome, Error> run_masscan(const ScanJob& job, const Config& 
     }};
 
     ScanOutcome outcome;
-    std::string pending;
-    std::array<char, kReadChunk> buffer{};
-    while (true) {
-        const ssize_t count = ::read(pipe->read_end.get(), buffer.data(), buffer.size());
-        if (count == 0) break;
-        if (count < 0) {
-            if (errno == EINTR) continue;
+    std::uint64_t open_ports_reported = 0;
+    std::optional<MasscanStatus> last_status;
+    std::deque<std::string> recent_messages;  // non-status stderr lines, for error reports
+
+    const auto on_stdout_line = [&](std::string_view line) {
+        if (const auto finding = parse_finding(line)) {
+            ++open_ports_reported;
+            callbacks.on_finding(*finding);
+        } else if (line.front() == '{' && line.find("\"status\"") != line.npos) {
+            ++outcome.malformed_lines;
+        }
+    };
+    const auto on_stderr_line = [&](std::string_view line) {
+        if (line.starts_with("rate:")) {
+            if (auto status = parse_masscan_status(line)) {
+                last_status = *status;
+            }
+            return;
+        }
+        const std::string_view text = trim(line);
+        if (text.empty()) {
+            return;
+        }
+        const LogLevel level = looks_like_problem(text) ? LogLevel::kWarn : LogLevel::kDebug;
+        if (logger.is_enabled(level)) {
+            logger.log(level, "masscan.message", std::format("masscan: {}", text));
+        }
+        recent_messages.emplace_back(text);
+        if (recent_messages.size() > kKeptMessages) {
+            recent_messages.pop_front();
+        }
+    };
+
+    std::string stdout_pending;
+    std::string stderr_pending;
+    std::array<pollfd, 2> fds{
+        {{stdout_pipe->read_end.get(), POLLIN, 0}, {stderr_pipe->read_end.get(), POLLIN, 0}}};
+    auto next_progress = started + config.progress_interval;
+    while (fds[0].fd >= 0 || fds[1].fd >= 0) {
+        const int ready = ::poll(fds.data(), fds.size(), kPollTimeoutMs);
+        if (ready < 0 && errno != EINTR) {
             break;
         }
-        pending.append(buffer.data(), static_cast<std::size_t>(count));
-        std::size_t line_start = 0;
-        for (std::size_t newline = pending.find('\n'); newline != std::string::npos;
-             newline = pending.find('\n', line_start)) {
-            const std::string_view line{pending.data() + line_start, newline - line_start};
-            if (!line.empty()) {
-                if (const auto finding = parse_finding(line)) {
-                    on_finding(*finding);
-                } else if (line.front() == '{' && line.find("\"status\"") != line.npos) {
-                    ++outcome.malformed_lines;
-                }
+        if (ready > 0) {
+            if (fds[0].fd >= 0 && fds[0].revents != 0) {
+                if (!read_available(fds[0].fd, stdout_pending)) fds[0].fd = -1;
+                drain_lines(stdout_pending, "\n", on_stdout_line);
             }
-            line_start = newline + 1;
+            if (fds[1].fd >= 0 && fds[1].revents != 0) {
+                if (!read_available(fds[1].fd, stderr_pending)) fds[1].fd = -1;
+                // masscan redraws its status line with \r, other messages end with \n.
+                drain_lines(stderr_pending, "\r\n", on_stderr_line);
+            }
         }
-        pending.erase(0, line_start);
+        const auto now = std::chrono::steady_clock::now();
+        if (now >= next_progress && callbacks.on_progress) {
+            callbacks.on_progress({.status = last_status,
+                                   .elapsed = now - started,
+                                   .open_ports_reported = open_ports_reported});
+            next_progress = now + config.progress_interval;
+        }
     }
 
     supervisor.request_stop();
@@ -362,7 +510,15 @@ std::expected<ScanOutcome, Error> run_masscan(const ScanJob& job, const Config& 
     outcome.stop_reason = stop_reason.load();
     outcome.was_killed = was_killed.load();
     outcome.resume_index = read_resume_index(work_dir->path() / "paused.conf");
-    outcome.diagnostics = summarize_stderr(read_file(log_file));
+    for (const std::string& message : recent_messages) {
+        outcome.diagnostics += outcome.diagnostics.empty() ? message : " | " + message;
+    }
+    logger.info("masscan.exited", "masscan exited",
+                {{"exit_code", outcome.exit_code},
+                 {"elapsed_s", std::chrono::duration_cast<std::chrono::seconds>(
+                                   std::chrono::steady_clock::now() - started)
+                                   .count()},
+                 {"open_ports_reported", open_ports_reported}});
     return outcome;
 }
 

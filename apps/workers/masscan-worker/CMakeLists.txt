@@ -21,6 +21,7 @@ find_package(Threads REQUIRED)
 add_library(masscan-worker-core STATIC
   src/address.cpp
   src/config.cpp
+  src/logger.cpp
   src/masscan_runner.cpp
   src/process.cpp
   src/report.cpp

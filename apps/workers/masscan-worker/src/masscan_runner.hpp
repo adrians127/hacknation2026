@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <expected>
 #include <filesystem>
@@ -11,6 +12,7 @@
 
 #include "config.hpp"
 #include "error.hpp"
+#include "logger.hpp"
 #include "scan_job.hpp"
 
 namespace masscan_worker {
@@ -32,7 +34,24 @@ struct ScanOutcome {
     std::string diagnostics;  // meaningful tail of masscan's stderr
 };
 
-using FindingSink = std::function<void(const Finding&)>;
+struct MasscanStatus {
+    double rate_pps = 0;
+    double percent_done = 0;
+    std::optional<std::chrono::seconds> remaining;
+    std::optional<std::chrono::seconds> waiting;  // listening for late replies after the last probe
+    std::uint64_t found = 0;
+};
+
+struct ScanProgress {
+    std::optional<MasscanStatus> status;  // none until masscan prints its first status line
+    std::chrono::steady_clock::duration elapsed;
+    std::uint64_t open_ports_reported;
+};
+
+struct ScanCallbacks {
+    std::function<void(const Finding&)> on_finding;
+    std::function<void(const ScanProgress&)> on_progress;  // every Config::progress_interval
+};
 
 // SIGINT/SIGTERM must be blocked in every thread before run_masscan starts its signal thread.
 void block_stop_signals();
@@ -46,9 +65,13 @@ void block_stop_signals();
 // One line of `masscan -oD` output; nullopt for anything but an open-port status record.
 [[nodiscard]] std::optional<Finding> parse_finding(std::string_view line);
 
-// Blocks until masscan exits; `on_finding` is called on the calling thread as results stream in.
+// masscan's stderr status line; nullopt for any other line.
+[[nodiscard]] std::optional<MasscanStatus> parse_masscan_status(std::string_view line);
+
+// Blocks until masscan exits; callbacks run on the calling thread.
 [[nodiscard]] std::expected<ScanOutcome, Error> run_masscan(const ScanJob& job,
                                                             const Config& config,
-                                                            const FindingSink& on_finding);
+                                                            const Logger& logger,
+                                                            const ScanCallbacks& callbacks);
 
 }  // namespace masscan_worker
