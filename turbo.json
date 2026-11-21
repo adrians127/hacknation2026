@@ -4,7 +4,7 @@
   "tasks": {
     "generate": {
       "dependsOn": ["^generate"],
-      "outputs": ["openapi.json", "src/generated/**"]
+      "outputs": ["openapi.json", "result.schema.json", "src/generated/**"]
     },
     "build": {
       "dependsOn": ["^build"],

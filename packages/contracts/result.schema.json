@@ -1,0 +1,2151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/Timestamp"
+    },
+    "scan": {
+      "$ref": "#/$defs/ScanInfo"
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "subnets": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "addresses_total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "addresses_scanned": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "hosts_up": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "open_ports": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "services_identified": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "http_endpoints": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "tls_endpoints": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "technologies": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "observations": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "changes": {
+          "anyOf": [
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "new",
+                  "reappeared",
+                  "unchanged",
+                  "changed",
+                  "disappeared"
+                ]
+              },
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "required": [
+                "new",
+                "reappeared",
+                "unchanged",
+                "changed",
+                "disappeared"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Ports by change status; null without a previous scan"
+        }
+      },
+      "required": [
+        "subnets",
+        "addresses_total",
+        "addresses_scanned",
+        "hosts_up",
+        "open_ports",
+        "services_identified",
+        "http_endpoints",
+        "tls_endpoints",
+        "technologies",
+        "observations",
+        "changes"
+      ],
+      "additionalProperties": false
+    },
+    "subnets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/SubnetResult"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "generated_at",
+    "scan",
+    "summary",
+    "subnets"
+  ],
+  "additionalProperties": false,
+  "title": "SubSurf scan result",
+  "description": "result.json: one scan run, nested subnet → host → port",
+  "$defs": {
+    "Timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+      "description": "UTC, ISO 8601"
+    },
+    "ScanInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "completed",
+            "stopped",
+            "failed"
+          ]
+        },
+        "stop_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "window_expired",
+                "cancelled",
+                "error"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "window": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "starts_at": {
+                  "$ref": "#/$defs/Timestamp"
+                },
+                "ends_at": {
+                  "$ref": "#/$defs/Timestamp"
+                }
+              },
+              "required": [
+                "starts_at",
+                "ends_at"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "previous_scan_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scanner": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "nmap_version": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "version",
+            "nmap_version"
+          ],
+          "additionalProperties": false
+        },
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "ports": {
+              "type": "string",
+              "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+            },
+            "max_rate": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Packets per second"
+            },
+            "scan_type": {
+              "type": "string",
+              "enum": [
+                "connect",
+                "syn"
+              ]
+            },
+            "service_detection": {
+              "type": "boolean"
+            },
+            "os_detection": {
+              "type": "boolean"
+            },
+            "http_probing": {
+              "type": "boolean"
+            },
+            "probed_paths": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 2048,
+                "pattern": "^\\/"
+              }
+            },
+            "signature_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "ports",
+            "max_rate",
+            "scan_type",
+            "service_detection",
+            "os_detection",
+            "http_probing",
+            "probed_paths",
+            "signature_count"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "stop_reason",
+        "started_at",
+        "finished_at",
+        "duration_ms",
+        "window",
+        "previous_scan_id",
+        "scanner",
+        "parameters"
+      ],
+      "additionalProperties": false
+    },
+    "SubnetResult": {
+      "type": "object",
+      "properties": {
+        "cidr": {
+          "type": "string",
+          "format": "cidrv4",
+          "pattern": "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\/([0-9]|[1-2][0-9]|3[0-2])$"
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "addresses_scanned": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "hosts_up": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "open_ports": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "addresses_scanned",
+            "hosts_up",
+            "open_ports"
+          ],
+          "additionalProperties": false
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HostResult"
+          },
+          "description": "Hosts that responded, failed to scan or disappeared; silent addresses are only counted"
+        }
+      },
+      "required": [
+        "cidr",
+        "summary",
+        "hosts"
+      ],
+      "additionalProperties": false
+    },
+    "HostResult": {
+      "type": "object",
+      "properties": {
+        "ip": {
+          "type": "string",
+          "format": "ipv4",
+          "pattern": "^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$"
+        },
+        "hostnames": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "input",
+                  "ptr",
+                  "tls_certificate",
+                  "http_redirect",
+                  "service_banner"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "up",
+            "down",
+            "unknown"
+          ]
+        },
+        "state_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scan_status": {
+          "type": "string",
+          "enum": [
+            "scanned",
+            "pending",
+            "failed",
+            "timeout",
+            "cancelled"
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "message": {
+                  "type": "string",
+                  "maxLength": 8192
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "probe_attempts": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "responded": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "total",
+            "responded"
+          ],
+          "additionalProperties": false,
+          "description": "Repeated measurements of an unstable host within this scan"
+        },
+        "mac": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "format": "mac",
+                  "pattern": "^(?:[0-9A-F]{2}:){5}[0-9A-F]{2}$|^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$"
+                },
+                "vendor": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 8192
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "address",
+                "vendor"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Same L2 segment only"
+        },
+        "os": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                "family": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "vendor": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "device_type": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "accuracy": {
+                  "$ref": "#/$defs/Confidence"
+                },
+                "cpe": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 256
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "family",
+                "vendor",
+                "device_type",
+                "accuracy",
+                "cpe"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Nmap OS detection (-O); null when disabled"
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PortResult"
+          }
+        },
+        "interest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Interest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diff": {
+          "$ref": "#/$defs/Diff"
+        }
+      },
+      "required": [
+        "ip",
+        "hostnames",
+        "state",
+        "state_reason",
+        "scan_status",
+        "error",
+        "observed_at",
+        "latency_ms",
+        "probe_attempts",
+        "mac",
+        "os",
+        "ports",
+        "interest"
+      ],
+      "additionalProperties": false
+    },
+    "Confidence": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Percent, 0-100"
+    },
+    "PortResult": {
+      "type": "object",
+      "properties": {
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "protocol": {
+          "type": "string",
+          "enum": [
+            "tcp",
+            "udp"
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "open",
+            "closed",
+            "filtered",
+            "unfiltered",
+            "open|filtered",
+            "closed|filtered",
+            "not_reported"
+          ],
+          "description": "`not_reported`: requested but absent from Nmap output"
+        },
+        "state_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "service": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Service"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Endpoint"
+          }
+        },
+        "technologies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Technology"
+          }
+        },
+        "observations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Observation"
+          }
+        },
+        "interest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Interest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diff": {
+          "$ref": "#/$defs/Diff"
+        }
+      },
+      "required": [
+        "port",
+        "protocol",
+        "state",
+        "state_reason",
+        "observed_at",
+        "service",
+        "endpoints",
+        "technologies",
+        "observations",
+        "interest"
+      ],
+      "additionalProperties": false
+    },
+    "Service": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "product": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extra_info": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hostname": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "os_type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "device_type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cpe": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "tunnel": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "ssl"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "probed",
+            "table"
+          ],
+          "description": "`table`: guessed from the port number only"
+        },
+        "confidence": {
+          "description": "Nmap `conf` × 10",
+          "$ref": "#/$defs/Confidence"
+        },
+        "banner": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fingerprint": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Nmap `servicefp` of an unrecognized service"
+        },
+        "scripts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "output": {
+                "type": "string",
+                "maxLength": 8192
+              }
+            },
+            "required": [
+              "id",
+              "output"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "name",
+        "product",
+        "version",
+        "extra_info",
+        "hostname",
+        "os_type",
+        "device_type",
+        "cpe",
+        "tunnel",
+        "method",
+        "confidence",
+        "banner",
+        "fingerprint",
+        "scripts"
+      ],
+      "additionalProperties": false,
+      "description": "Nmap service and version detection (-sV)"
+    },
+    "Endpoint": {
+      "type": "object",
+      "properties": {
+        "hostname": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Sent as HTTP Host and TLS SNI; null when the service was addressed by its IP"
+        },
+        "tls": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TlsInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "http": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HttpInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "message": {
+                  "type": "string",
+                  "maxLength": 8192
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "hostname",
+        "tls",
+        "http",
+        "error"
+      ],
+      "additionalProperties": false,
+      "description": "One port seen under one name (virtual host)"
+    },
+    "TlsInfo": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "enum": [
+            "SSLv2",
+            "SSLv3",
+            "TLSv1.0",
+            "TLSv1.1",
+            "TLSv1.2",
+            "TLSv1.3"
+          ]
+        },
+        "cipher": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "alpn": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "accepted_versions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "SSLv2",
+              "SSLv3",
+              "TLSv1.0",
+              "TLSv1.1",
+              "TLSv1.2",
+              "TLSv1.3"
+            ]
+          },
+          "description": "Versions accepted when probed one by one; empty when not probed"
+        },
+        "certificate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Certificate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chain_length": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "is_trusted": {
+          "type": "boolean"
+        },
+        "validation_error": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "cipher",
+        "alpn",
+        "accepted_versions",
+        "certificate",
+        "chain_length",
+        "is_trusted",
+        "validation_error"
+      ],
+      "additionalProperties": false
+    },
+    "Certificate": {
+      "type": "object",
+      "properties": {
+        "subject": {
+          "type": "object",
+          "properties": {
+            "raw": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "common_name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "organization": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "organizational_unit": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "raw",
+            "common_name",
+            "organization",
+            "organizational_unit"
+          ],
+          "additionalProperties": false
+        },
+        "issuer": {
+          "type": "object",
+          "properties": {
+            "raw": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "common_name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "organization": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "organizational_unit": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "raw",
+            "common_name",
+            "organization",
+            "organizational_unit"
+          ],
+          "additionalProperties": false
+        },
+        "serial_number": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[0-9a-f]+$"
+        },
+        "not_before": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "not_after": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "san_dns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          }
+        },
+        "san_ip": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "ipv4",
+                "pattern": "^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$"
+              },
+              {
+                "type": "string",
+                "format": "ipv6",
+                "pattern": "^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))$"
+              }
+            ]
+          }
+        },
+        "fingerprint_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "public_key": {
+          "type": "object",
+          "properties": {
+            "algorithm": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "bits": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "algorithm",
+            "bits"
+          ],
+          "additionalProperties": false
+        },
+        "signature_algorithm": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "is_self_signed": {
+          "type": "boolean"
+        },
+        "is_expired": {
+          "type": "boolean",
+          "description": "At `observed_at` of the port"
+        },
+        "hostname_matches": {
+          "description": "Against the endpoint hostname; null: none",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "pem": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "subject",
+        "issuer",
+        "serial_number",
+        "not_before",
+        "not_after",
+        "san_dns",
+        "san_ip",
+        "fingerprint_sha256",
+        "public_key",
+        "signature_algorithm",
+        "is_self_signed",
+        "is_expired",
+        "hostname_matches",
+        "pem"
+      ],
+      "additionalProperties": false,
+      "description": "The leaf certificate"
+    },
+    "HttpInfo": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "final_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "redirects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "status_code": {
+                "type": "integer",
+                "minimum": 300,
+                "maximum": 399
+              },
+              "location": {
+                "type": "string",
+                "maxLength": 8192,
+                "description": "As sent, may be relative"
+              }
+            },
+            "required": [
+              "url",
+              "status_code",
+              "location"
+            ],
+            "additionalProperties": false
+          },
+          "description": "In order; the final response is not a hop"
+        },
+        "redirect_stop_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "max_redirects",
+                "out_of_scope",
+                "loop"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Why the chain was cut short; null when it ended on its own"
+        },
+        "response_time_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "response": {
+          "$ref": "#/$defs/HttpResponse"
+        },
+        "cookies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Cookie"
+          },
+          "description": "Set anywhere along the redirect chain"
+        },
+        "favicon": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Favicon"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PathProbe"
+          }
+        }
+      },
+      "required": [
+        "url",
+        "final_url",
+        "redirects",
+        "redirect_stop_reason",
+        "response_time_ms",
+        "response",
+        "cookies",
+        "favicon",
+        "paths"
+      ],
+      "additionalProperties": false
+    },
+    "HttpResponse": {
+      "type": "object",
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "enum": [
+            "HTTP/1.0",
+            "HTTP/1.1",
+            "HTTP/2",
+            "HTTP/3"
+          ]
+        },
+        "status_code": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "meta_generator": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "`<meta name=\"generator\">`"
+        },
+        "content_type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "headers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "value": {
+                "type": "string",
+                "maxLength": 8192
+              }
+            },
+            "required": [
+              "name",
+              "value"
+            ],
+            "additionalProperties": false
+          },
+          "description": "In received order with duplicates; Set-Cookie is parsed into `cookies` instead"
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "The excerpt is shorter than the body"
+            },
+            "excerpt": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 65536
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start of the body as text, for HTML-fragment and footer-version signatures",
+              "x-sensitive": true
+            }
+          },
+          "required": [
+            "size",
+            "sha256",
+            "truncated",
+            "excerpt"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocol",
+        "status_code",
+        "reason",
+        "title",
+        "meta_generator",
+        "content_type",
+        "headers",
+        "body"
+      ],
+      "additionalProperties": false,
+      "description": "The final response, after redirects"
+    },
+    "Cookie": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Omitted (null) unless configured",
+          "x-sensitive": true
+        },
+        "domain": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 2048
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expires": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_age": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "secure": {
+          "type": "boolean"
+        },
+        "http_only": {
+          "type": "boolean"
+        },
+        "same_site": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "strict",
+                "lax",
+                "none"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "set_by_url": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "domain",
+        "path",
+        "expires",
+        "max_age",
+        "secure",
+        "http_only",
+        "same_site",
+        "set_by_url"
+      ],
+      "additionalProperties": false
+    },
+    "Favicon": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "md5": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "mmh3": {
+          "type": "integer",
+          "minimum": -2147483648,
+          "maximum": 2147483647,
+          "description": "MurmurHash3 of the base64-encoded icon, as Shodan computes it"
+        }
+      },
+      "required": [
+        "url",
+        "size",
+        "sha256",
+        "md5",
+        "mmh3"
+      ],
+      "additionalProperties": false
+    },
+    "PathProbe": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "maxLength": 2048,
+          "pattern": "^\\/"
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "GET",
+            "HEAD"
+          ]
+        },
+        "status_code": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "content_length": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "body_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "method",
+        "status_code",
+        "title",
+        "content_length",
+        "body_sha256",
+        "location"
+      ],
+      "additionalProperties": false,
+      "description": "Safe detection only: GET/HEAD, no credentials, no request body"
+    },
+    "Technology": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "cms",
+            "web_application",
+            "framework",
+            "web_server",
+            "app_server",
+            "programming_language",
+            "javascript_library",
+            "database",
+            "operating_system",
+            "iot_device",
+            "network_device",
+            "cdn",
+            "waf",
+            "proxy",
+            "other"
+          ]
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cpe": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "detected_by": {
+          "$ref": "#/$defs/Detector"
+        },
+        "evidence": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "category",
+        "version",
+        "cpe",
+        "confidence",
+        "detected_by",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "Detector": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "nmap",
+            "builtin",
+            "signature"
+          ]
+        },
+        "signature_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "signature_name": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "signature_version": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "signature_id",
+        "signature_name",
+        "signature_version"
+      ],
+      "additionalProperties": false,
+      "description": "Set `signature_*` only for kind `signature`"
+    },
+    "Evidence": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "service_banner",
+            "nmap_service",
+            "os_fingerprint",
+            "url",
+            "redirect",
+            "header",
+            "cookie",
+            "title",
+            "meta_generator",
+            "body",
+            "favicon",
+            "path",
+            "tls_certificate"
+          ]
+        },
+        "hostname": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Endpoint the evidence comes from; null: the IP"
+        },
+        "key": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Header or cookie name, probed path, certificate field"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Matched fragment, truncated"
+        }
+      },
+      "required": [
+        "source",
+        "hostname",
+        "key",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "Observation": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Stable across scans: the diff and DefectDojo deduplication key"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "admin_panel",
+            "login_page",
+            "staging_environment",
+            "test_environment",
+            "development_environment",
+            "default_page",
+            "directory_listing",
+            "version_disclosure",
+            "outdated_component",
+            "debug_mode",
+            "interesting_header",
+            "interesting_cookie",
+            "insecure_cookie",
+            "missing_security_header",
+            "cleartext_login",
+            "tls_self_signed",
+            "tls_expired",
+            "tls_hostname_mismatch",
+            "tls_untrusted",
+            "tls_weak_protocol",
+            "unusual_banner",
+            "signature_match",
+            "other"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "detected_by": {
+          "$ref": "#/$defs/Detector"
+        },
+        "evidence": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        }
+      },
+      "required": [
+        "key",
+        "kind",
+        "title",
+        "severity",
+        "confidence",
+        "detected_by",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "Interest": {
+      "type": "object",
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 8192
+          }
+        }
+      },
+      "required": [
+        "score",
+        "reasons"
+      ],
+      "additionalProperties": false,
+      "description": "Analytical priority, higher is more worth a look"
+    },
+    "Diff": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "new",
+            "reappeared",
+            "unchanged",
+            "changed",
+            "disappeared"
+          ]
+        },
+        "first_seen_at": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "last_seen_at": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "missed_scans": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Consecutive scans without a response"
+        },
+        "is_unstable": {
+          "type": "boolean",
+          "description": "Responded only in some of the recent scans"
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "description": "Dotted path, e.g. `service.version`"
+              },
+              "previous": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 8192
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "current": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 8192
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "field",
+              "previous",
+              "current"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "status",
+        "first_seen_at",
+        "last_seen_at",
+        "missed_scans",
+        "is_unstable",
+        "changes"
+      ],
+      "additionalProperties": false,
+      "description": "Comparison with `scan.previous_scan_id`, filled in by the backend; absent in worker output"
+    }
+  }
+}

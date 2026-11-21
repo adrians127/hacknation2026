@@ -50,7 +50,7 @@ jobs:
       - name: Generated contract is up to date
         run: |
           pnpm generate
-          git diff --exit-code -- packages/contracts/openapi.json packages/api-client/src/generated
+          git diff --exit-code -- packages/contracts/openapi.json packages/contracts/result.schema.json packages/api-client/src/generated
 
   docker:
     name: Docker images build

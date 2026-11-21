@@ -6,10 +6,11 @@
   "description": "Shared zod schemas + inferred types between frontend, backend and workers; source of openapi.json",
   "exports": {
     "./openapi.json": "./openapi.json",
+    "./result.schema.json": "./result.schema.json",
     "./*": "./src/*.ts"
   },
   "scripts": {
-    "generate": "tsx scripts/generate-openapi.ts",
+    "generate": "tsx scripts/generate-openapi.ts && tsx scripts/generate-json-schema.ts",
     "lint": "oxlint",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
