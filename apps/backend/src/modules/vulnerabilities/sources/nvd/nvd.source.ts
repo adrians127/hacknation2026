@@ -66,9 +66,17 @@ export function createNvdSource(config: NvdConfig = nvdConfig()): VulnerabilityS
       `nvd/${name}.json.gz`,
       context.signal,
     );
-    for await (const cve of readNvdFeed(path, context.signal, meta.sha256)) {
+    let invalid = 0;
+    let example: string | undefined;
+    const onInvalid = (error: z.ZodError) => {
+      invalid++;
+      example ??= z.prettifyError(error);
+    };
+    for await (const cve of readNvdFeed(path, context.signal, meta.sha256, onInvalid)) {
       yield { type: "upsert", record: normalizeNvdCve(cve) };
     }
+    // Unreadable records count as unseen: a full sync would withdraw them (or refuse to).
+    if (invalid > 0) context.log.warn({ feed: name, invalid, example }, "Unreadable NVD records");
     return meta;
   }
 

@@ -126,6 +126,8 @@ export const REGRESSHION = {
         },
       },
     ],
+    // Since 2026 NVD also lists SSVC decisions here, with no CVSS data.
+    ssvcV203: [{ source: "134c704f-9b21-4f2e-91b3-4a467353bcc0", type: "Secondary", ssvcData: {} }],
   },
   configurations: [
     {

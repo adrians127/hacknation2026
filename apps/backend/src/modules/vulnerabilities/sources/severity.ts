@@ -1,4 +1,5 @@
-import { Cvss2, Cvss3P0, Cvss3P1, Cvss4P0 } from "ae-cvss-calculator";
+// A UMD bundle: Node's ESM loader sees no named exports, only the default (module.exports).
+import cvss from "ae-cvss-calculator";
 
 import type {
   VulnerabilitySeverity,
@@ -28,16 +29,16 @@ export function scoreVector(vector: string): CvssScore | null {
     let score: number | undefined;
     if (vector.startsWith("CVSS:4.0/")) {
       version = "4.0";
-      score = new Cvss4P0(vector).calculateScores().base;
+      score = new cvss.Cvss4P0(vector).calculateScores().base;
     } else if (vector.startsWith("CVSS:3.1/")) {
       version = "3.1";
-      score = new Cvss3P1(vector).calculateScores().base;
+      score = new cvss.Cvss3P1(vector).calculateScores().base;
     } else if (vector.startsWith("CVSS:3.0/")) {
       version = "3.0";
-      score = new Cvss3P0(vector).calculateScores().base;
+      score = new cvss.Cvss3P0(vector).calculateScores().base;
     } else {
       version = "2.0";
-      score = new Cvss2(vector).calculateScores().base;
+      score = new cvss.Cvss2(vector).calculateScores().base;
     }
     if (score === undefined || !Number.isFinite(score)) return null;
     return { score, vector, version, severity: severityOf(score, version) };

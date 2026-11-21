@@ -23,6 +23,9 @@ apps/backend/src/generated/
 .env.*
 !.env.example
 
+# vulnerability database downloads (apps/backend VULN_CACHE_DIR, doubles as an offline mirror)
+apps/backend/.cache/
+
 # logs
 logs/
 *.log

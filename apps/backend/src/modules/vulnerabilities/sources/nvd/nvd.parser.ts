@@ -57,7 +57,15 @@ export const NvdCveSchema = z.object({
   lastModified: z.string().optional(),
   vulnStatus: z.string().optional(),
   descriptions: z.array(z.object({ lang: z.string(), value: z.string() })).default([]),
-  metrics: z.record(z.string(), z.array(MetricSchema)).default({}),
+  // Other keys (e.g. `ssvcV203`, SSVC decisions without a CVSS score) are ignored.
+  metrics: z
+    .object({
+      cvssMetricV40: z.array(MetricSchema).optional(),
+      cvssMetricV31: z.array(MetricSchema).optional(),
+      cvssMetricV30: z.array(MetricSchema).optional(),
+      cvssMetricV2: z.array(MetricSchema).optional(),
+    })
+    .default({}),
   configurations: z
     .array(
       z.object({
@@ -78,7 +86,12 @@ export type NvdCve = z.infer<typeof NvdCveSchema>;
 const MAX_DESCRIPTION = 4000;
 const MAX_REFERENCES = 20;
 const MAX_PLATFORMS = 20;
-const METRIC_VERSIONS = ["cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2"];
+const METRIC_VERSIONS = [
+  "cvssMetricV40",
+  "cvssMetricV31",
+  "cvssMetricV30",
+  "cvssMetricV2",
+] as const;
 
 /** NVD timestamps carry no zone and are UTC. */
 export function nvdDate(value: string | undefined): Date | null {
@@ -213,6 +226,7 @@ export async function* readNvdFeed(
   path: string,
   signal: AbortSignal,
   sha256?: string,
+  onInvalid: (error: z.ZodError) => void = () => {},
 ): AsyncGenerator<NvdCve> {
   const file = createReadStream(path);
   const input = path.endsWith(".gz") ? file.pipe(createGunzip()) : file;
@@ -231,6 +245,7 @@ export async function* readNvdFeed(
       for (const value of pending.splice(0)) {
         const parsed = NvdCveSchema.safeParse(cveOf(value));
         if (parsed.success) yield parsed.data;
+        else onInvalid(parsed.error);
       }
     }
   } finally {

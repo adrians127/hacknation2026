@@ -60,14 +60,20 @@ export function createOsvSource(config: OsvConfig = osvConfig()): VulnerabilityS
       context.signal,
     );
     let newest: string | null = null;
+    let invalid = 0;
     for await (const text of readZipJson(path, keep, context.signal)) {
       const record = parseOsvRecord(text);
-      if (!record) continue;
+      if (!record) {
+        invalid++;
+        continue;
+      }
       if (newest === null || Date.parse(record.modified) > Date.parse(newest)) {
         newest = record.modified;
       }
       yield { type: "upsert", record: normalizeOsvRecord(record, ecosystem) };
     }
+    // Unreadable records count as unseen: a full sync would withdraw them (or refuse to).
+    if (invalid > 0) context.log.warn({ ecosystem, invalid }, "Unreadable OSV records");
     context.log.info({ ecosystem }, "OSV ecosystem read");
     return newest;
   }
