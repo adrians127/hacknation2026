@@ -1558,11 +1558,11 @@ export interface operations {
                         maxRate: number;
                         batchSize: number;
                         jobs: {
-                            queued?: number;
-                            leased?: number;
-                            completed?: number;
-                            failed?: number;
-                            stopped?: number;
+                            queued: number;
+                            leased: number;
+                            completed: number;
+                            failed: number;
+                            stopped: number;
                         };
                         baseScan: {
                             /** Format: uuid */

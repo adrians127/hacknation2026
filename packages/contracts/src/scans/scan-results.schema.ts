@@ -37,7 +37,13 @@ export const ScanDetailSchema = ScanSchema.extend({
   ports: z.string(),
   maxRate: z.number().int(),
   batchSize: z.number().int(),
-  jobs: z.record(ScanJobStatusSchema, CountSchema),
+  jobs: z.object({
+    queued: CountSchema,
+    leased: CountSchema,
+    completed: CountSchema,
+    failed: CountSchema,
+    stopped: CountSchema,
+  }) satisfies z.ZodType<Record<z.infer<typeof ScanJobStatusSchema>, number>>,
   /** The scan this one is compared with; `null` for the first scan. */
   baseScan: z.object({ id: z.uuid(), startedAt: z.iso.datetime().nullable() }).nullable(),
   /** `null` without a base scan. */

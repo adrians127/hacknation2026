@@ -181,16 +181,15 @@
   },
   "scans": {
     "title": "Scans",
-    "subtitle": "History of discovery scans",
+    "subtitle": "Every scan run: open one to see its hosts and what changed since the previous scan.",
     "start": "Start scan",
-    "starting": "Starting…",
     "columns": {
-      "id": "Scan",
-      "status": "Status",
-      "targets": "Targets",
-      "hosts": "Hosts",
-      "services": "Services",
       "started": "Started",
+      "status": "Status",
+      "addresses": "Addresses",
+      "up": "Hosts up",
+      "noAnswer": "No answer",
+      "openPorts": "Open ports",
       "duration": "Duration"
     },
     "statuses": {
@@ -200,8 +199,29 @@
       "stopped": "Stopped",
       "failed": "Failed"
     },
-    "toast": {
-      "started": "Scan started."
+    "detail": {
+      "back": "All scans",
+      "title": "Scan of {{date}}",
+      "subtitle": "What this scan found. Changes are measured against the previous scan, only for addresses that answered both times.",
+      "addresses": "Addresses",
+      "up": "Hosts up",
+      "down": "{{formatted}} down",
+      "noAnswer": "No answer",
+      "openPorts": "Open ports",
+      "jobs": "Jobs finished",
+      "stoppedJobs": "{{formatted}} stopped at the time window's end",
+      "duration": "Duration",
+      "rate": "Rate limit",
+      "ports": "Scanned ports",
+      "comparedWith": "Compared with the scan of {{date}}. Click a number to show only those hosts.",
+      "firstScan": "This is the first scan of these addresses, so there is nothing to compare it with yet.",
+      "hosts": {
+        "new": "new hosts",
+        "gone": "hosts gone",
+        "changed": "hosts changed",
+        "unknown": "hosts without an answer"
+      },
+      "serviceChanges": "Services: {{new}} new, {{gone}} gone, {{changed}} changed."
     }
   },
   "language": {
@@ -231,7 +251,6 @@
     "label": "Main navigation",
     "dashboard": "Dashboard",
     "targets": "Targets",
-    "hosts": "Hosts",
     "scans": "Scans",
     "users": "Users",
     "roles": "Roles"

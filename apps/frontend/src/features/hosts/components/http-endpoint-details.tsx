@@ -1,14 +1,12 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ServiceDetail } from "@subsurf/contracts/hosts/hosts.schema";
+import type { HttpEndpoint } from "@subsurf/contracts/workers/worker-result.schema";
 
 import { Badge } from "@/components/ui/badge";
 import { certificateState, statusCodeClass } from "@/features/hosts/lib/badges";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-type HttpEndpoint = ServiceDetail["http"][number];
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (

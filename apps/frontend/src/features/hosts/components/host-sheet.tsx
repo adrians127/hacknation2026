@@ -2,14 +2,14 @@ import { Pencil } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { HostDetail, ServiceDetail } from "@subsurf/contracts/hosts/hosts.schema";
+import type { ScanHostDetail, ScanServiceDetail } from "@subsurf/contracts/scans/scan-results.schema";
 
 import { GuardedButton } from "@/components/guarded-button";
 import { IconAction } from "@/components/icon-action";
-import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useHost } from "@/features/hosts/api/get-host";
+import { useScanHost } from "@/features/hosts/api/get-scan-host";
+import { ChangeBadge } from "@/features/hosts/components/change-badge";
 import { HostStatusBadge } from "@/features/hosts/components/host-status-badge";
 import { HttpEndpointDetails } from "@/features/hosts/components/http-endpoint-details";
 import { ServiceIdentity } from "@/features/hosts/components/service-identity";
@@ -17,6 +17,7 @@ import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageBadge } from "@/features/hosts/components/triage-badge";
 import { useErrorMessage } from "@/hooks/use-error-message";
 import { formatDateTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -31,8 +32,8 @@ function ServiceSection({
   service,
   onEdit,
 }: {
-  service: ServiceDetail;
-  onEdit: (service: ServiceDetail) => void;
+  service: ScanServiceDetail;
+  onEdit: (service: ScanServiceDetail) => void;
 }) {
   const { t, i18n } = useTranslation("hosts");
   const locale = i18n.resolvedLanguage;
@@ -44,11 +45,7 @@ function ServiceSection({
           {service.port}/{service.protocol}
         </span>
         <ServiceIdentity service={service} />
-        {!service.seenInLatestScan && (
-          <Badge variant="outline" className="text-muted-foreground">
-            {t("service.notSeen")}
-          </Badge>
-        )}
+        <ChangeBadge change={service.change} />
         <TriageBadge status={service.triage} />
         <span className="ml-auto">
           <IconAction
@@ -61,10 +58,8 @@ function ServiceSection({
       </header>
 
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-        <Field label={t("detail.observedAt")}>
-          {service.observedAt ? formatDateTime(service.observedAt, locale) : "—"}
-        </Field>
         <Field label={t("detail.firstSeen")}>{formatDateTime(service.firstSeenAt, locale)}</Field>
+        <Field label={t("detail.lastSeen")}>{formatDateTime(service.lastSeenAt, locale)}</Field>
         <Field label={t("detail.detection")}>
           {service.method ?? "—"}
           {service.confidence !== null && ` · ${service.confidence}/10`}
@@ -112,13 +107,15 @@ function ServiceSection({
 }
 
 function HostDetails({
+  scanId,
   host,
   onEditHost,
   onEditService,
 }: {
-  host: HostDetail;
-  onEditHost: (host: HostDetail) => void;
-  onEditService: (host: HostDetail, service: ServiceDetail) => void;
+  scanId: string;
+  host: ScanHostDetail;
+  onEditHost: (host: ScanHostDetail) => void;
+  onEditService: (host: ScanHostDetail, service: ScanServiceDetail) => void;
 }) {
   const { t, i18n } = useTranslation("hosts");
   const locale = i18n.resolvedLanguage;
@@ -131,7 +128,8 @@ function HostDetails({
           {host.hostnames.length > 0 ? host.hostnames.join(", ") : t("detail.noHostnames")}
         </SheetDescription>
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <HostStatusBadge status={host.lastStatus} />
+          <HostStatusBadge status={host.status} />
+          <ChangeBadge change={host.change} />
           <TriageBadge status={host.triage} />
           <TagList tags={host.tags} />
           <GuardedButton
@@ -147,13 +145,16 @@ function HostDetails({
         </div>
       </SheetHeader>
 
-      <div className="grid gap-6 px-4 pb-6">
-        <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+      <div className="grid gap-6 px-4 pt-4 pb-6">
+        <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+          <Field label={t("detail.observedAt")}>
+            {host.observedAt ? formatDateTime(host.observedAt, locale) : "—"}
+          </Field>
+          <Field label={t("detail.latency")}>
+            {host.latencyMs === null ? "—" : `${host.latencyMs} ms`}
+          </Field>
           <Field label={t("detail.firstSeen")}>{formatDateTime(host.firstSeenAt, locale)}</Field>
           <Field label={t("detail.lastSeen")}>{formatDateTime(host.lastSeenAt, locale)}</Field>
-          <Field label={t("detail.lastAnswer")}>
-            {host.lastScannedAt ? formatDateTime(host.lastScannedAt, locale) : "—"}
-          </Field>
         </dl>
 
         <section className="grid gap-1">
@@ -176,7 +177,11 @@ function HostDetails({
             </thead>
             <tbody>
               {host.history.map((entry) => (
-                <tr key={entry.scanId} className="border-b last:border-0">
+                <tr
+                  key={entry.scanId}
+                  className={cn("border-b last:border-0", entry.scanId === scanId && "font-medium")}
+                  aria-current={entry.scanId === scanId ? "true" : undefined}
+                >
                   <td className="py-1">{formatDateTime(entry.scannedAt, locale)}</td>
                   <td className="py-1">{t(`observation.${entry.status}`)}</td>
                   <td className="py-1 text-right tabular-nums">
@@ -208,27 +213,34 @@ function HostDetails({
   );
 }
 
-/** Everything known about one host: decrypted HTTP details, TLS, banners and scan history. */
+/** One host as one scan saw it: decrypted HTTP details, TLS, banners, and its scan history. */
 export function HostSheet({
+  scanId,
   hostId,
   onClose,
   onEditHost,
   onEditService,
 }: {
+  scanId: string;
   hostId: string;
   onClose: () => void;
-  onEditHost: (host: HostDetail) => void;
-  onEditService: (host: HostDetail, service: ServiceDetail) => void;
+  onEditHost: (host: ScanHostDetail) => void;
+  onEditService: (host: ScanHostDetail, service: ScanServiceDetail) => void;
 }) {
   const { t } = useTranslation("hosts");
   const errorMessage = useErrorMessage();
-  const host = useHost(hostId);
+  const host = useScanHost(scanId, hostId);
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="gap-0 overflow-y-auto sm:max-w-3xl">
         {host.isSuccess ? (
-          <HostDetails host={host.data} onEditHost={onEditHost} onEditService={onEditService} />
+          <HostDetails
+            scanId={scanId}
+            host={host.data}
+            onEditHost={onEditHost}
+            onEditService={onEditService}
+          />
         ) : (
           <SheetHeader>
             <SheetTitle>{t("detail.title")}</SheetTitle>

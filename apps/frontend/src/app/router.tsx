@@ -7,13 +7,13 @@ import { UsersRoute } from "@/app/routes/admin/users";
 import { AppLayout } from "@/app/routes/app-layout";
 import { ChangePasswordRoute } from "@/app/routes/change-password";
 import { DashboardRoute } from "@/app/routes/dashboard";
-import { HostsRoute } from "@/app/routes/hosts";
 import { LandingRoute } from "@/app/routes/landing";
 import { LoginRoute } from "@/app/routes/login";
 import { NotFoundRoute } from "@/app/routes/not-found";
 import { RequirePermission } from "@/app/routes/require-permission";
 import { RootLayout } from "@/app/routes/root-layout";
 import { RouteError } from "@/app/routes/route-error";
+import { ScanDetailRoute } from "@/app/routes/scan-detail";
 import { ScansRoute } from "@/app/routes/scans";
 import { StatusRoute } from "@/app/routes/status";
 import { TargetsRoute } from "@/app/routes/targets";
@@ -56,14 +56,12 @@ export const router = createBrowserRouter([
             ],
           },
           {
-            path: "hosts",
-            element: <RequirePermission permission="hosts:read" />,
-            children: [{ index: true, Component: HostsRoute }],
-          },
-          {
             path: "scans",
             element: <RequirePermission permission="scans:read" />,
-            children: [{ index: true, Component: ScansRoute }],
+            children: [
+              { index: true, Component: ScansRoute },
+              { path: ":scanId", Component: ScanDetailRoute },
+            ],
           },
           {
             path: "admin/users",

@@ -1,7 +1,4 @@
 {
-  "title": "Hosts",
-  "subtitle": "Every address that answered a scan, with its services. Notes, tags, triage and corrections belong to you: later scans keep them.",
-  "empty": "No hosts yet. They appear here once a scan finds a live address.",
   "noMatches": "No hosts match these filters",
   "search": {
     "label": "Search hosts",
@@ -9,18 +6,29 @@
   },
   "filters": {
     "triage": "Filter by triage status",
-    "anyTriage": "Any triage status"
+    "anyTriage": "Any triage status",
+    "change": "Filter by change",
+    "allHosts": "All hosts",
+    "changes": {
+      "any": "Any change",
+      "new": "New",
+      "gone": "Gone",
+      "changed": "Changed",
+      "unknown": "No answer"
+    }
+  },
+  "change": {
+    "new": "New",
+    "gone": "Gone",
+    "changed": "Changed",
+    "unchanged": "Unchanged",
+    "unknown": "No answer"
   },
   "triage": {
     "unreviewed": "Unreviewed",
     "reviewed": "Reviewed",
     "important": "Important",
     "false_positive": "False positive"
-  },
-  "status": {
-    "up": "Up",
-    "down": "Down",
-    "unknown": "Unknown"
   },
   "observation": {
     "up": "Up",
@@ -33,16 +41,15 @@
     "expand": "Services",
     "host": "Host",
     "status": "Status",
+    "change": "Change",
     "services": "Open ports",
-    "lastSeen": "Last seen",
     "triage": "Triage",
     "tags": "Tags",
     "note": "Note",
     "actions": "Actions",
     "port": "Port",
     "service": "Service",
-    "http": "HTTP",
-    "latestScan": "Latest scan"
+    "http": "HTTP"
   },
   "actions": {
     "expand": "Show the services of {{ip}}",
@@ -56,9 +63,7 @@
   "service": {
     "unidentified": "unidentified",
     "edited": "Corrected",
-    "observed": "The scanner saw: {{value}}",
-    "open": "Open",
-    "notSeen": "Not in the latest scan"
+    "observed": "The scanner saw: {{value}}"
   },
   "http": {
     "noTitle": "no title",
@@ -90,7 +95,6 @@
     "noHostnames": "No known hostnames",
     "firstSeen": "First seen",
     "lastSeen": "Last seen",
-    "lastAnswer": "Latest answer",
     "note": "Note",
     "noNote": "No note yet",
     "history": "Scan history",

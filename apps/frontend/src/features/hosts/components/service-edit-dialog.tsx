@@ -4,8 +4,8 @@ import { toast } from "sonner";
 
 import {
   UpdateServiceBodySchema,
+  type ServiceEdits,
   type ServiceIdentity,
-  type ServiceSummary,
   type TriageStatus,
 } from "@subsurf/contracts/hosts/hosts.schema";
 
@@ -37,7 +37,7 @@ const toOverride = (value: string) => value.trim() || null;
 interface ServiceEditDialogProps {
   hostId: string;
   hostIp: string;
-  service: Pick<ServiceSummary, "id" | "port" | "protocol" | "observed" | "overrides" | "note" | "tags" | "triage">;
+  service: ServiceEdits & { port: number; protocol: string; observed: ServiceIdentity };
   onClose: () => void;
 }
 

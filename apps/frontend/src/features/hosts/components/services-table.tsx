@@ -2,26 +2,28 @@ import { Pencil } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { HostListItem, ServiceSummary } from "@subsurf/contracts/hosts/hosts.schema";
+import type { ScanHost, ScanService } from "@subsurf/contracts/scans/scan-results.schema";
 
 import { DataTable } from "@/components/data-table";
 import { IconAction } from "@/components/icon-action";
-import { Badge } from "@/components/ui/badge";
+import { ChangeBadge } from "@/features/hosts/components/change-badge";
 import { HttpSummary } from "@/features/hosts/components/http-summary";
 import { ServiceIdentity } from "@/features/hosts/components/service-identity";
 import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageControl } from "@/features/hosts/components/triage-control";
 import { createDataTableColumns } from "@/lib/data-table";
 
-const column = createDataTableColumns<ServiceSummary>();
+const column = createDataTableColumns<ScanService>();
 
-/** The services of one host: shown under its row in the hosts table. */
+/** The services of one host in one scan: shown under its row in the hosts table. */
 export function ServicesTable({
   host,
+  compared,
   onEdit,
 }: {
-  host: HostListItem;
-  onEdit: (host: HostListItem, service: ServiceSummary) => void;
+  host: ScanHost;
+  compared: boolean;
+  onEdit: (host: ScanHost, service: ScanService) => void;
 }) {
   const { t } = useTranslation("hosts");
 
@@ -38,6 +40,15 @@ export function ServicesTable({
             </span>
           ),
         }),
+        ...(compared
+          ? [
+              column.accessor("change", {
+                header: t("columns.change"),
+                enableSorting: false,
+                cell: ({ getValue }) => <ChangeBadge change={getValue()} />,
+              }),
+            ]
+          : []),
         column.display({
           id: "service",
           header: t("columns.service"),
@@ -46,22 +57,8 @@ export function ServicesTable({
         column.accessor("http", {
           header: t("columns.http"),
           enableSorting: false,
-          meta: { className: "max-w-80" },
+          meta: { className: "max-w-96" },
           cell: ({ getValue }) => <HttpSummary endpoints={getValue()} />,
-        }),
-        column.accessor("seenInLatestScan", {
-          header: t("columns.latestScan"),
-          enableSorting: false,
-          cell: ({ getValue }) =>
-            getValue() ? (
-              <Badge variant="outline" className="border-emerald-500/40 text-emerald-500">
-                {t("service.open")}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-muted-foreground">
-                {t("service.notSeen")}
-              </Badge>
-            ),
         }),
         column.accessor("triage", {
           header: t("columns.triage"),
@@ -104,7 +101,7 @@ export function ServicesTable({
           ),
         }),
       ]),
-    [t, host, onEdit],
+    [t, host, compared, onEdit],
   );
 
   return (
@@ -113,7 +110,7 @@ export function ServicesTable({
         columns={columns}
         data={host.services}
         emptyLabel={t("detail.noServices")}
-        rowClassName={(service) => (service.seenInLatestScan ? undefined : "opacity-60")}
+        rowClassName={(service) => (service.change === "gone" ? "opacity-60" : undefined)}
       />
     </div>
   );

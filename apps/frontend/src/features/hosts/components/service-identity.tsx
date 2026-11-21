@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import {
   effectiveServiceIdentity,
   hasServiceOverrides,
-  type ServiceSummary,
+  type ServiceEdits,
+  type ServiceIdentity as ServiceIdentityFields,
 } from "@subsurf/contracts/hosts/hosts.schema";
 
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 const joined = (...parts: (string | null)[]) => parts.filter(Boolean).join(" ");
 
 /** The service as displayed: corrections win, with a badge that shows what the scanner saw. */
-export function ServiceIdentity({ service }: { service: Pick<ServiceSummary, "observed" | "overrides"> }) {
+export function ServiceIdentity({
+  service,
+}: {
+  service: Pick<ServiceEdits, "overrides"> & { observed: ServiceIdentityFields };
+}) {
   const { t } = useTranslation("hosts");
   const { name, product, version } = effectiveServiceIdentity(service);
   const observed =

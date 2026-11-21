@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 import {
   UpdateHostBodySchema,
-  type HostListItem,
+  type HostEdits,
   type TriageStatus,
 } from "@subsurf/contracts/hosts/hosts.schema";
 
@@ -28,7 +28,7 @@ import { parseTags } from "@/lib/tags";
 type Field = "note" | "tags";
 
 interface HostEditDialogProps {
-  host: Pick<HostListItem, "id" | "ip" | "note" | "tags" | "triage">;
+  host: HostEdits & { ip: string };
   onClose: () => void;
 }
 

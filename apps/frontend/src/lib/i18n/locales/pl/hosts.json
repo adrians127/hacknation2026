@@ -1,7 +1,4 @@
 {
-  "title": "Hosty",
-  "subtitle": "Każdy adres, który odpowiedział w skanie, wraz z usługami. Notatki, tagi, triage i korekty należą do Ciebie: kolejne skany ich nie zmieniają.",
-  "empty": "Nie ma jeszcze hostów. Pojawią się tutaj, gdy skan znajdzie aktywny adres.",
   "noMatches": "Żaden host nie pasuje do filtrów",
   "search": {
     "label": "Szukaj hostów",
@@ -9,18 +6,29 @@
   },
   "filters": {
     "triage": "Filtruj według statusu triage",
-    "anyTriage": "Dowolny status triage"
+    "anyTriage": "Dowolny status triage",
+    "change": "Filtruj według zmiany",
+    "allHosts": "Wszystkie hosty",
+    "changes": {
+      "any": "Dowolna zmiana",
+      "new": "Nowe",
+      "gone": "Zniknięte",
+      "changed": "Zmienione",
+      "unknown": "Bez odpowiedzi"
+    }
+  },
+  "change": {
+    "new": "Nowy",
+    "gone": "Zniknął",
+    "changed": "Zmieniony",
+    "unchanged": "Bez zmian",
+    "unknown": "Brak odpowiedzi"
   },
   "triage": {
     "unreviewed": "Nieprzejrzany",
     "reviewed": "Przejrzany",
     "important": "Ważny",
     "false_positive": "Fałszywy alarm"
-  },
-  "status": {
-    "up": "Aktywny",
-    "down": "Nieaktywny",
-    "unknown": "Nieznany"
   },
   "observation": {
     "up": "Aktywny",
@@ -33,16 +41,15 @@
     "expand": "Usługi",
     "host": "Host",
     "status": "Status",
+    "change": "Zmiana",
     "services": "Otwarte porty",
-    "lastSeen": "Ostatnio widziany",
     "triage": "Triage",
     "tags": "Tagi",
     "note": "Notatka",
     "actions": "Akcje",
     "port": "Port",
     "service": "Usługa",
-    "http": "HTTP",
-    "latestScan": "Ostatni skan"
+    "http": "HTTP"
   },
   "actions": {
     "expand": "Pokaż usługi hosta {{ip}}",
@@ -56,9 +63,7 @@
   "service": {
     "unidentified": "niezidentyfikowana",
     "edited": "Skorygowano",
-    "observed": "Skaner wykrył: {{value}}",
-    "open": "Otwarty",
-    "notSeen": "Brak w ostatnim skanie"
+    "observed": "Skaner wykrył: {{value}}"
   },
   "http": {
     "noTitle": "brak tytułu",
@@ -90,7 +95,6 @@
     "noHostnames": "Brak znanych nazw",
     "firstSeen": "Pierwszy raz widziany",
     "lastSeen": "Ostatnio widziany",
-    "lastAnswer": "Ostatnia odpowiedź",
     "note": "Notatka",
     "noNote": "Brak notatki",
     "history": "Historia skanów",

@@ -2,33 +2,39 @@ import { ChevronDown, ChevronRight, PanelRightOpen, Pencil, StickyNote } from "l
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { HostListItem, ServiceSummary } from "@subsurf/contracts/hosts/hosts.schema";
+import type { ScanHost, ScanService } from "@subsurf/contracts/scans/scan-results.schema";
 
 import { DataTable } from "@/components/data-table";
 import { IconAction } from "@/components/icon-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ChangeBadge } from "@/features/hosts/components/change-badge";
 import { HostStatusBadge } from "@/features/hosts/components/host-status-badge";
 import { ServicesTable } from "@/features/hosts/components/services-table";
 import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageControl } from "@/features/hosts/components/triage-control";
+import { CHANGE_CLASS } from "@/features/hosts/lib/badges";
 import { createDataTableColumns } from "@/lib/data-table";
-import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const MAX_HOSTNAMES = 2;
 const MAX_PORTS = 8;
 
-const column = createDataTableColumns<HostListItem>();
+const column = createDataTableColumns<ScanHost>();
 
-function PortChips({ services }: { services: readonly ServiceSummary[] }) {
+/** Ports colored by change: new, changed, or struck through when gone. */
+function PortChips({ services }: { services: readonly ScanService[] }) {
   return (
     <span className="flex max-w-72 flex-wrap gap-1">
       {services.slice(0, MAX_PORTS).map((service) => (
         <Badge
           key={service.id}
           variant="outline"
-          className={cn("font-mono", !service.seenInLatestScan && "opacity-50 line-through")}
+          className={cn(
+            "font-mono",
+            service.change && service.change !== "unchanged" && CHANGE_CLASS[service.change],
+            service.change === "gone" && "line-through",
+          )}
         >
           {service.port}
           {service.observed.name || service.overrides.name
@@ -44,15 +50,22 @@ function PortChips({ services }: { services: readonly ServiceSummary[] }) {
 }
 
 interface HostsTableProps {
-  hosts: HostListItem[];
-  onOpen: (host: HostListItem) => void;
-  onEditHost: (host: HostListItem) => void;
-  onEditService: (host: HostListItem, service: ServiceSummary) => void;
+  hosts: ScanHost[];
+  /** The scan has a base scan: show what changed. */
+  compared: boolean;
+  onOpen: (host: ScanHost) => void;
+  onEditHost: (host: ScanHost) => void;
+  onEditService: (host: ScanHost, service: ScanService) => void;
 }
 
-export function HostsTable({ hosts, onOpen, onEditHost, onEditService }: HostsTableProps) {
-  const { t, i18n } = useTranslation("hosts");
-  const locale = i18n.resolvedLanguage;
+export function HostsTable({
+  hosts,
+  compared,
+  onOpen,
+  onEditHost,
+  onEditService,
+}: HostsTableProps) {
+  const { t } = useTranslation("hosts");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
 
   const toggle = useCallback((id: string) => {
@@ -117,21 +130,24 @@ export function HostsTable({ hosts, onOpen, onEditHost, onEditService }: HostsTa
             </div>
           ),
         }),
-        column.accessor("lastStatus", {
+        column.accessor("status", {
           header: t("columns.status"),
           enableSorting: false,
           cell: ({ getValue }) => <HostStatusBadge status={getValue()} />,
         }),
+        ...(compared
+          ? [
+              column.accessor("change", {
+                header: t("columns.change"),
+                enableSorting: false,
+                cell: ({ getValue }) => <ChangeBadge change={getValue()} />,
+              }),
+            ]
+          : []),
         column.accessor("services", {
           header: t("columns.services"),
           enableSorting: false,
           cell: ({ getValue }) => <PortChips services={getValue()} />,
-        }),
-        column.accessor("lastSeenAt", {
-          header: t("columns.lastSeen"),
-          enableSorting: false,
-          meta: { className: "whitespace-nowrap text-muted-foreground" },
-          cell: ({ getValue }) => formatDateTime(getValue(), locale),
         }),
         column.accessor("triage", {
           header: t("columns.triage"),
@@ -169,7 +185,7 @@ export function HostsTable({ hosts, onOpen, onEditHost, onEditService }: HostsTa
           ),
         }),
       ]),
-    [t, locale, expanded, toggle, onOpen, onEditHost],
+    [t, compared, expanded, toggle, onOpen, onEditHost],
   );
 
   return (
@@ -178,7 +194,9 @@ export function HostsTable({ hosts, onOpen, onEditHost, onEditService }: HostsTa
       data={hosts}
       emptyLabel={t("noMatches")}
       renderExpanded={(host) =>
-        expanded.has(host.id) ? <ServicesTable host={host} onEdit={onEditService} /> : null
+        expanded.has(host.id) ? (
+          <ServicesTable host={host} compared={compared} onEdit={onEditService} />
+        ) : null
       }
     />
   );

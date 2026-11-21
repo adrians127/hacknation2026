@@ -1,4 +1,5 @@
 import type { TriageStatus } from "@subsurf/contracts/hosts/hosts.schema";
+import type { ScanChange } from "@subsurf/contracts/scans/scan-results.schema";
 
 /** Tinted outline badges, in the style of the mock-data badge. */
 export const TRIAGE_CLASS: Record<TriageStatus, string> = {
@@ -6,6 +7,14 @@ export const TRIAGE_CLASS: Record<TriageStatus, string> = {
   reviewed: "border-emerald-500/40 bg-emerald-500/10 text-emerald-500",
   important: "border-red-500/40 bg-red-500/10 text-red-500",
   false_positive: "text-muted-foreground line-through",
+};
+
+export const CHANGE_CLASS: Record<ScanChange, string> = {
+  new: "border-emerald-500/40 bg-emerald-500/10 text-emerald-500",
+  gone: "border-red-500/40 bg-red-500/10 text-red-500",
+  changed: "border-amber-500/40 bg-amber-500/10 text-amber-500",
+  unknown: "border-dashed text-muted-foreground",
+  unchanged: "text-muted-foreground",
 };
 
 export function statusCodeClass(code: number | null): string {
