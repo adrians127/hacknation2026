@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 #
 # Built from this directory: docker build -t nmap-worker apps/workers/nmap-worker
-# (or `pnpm workers:build` from the repo root).
+# (or `docker compose -f docker/docker-compose.workers.yml --profile nmap build` from the repo root).
 #
 # Build and runtime share one base so the binary's libstdc++ matches at runtime.
 

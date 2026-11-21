@@ -5,8 +5,8 @@ A **C++23** scanning worker that wraps **nmap**. For now it is a skeleton: it pr
 ## Build and run (Docker, recommended)
 
 ```bash
-pnpm workers:build                                                     # from the repo root
-docker compose -f docker/docker-compose.yml --profile workers run --rm nmap-worker
+docker compose -f docker/docker-compose.workers.yml --profile nmap build   # from the repo root
+docker compose -f docker/docker-compose.workers.yml --profile nmap run --rm nmap-worker
 ```
 
 The image is built and runs on `ubuntu:26.04` (GCC, CMake, Ninja, nmap 7.98). Build and runtime share the same base, so the libstdc++ version matches. The process runs as the `worker` user, and nmap has `setcap cap_net_raw,cap_net_admin`. Compose grants the container `NET_RAW` / `NET_ADMIN`, without which SYN scans and OS detection are impossible.

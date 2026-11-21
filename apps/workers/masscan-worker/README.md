@@ -100,8 +100,8 @@ A `failed` result still contains whatever masscan reported before it failed.
 
 ```bash
 pnpm workers:build                                     # from the repo root
-docker compose -f docker/docker-compose.yml --profile workers \
-  run --rm -T masscan-worker < apps/workers/masscan-worker/examples/job.json
+pnpm workers:masscan < apps/workers/masscan-worker/examples/job.json
+# = docker compose -f docker/docker-compose.workers.yml run --rm -T masscan-worker < job.json
 ```
 
 The image is built and runs on `ubuntu:26.04`, with the distribution's `masscan` and `nlohmann-json3-dev`. The unit tests run during the image build. masscan has `setcap cap_net_raw,cap_net_admin`, so the worker runs as the non-root `worker` user. The container needs `NET_RAW` / `NET_ADMIN`. On a bridge network, masscan's replies go through Docker NAT. For real sweeps, use `network_mode: host` on a Linux host.

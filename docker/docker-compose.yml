@@ -1,8 +1,9 @@
 # Local infrastructure for Attack Surface Intelligence. See docker/README.md.
 #
 #   pnpm db:up          PostgreSQL only
-#   pnpm infra:up       every default service (today: PostgreSQL)
-#   pnpm workers:up     also build + start the nmap worker (profile: workers)
+#   pnpm infra:up       every service (today: PostgreSQL)
+#
+# Scan workers live in docker-compose.workers.yml.
 #
 # Defaults match apps/backend/.env.example. Override them via the shell
 # environment or an optional docker/.env.
@@ -29,35 +30,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  nmap-worker:
-    profiles: ["workers"]
-    build:
-      context: ../apps/workers/nmap-worker
-    image: hacknation/nmap-worker:local
-    container_name: hacknation-nmap-worker
-    environment:
-      # The backend runs on the host via `pnpm dev`.
-      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:3001/v1}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    cap_add:
-      - NET_RAW
-      - NET_ADMIN
-
-  # One-shot CLI: one JSON job on stdin, the result on stdout. See its README:
-  #   docker compose -f docker/docker-compose.yml --profile workers run --rm -T masscan-worker < job.json
-  # The default command only prints usage, so `pnpm workers:up` does not start a scan.
-  masscan-worker:
-    profiles: ["workers"]
-    build:
-      context: ../apps/workers/masscan-worker
-    image: hacknation/masscan-worker:local
-    command: ["--help"]
-    restart: "no"
-    cap_add:
-      - NET_RAW
-      - NET_ADMIN
 
 volumes:
   hacknation-postgres-data:

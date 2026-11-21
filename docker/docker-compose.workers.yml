@@ -1,0 +1,38 @@
+# Scan workers for Attack Surface Intelligence. See docker/README.md.
+#
+#   pnpm workers:build    build the masscan-worker image
+#   pnpm workers:masscan  one-shot masscan sweep: pnpm workers:masscan < job.json
+#
+# nmap-worker is not needed for now and sits behind the `nmap` profile:
+#   docker compose -f docker/docker-compose.workers.yml --profile nmap up -d --build
+#
+# A separate compose project from docker-compose.yml (infrastructure), so workers can be
+# built, started and torn down on scan hosts without the database.
+name: hacknation-workers
+
+services:
+  nmap-worker:
+    profiles: ["nmap"]
+    build:
+      context: ../apps/workers/nmap-worker
+    image: hacknation/nmap-worker:local
+    container_name: hacknation-nmap-worker
+    environment:
+      # The backend runs on the host via `pnpm dev`.
+      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:3001/v1}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
+  # One-shot CLI: one JSON job on stdin, the result on stdout (see its README).
+  #   docker compose -f docker/docker-compose.workers.yml run --rm -T masscan-worker < job.json
+  masscan-worker:
+    build:
+      context: ../apps/workers/masscan-worker
+    image: hacknation/masscan-worker:local
+    restart: "no"
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN

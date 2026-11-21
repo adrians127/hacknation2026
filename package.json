@@ -22,10 +22,8 @@
     "db:up": "docker compose -f docker/docker-compose.yml up -d postgres",
     "db:logs": "docker compose -f docker/docker-compose.yml logs -f postgres",
     "db:reset": "pnpm --filter @hacknation/backend db:reset",
-    "workers:build": "docker compose -f docker/docker-compose.yml --profile workers build",
-    "workers:up": "docker compose -f docker/docker-compose.yml --profile workers up -d --build",
-    "workers:down": "docker compose -f docker/docker-compose.yml --profile workers down",
-    "workers:logs": "docker compose -f docker/docker-compose.yml --profile workers logs -f nmap-worker"
+    "workers:build": "docker compose -f docker/docker-compose.workers.yml build masscan-worker",
+    "workers:masscan": "docker compose -f docker/docker-compose.workers.yml run --rm -T masscan-worker"
   },
   "devDependencies": {
     "oxlint": "^1.94.0",
