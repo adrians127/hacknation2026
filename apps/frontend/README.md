@@ -53,7 +53,7 @@ const create = api.useMutation("post", "/targets");   // once the endpoint exist
 
 Query keys are built from the method, path and parameters, so there is no separate key registry to maintain. Forms can use the zod schemas from `@hacknation/contracts`, the same ones the backend validates with.
 
-A feature's data goes through hooks in `features/<name>/api/`, one file per endpoint (`get-targets.ts` → `useTargets`, `create-target.ts` → `useCreateTarget`). Components call those hooks, never `api.*` directly. A one-off call outside a feature, such as `/health` on the public `/status` page, may use `api.useQuery` directly.
+A feature's data goes through hooks in `features/<name>/api/`, one file per endpoint (`get-targets.ts` → `useTargets`, `import-targets.ts` → `useImportTargets`). Components call those hooks, never `api.*` directly. A one-off call outside a feature, such as `/health` on the public `/status` page, may use `api.useQuery` directly.
 
 ## Mocking endpoints the backend doesn't have yet
 
@@ -67,6 +67,7 @@ Rules:
 - **Mutations take `{ body, params }`**, like `api.useMutation`, so the `mutate(...)` calls in components don't change.
 - **Fixtures live in `features/<name>/api/mocks.ts`** as in-memory data. Mocked mutations modify that data, so lists refresh after invalidation as they will with the backend. A page reload resets it.
 - **Mark every mock with `// MOCK: <target api call>`.** `grep -rn "MOCK:" apps/frontend/src` lists what is still left to integrate.
+- **Mark the page too:** a route whose data still comes from mocks passes `mocked` to `PageHeader`, which shows a "Mock data" badge next to the title, so nobody mistakes sample data for scan results.
 - `mockResponse(data)` and `mockError(status, message, code?)` from `@/api/mock` add a short delay, return a copy of the fixture and reject with the same `ErrorResponse` body as a real non-2xx response (with `code`, the UI shows the translated `errors.<code>` message).
 
 A mocked query and a mocked mutation:
@@ -118,7 +119,7 @@ Swap checklist:
 
 1. The endpoint is registered in contracts and `pnpm generate` has run.
 2. Replace the mocked `queryFn`/`mutationFn` with `api.*`. Keep the hook's name and signature.
-3. Delete the fixture from `mocks.ts` (and the file once it's empty) and the `// MOCK:` line.
+3. Delete the fixture from `mocks.ts` (and the file once it's empty) and the `// MOCK:` line. Once a page has no mocked data left, drop `mocked` from its `PageHeader`.
 4. `pnpm check-types` shows any place where the mock's shape differed from the backend's.
 
 ## Auth and permissions

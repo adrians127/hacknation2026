@@ -257,6 +257,10 @@
   "table": {
     "empty": "Nothing here yet"
   },
+  "mock": {
+    "badge": "Mock data",
+    "tooltip": "This page shows sample data generated in the browser. The backend does not serve it yet, so changes made here are not saved."
+  },
   "errors": {
     "generic": "Something went wrong. Try again.",
     "network": "Cannot reach the server.",

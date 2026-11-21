@@ -35,6 +35,7 @@ export function TargetsRoute() {
   return (
     <div className="grid gap-6">
       <PageHeader
+        mocked
         title={t("targets.title")}
         description={t("targets.subtitle")}
         actions={

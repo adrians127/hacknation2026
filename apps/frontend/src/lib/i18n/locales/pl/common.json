@@ -271,6 +271,10 @@
   "table": {
     "empty": "Nic tu jeszcze nie ma"
   },
+  "mock": {
+    "badge": "Dane przykładowe",
+    "tooltip": "Ta strona pokazuje przykładowe dane generowane w przeglądarce. Backend jeszcze ich nie udostępnia, więc zmiany wprowadzone tutaj nie są zapisywane."
+  },
   "errors": {
     "generic": "Coś poszło nie tak. Spróbuj ponownie.",
     "network": "Brak połączenia z serwerem.",
