@@ -68,14 +68,15 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - **Worker result format (locked):** [`docs/worker-result-format.md`](docs/worker-result-format.md) is the source of truth for the `{ scan, hosts[] }` JSON a worker returns for one job.
   - Workers work towards producing exactly that structure.
   - The backend builds every scan-data feature on it: storing observations, diffs, dashboard, signatures/detections, export/import, DefectDojo.
-  - **Read it before designing any such feature.** Change the document first (with the user's agreement), then the code. The current `NmapResultSchema` still differs; the document lists the gap.
+  - **Read it before designing any such feature.** Change the document first (with the user's agreement), then the code. The contract (`WorkerResultSchema`) matches it; the `nmap-worker` output does not yet (the document lists the gap).
+- **Worker results → database:** `resultsService.ingest()` writes observations per scan (`ScanJobResult`, `HostObservation`, `HostnameObservation`, `PortObservation` with protocol details as JSONB in `details`) and the `Host`/`Service` assets that live across scans and hold user edits. Details: [`apps/backend/README.md`](apps/backend/README.md#scan-results).
 - **Targets → scan jobs:** the import (`POST /targets/import`; manual, CSV and JSON all go through the shared parser in `contracts/src/targets/target-input.ts`) fills the `Target` inventory and can queue a `Scan` split into `ScanJob` batches. Workers lease those rows; the lease endpoints are not implemented yet. Details: [`apps/backend/README.md`](apps/backend/README.md#targets-and-scan-jobs).
 - **Auth/RBAC (implemented):**
   - local accounts (argon2id) and a 15-minute access JWT plus a rotating refresh token, both in httpOnly cookies;
   - roles are database rows built from the `resource:action` catalog in `contracts/src/auth/permissions.ts`;
   - the PDF's four roles (item 13) are locked system roles, and admins create custom roles (item 12);
   - details and the rules for mapping new permissions onto system roles: [`apps/backend/README.md`](apps/backend/README.md#auth-and-rbac).
-- **Sensitive data:** encrypted at rest at the application level. To be designed together with the models.
+- **Sensitive data:** encrypted at rest at the application level (AES-256-GCM, `DATA_ENCRYPTION_KEY`, `apps/backend/src/lib/crypto.ts`). Scan results store sensitive JSON fields as `{ "$enc": "v1.…" }`; the other tables are still to be covered (see the backend README).
 - **DefectDojo:** a local instance runs in `docker/` (`http://localhost:8080`, fixed dev API token). The backend will push findings through `/api/v2/import-scan/`. Not implemented yet.
 
 ## Monorepo commands

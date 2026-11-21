@@ -228,7 +228,7 @@ One entry per `(scheme, vhost)`: once by bare IP (`vhost: null`) and once for ea
 | `headers` | `[{ name, value }]` | Final response headers in order, names lowercase, **without `Set-Cookie`** |
 | `cookies` | cookie[] | Parsed from every `Set-Cookie` along the chain: `name`, `valueSha256`, `secure`, `httpOnly`, `sameSite` (`Strict` \| `Lax` \| `None` \| `null`), `domain`, `path`, `expires`. **The value itself is never sent** |
 | `redirects` | `[{ url, statusCode, location, followed }]` | The redirect chain; `followed: false` for a redirect the worker did not follow (off-host or over `maxRedirects`) |
-| `body` | `{ sha256, size, contentType, content, truncated }` | `content` only for text types (HTML, JSON, XML, plain text), cut at `maxBodyBytes`; otherwise `null` |
+| `body` | `{ sha256, size, contentType, content, truncated }` \| `null` | `null` when there was no response. `content` only for text types (HTML, JSON, XML, plain text), cut at `maxBodyBytes`; otherwise `null` |
 | `favicon` | `{ url, mmh3, sha256 }` \| `null` | From `<link rel="icon">` or `/favicon.ico` on the same host |
 | `tls` | object \| `null` | `version`, `cipher`, `alpn`, `cert` (`subjectCn`, `san[]`, `issuer`, `notBefore`, `notAfter`, `serial`, `sha256`, `selfSigned`, `keyAlgorithm`, `keyBits`); `null` for `http` |
 | `probes` | probe[] | Results of the probe paths from the job: `path`, `statusCode`, `location`, `title`, `size`, `bodySha256`, `error` |
@@ -277,9 +277,14 @@ The worker result does not contain these. The backend computes them from stored 
 | Likely machines behind one IP | Ports grouped by matching `identity` signals |
 | Host lifecycle (active, unstable, inactive) | Consecutive misses within coverage |
 
+## Where it lives in code
+
+- **Contract:** `WorkerResultSchema` in `packages/contracts/src/workers/worker-result.schema.ts` validates this format. It is the request body of `POST /workers/nmap/results` in `openapi.json`. `worker-result.fixture.ts` next to it builds the example above for tests.
+- **Backend:** `resultsService.ingest()` (`apps/backend/src/modules/results/`) turns a validated result into database rows. See [Scan results in the backend README](../apps/backend/README.md#scan-results).
+
 ## Gap to the current implementation
 
-The current `NmapResultSchema` (`packages/contracts/src/workers/workers.schema.ts`) and the output of `nmap-worker` predate this document:
+The contract matches this document. The output of `nmap-worker` predates it:
 
 - Keys are snake_case (`job_id`, `duration_ms`), and the envelope lacks `scanId`, `worker`, `stopReason`, timestamps, `phasesMs`, `params` and `counts`.
 - Host statuses are `pending`/`scanned`/`failed`/`timeout`/`cancelled` instead of `up`/`down`/`timeout`/`cancelled`/`failed`.
@@ -289,6 +294,5 @@ The current `NmapResultSchema` (`packages/contracts/src/workers/workers.schema.t
 
 To close the gap:
 
-1. Rewrite `NmapResultSchema` after this document and run `pnpm generate`.
-2. Update the worker's JSON codec.
-3. Extend `NmapJob` as described in [What the job must provide](#what-the-job-must-provide).
+1. Update the worker's JSON codec to produce this format.
+2. Extend `NmapJob` as described in [What the job must provide](#what-the-job-must-provide).
