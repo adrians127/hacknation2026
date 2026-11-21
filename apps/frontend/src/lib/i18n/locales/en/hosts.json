@@ -1,0 +1,136 @@
+{
+  "title": "Hosts",
+  "subtitle": "Every address that answered a scan, with its services. Notes, tags, triage and corrections belong to you: later scans keep them.",
+  "empty": "No hosts yet. They appear here once a scan finds a live address.",
+  "noMatches": "No hosts match these filters",
+  "search": {
+    "label": "Search hosts",
+    "placeholder": "IP, hostname, port, product or tag"
+  },
+  "filters": {
+    "triage": "Filter by triage status",
+    "anyTriage": "Any triage status"
+  },
+  "triage": {
+    "unreviewed": "Unreviewed",
+    "reviewed": "Reviewed",
+    "important": "Important",
+    "false_positive": "False positive"
+  },
+  "status": {
+    "up": "Up",
+    "down": "Down",
+    "unknown": "Unknown"
+  },
+  "observation": {
+    "up": "Up",
+    "down": "Down",
+    "timeout": "Timed out",
+    "cancelled": "Not scanned",
+    "failed": "Failed"
+  },
+  "columns": {
+    "expand": "Services",
+    "host": "Host",
+    "status": "Status",
+    "services": "Open ports",
+    "lastSeen": "Last seen",
+    "triage": "Triage",
+    "tags": "Tags",
+    "note": "Note",
+    "actions": "Actions",
+    "port": "Port",
+    "service": "Service",
+    "http": "HTTP",
+    "latestScan": "Latest scan"
+  },
+  "actions": {
+    "expand": "Show the services of {{ip}}",
+    "collapse": "Hide the services of {{ip}}",
+    "details": "Details of {{ip}}",
+    "edit": "Edit",
+    "editHost": "Edit {{ip}}",
+    "editService": "Edit service {{name}}",
+    "triageOf": "Triage status of {{name}}"
+  },
+  "service": {
+    "unidentified": "unidentified",
+    "edited": "Corrected",
+    "observed": "The scanner saw: {{value}}",
+    "open": "Open",
+    "notSeen": "Not in the latest scan"
+  },
+  "http": {
+    "noTitle": "no title",
+    "bareIp": "by IP",
+    "more": "+{{n}} more",
+    "redirects": "Redirects",
+    "notFollowed": "not followed",
+    "headers": "Headers",
+    "cookies": "Cookies",
+    "cookieValuesHashed": "Cookie values never leave the scanner; only their hashes are stored.",
+    "tls": "TLS certificate",
+    "selfSigned": "Self-signed",
+    "expired": "Expired",
+    "expiresSoon": "Expires within 30 days",
+    "subject": "Subject",
+    "san": "Alternative names",
+    "issuer": "Issuer",
+    "validity": "Valid",
+    "key": "Key",
+    "cipher": "Cipher",
+    "favicon": "Favicon",
+    "probes": "Probed paths",
+    "body": "Response body",
+    "truncated": "truncated"
+  },
+  "detail": {
+    "title": "Host details",
+    "loading": "Loading the host",
+    "noHostnames": "No known hostnames",
+    "firstSeen": "First seen",
+    "lastSeen": "Last seen",
+    "lastAnswer": "Latest answer",
+    "note": "Note",
+    "noNote": "No note yet",
+    "history": "Scan history",
+    "scannedAt": "Scan",
+    "latency": "Latency",
+    "openPorts": "Open ports",
+    "services": "Services",
+    "noServices": "No open ports seen",
+    "observedAt": "Observed",
+    "detection": "Detection",
+    "extraInfo": "Details",
+    "banner": "Banner",
+    "endpoints": "HTTP endpoints"
+  },
+  "form": {
+    "hostTitle": "Edit {{ip}}",
+    "serviceTitle": "Edit {{port}}/{{protocol}} on {{ip}}",
+    "keptAcrossScans": "Your changes stay as they are when later scans run.",
+    "note": "Note",
+    "noteEncrypted": "Stored encrypted.",
+    "tags": "Tags",
+    "tagsHint": "Comma-separated, e.g. dmz, owner-it",
+    "triage": "Triage status",
+    "corrections": "Corrections",
+    "correctionsHint": "Replace what the scanner identified. Leave a field empty to show the scanned value (shown greyed out).",
+    "identity": {
+      "name": "Service",
+      "product": "Product",
+      "version": "Version"
+    },
+    "noteTooLong": "The note can have at most 2000 characters",
+    "tagsInvalid": "Up to 20 tags of at most 50 characters each",
+    "overrideInvalid": "A correction can have at most 200 characters",
+    "cancel": "Cancel",
+    "submit": "Save",
+    "submitting": "Saving…"
+  },
+  "toast": {
+    "hostSaved": "Host saved",
+    "serviceSaved": "Service saved",
+    "triageSaved": "Triage status saved"
+  }
+}

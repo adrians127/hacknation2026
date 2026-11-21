@@ -231,6 +231,7 @@
     "label": "Main navigation",
     "dashboard": "Dashboard",
     "targets": "Targets",
+    "hosts": "Hosts",
     "scans": "Scans",
     "users": "Users",
     "roles": "Roles"
@@ -255,7 +256,13 @@
     "copied": "Copied"
   },
   "table": {
-    "empty": "Nothing here yet"
+    "empty": "Nothing here yet",
+    "pagination": {
+      "label": "Pagination",
+      "range": "{{from}}–{{to}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next"
+    }
   },
   "mock": {
     "badge": "Mock data",

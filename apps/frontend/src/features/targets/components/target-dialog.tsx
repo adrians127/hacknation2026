@@ -16,14 +16,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUpdateTarget } from "@/features/targets/api/update-target";
 import { useErrorMessage } from "@/hooks/use-error-message";
+import { parseTags } from "@/lib/tags";
 
 type Field = "note" | "tags";
-
-const parseTags = (raw: string) =>
-  raw
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
 
 interface TargetDialogProps {
   /** Only its note and tags can change; new targets come from the import page. */

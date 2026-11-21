@@ -7,6 +7,7 @@ import { UsersRoute } from "@/app/routes/admin/users";
 import { AppLayout } from "@/app/routes/app-layout";
 import { ChangePasswordRoute } from "@/app/routes/change-password";
 import { DashboardRoute } from "@/app/routes/dashboard";
+import { HostsRoute } from "@/app/routes/hosts";
 import { LandingRoute } from "@/app/routes/landing";
 import { LoginRoute } from "@/app/routes/login";
 import { NotFoundRoute } from "@/app/routes/not-found";
@@ -53,6 +54,11 @@ export const router = createBrowserRouter([
                 children: [{ index: true, Component: TargetsNewRoute }],
               },
             ],
+          },
+          {
+            path: "hosts",
+            element: <RequirePermission permission="hosts:read" />,
+            children: [{ index: true, Component: HostsRoute }],
           },
           {
             path: "scans",

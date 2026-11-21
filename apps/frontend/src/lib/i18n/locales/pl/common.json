@@ -245,6 +245,7 @@
     "label": "Nawigacja główna",
     "dashboard": "Pulpit",
     "targets": "Cele",
+    "hosts": "Hosty",
     "scans": "Skany",
     "users": "Użytkownicy",
     "roles": "Role"
@@ -269,7 +270,13 @@
     "copied": "Skopiowano"
   },
   "table": {
-    "empty": "Nic tu jeszcze nie ma"
+    "empty": "Nic tu jeszcze nie ma",
+    "pagination": {
+      "label": "Stronicowanie",
+      "range": "{{from}}–{{to}} z {{total}}",
+      "previous": "Poprzednia",
+      "next": "Następna"
+    }
   },
   "mock": {
     "badge": "Dane przykładowe",
