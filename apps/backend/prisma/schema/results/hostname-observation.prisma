@@ -1,0 +1,17 @@
+/// A name seen for an address in one scan: given in the job, from reverse DNS or from a certificate.
+model HostnameObservation {
+  hostObservationId String         @db.Uuid
+  name              String
+  source            HostnameSource
+
+  hostObservation HostObservation @relation(fields: [hostObservationId], references: [id], onDelete: Cascade)
+
+  @@id([hostObservationId, name, source])
+  @@index([name])
+}
+
+enum HostnameSource {
+  job
+  ptr
+  tls_san
+}

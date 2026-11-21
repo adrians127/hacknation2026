@@ -1,0 +1,30 @@
+/// One open port at one address in one scan. Columns hold what identifies, filters and diffs a
+/// service; `details` holds the rest of the worker's port object (identity, banner, scripts, http[]).
+model PortObservation {
+  id                String            @id @default(uuid(7)) @db.Uuid
+  hostObservationId String            @db.Uuid
+  serviceId         String            @db.Uuid
+  protocol          TransportProtocol
+  port              Int
+  state             String
+  reason            String?
+  serviceName       String?
+  serviceProduct    String?
+  serviceVersion    String?
+  serviceExtraInfo  String?
+  serviceCpe        String[]
+  serviceMethod     String?
+  serviceConfidence Int?
+  /// SHA-256 of the fields that matter for diffs (src/modules/results/fingerprint.ts).
+  fingerprint       String
+  /// Sensitive values are replaced with { "$enc": "v1.…" } (src/lib/crypto.ts).
+  details           Json
+
+  hostObservation HostObservation @relation(fields: [hostObservationId], references: [id], onDelete: Cascade)
+  /// Restrict: a service's history must not vanish with it.
+  service         Service         @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@unique([hostObservationId, protocol, port])
+  @@index([serviceId])
+  @@index([details(ops: JsonbPathOps)], type: Gin)
+}

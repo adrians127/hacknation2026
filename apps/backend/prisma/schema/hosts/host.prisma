@@ -1,0 +1,19 @@
+/// An address that has been `up` in at least one scan; it lives across scans. Ingest only moves
+/// `firstSeenAt`/`lastSeenAt`. `note` and `tags` belong to users (PDF item 14).
+model Host {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  ip          String   @unique
+  /// Unsigned integer form for CIDR range queries.
+  ipNumber    BigInt
+  firstSeenAt DateTime
+  lastSeenAt  DateTime
+  note        String   @default("")
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  services     Service[]
+  observations HostObservation[]
+
+  @@index([ipNumber])
+}

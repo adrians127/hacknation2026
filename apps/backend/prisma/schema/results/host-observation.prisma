@@ -1,0 +1,39 @@
+/// What one scan saw at one address. Every address of a job gets a row, `down` ones included,
+/// so the scan's coverage is known. Written by results ingest, never edited.
+model HostObservation {
+  id         String                @id @default(uuid(7)) @db.Uuid
+  scanId     String                @db.Uuid
+  resultId   String                @db.Uuid
+  /// Null until the address has been `up` in some scan.
+  hostId     String?               @db.Uuid
+  ip         String
+  /// Unsigned integer form for CIDR range queries (an Int cannot hold every IPv4 address).
+  ipNumber   BigInt
+  status     HostObservationStatus
+  reason     String?
+  /// Null for `cancelled`: never scanned.
+  observedAt DateTime?
+  latencyMs  Int?
+  /// { code, message } for `timeout` and `failed`.
+  error      Json?
+
+  scan      Scan                  @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  result    ScanJobResult         @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  host      Host?                 @relation(fields: [hostId], references: [id], onDelete: SetNull)
+  hostnames HostnameObservation[]
+  ports     PortObservation[]
+
+  /// Also serves lookups by scanId.
+  @@unique([scanId, ip])
+  @@index([resultId])
+  @@index([hostId])
+  @@index([ipNumber])
+}
+
+enum HostObservationStatus {
+  up
+  down
+  timeout
+  cancelled
+  failed
+}
