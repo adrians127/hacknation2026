@@ -62,6 +62,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 ## Architecture (settled)
 
 - **Contract:** `contracts/*.schema.ts` (zod) → `pnpm generate` → `openapi.json` → `api-client` (types) → frontend (`api.useQuery("get", "/path")`). The backend validates requests with the same schemas. The C++ workers take their endpoint definitions from the same `openapi.json`.
+- **Frontend mocks:** an endpoint the backend doesn't have yet is mocked only in the feature's `api/` hooks (TanStack Query), never in components, so switching to the backend changes one function. See [`apps/frontend/README.md`](apps/frontend/README.md#mocking-endpoints-the-backend-doesnt-have-yet).
 - **Workers ↔ backend:** HTTP pull. A worker takes a batch of work (lease + heartbeat) and sends results back over REST. Workers have no database access.
 - **Auth/RBAC:** local accounts (argon2) and a JWT in an httpOnly cookie. The four roles from the PDF (item 13). Not implemented yet.
 - **Sensitive data:** encrypted at rest at the application level. To be designed together with the models.
