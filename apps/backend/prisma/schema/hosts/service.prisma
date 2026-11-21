@@ -1,16 +1,23 @@
 /// A port that has been open on a host in at least one scan; it lives across scans. Ingest only
-/// moves `firstSeenAt`/`lastSeenAt`. `note` and `tags` belong to users (PDF item 14).
+/// moves `firstSeenAt`/`lastSeenAt`. `note`, `tags`, `triage` and the `*Override` corrections
+/// belong to users and ingest never writes them (PDF item 14).
 model Service {
-  id          String            @id @default(uuid(7)) @db.Uuid
-  hostId      String            @db.Uuid
-  protocol    TransportProtocol
-  port        Int
-  firstSeenAt DateTime
-  lastSeenAt  DateTime
-  note        String            @default("")
-  tags        String[]          @default([])
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id              String            @id @default(uuid(7)) @db.Uuid
+  hostId          String            @db.Uuid
+  protocol        TransportProtocol
+  port            Int
+  firstSeenAt     DateTime
+  lastSeenAt      DateTime
+  /// { "$enc": "v1.…" } (src/lib/crypto.ts); null = no note.
+  note            Json?
+  tags            String[]          @default([])
+  triage          TriageStatus      @default(unreviewed)
+  /// User corrections of what service detection reported; null = show the observed value.
+  nameOverride    String?
+  productOverride String?
+  versionOverride String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   host         Host              @relation(fields: [hostId], references: [id], onDelete: Cascade)
   observations PortObservation[]
