@@ -5,15 +5,15 @@ import { initReactI18next } from "react-i18next";
 import commonEn from "@/lib/i18n/locales/en/common.json";
 import commonPl from "@/lib/i18n/locales/pl/common.json";
 
-export const SUPPORTED_LANGUAGES = ["pl", "en"] as const;
+export const SUPPORTED_LANGUAGES = ["en", "pl"] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
 /** localStorage key the detector caches the chosen language under. */
 export const LANGUAGE_STORAGE_KEY = "asi.language";
 
 export const resources = {
-  pl: { common: commonPl },
   en: { common: commonEn },
+  pl: { common: commonPl },
 } as const;
 
 // Resources are bundled eagerly, so init() resolves before the first render and
@@ -23,7 +23,7 @@ void i18next
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: "pl",
+    fallbackLng: "en",
     supportedLngs: SUPPORTED_LANGUAGES,
     defaultNS: "common",
     interpolation: { escapeValue: false },
