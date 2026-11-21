@@ -10,7 +10,7 @@ if (existsSync(".env")) {
 }
 
 // `prisma generate` runs on every install and never connects, so a placeholder
-// keeps fresh clones and CI green; migrate/studio fail clearly against it.
+// keeps fresh clones and image builds working; migrate/studio fail clearly against it.
 const url =
   databaseUrlFromEnv() ?? "postgresql://placeholder:placeholder@localhost:5432/placeholder";
 

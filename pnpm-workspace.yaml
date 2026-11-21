@@ -10,7 +10,7 @@ packages:
 injectWorkspacePackages: true
 
 # Security: a dependency's install script is arbitrary code execution on dev
-# laptops and in CI, so pnpm runs one only if it is named here.
+# laptops and in Docker builds, so pnpm runs one only if it is named here.
 allowBuilds:
   # Bundler binary used by tsx (backend dev) and vite.
   esbuild: true
