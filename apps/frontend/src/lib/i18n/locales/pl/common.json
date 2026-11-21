@@ -63,6 +63,9 @@
     "copy": "Kopiuj",
     "copied": "Skopiowano"
   },
+  "table": {
+    "empty": "Nic tu jeszcze nie ma"
+  },
   "errors": {
     "generic": "Coś poszło nie tak. Spróbuj ponownie.",
     "network": "Brak połączenia z serwerem.",

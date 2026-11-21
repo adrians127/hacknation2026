@@ -8,6 +8,8 @@ import type { User } from "@hacknation/contracts/users/users.schema";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { GuardedButton } from "@/components/guarded-button";
+import { PageHeader } from "@/components/page-header";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRoles } from "@/features/roles/api/get-roles";
 import { useDeactivateUser } from "@/features/users/api/deactivate-user";
@@ -56,19 +58,19 @@ export function UsersRoute() {
 
   return (
     <div className="grid gap-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t("users.title")}</h1>
-          <p className="text-muted-foreground">{t("users.description")}</p>
-        </div>
-        <GuardedButton
-          permissions={["users:create", "roles:read"]}
-          onClick={() => setDialog({ kind: "create" })}
-        >
-          <UserPlus />
-          {t("users.create")}
-        </GuardedButton>
-      </header>
+      <PageHeader
+        title={t("users.title")}
+        description={t("users.description")}
+        actions={
+          <GuardedButton
+            permissions={["users:create", "roles:read"]}
+            onClick={() => setDialog({ kind: "create" })}
+          >
+            <UserPlus />
+            {t("users.create")}
+          </GuardedButton>
+        }
+      />
 
       {users.isPending ? (
         <Skeleton className="h-48 w-full" />
@@ -77,21 +79,25 @@ export function UsersRoute() {
           {errorMessage(users.error)}
         </p>
       ) : (
-        <UsersTable
-          users={users.data.items}
-          onEdit={(user) => setDialog({ kind: "edit", user })}
-          onResetPassword={(user) => setDialog({ kind: "reset", user })}
-          onDeactivate={(user) => setDialog({ kind: "deactivate", user })}
-          onReactivate={(user) =>
-            reactivate.mutate(
-              { params: { path: { id: user.id } } },
-              {
-                onSuccess: () => toast.success(t("users.toast.reactivated")),
-                onError: (error) => toast.error(errorMessage(error)),
-              },
-            )
-          }
-        />
+        <Card>
+          <CardContent>
+            <UsersTable
+              users={users.data.items}
+              onEdit={(user) => setDialog({ kind: "edit", user })}
+              onResetPassword={(user) => setDialog({ kind: "reset", user })}
+              onDeactivate={(user) => setDialog({ kind: "deactivate", user })}
+              onReactivate={(user) =>
+                reactivate.mutate(
+                  { params: { path: { id: user.id } } },
+                  {
+                    onSuccess: () => toast.success(t("users.toast.reactivated")),
+                    onError: (error) => toast.error(errorMessage(error)),
+                  },
+                )
+              }
+            />
+          </CardContent>
+        </Card>
       )}
 
       {(activeDialog?.kind === "create" || activeDialog?.kind === "edit") && (

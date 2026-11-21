@@ -51,7 +51,7 @@ English is the project's default language: documentation, code comments, commit 
 
 A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 
-- `apps/frontend`: React 19 + Vite 8 + React Router 8 (data mode) + Tailwind 4 + shadcn/ui + TanStack Query.
+- `apps/frontend`: React 19 + Vite 8 + React Router 8 (data mode) + Tailwind 4 + shadcn/ui + TanStack Query + TanStack Table.
 - `apps/backend`: Express 5 + TS (built with tsdown, dev with tsx). Talks to PostgreSQL through Prisma 7. **The only component that writes to the database.**
 - `apps/workers/<name>`: C++23 + CMake + nmap workers, built and run in Docker. **Not pnpm workspaces** (no `package.json`), so `pnpm build` does not need a local C++ compiler.
 - `packages/contracts`: `@hacknation/contracts`, zod schemas and types. Generates the committed `openapi.json`. A source-only package with no build step.

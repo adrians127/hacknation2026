@@ -63,6 +63,9 @@
     "copy": "Copy",
     "copied": "Copied"
   },
+  "table": {
+    "empty": "Nothing here yet"
+  },
   "errors": {
     "generic": "Something went wrong. Try again.",
     "network": "Cannot reach the server.",

@@ -7,6 +7,7 @@ The interface for the security team: a dashboard with findings, targets, scans, 
 - **React 19** + **Vite 8** + **TypeScript 7**
 - **React Router 8** in data mode (`createBrowserRouter` in `src/app/router.tsx`)
 - **TanStack Query 5** + **openapi-react-query**: hooks generated from the typed `@hacknation/api-client`
+- **TanStack Table 9**: sortable data tables (`components/data-table.tsx`)
 - **Tailwind 4** (Vite plugin, no config file) + **shadcn/ui** (`radix-nova` style, `components.json`)
 - **i18next**: EN (default) + PL
 - **Vitest** · **oxlint** (type-aware, react / jsx-a11y rules)
@@ -26,7 +27,7 @@ pnpm --filter @hacknation/frontend exec shadcn add <component>
 main.tsx                 bootstrap: i18n, App, CSS
 app/                     app.tsx (RouterProvider), router.tsx, provider.tsx, routes/
 api/                     client.ts (apiClient + `api` hooks + session refresh), query-client.ts, mock.ts (mock helpers)
-components/              shared components: guarded-button, icon-action, confirm-dialog, language-toggle, logo
+components/              shared components: data-table, page-header, guarded-button, icon-action, confirm-dialog, language-toggle, logo
 components/ui/           shadcn components (excluded from lint)
 config/                  typed env variables (fail-fast)
 features/<name>/         api/, components/, hooks/, lib/, types/ (no barrel files)
@@ -133,6 +134,12 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 - **Labels:** system roles are translated by key and custom roles show their stored name (`useRoleLabels`); permissions read as "Resource: Action" (`usePermissionLabel`, keys in `auth.json`). A new permission needs `permissions.resources.<resource>` (and a new action) in both languages.
 - **Errors:** `useErrorMessage()` turns anything a query or mutation threw into a translated message, by the API's `error.code` (`common.json`, `errors.*`) or by status.
 - **Admin panel:** `features/users` and `features/roles` (the permission matrix in `features/roles/lib/permission-matrix.ts` is built from the contracts catalog). The admin routes compose them, e.g. the user form gets the role list from `features/roles`.
+
+## Pages and tables
+
+- A page starts with `PageHeader` (title, description, page-level buttons in `actions`) and puts its content in `Card`s.
+- Lists use `DataTable` (`components/data-table.tsx`), a sortable table on TanStack Table v9. Define columns with `createDataTableColumns<T>().columns([...])` from `lib/data-table.ts`, inside `useMemo`: v9 rebuilds the table whenever `columns` or `data` change identity. `meta: { className }` styles a column's header and cells (e.g. `text-right`). Dates go through `lib/format.ts`.
+- The app is dark-only (`class="dark"` in `index.html`); `brand` is the accent color (`text-brand`, `bg-brand/15`).
 
 ## Translations
 
