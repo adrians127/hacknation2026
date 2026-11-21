@@ -25,7 +25,7 @@ SubSurf is an attack surface intelligence prototype for recurring discovery scan
 
 ```bash
 pnpm install          # dependencies + prisma generate
-pnpm project:setup    # .env.example -> .env in every app
+pnpm project:setup    # .env.example -> .env in every app (re-run after a pull: adds new variables)
 pnpm db:up            # PostgreSQL in Docker
 pnpm db:reset         # migrations + seed: system roles, admin and demo accounts
 pnpm dev              # backend :3001 (Swagger: /docs) + frontend :3000

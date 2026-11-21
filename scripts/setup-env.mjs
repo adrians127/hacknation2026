@@ -1,23 +1,15 @@
 #!/usr/bin/env node
-/**
- * Bootstraps local env files: finds every `.env*.example` in the repo and copies
- * it to the same path without the `.example` suffix.
- *
- * Existing files are NEVER clobbered by default — a real `.env` holds secrets
- * the example only has placeholders for (JWT secrets, encryption keys), so a
- * blind copy would silently break a working setup. Pass `--force` to overwrite
- * anyway; the previous file is saved alongside as `<name>.bak` first.
- *
- * Run via `pnpm project:setup`.
- */
+// `pnpm project:setup`: creates every `.env` from its `.env*.example`. When the `.env` already
+// exists, it only appends the keys the example has and the `.env` lacks (with their comments),
+// so re-running after a pull picks up new variables. Existing values are never changed: a real
+// `.env` may hold secrets. `--force` replaces the file instead, keeping the old one as `<name>.bak`.
 
-import { copyFileSync, readdirSync, readFileSync, existsSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Directories never worth walking into. */
 const SKIP_DIRS = new Set([
   "node_modules",
   ".git",
@@ -29,12 +21,15 @@ const SKIP_DIRS = new Set([
   "coverage",
 ]);
 
-/** How deep to look: repo root, `apps/*`, `packages/*`, `docker/`, `apps/workers/*` all fit. */
+// Repo root, `apps/*`, `packages/*`, `docker/`, `apps/workers/*` all fit.
 const MAX_DEPTH = 3;
+
+const KEY_LINE = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/;
+// A commented-out key counts as present: someone disabled it on purpose.
+const COMMENTED_KEY_LINE = /^\s*#\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/;
 
 const force = process.argv.includes("--force");
 
-/** Matches `.env.example`, `.env.test.example`, … */
 function isEnvExample(name) {
   return name.startsWith(".env") && name.endsWith(".example");
 }
@@ -52,62 +47,91 @@ function findEnvExamples(dir, depth = 0) {
   return found;
 }
 
-/** Placeholder values the examples ship with, which only a human can fill in. */
-function placeholderKeys(filePath) {
-  return readFileSync(filePath, "utf8")
-    .split("\n")
-    .filter((line) => !line.trimStart().startsWith("#") && line.includes("="))
-    .filter((line) => /=\s*"?your-/.test(line))
-    .map((line) => line.slice(0, line.indexOf("=")).trim());
+function presentKeys(text) {
+  const keys = new Set();
+  for (const line of text.split(/\r?\n/)) {
+    const match = KEY_LINE.exec(line) ?? COMMENTED_KEY_LINE.exec(line);
+    if (match) keys.add(match[1]);
+  }
+  return keys;
 }
 
-const examples = findEnvExamples(REPO_ROOT).sort();
+/** The example's keys missing from `existing`, each with the comment lines right above it. */
+function missingEntries(exampleText, existing) {
+  const lines = exampleText.split(/\r?\n/);
+  const entries = [];
+  lines.forEach((line, index) => {
+    const match = KEY_LINE.exec(line);
+    if (!match || existing.has(match[1])) return;
+    let start = index;
+    while (start > 0 && lines[start - 1].trimStart().startsWith("#")) start--;
+    entries.push({ key: match[1], lines: lines.slice(start, index + 1) });
+  });
+  return entries;
+}
+
+function appendMissing(source, target) {
+  const current = readFileSync(target, "utf8");
+  const entries = missingEntries(readFileSync(source, "utf8"), presentKeys(current));
+  if (entries.length === 0) return [];
+
+  // A blank line before each commented entry keeps the example's grouping.
+  const body = entries
+    .map(({ lines }, i) => (i > 0 && lines.length > 1 ? `\n${lines.join("\n")}` : lines.join("\n")))
+    .join("\n");
+  const separator = current === "" || current.endsWith("\n") ? "\n" : "\n\n";
+  appendFileSync(target, `${separator}# Added by pnpm project:setup (new in .env.example)\n${body}\n`);
+  return entries;
+}
+
+// Values the examples ship as `your-…`, which only a human can fill in.
+function placeholderKeys(lines) {
+  return lines
+    .map((line) => /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"?your-/.exec(line)?.[1])
+    .filter(Boolean);
+}
+
+const examples = findEnvExamples(REPO_ROOT).toSorted();
 
 if (examples.length === 0) {
   console.log("No .env*.example files found — nothing to do.");
   process.exit(0);
 }
 
-const created = [];
-const skipped = [];
-const overwritten = [];
+const placeholders = [];
+let changed = false;
 
 for (const source of examples) {
   const target = source.slice(0, -".example".length);
   const shown = relative(REPO_ROOT, target);
 
-  if (existsSync(target)) {
-    if (!force) {
-      skipped.push(shown);
-      continue;
-    }
+  if (!existsSync(target)) {
+    copyFileSync(source, target);
+    console.log(`  created   ${shown}`);
+    placeholders.push({ shown, keys: placeholderKeys(readFileSync(target, "utf8").split("\n")) });
+    changed = true;
+  } else if (force) {
     copyFileSync(target, `${target}.bak`);
     copyFileSync(source, target);
-    overwritten.push(shown);
-    continue;
+    console.log(`  overwrote ${shown} (backup: ${shown}.bak)`);
+    placeholders.push({ shown, keys: placeholderKeys(readFileSync(target, "utf8").split("\n")) });
+    changed = true;
+  } else {
+    const added = appendMissing(source, target);
+    if (added.length === 0) {
+      console.log(`  ok        ${shown} (no missing variables)`);
+      continue;
+    }
+    console.log(`  updated   ${shown}: added ${added.map((e) => e.key).join(", ")}`);
+    placeholders.push({ shown, keys: placeholderKeys(added.flatMap((e) => e.lines)) });
+    changed = true;
   }
-
-  copyFileSync(source, target);
-  created.push({ shown, placeholders: placeholderKeys(target) });
 }
 
-for (const { shown } of created) console.log(`  created   ${shown}`);
-for (const shown of overwritten) console.log(`  overwrote ${shown} (backup: ${shown}.bak)`);
-for (const shown of skipped) console.log(`  skipped   ${shown} (already exists)`);
-
-if (skipped.length > 0 && !force) {
-  console.log("\nExisting files were left untouched. Re-run with --force to replace them");
-  console.log("(the current file is backed up to <name>.bak first).");
-}
-
-const needsFilling = created.filter((f) => f.placeholders.length > 0);
+const needsFilling = placeholders.filter((p) => p.keys.length > 0);
 if (needsFilling.length > 0) {
-  console.log("\n⚠️  These copies still have placeholder values — fill them in before `pnpm dev`:");
-  for (const { shown, placeholders } of needsFilling) {
-    console.log(`  ${shown}: ${placeholders.join(", ")}`);
-  }
+  console.log("\n⚠️  Placeholder values to fill in before `pnpm dev`:");
+  for (const { shown, keys } of needsFilling) console.log(`  ${shown}: ${keys.join(", ")}`);
 }
 
-if (created.length > 0 || overwritten.length > 0) {
-  console.log("\nNext: pnpm db:up && pnpm dev");
-}
+if (changed) console.log("\nNext: pnpm db:up && pnpm dev");

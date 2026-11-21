@@ -103,6 +103,9 @@ const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
   // No logger yet (the logger depends on this module), so go straight to stderr.
   console.error("Invalid environment variables:\n", z.prettifyError(parsed.error));
+  if (process.env.NODE_ENV !== "production") {
+    console.error("\nNew variable in .env.example? `pnpm project:setup` adds it to your .env.");
+  }
   process.exit(1);
 }
 
