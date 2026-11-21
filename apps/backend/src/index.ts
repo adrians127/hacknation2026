@@ -2,6 +2,7 @@ import { buildApp } from "~backend/app";
 import { env } from "~backend/config/env";
 import { logger } from "~backend/lib/logger";
 import { prisma } from "~backend/lib/prisma";
+import { syncSystemRoles } from "~backend/modules/roles/system-roles";
 
 const app = buildApp();
 
@@ -12,7 +13,9 @@ const server = app.listen(env.PORT, () => {
 // Non-fatal: keep serving (and reporting `database: down` on /v1/health) rather than crash-loop.
 prisma.$queryRaw`SELECT 1`
   .then(() => logger.info("Database connection OK"))
-  .catch((err: unknown) => logger.error({ err }, "Database connection failed at startup"));
+  .then(() => syncSystemRoles())
+  .then(() => logger.info("System roles in sync"))
+  .catch((err: unknown) => logger.error({ err }, "Database startup checks failed"));
 
 function shutdown(signal: string): void {
   logger.info({ signal }, "Shutting down");

@@ -1,6 +1,7 @@
 import { afterAll, beforeEach } from "vitest";
 
 import { prisma } from "~backend/lib/prisma";
+import { syncSystemRoles } from "~backend/modules/roles/system-roles";
 
 // Every test starts from empty tables; files run one at a time (fileParallelism: false).
 beforeEach(async () => {
@@ -11,6 +12,7 @@ beforeEach(async () => {
     const list = tables.map(({ tablename }) => `"public"."${tablename}"`).join(", ");
     await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${list} CASCADE`);
   }
+  await syncSystemRoles();
 });
 
 afterAll(async () => {
