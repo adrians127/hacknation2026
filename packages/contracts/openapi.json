@@ -77,8 +77,7 @@
                   "SYSTEM_ROLE_READ_ONLY",
                   "ROLE_IN_USE",
                   "EMAIL_TAKEN",
-                  "ROLE_NAME_TAKEN",
-                  "TARGET_EXISTS"
+                  "ROLE_NAME_TAKEN"
                 ]
               },
               "details": {}

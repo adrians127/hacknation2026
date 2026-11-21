@@ -36,7 +36,7 @@
   "targets": {
     "title": "Targets",
     "subtitle": "IP addresses, CIDR ranges and domains included in scans",
-    "add": "Add target",
+    "add": "Add targets",
     "never": "Never",
     "columns": {
       "value": "Target",
@@ -57,11 +57,8 @@
       "delete": "Delete {{value}}"
     },
     "form": {
-      "createTitle": "Add target",
       "editTitle": "Edit target",
       "value": "IP, CIDR range or domain",
-      "valuePlaceholder": "10.0.0.0/24",
-      "valueRequired": "Enter an address, range or domain.",
       "note": "Note",
       "noteTooLong": "Use at most 500 characters.",
       "tags": "Tags",
@@ -76,9 +73,110 @@
       "confirm": "Delete"
     },
     "toast": {
-      "created": "Target added.",
       "updated": "Target saved.",
       "deleted": "Target deleted."
+    },
+    "import": {
+      "title": "Add targets",
+      "subtitle": "Enter IP addresses, CIDR ranges (up to /16) and domains by hand, or load them from a CSV or JSON file.",
+      "back": "Back to targets",
+      "tabs": {
+        "manual": "Manual",
+        "csv": "CSV file",
+        "json": "JSON file"
+      },
+      "manual": {
+        "label": "Targets",
+        "placeholder": "10.0.0.0/24, Campus network\n192.0.2.15\nexample.com",
+        "hint": "One target per line, optionally followed by a comma and a note. Lines starting with # are skipped."
+      },
+      "csv": {
+        "hint": "One target per row with an optional note in the next column. A header row (target, note) is optional; columns may be separated by a comma, semicolon or tab.",
+        "sample": "Download a sample CSV"
+      },
+      "json": {
+        "hint": "An array of addresses, or of objects with target and note fields, optionally under a targets key.",
+        "sample": "Download a sample JSON"
+      },
+      "file": {
+        "label": "File",
+        "selected": "{{name}} ({{size}} kB)",
+        "tooLarge": "The file is larger than 10 MB.",
+        "unreadable": "The file could not be read."
+      },
+      "preview": {
+        "title": "Preview",
+        "empty": "Enter targets or choose a file to see what will be imported.",
+        "ready_one": "{{count, number}} target ready to import",
+        "ready_other": "{{count, number}} targets ready to import",
+        "breakdown": "IP: {{ip, number}} · CIDR: {{cidr, number}} · Domains: {{domain, number}}",
+        "addresses_one": "{{count, number}} IP address in total",
+        "addresses_other": "{{count, number}} IP addresses in total",
+        "skipped_one": "{{count, number}} entry will be skipped.",
+        "skipped_other": "{{count, number}} entries will be skipped.",
+        "issuesTitle": "Problems and changes",
+        "line": "Line",
+        "item": "Item",
+        "value": "Value",
+        "problem": "Problem",
+        "changed": "Changed",
+        "rejected": "Skipped",
+        "more_one": "…and {{count, number}} more",
+        "more_other": "…and {{count, number}} more"
+      },
+      "issues": {
+        "invalid_format": "Not an IPv4 address, CIDR range or domain",
+        "ipv6_unsupported": "IPv6 is not supported",
+        "reserved_range": "Reserved range (loopback, link-local, multicast or broadcast)",
+        "cidr_too_large": "Range larger than /16",
+        "value_too_long": "Too long",
+        "note_too_long": "Note longer than 500 characters",
+        "duplicate": "Repeats an earlier entry",
+        "cidr_normalized": "Host bits cleared to the network address",
+        "single_host_cidr": "A /32 range is imported as a single address",
+        "url_stripped": "URL reduced to its host name"
+      },
+      "listErrors": {
+        "empty": "There is nothing to import.",
+        "invalid_json": "The file is not valid JSON.",
+        "unsupported_json_shape": "Expected an array of targets or an object with a targets array.",
+        "too_many_entries": "More than 100,000 targets in one import.",
+        "too_many_addresses": "More than 1,048,576 IP addresses in one import.",
+        "too_many_domains": "More than 1,000 domains in one import."
+      },
+      "startScan": {
+        "label": "Start a scan right away",
+        "hint": "Domains are resolved to IP addresses and all addresses are split into scan jobs for the workers."
+      },
+      "submit_one": "Import {{count, number}} target",
+      "submit_other": "Import {{count, number}} targets",
+      "submitting": "Importing…",
+      "toast": "Targets imported.",
+      "result": {
+        "title": "Import finished",
+        "created_one": "{{count, number}} target added",
+        "created_other": "{{count, number}} targets added",
+        "skipped_one": "{{count, number}} target was already on the list",
+        "skipped_other": "{{count, number}} targets were already on the list",
+        "scanTitle": "Scan queued",
+        "noScan": "No scan was queued.",
+        "addresses": "IP addresses",
+        "jobs": "Scan jobs",
+        "ports": "Ports",
+        "maxRate": "Rate limit",
+        "maxRateValue": "{{rate, number}} packets/s per job",
+        "warningsTitle": "Left out of the scan",
+        "importMore": "Import more",
+        "toTargets": "Go to targets"
+      },
+      "warnings": {
+        "dns_not_found": "The domain does not exist",
+        "dns_no_addresses": "The domain has no IPv4 address (A record)",
+        "dns_timeout": "The DNS lookup timed out",
+        "dns_failed": "The DNS lookup failed",
+        "resolves_to_reserved": "Points to a reserved address, which was skipped",
+        "no_scannable_targets": "Nothing was left to scan, so no scan was queued."
+      }
     }
   },
   "scans": {
@@ -175,7 +273,6 @@
     "SYSTEM_ROLE_READ_ONLY": "System roles cannot be changed.",
     "ROLE_IN_USE": "Users still have this role. Move them to another role first.",
     "EMAIL_TAKEN": "A user with this email already exists.",
-    "ROLE_NAME_TAKEN": "A role with this name already exists.",
-    "TARGET_EXISTS": "This target is already on the list."
+    "ROLE_NAME_TAKEN": "A role with this name already exists."
   }
 }

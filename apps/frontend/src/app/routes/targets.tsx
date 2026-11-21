@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import type { Target } from "@hacknation/contracts/targets/targets.schema";
@@ -16,10 +17,11 @@ import { TargetDialog } from "@/features/targets/components/target-dialog";
 import { TargetsTable } from "@/features/targets/components/targets-table";
 import { useErrorMessage } from "@/hooks/use-error-message";
 
-type Dialog = { kind: "create" } | { kind: "edit"; target: Target } | { kind: "delete"; target: Target };
+type Dialog = { kind: "edit"; target: Target } | { kind: "delete"; target: Target };
 
 export function TargetsRoute() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const errorMessage = useErrorMessage();
   const targets = useTargets();
   const deleteTarget = useDeleteTarget();
@@ -36,7 +38,7 @@ export function TargetsRoute() {
         title={t("targets.title")}
         description={t("targets.subtitle")}
         actions={
-          <GuardedButton permissions={["targets:create"]} onClick={() => setDialog({ kind: "create" })}>
+          <GuardedButton permissions={["targets:create"]} onClick={() => void navigate("/app/targets/new")}>
             <Plus />
             {t("targets.add")}
           </GuardedButton>
@@ -61,12 +63,8 @@ export function TargetsRoute() {
         </Card>
       )}
 
-      {(dialog?.kind === "create" || dialog?.kind === "edit") && (
-        <TargetDialog
-          key={dialog.kind === "edit" ? dialog.target.id : "create"}
-          target={dialog.kind === "edit" ? dialog.target : undefined}
-          onClose={closeDialog}
-        />
+      {dialog?.kind === "edit" && (
+        <TargetDialog key={dialog.target.id} target={dialog.target} onClose={closeDialog} />
       )}
 
       {dialog?.kind === "delete" && (

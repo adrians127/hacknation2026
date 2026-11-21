@@ -29,13 +29,6 @@ export const TargetListResponseSchema = z.object({ items: z.array(TargetSchema) 
 const NoteSchema = z.string().max(TARGET_IMPORT_LIMITS.maxNoteLength);
 const TagsSchema = z.array(NonBlankStringSchema.max(50)).max(20);
 
-export const CreateTargetBodySchema = z.object({
-  // A domain name is at most 253 characters, longer than any IP or CIDR.
-  value: NonBlankStringSchema.max(TARGET_IMPORT_LIMITS.maxDomainLength),
-  note: NoteSchema.optional(),
-  tags: TagsSchema.optional(),
-});
-
 export const UpdateTargetBodySchema = z
   .object({
     note: NoteSchema.optional(),
@@ -105,7 +98,6 @@ export const ImportTargetsResponseSchema = z.object({
 
 export type Target = z.infer<typeof TargetSchema>;
 export type TargetListResponse = z.infer<typeof TargetListResponseSchema>;
-export type CreateTargetBody = z.infer<typeof CreateTargetBodySchema>;
 export type UpdateTargetBody = z.infer<typeof UpdateTargetBodySchema>;
 export type ImportTargetsBody = z.infer<typeof ImportTargetsBodySchema>;
 export type ImportWarningCode = z.infer<typeof ImportWarningCodeSchema>;
