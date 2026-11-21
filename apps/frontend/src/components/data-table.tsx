@@ -1,5 +1,6 @@
 import { useTable, type RowData } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { Fragment, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,11 +18,14 @@ export function DataTable<TData extends RowData>({
   data,
   emptyLabel,
   rowClassName,
+  renderExpanded,
 }: {
   columns: DataTableColumns<TData>;
   data: TData[];
   emptyLabel?: string;
   rowClassName?: (row: TData) => string | undefined;
+  /** Content of a full-width row under the row, or `null` while it is collapsed. */
+  renderExpanded?: (row: TData) => ReactNode;
 }) {
   const { t } = useTranslation();
   const table = useTable({ features: dataTableFeatures, columns, data });
@@ -63,15 +67,27 @@ export function DataTable<TData extends RowData>({
             </TableCell>
           </TableRow>
         ) : (
-          rows.map((row) => (
-            <TableRow key={row.id} className={rowClassName?.(row.original)}>
-              {row.getAllCells().map((cell) => (
-                <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
-                  <table.FlexRender cell={cell} />
-                </TableCell>
-              ))}
-            </TableRow>
-          ))
+          rows.map((row) => {
+            const expanded = renderExpanded?.(row.original);
+            return (
+              <Fragment key={row.id}>
+                <TableRow className={rowClassName?.(row.original)}>
+                  {row.getAllCells().map((cell) => (
+                    <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
+                      <table.FlexRender cell={cell} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+                {expanded != null && (
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableCell colSpan={columns.length} className="p-0">
+                      {expanded}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            );
+          })
         )}
       </TableBody>
     </Table>

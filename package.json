@@ -22,12 +22,15 @@
     "db:up": "docker compose -f docker/docker-compose.yml up -d postgres",
     "db:logs": "docker compose -f docker/docker-compose.yml logs -f postgres",
     "db:reset": "pnpm --filter @subsurf/backend db:reset",
+    "db:seed:hosts": "pnpm --filter @subsurf/backend db:seed:hosts",
     "dojo:up": "docker compose -f docker/docker-compose.yml up -d defectdojo-nginx defectdojo-celeryworker defectdojo-celerybeat",
     "dojo:logs": "docker compose -f docker/docker-compose.yml logs -f defectdojo-initializer defectdojo-uwsgi defectdojo-celeryworker defectdojo-celerybeat defectdojo-nginx",
     "dojo:smoke": "node docker/defectdojo/smoke-test.mjs",
     "workers:build": "docker compose -f docker/docker-compose.workers.yml build masscan-worker",
     "workers:masscan": "docker compose -f docker/docker-compose.workers.yml run --rm -T masscan-worker",
-    "workers:manager": "docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager"
+    "workers:manager": "docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager",
+    "workers:nmap:build": "docker compose -f docker/docker-compose.workers.yml --profile nmap build nmap-worker",
+    "workers:nmap": "docker compose -f docker/docker-compose.workers.yml run --rm -T nmap-worker --input -"
   },
   "devDependencies": {
     "oxlint": "^1.94.0",

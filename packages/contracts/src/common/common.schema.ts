@@ -7,6 +7,9 @@ import { z } from "zod";
  */
 export const NonBlankStringSchema = z.string().min(1).regex(/\S/, "Must not be blank");
 
+/** User-assigned labels on inventory items (targets, hosts, services). */
+export const TagsSchema = z.array(NonBlankStringSchema.max(50)).max(20);
+
 /** Machine-readable reason, so the frontend can tell 401/403/409 cases apart and translate them. */
 export const ErrorCodeSchema = z.enum([
   "UNAUTHENTICATED",

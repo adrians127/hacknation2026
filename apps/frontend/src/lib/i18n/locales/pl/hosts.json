@@ -1,0 +1,140 @@
+{
+  "noMatches": "Żaden host nie pasuje do filtrów",
+  "search": {
+    "label": "Szukaj hostów",
+    "placeholder": "IP, nazwa hosta, port, produkt lub tag"
+  },
+  "filters": {
+    "triage": "Filtruj według statusu triage",
+    "anyTriage": "Dowolny status triage",
+    "change": "Filtruj według zmiany",
+    "allHosts": "Wszystkie hosty",
+    "changes": {
+      "any": "Dowolna zmiana",
+      "new": "Nowe",
+      "gone": "Zniknięte",
+      "changed": "Zmienione",
+      "unknown": "Bez odpowiedzi"
+    }
+  },
+  "change": {
+    "new": "Nowy",
+    "gone": "Zniknął",
+    "changed": "Zmieniony",
+    "unchanged": "Bez zmian",
+    "unknown": "Brak odpowiedzi"
+  },
+  "triage": {
+    "unreviewed": "Nieprzejrzany",
+    "reviewed": "Przejrzany",
+    "important": "Ważny",
+    "false_positive": "Fałszywy alarm"
+  },
+  "observation": {
+    "up": "Aktywny",
+    "down": "Nieaktywny",
+    "timeout": "Przekroczony czas",
+    "cancelled": "Nieprzeskanowany",
+    "failed": "Błąd"
+  },
+  "columns": {
+    "expand": "Usługi",
+    "host": "Host",
+    "status": "Status",
+    "change": "Zmiana",
+    "services": "Otwarte porty",
+    "triage": "Triage",
+    "tags": "Tagi",
+    "note": "Notatka",
+    "actions": "Akcje",
+    "port": "Port",
+    "service": "Usługa",
+    "http": "HTTP"
+  },
+  "actions": {
+    "expand": "Pokaż usługi hosta {{ip}}",
+    "collapse": "Ukryj usługi hosta {{ip}}",
+    "details": "Szczegóły hosta {{ip}}",
+    "edit": "Edytuj",
+    "editHost": "Edytuj {{ip}}",
+    "editService": "Edytuj usługę {{name}}",
+    "triageOf": "Status triage: {{name}}"
+  },
+  "service": {
+    "unidentified": "niezidentyfikowana",
+    "edited": "Skorygowano",
+    "observed": "Skaner wykrył: {{value}}"
+  },
+  "http": {
+    "noTitle": "brak tytułu",
+    "bareIp": "po IP",
+    "more": "i jeszcze {{n}}",
+    "redirects": "Przekierowania",
+    "notFollowed": "niewykonane",
+    "headers": "Nagłówki",
+    "cookies": "Ciasteczka",
+    "cookieValuesHashed": "Wartości ciasteczek nie opuszczają skanera; zapisujemy tylko ich skróty.",
+    "tls": "Certyfikat TLS",
+    "selfSigned": "Samopodpisany",
+    "expired": "Wygasł",
+    "expiresSoon": "Wygasa w ciągu 30 dni",
+    "subject": "Podmiot",
+    "san": "Nazwy alternatywne",
+    "issuer": "Wystawca",
+    "validity": "Ważny",
+    "key": "Klucz",
+    "cipher": "Szyfr",
+    "favicon": "Favicon",
+    "probes": "Sprawdzone ścieżki",
+    "body": "Treść odpowiedzi",
+    "truncated": "obcięta"
+  },
+  "detail": {
+    "title": "Szczegóły hosta",
+    "loading": "Wczytywanie hosta",
+    "noHostnames": "Brak znanych nazw",
+    "firstSeen": "Pierwszy raz widziany",
+    "lastSeen": "Ostatnio widziany",
+    "note": "Notatka",
+    "noNote": "Brak notatki",
+    "history": "Historia skanów",
+    "scannedAt": "Skan",
+    "latency": "Opóźnienie",
+    "openPorts": "Otwarte porty",
+    "services": "Usługi",
+    "noServices": "Nie wykryto otwartych portów",
+    "observedAt": "Zaobserwowano",
+    "detection": "Wykrywanie",
+    "extraInfo": "Szczegóły",
+    "banner": "Baner",
+    "endpoints": "Endpointy HTTP"
+  },
+  "form": {
+    "hostTitle": "Edytuj {{ip}}",
+    "serviceTitle": "Edytuj {{port}}/{{protocol}} na {{ip}}",
+    "keptAcrossScans": "Twoje zmiany pozostaną bez zmian po kolejnych skanach.",
+    "note": "Notatka",
+    "noteEncrypted": "Przechowywana w postaci zaszyfrowanej.",
+    "tags": "Tagi",
+    "tagsHint": "Oddzielone przecinkami, np. dmz, wlasciciel-it",
+    "triage": "Status triage",
+    "corrections": "Korekty",
+    "correctionsHint": "Zastępują to, co zidentyfikował skaner. Zostaw pole puste, aby pokazać wartość ze skanu (widoczną na szaro).",
+    "identity": {
+      "name": "Usługa",
+      "product": "Produkt",
+      "version": "Wersja"
+    },
+    "noteTooLong": "Notatka może mieć najwyżej 2000 znaków",
+    "tagsInvalid": "Najwyżej 20 tagów, każdy do 50 znaków",
+    "overrideInvalid": "Korekta może mieć najwyżej 200 znaków",
+    "cancel": "Anuluj",
+    "submit": "Zapisz",
+    "submitting": "Zapisywanie…"
+  },
+  "toast": {
+    "hostSaved": "Zapisano hosta",
+    "serviceSaved": "Zapisano usługę",
+    "triageSaved": "Zapisano status triage"
+  }
+}

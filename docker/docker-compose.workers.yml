@@ -4,6 +4,8 @@
 #   pnpm workers:masscan  one-shot masscan sweep: pnpm workers:masscan < job.json
 #   pnpm workers:manager  build and run worker-manager on its example job list; results
 #                         land in worker-results/<run-id>/ at the repo root
+#   pnpm workers:nmap:build  build and test the nmap-worker image
+#   pnpm workers:nmap        one-shot Nmap job: pnpm workers:nmap < job.json
 #
 # nmap-worker is not needed for now and sits behind the `nmap` profile:
 #   docker compose -f docker/docker-compose.workers.yml --profile nmap up -d --build
@@ -17,13 +19,18 @@ services:
     profiles: ["nmap"]
     build:
       context: ../apps/workers/nmap-worker
+      args:
+        UBUNTU_IMAGE: ${UBUNTU_IMAGE:-ubuntu}
     image: hacknation/nmap-worker:local
     container_name: hacknation-nmap-worker
+    command: ["--http"]
     environment:
       # The backend runs on the host via `pnpm dev`.
       BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:3001/v1}
       WORKER_TOKEN: ${WORKER_TOKEN:-}
-      NMAP_SCAN_TYPE: syn
+      NMAP_SCAN_TYPE: ${NMAP_SCAN_TYPE:-syn}
+      # Nmap checks this even when its binary already has the required file capabilities.
+      NMAP_PRIVILEGED: "1"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     cap_add:

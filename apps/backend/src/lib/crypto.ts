@@ -55,3 +55,21 @@ export function isEncryptedValue(value: unknown): value is EncryptedValue {
 export function encryptNullable(value: unknown): EncryptedValue | null {
   return value === null ? null : encryptJson(value);
 }
+
+/** Free text written by users (notes). An empty text stores as `null`. */
+export function encryptText(text: string): EncryptedValue | null {
+  return text === "" ? null : encryptJson(text);
+}
+
+/** Reads a column written by `encryptText`; throws if it holds anything else. */
+export function decryptText(stored: unknown): string {
+  if (stored === null) return "";
+  if (!isEncryptedValue(stored)) {
+    throw new Error("Expected an encrypted value");
+  }
+  const text = decryptJson(stored);
+  if (typeof text !== "string") {
+    throw new Error("Encrypted value is not a text");
+  }
+  return text;
+}

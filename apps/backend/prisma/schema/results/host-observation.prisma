@@ -1,5 +1,5 @@
-/// What one scan saw at one address. Every address of a job gets a row, `down` ones included,
-/// so the scan's coverage is known. Written by results ingest, never edited.
+/// What one job result saw at one address. Every address of a job gets a row, `down` ones included,
+/// so separate worker runs retain their own evidence. Written by results ingest, never edited.
 model HostObservation {
   id         String                @id @default(uuid(7)) @db.Uuid
   scanId     String                @db.Uuid
@@ -23,9 +23,8 @@ model HostObservation {
   hostnames HostnameObservation[]
   ports     PortObservation[]
 
-  /// Also serves lookups by scanId.
-  @@unique([scanId, ip])
-  @@index([resultId])
+  @@unique([resultId, ip])
+  @@index([scanId, ip])
   @@index([hostId])
   @@index([ipNumber])
 }

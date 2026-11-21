@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { NonBlankStringSchema } from "../common/common.schema";
+import { NonBlankStringSchema, TagsSchema } from "../common/common.schema";
 import { QueuedScanSchema } from "../scans/scans.schema";
 import {
   collectTargets,
@@ -27,7 +27,6 @@ export const TargetSchema = z.object({
 export const TargetListResponseSchema = z.object({ items: z.array(TargetSchema) });
 
 const NoteSchema = z.string().max(TARGET_IMPORT_LIMITS.maxNoteLength);
-const TagsSchema = z.array(NonBlankStringSchema.max(50)).max(20);
 
 export const UpdateTargetBodySchema = z
   .object({

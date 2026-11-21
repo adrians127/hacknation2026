@@ -23,7 +23,7 @@ The Nmap worker sends `WORKER_TOKEN` as a bearer machine token to JSON endpoints
 
 ## Result format (locked)
 
-What a worker returns for a job is fixed in [`docs/worker-result-format.md`](../../docs/worker-result-format.md): a `{ scan, hosts[] }` document with every address of the job, its open ports, service detection and HTTP/TLS fingerprint data. Every worker works towards producing exactly that structure. The backend builds all scan-data features on it. The document also lists what the current `nmap-worker` output still lacks, and what the job must provide (domains per IP, probe paths).
+What a worker returns for a job is fixed in [`docs/worker-result-format.md`](../../docs/worker-result-format.md): a `{ scan, hosts[] }` document with every address of the job, its open ports and service detection. The backend builds scan-data features on it. The current `nmap-worker` emits this structure; HTTP/TLS fingerprint collection is still pending.
 
 ## Scan jobs in the database
 

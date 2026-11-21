@@ -30,11 +30,23 @@ FAKE_NMAP = textwrap.dedent("""\
     if os.environ.get('FAKE_NMAP_INVALID_XML'):
         output.write_text('<broken>')
     else:
-        output.write_text(f'''<nmaprun><host><address addr="{target}" addrtype="ipv4"/>
-            <ports><port protocol="tcp" portid="{ports[0]}"><state state="open"/>
-            <service name="https" product="Example" version="1.0"><cpe>cpe:/a:example:1</cpe>
-            </service></port></ports></host><runstats><finished exit="success"/></runstats>
-            </nmaprun>''')
+        down = target == os.environ.get('FAKE_NMAP_DOWN_IP')
+        filtered = target == os.environ.get('FAKE_NMAP_FILTERED_IP')
+        first = '' if down else (f'''<ports><port protocol="tcp" portid="{ports[0]}">
+            <state state="filtered" reason="no-response"/></port>''' if filtered else
+            f'''<ports><port protocol="tcp" portid="{ports[0]}">
+            <state state="open" reason="syn-ack" reason_ttl="63"/>
+            <service name="https" product="Example" version="1.0" extrainfo="test"
+                     method="probed" conf="9"><cpe>cpe:/a:example:1</cpe></service>
+            </port>''')
+        last = '' if down or len(ports) == 1 else f'''<port protocol="tcp" portid="{ports[1]}">
+            <state state="closed" reason="reset"/></port>'''
+        end = '' if down else '</ports>'
+        output.write_text(f'''<nmaprun version="7.95"><host>
+            <status state="{'down' if down else 'up'}" reason="{'no-response' if down else 'syn-ack'}"/>
+            <address addr="{target}" addrtype="ipv4"/><times srtt="3500"/>
+            <hostnames><hostname name="ptr.example.org" type="PTR"/></hostnames>
+            {first}{last}{end}</host><runstats><finished exit="success"/></runstats></nmaprun>''')
     """)
 
 
@@ -50,8 +62,9 @@ class WorkerTest(unittest.TestCase):
     def job(self, targets, **limits):
         deadline = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=30)
         return {
-            "job_id": "test-job",
+            "job_id": "0193a1aa-6c1e-7b3f-9d2a-4e5f60718293",
             "lease_id": "test-lease",
+            "scan_id": "0193a0f2-1b2c-7d3e-8f40-516273849506",
             "subnet": "127.0.0.0/30",
             "deadline": deadline.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "limits": {"max_parallel": 2, "max_rate_per_process": 50,
@@ -60,28 +73,36 @@ class WorkerTest(unittest.TestCase):
         }
 
     def run_job(self, job, **environment):
-        path = self.directory / "job.json"
-        path.write_text(json.dumps(job))
         process_environment = os.environ.copy()
         process_environment.update(environment)
         process_environment["NMAP_BINARY"] = str(self.fake_nmap)
-        result = subprocess.run([str(WORKER), "--job-file", str(path)], capture_output=True,
+        result = subprocess.run([str(WORKER)], input=json.dumps(job), capture_output=True,
                                 text=True, timeout=10, env=process_environment)
         return result.returncode, json.loads(result.stdout)
 
     def test_parallel_hosts_and_xml_mapping(self):
         log = self.directory / "starts.log"
         targets = [
-            {"ip": "127.0.0.1", "domain": None, "tcp_ports": [80, 443]},
-            {"ip": "127.0.0.2", "domain": "example.org", "tcp_ports": [8080]},
+            {"ip": "127.0.0.1", "domains": [], "tcp_ports": [80, 443]},
+            {"ip": "127.0.0.2", "domains": ["example.org"], "tcp_ports": [8080]},
         ]
         code, result = self.run_job(self.job(targets), FAKE_NMAP_SLEEP_MS="350",
                                     FAKE_NMAP_LOG=str(log))
         self.assertEqual(code, 0)
-        self.assertEqual(result["status"], "completed")
-        self.assertEqual([port["state"] for port in result["hosts"][0]["ports"]],
-                         ["open", "not_reported"])
+        self.assertEqual(result["scan"]["status"], "completed")
+        self.assertEqual(result["scan"]["counts"]["addresses"], 2)
+        self.assertEqual(result["scan"]["counts"]["openPorts"], 2)
+        self.assertEqual(result["scan"]["worker"]["nmapVersion"], "7.95")
+        self.assertEqual([port["state"] for port in result["hosts"][0]["ports"]], ["open"])
+        self.assertEqual(result["hosts"][0]["status"], "up")
+        self.assertEqual(result["hosts"][0]["reason"], "syn-ack")
+        self.assertEqual(result["hosts"][0]["latencyMs"], 4)
+        self.assertEqual(result["hosts"][0]["ports"][0]["identity"]["ttl"], 63)
+        self.assertEqual(result["hosts"][0]["ports"][0]["service"]["method"], "probed")
         self.assertEqual(result["hosts"][0]["ports"][0]["service"]["product"], "Example")
+        self.assertEqual(result["hosts"][1]["hostnames"][0],
+                         {"name": "example.org", "source": "job"})
+        self.assertEqual(result["hosts"][0]["ports"][0]["http"], [])
         starts = [float(line.split()[1]) for line in log.read_text().splitlines()]
         self.assertEqual(len(starts), 2)
         self.assertLess(abs(starts[0] - starts[1]), 0.25)
@@ -89,21 +110,67 @@ class WorkerTest(unittest.TestCase):
     def test_rejects_ip_outside_subnet(self):
         code, result = self.run_job(self.job([{"ip": "127.0.1.1", "tcp_ports": [80]}]))
         self.assertNotEqual(code, 0)
-        self.assertEqual(result["code"], "invalid_target")
+        self.assertEqual(result["scan"]["status"], "failed")
+        self.assertEqual(result["scan"]["error"]["code"], "invalid-target")
+
+    def test_job_identifiers_must_match_result_contract(self):
+        job = self.job([{"ip": "127.0.0.1", "tcp_ports": [80]}])
+        job["scan_id"] = "not-a-uuid"
+        code, result = self.run_job(job)
+        self.assertEqual(code, 2)
+        self.assertEqual(result["scan"]["error"]["code"], "invalid-job")
+
+    def test_effective_limits_are_reported(self):
+        target = {"ip": "127.0.0.1", "tcp_ports": [80]}
+        code, result = self.run_job(self.job([target], max_parallel=200,
+                                               max_rate_per_process=1000))
+        self.assertEqual(code, 0)
+        self.assertEqual(result["scan"]["params"]["maxParallel"], 1)
+        self.assertEqual(result["scan"]["params"]["maxRatePerProcess"], 50)
 
     def test_timeout_is_not_reported_as_scanned(self):
         target = {"ip": "127.0.0.1", "tcp_ports": [80]}
         code, result = self.run_job(self.job([target], host_timeout_ms=100),
                                     FAKE_NMAP_SLEEP_MS="1000")
-        self.assertNotEqual(code, 0)
-        self.assertEqual(result["status"], "partial")
+        self.assertEqual(code, 0)
+        self.assertEqual(result["scan"]["status"], "partial")
         self.assertEqual(result["hosts"][0]["status"], "timeout")
+        self.assertEqual(result["scan"]["counts"]["timeout"], 1)
 
     def test_malformed_xml_is_a_host_error(self):
         target = {"ip": "127.0.0.1", "tcp_ports": [80]}
         code, result = self.run_job(self.job([target]), FAKE_NMAP_INVALID_XML="1")
-        self.assertNotEqual(code, 0)
-        self.assertEqual(result["hosts"][0]["error"]["code"], "invalid_xml")
+        self.assertEqual(code, 0)
+        self.assertEqual(result["hosts"][0]["error"]["code"], "invalid-xml")
+
+    def test_down_host_has_no_ports(self):
+        target = {"ip": "127.0.0.2", "tcp_ports": [80]}
+        code, result = self.run_job(self.job([target]), FAKE_NMAP_DOWN_IP="127.0.0.2")
+        self.assertEqual(code, 0)
+        self.assertEqual(result["hosts"][0]["status"], "down")
+        self.assertEqual(result["hosts"][0]["ports"], [])
+        self.assertEqual(result["scan"]["counts"]["down"], 1)
+
+    def test_pn_does_not_make_unresponsive_host_up(self):
+        target = {"ip": "127.0.0.1", "tcp_ports": [80]}
+        code, result = self.run_job(self.job([target]), FAKE_NMAP_FILTERED_IP="127.0.0.1")
+        self.assertEqual(code, 0)
+        self.assertEqual(result["hosts"][0]["status"], "down")
+        self.assertEqual(result["hosts"][0]["reason"], "no-response")
+        self.assertEqual(result["hosts"][0]["ports"], [])
+
+    def test_file_input_and_output(self):
+        path = self.directory / "job.json"
+        destination = self.directory / "result.json"
+        path.write_text(json.dumps(self.job([{"ip": "127.0.0.1", "tcp_ports": [80]}])))
+        environment = os.environ.copy()
+        environment["NMAP_BINARY"] = str(self.fake_nmap)
+        process = subprocess.run([str(WORKER), "--input", str(path), "--output", str(destination),
+                                  "--pretty"], capture_output=True, text=True, timeout=10,
+                                 env=environment)
+        self.assertEqual(process.returncode, 0)
+        self.assertFalse(process.stdout)
+        self.assertEqual(json.loads(destination.read_text())["scan"]["status"], "completed")
 
 
 if __name__ == "__main__":
