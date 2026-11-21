@@ -26,7 +26,7 @@ pnpm --filter @hacknation/frontend exec shadcn add <component>
 main.tsx                 bootstrap: i18n, App, CSS
 app/                     app.tsx (RouterProvider), router.tsx, provider.tsx, routes/
 api/                     client.ts (apiClient + `api` hooks + session refresh), query-client.ts, mock.ts (mock helpers)
-components/              shared components: guarded-button, icon-action, confirm-dialog, language-toggle
+components/              shared components: guarded-button, icon-action, confirm-dialog, language-toggle, logo
 components/ui/           shadcn components (excluded from lint)
 config/                  typed env variables (fail-fast)
 features/<name>/         api/, components/, hooks/, lib/, types/ (no barrel files)

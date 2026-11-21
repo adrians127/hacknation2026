@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { LanguageToggle } from "@/components/language-toggle";
 import { Logo } from "@/components/logo";
@@ -14,11 +14,13 @@ export function LoginRoute() {
   const [searchParams] = useSearchParams();
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-4">
-      <Logo variant="full" label={t("appName")} className="w-48" />
+    <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-6">
+      <Link to="/">
+        <Logo variant="full" label={t("appName")} className="w-48" />
+      </Link>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>{tAuth("login.title")}</CardTitle>
+          <CardTitle className="text-xl">{tAuth("login.title")}</CardTitle>
           <CardDescription>{tAuth("login.description")}</CardDescription>
         </CardHeader>
         <CardContent>
