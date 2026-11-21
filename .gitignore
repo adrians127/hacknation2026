@@ -42,3 +42,6 @@ coverage/
 # claude — local-only settings; shared agents/commands may be committed
 .claude/settings.local.json
 .claude/.cc-writes/
+
+# Claude Code worktrees
+.claude/worktrees/

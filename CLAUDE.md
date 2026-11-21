@@ -44,7 +44,7 @@ English is the project's default language: documentation, code comments, commit 
 | nmap-worker (CMake/Docker build, network capabilities) | [`apps/workers/nmap-worker/README.md`](apps/workers/nmap-worker/README.md) |
 | Contract (zod schemas, OpenAPI generation, adding an endpoint) | [`packages/contracts/README.md`](packages/contracts/README.md) |
 | Typed API client (and why it uses TS 6) | [`packages/api-client/README.md`](packages/api-client/README.md) |
-| Local infrastructure (PostgreSQL, worker in compose) | [`docker/README.md`](docker/README.md) |
+| Local infrastructure (PostgreSQL, DefectDojo, worker in compose) | [`docker/README.md`](docker/README.md) |
 | Technical documentation and presentation | [`docs/`](docs/) |
 
 ## Repository structure
@@ -56,7 +56,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - `apps/workers/<name>`: C++23 + CMake + nmap workers, built and run in Docker. **Not pnpm workspaces** (no `package.json`), so `pnpm build` does not need a local C++ compiler.
 - `packages/contracts`: `@hacknation/contracts`, zod schemas and types. Generates the committed `openapi.json`. A source-only package with no build step.
 - `packages/api-client`: `@hacknation/api-client`, types generated from `openapi.json` + `openapi-fetch`. **The only workspace on TypeScript 6** (`openapi-typescript` needs the JS API that TS 7 no longer ships).
-- `docker/`: Docker Compose (PostgreSQL 19, worker under the `workers` profile). Not a workspace.
+- `docker/`: Docker Compose (PostgreSQL 19, local DefectDojo, worker under the `workers` profile). Not a workspace.
 - `docs/`: technical documentation and the presentation.
 
 ## Architecture (settled)
@@ -66,6 +66,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - **Workers ↔ backend:** HTTP pull. A worker takes a batch of work (lease + heartbeat) and sends results back over REST. Workers have no database access.
 - **Auth/RBAC:** local accounts (argon2) and a JWT in an httpOnly cookie. The four roles from the PDF (item 13). Not implemented yet.
 - **Sensitive data:** encrypted at rest at the application level. To be designed together with the models.
+- **DefectDojo:** a local instance runs in `docker/` (`http://localhost:8080`, fixed dev API token). The backend will push findings through `/api/v2/import-scan/`. Not implemented yet.
 
 ## Monorepo commands
 
@@ -83,7 +84,8 @@ pnpm generate       # contracts -> openapi.json -> api-client/src/generated (com
 pnpm clean
 pnpm db:up          # PostgreSQL in Docker (pnpm db:logs)
 pnpm db:reset       # drop + migrations + seed
-pnpm infra:up       # all default compose services (infra:down, infra:logs)
+pnpm infra:up       # all default compose services, DefectDojo included (infra:down, infra:logs)
+pnpm dojo:up        # DefectDojo only, :8080 (dojo:logs, dojo:smoke)
 pnpm workers:build  # build worker images (workers:up, workers:down, workers:logs)
 ```
 
