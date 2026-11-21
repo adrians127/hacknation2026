@@ -10,6 +10,7 @@ import { ZipFile } from "yazl";
 import type { Fetcher } from "~backend/modules/vulnerabilities/sources/fetcher";
 import { HttpStatusError } from "~backend/modules/vulnerabilities/sources/fetcher";
 import type {
+  NormalizedVulnerability,
   SourceEvent,
   SyncContext,
   VulnerabilitySource,
@@ -266,3 +267,37 @@ export const JETTY_GHSA = {
   ],
   database_specific: { severity: "LOW" },
 };
+
+/** A normalized record with one CPE criterion (OpenSSH before 9.8), changed by `overrides`. */
+export function vulnerabilityRecord(
+  externalId: string,
+  overrides: Partial<NormalizedVulnerability> = {},
+): NormalizedVulnerability {
+  return {
+    externalId,
+    canonicalId: externalId,
+    aliases: [],
+    scopes: [],
+    title: null,
+    description: `${externalId} description`,
+    status: "active",
+    withdrawnAt: null,
+    severity: "high",
+    cvssScore: 7.5,
+    cvssVector: null,
+    cvssVersion: null,
+    kevAddedAt: null,
+    kevDueDate: null,
+    references: [],
+    publishedAt: null,
+    sourceModifiedAt: new Date("2026-01-01T00:00:00Z"),
+    criteria: [
+      {
+        kind: "cpe",
+        matchKey: "cpe:a:openbsd:openssh",
+        data: { conditions: [{ endExcluding: "9.8" }] },
+      },
+    ],
+    ...overrides,
+  };
+}

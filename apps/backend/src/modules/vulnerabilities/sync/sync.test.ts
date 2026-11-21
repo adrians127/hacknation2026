@@ -13,42 +13,12 @@ import {
   releaseLease,
 } from "~backend/modules/vulnerabilities/sync/lease";
 import { runSync, type SyncOptions } from "~backend/modules/vulnerabilities/sync/sync.service";
-import { FakeFetcher } from "~backend/modules/vulnerabilities/test/fixtures";
+import {
+  FakeFetcher,
+  vulnerabilityRecord as record,
+} from "~backend/modules/vulnerabilities/test/fixtures";
 
 const HOLDER = "test-holder";
-
-function record(
-  externalId: string,
-  overrides: Partial<NormalizedVulnerability> = {},
-): NormalizedVulnerability {
-  return {
-    externalId,
-    canonicalId: externalId,
-    aliases: [],
-    scopes: [],
-    title: null,
-    description: `${externalId} description`,
-    status: "active",
-    withdrawnAt: null,
-    severity: "high",
-    cvssScore: 7.5,
-    cvssVector: null,
-    cvssVersion: null,
-    kevAddedAt: null,
-    kevDueDate: null,
-    references: [],
-    publishedAt: null,
-    sourceModifiedAt: new Date("2026-01-01T00:00:00Z"),
-    criteria: [
-      {
-        kind: "cpe",
-        matchKey: "cpe:a:openbsd:openssh",
-        data: { conditions: [{ endExcluding: "9.8" }] },
-      },
-    ],
-    ...overrides,
-  };
-}
 
 /** Emits whatever the test scripts, the way a real source would. */
 function scriptedSource(script: () => SourceEvent[] | Error): VulnerabilitySource {
