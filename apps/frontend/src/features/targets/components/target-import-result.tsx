@@ -42,7 +42,7 @@ export function TargetImportResult({ result, onImportMore }: TargetImportResultP
               <dt className="text-muted-foreground">{t("targets.import.result.jobs")}</dt>
               <dd className="tabular-nums">{formatNumber(scan.jobCount, locale)}</dd>
               <dt className="text-muted-foreground">{t("targets.import.result.ports")}</dt>
-              <dd className="font-mono break-all">{scan.ports}</dd>
+              <dd className="font-mono break-words">{scan.ports.replaceAll(",", ", ")}</dd>
               <dt className="text-muted-foreground">{t("targets.import.result.maxRate")}</dt>
               <dd>{t("targets.import.result.maxRateValue", { rate: scan.maxRate })}</dd>
             </dl>

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   isTargetWarning,
   type TargetIssue,
+  type TargetIssueCode,
   type TargetParseResult,
 } from "@hacknation/contracts/targets/target-input";
 
@@ -13,6 +14,9 @@ import { createDataTableColumns } from "@/lib/data-table";
 
 // Enough to spot the pattern; rendering 100k rows would freeze the page.
 const MAX_ROWS = 100;
+
+// A repeat is harmless (a warning) but still not imported.
+const isDropped = (code: TargetIssueCode) => !isTargetWarning(code) || code === "duplicate";
 
 const column = createDataTableColumns<TargetIssue>();
 
@@ -25,7 +29,7 @@ interface TargetImportPreviewProps {
 export function TargetImportPreview({ result, position }: TargetImportPreviewProps) {
   const { t } = useTranslation();
   const { entries, issues, listErrors, stats } = result;
-  const rejected = useMemo(() => issues.filter((issue) => !isTargetWarning(issue.code)).length, [issues]);
+  const dropped = useMemo(() => issues.filter((issue) => isDropped(issue.code)).length, [issues]);
   const shown = useMemo(() => issues.slice(0, MAX_ROWS), [issues]);
 
   const columns = useMemo(
@@ -45,11 +49,10 @@ export function TargetImportPreview({ result, position }: TargetImportPreviewPro
           enableSorting: false,
           cell: ({ getValue }) => {
             const code = getValue();
-            const isWarning = isTargetWarning(code);
             return (
               <span className="flex flex-wrap items-center gap-2">
-                <Badge variant={isWarning ? "secondary" : "destructive"}>
-                  {t(isWarning ? "targets.import.preview.changed" : "targets.import.preview.rejected")}
+                <Badge variant={isTargetWarning(code) ? "secondary" : "destructive"}>
+                  {t(isDropped(code) ? "targets.import.preview.rejected" : "targets.import.preview.changed")}
                 </Badge>
                 {t(`targets.import.issues.${code}`)}
               </span>
@@ -75,8 +78,8 @@ export function TargetImportPreview({ result, position }: TargetImportPreviewPro
           {" · "}
           {t("targets.import.preview.addresses", { count: stats.addresses })}
         </p>
-        {rejected > 0 && (
-          <p className="text-muted-foreground">{t("targets.import.preview.skipped", { count: rejected })}</p>
+        {dropped > 0 && (
+          <p className="text-muted-foreground">{t("targets.import.preview.skipped", { count: dropped })}</p>
         )}
       </div>
       {issues.length > 0 && (
