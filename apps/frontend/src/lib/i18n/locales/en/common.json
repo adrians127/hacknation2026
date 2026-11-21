@@ -253,7 +253,8 @@
     "targets": "Targets",
     "scans": "Scans",
     "users": "Users",
-    "roles": "Roles"
+    "roles": "Roles",
+    "vulnerabilities": "Vulnerabilities"
   },
   "notFound": {
     "title": "Page not found",

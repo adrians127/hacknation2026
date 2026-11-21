@@ -267,7 +267,8 @@
     "targets": "Cele",
     "scans": "Skany",
     "users": "Użytkownicy",
-    "roles": "Role"
+    "roles": "Role",
+    "vulnerabilities": "Podatności"
   },
   "notFound": {
     "title": "Nie znaleziono strony",

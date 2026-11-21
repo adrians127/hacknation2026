@@ -2,7 +2,11 @@ import { Pencil } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ScanHostDetail, ScanServiceDetail } from "@subsurf/contracts/scans/scan-results.schema";
+import type {
+  HostHistoryEntry,
+  ScanHostDetail,
+  ScanServiceDetail,
+} from "@subsurf/contracts/scans/scan-results.schema";
 
 import { GuardedButton } from "@/components/guarded-button";
 import { IconAction } from "@/components/icon-action";
@@ -15,6 +19,8 @@ import { HttpEndpointDetails } from "@/features/hosts/components/http-endpoint-d
 import { ServiceIdentity } from "@/features/hosts/components/service-identity";
 import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageBadge } from "@/features/hosts/components/triage-badge";
+import { ServiceVulnerabilities } from "@/features/vulnerabilities/components/service-vulnerabilities";
+import { VulnerabilitySummaryBadge } from "@/features/vulnerabilities/components/vulnerability-summary";
 import { useErrorMessage } from "@/hooks/use-error-message";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -30,9 +36,13 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function ServiceSection({
   service,
+  scanId,
+  history,
   onEdit,
 }: {
   service: ScanServiceDetail;
+  scanId: string;
+  history: readonly HostHistoryEntry[];
   onEdit: (service: ScanServiceDetail) => void;
 }) {
   const { t, i18n } = useTranslation("hosts");
@@ -47,6 +57,7 @@ function ServiceSection({
         <ServiceIdentity service={service} />
         <ChangeBadge change={service.change} />
         <TriageBadge status={service.triage} />
+        <VulnerabilitySummaryBadge summary={service.vulnerabilities} />
         <span className="ml-auto">
           <IconAction
             label={t("actions.editService", { name: String(service.port) })}
@@ -72,6 +83,8 @@ function ServiceSection({
           </Field>
         )}
       </dl>
+
+      <ServiceVulnerabilities service={service} scanId={scanId} history={history} />
 
       {(service.note || service.tags.length > 0) && (
         <div className="grid gap-1.5 rounded-lg bg-muted/40 p-2 text-sm">
@@ -131,6 +144,7 @@ function HostDetails({
           <HostStatusBadge status={host.status} />
           <ChangeBadge change={host.change} />
           <TriageBadge status={host.triage} />
+          <VulnerabilitySummaryBadge summary={host.vulnerabilities} />
           <TagList tags={host.tags} />
           <GuardedButton
             size="sm"
@@ -203,6 +217,8 @@ function HostDetails({
               <ServiceSection
                 key={service.id}
                 service={service}
+                scanId={scanId}
+                history={host.history}
                 onEdit={(selected) => onEditService(host, selected)}
               />
             ))
