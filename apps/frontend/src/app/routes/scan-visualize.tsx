@@ -255,7 +255,7 @@ export function ScanVisualizeRoute() {
         style: nodeStyle,
         draggable: false,
       });
-      nextEdges.push({ id: `${parentId}:${branch.id}`, source: parentId, target: branch.id, type: "smoothstep", style: { stroke: "#64748b", strokeWidth: 2 } });
+      nextEdges.push({ id: `${parentId}:${branch.id}`, source: parentId, target: branch.id, type: "smoothstep", style: { stroke: "var(--muted-foreground)", strokeWidth: 2 } });
     }
     return { nodes: nextNodes, edges: nextEdges };
   }, [tree, visible, expanded, t, th, activateNode, canCreateTargets, canTagHosts, openNodeAction]);
@@ -278,8 +278,8 @@ export function ScanVisualizeRoute() {
         <Card className="p-8 text-center text-muted-foreground">{t("scans.visualization.empty")}</Card>
       ) : (
         <Card className="h-[min(72vh,800px)] min-h-96 overflow-hidden p-0">
-          <ReactFlow nodes={nodes} edges={edges} onNodeClick={(_, node) => activateNode(node.id)} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} fitView minZoom={0.1} maxZoom={2} className="bg-background">
-            <Background color="#334155" gap={24} size={1} />
+          <ReactFlow nodes={nodes} edges={edges} onNodeClick={(_, node) => activateNode(node.id)} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} fitView minZoom={0.1} maxZoom={2} forceColorMode="light" className="bg-background">
+            <Background color="var(--input)" gap={24} size={1} />
             <Controls showInteractive={false} />
             <FitVisibleNodes count={nodes.length} />
           </ReactFlow>
