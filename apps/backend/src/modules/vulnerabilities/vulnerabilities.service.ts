@@ -32,6 +32,7 @@ import {
   toRun,
   toServiceVulnerability,
   toSource,
+  TRIAGE_INCLUDE,
   type MatchRow,
 } from "~backend/modules/vulnerabilities/vulnerabilities.mapper";
 
@@ -223,7 +224,8 @@ export const vulnerabilitiesService = {
     });
     if (!match) throw HttpError.notFound("The service never matched this vulnerability");
     const fields = {
-      ...(body.triage !== undefined && { triage: body.triage }),
+      // The user's verdict replaces a rule's for good: rules never touch it again.
+      ...(body.triage !== undefined && { triage: body.triage, triageRuleId: null }),
       ...(body.note !== undefined && { note: encryptText(body.note.trim()) ?? Prisma.DbNull }),
       updatedById,
     };
@@ -294,7 +296,10 @@ export const vulnerabilitiesService = {
       prisma.vulnerability.findMany({
         where: { id: { in: [...new Set(matches.map((match) => match.vulnerabilityId))] } },
       }),
-      prisma.serviceVulnerabilityTriage.findMany({ where: { serviceId: { in: [...serviceIds] } } }),
+      prisma.serviceVulnerabilityTriage.findMany({
+        where: { serviceId: { in: [...serviceIds] } },
+        include: TRIAGE_INCLUDE,
+      }),
     ]);
     const recordById = new Map(records.map((record) => [record.id, record]));
     const triageByKey = new Map(triage.map((row) => [`${row.serviceId}|${row.canonicalId}`, row]));

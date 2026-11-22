@@ -22,6 +22,8 @@ function row(facts: Partial<ScanChangeRow>): ScanChangeRow {
     after: null,
     priority: "low",
     reason: "other",
+    rule: null,
+    muted: false,
     lifecycle: { state: "active", misses: 0, flips: 0 },
     ...facts,
   };

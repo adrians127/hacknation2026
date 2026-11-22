@@ -13,6 +13,7 @@ import { buildWorkerResult } from "@subsurf/contracts/workers/worker-result.fixt
 
 import { buildApiDocs } from "~backend/lib/api-docs";
 import { prisma } from "~backend/lib/prisma";
+import { createRuleRow, definition } from "~backend/modules/rules/test/rules";
 import { serviceWithMatch } from "~backend/modules/vulnerabilities/test/matches";
 import { createUser, signInAs } from "~backend/test/auth";
 import { startTestServer, type TestServer } from "~backend/test/http";
@@ -122,6 +123,7 @@ const targetPath = async () => {
   });
   return `/v1/targets/${target.id}`;
 };
+const rulePath = async () => `/v1/rules/${(await createRuleRow()).id}`;
 const importTargets = (startScan: boolean) => async () => ({
   entries: [{ value: "192.0.2.10" }],
   startScan,
@@ -378,6 +380,28 @@ const ENDPOINTS: Endpoint[] = [
     path: triagePath,
     body: async () => ({ triage: "important" }),
   },
+
+  // rules
+  { route: "GET /rules", requires: ["rules:read"], path: async () => "/v1/rules" },
+  {
+    route: "POST /rules",
+    requires: ["rules:create"],
+    path: async () => "/v1/rules",
+    body: async () => ({ name: "Tag RDP", definition: definition("service") }),
+  },
+  {
+    route: "POST /rules/preview",
+    requires: ["rules:read"],
+    path: async () => "/v1/rules/preview",
+    body: async () => ({ definition: definition("vulnerability") }),
+  },
+  {
+    route: "PATCH /rules/{id}",
+    requires: ["rules:update"],
+    path: rulePath,
+    body: async () => ({ enabled: false }),
+  },
+  { route: "DELETE /rules/{id}", requires: ["rules:delete"], path: rulePath },
 
   // defectdojo
   {

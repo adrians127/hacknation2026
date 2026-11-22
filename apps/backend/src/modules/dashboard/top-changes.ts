@@ -38,6 +38,7 @@ export function groupChanges(rows: readonly ScanChangeRow[]): DashboardChange[] 
         change: head.change,
         priority: first.priority,
         reasons: [...new Set(sorted.map((row) => row.reason))],
+        rule: first.rule,
         ports: wholeHost ? group.flatMap((row) => (row.port === null ? [] : [row.port])) : [],
         fields: group.flatMap((row) =>
           row.field === null

@@ -4,7 +4,7 @@ import type { ScanChangeRow } from "@subsurf/contracts/scans/scan-changes.schema
 
 import { rateChange } from "~backend/modules/scans/change-priority";
 
-type Facts = Omit<ScanChangeRow, "priority" | "reason">;
+type Facts = Omit<ScanChangeRow, "priority" | "reason" | "rule" | "muted">;
 
 const base: Facts = {
   hostId: "0193f0d0-0000-7000-8000-000000000001",

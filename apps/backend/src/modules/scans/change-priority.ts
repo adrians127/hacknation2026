@@ -15,7 +15,7 @@ const ADMIN_PATH = /admin|login|manager|console|phpmyadmin|setup|install/i;
 const answered = (status: string | null) => status !== null && /^2\d\d$/.test(status);
 
 /** A change before it is rated. */
-export type ChangeFacts = Omit<ScanChangeRow, "priority" | "reason">;
+export type ChangeFacts = Omit<ScanChangeRow, "priority" | "reason" | "rule" | "muted">;
 type RowFacts = ChangeFacts;
 
 interface Rated {
@@ -91,7 +91,7 @@ function fieldRow(row: RowFacts): Rated {
 export function rateChange(row: RowFacts, hostChange: ScanChange = row.change): ScanChangeRow {
   const rated =
     row.field !== null ? fieldRow(row) : row.port === null ? hostRow(row) : serviceRow(row, hostChange);
-  return { ...row, ...rated };
+  return { ...row, ...rated, rule: null, muted: false };
 }
 
 export const PRIORITY_ORDER: Record<ChangePriority, number> = { high: 0, medium: 1, low: 2 };

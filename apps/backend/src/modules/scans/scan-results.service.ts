@@ -32,6 +32,12 @@ import {
 import { decryptText } from "~backend/lib/crypto";
 import { HttpError } from "~backend/lib/http-error";
 import { prisma } from "~backend/lib/prisma";
+import {
+  applyChangeRules,
+  type ChangePriorityRule,
+  type ChangeRowFacts,
+} from "~backend/modules/rules/rule-match";
+import { loadChangeRules, ruleNames } from "~backend/modules/rules/rules.repository";
 import { hostLifecycle } from "~backend/modules/scans/host-lifecycle";
 import { mergeObservations } from "~backend/modules/scans/merge-observations";
 import {
@@ -44,7 +50,7 @@ import {
 import {
   OBSERVATION_INCLUDE,
   SCAN_INCLUDE,
-  toChangeRows,
+  toChangeFacts,
   toScan,
   toScanHost,
   toScanHostDetail,
@@ -393,7 +399,7 @@ async function hostsInScan(
   const shownServices = new Map(
     entries.map((entry) => [entry.hostId, entry.services.map((service) => service.serviceId)]),
   );
-  const [hosts, observations, summaries, lifecycleByIp] = await Promise.all([
+  const [hosts, observations, summaries, lifecycleByIp, rules] = await Promise.all([
     prisma.host.findMany({
       where: { id: { in: entries.map((entry) => entry.hostId) } },
       include: { services: true },
@@ -401,6 +407,7 @@ async function hostsInScan(
     effectiveObservations(base ? [scanId, base.id] : [scanId], ips),
     vulnerabilitiesService.summaries(shownServices),
     lifecycles(scan, ips),
+    ruleNames(),
   ]);
   const current = observations.filter((row) => row.scanId === scanId);
   const before = base
@@ -424,6 +431,7 @@ async function hostsInScan(
               host: summaries.groups.get(diff.hostId) ?? EMPTY_SUMMARY,
               services: summaries.services,
             },
+            rules,
           },
         ]
       : [];
@@ -640,19 +648,54 @@ export const scanResultsService = {
     return { scan, base, hosts };
   },
 
-  /** Every change since the base scan, one row each, rated (export and dashboard). */
-  async changes(scanId: string, baseId?: string): Promise<ScanChangesResponse> {
+  /** Every change since the base scan, one row each, rated by the built-in rules only. */
+  async changeFacts(
+    scanId: string,
+    baseId?: string,
+  ): Promise<Omit<ScanChangesResponse, "items"> & { facts: ChangeRowFacts[] }> {
     const scan = await findScan(scanId);
     const base = await resolveBase(scan, baseId);
-    if (!base) return { scan: scanRef(scan), baseScan: null, items: [] };
+    if (!base) return { scan: scanRef(scan), baseScan: null, facts: [] };
     const { entries } = await diffWithBase(scan, base);
     const changed = entries.filter((entry) => entry.change !== null && entry.change !== "unchanged");
-    const items = [];
+    const facts = [];
     for (let start = 0; start < changed.length; start += CHANGES_BATCH) {
       const page = await hostsInScan(scan, base, changed.slice(start, start + CHANGES_BATCH));
-      items.push(...page.flatMap(toChangeRows));
+      facts.push(...page.flatMap(toChangeFacts));
     }
-    return { scan: scanRef(scan), baseScan: scanRef(base), items };
+    return { scan: scanRef(scan), baseScan: scanRef(base), facts };
+  },
+
+  /** Every change since the base scan, one row each, rated, then re-rated by the rules (export and dashboard). */
+  async changes(
+    scanId: string,
+    baseId?: string,
+    rules?: readonly ChangePriorityRule[],
+  ): Promise<ScanChangesResponse> {
+    const [{ facts, ...scans }, changeRules] = await Promise.all([
+      scanResultsService.changeFacts(scanId, baseId),
+      rules ?? loadChangeRules(),
+    ]);
+    return { ...scans, items: facts.map((row) => applyChangeRules(row, changeRules)) };
+  },
+
+  /**
+   * The latest `count` scans with results, each compared with the scan with results before it,
+   * newest first (fewer when there are not enough scans).
+   */
+  async recentDiffs(count: number): Promise<HostDiff[][]> {
+    const scans = await prisma.scan.findMany({
+      where: { results: { some: {} } },
+      orderBy: { createdAt: "desc" },
+      take: count + 1,
+    });
+    const diffs: HostDiff[][] = [];
+    for (const [index, scan] of scans.entries()) {
+      const base = scans[index + 1];
+      if (!base) break;
+      diffs.push((await diffWithBase(scan, { id: base.id, startedAt: base.startedAt })).entries);
+    }
+    return diffs;
   },
 
   /** Host assets the scan lists (gone and unknown included) inside `ranges` (sorted, merged). */

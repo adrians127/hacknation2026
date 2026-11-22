@@ -104,7 +104,12 @@ const BasisSchema = z.object({
 
 export type MatchRow = Prisma.VulnerabilityMatchGetPayload<object>;
 export type VulnerabilityRow = Prisma.VulnerabilityGetPayload<object>;
-export type TriageRow = Prisma.ServiceVulnerabilityTriageGetPayload<object>;
+export const TRIAGE_INCLUDE = {
+  triageRule: { select: { id: true, name: true } },
+} as const satisfies Prisma.ServiceVulnerabilityTriageInclude;
+export type TriageRow = Prisma.ServiceVulnerabilityTriageGetPayload<{
+  include: typeof TRIAGE_INCLUDE;
+}>;
 
 /** One match with what the UI shows of it: the displayed record and the user's triage. */
 export function toServiceVulnerability(
@@ -141,6 +146,7 @@ export function toServiceVulnerability(
     }),
     references: (record?.references ?? []).filter((url) => URL.canParse(url)).slice(0, 10),
     triage: triage?.triage ?? "unreviewed",
+    triageRule: triage?.triageRule ?? null,
     note: triage ? decryptText(triage.note) : "",
   };
 }
