@@ -36,7 +36,7 @@ lib/auth/                useMe, useCan/usePermissions, role and permission label
 lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin,hosts,pipelines,vulnerabilities,reports,rules}.json, parity test
 ```
 
-Outside `src/`, `public/` is served as-is; `public/samples/targets.{csv,json}` and `scan-results.{csv,json}` are the sample files linked from the target and results import pages (`features/scans/lib/samples.test.ts` keeps the result samples importable).
+Outside `src/`, `public/` is served as-is; `public/favicon.png` is the tab icon (a copy of `src/assets/subsurf-icon.png`, the sidebar icon); `public/samples/targets.{csv,json}` and `scan-results.{csv,json}` are the sample files linked from the target and results import pages (`features/scans/lib/samples.test.ts` keeps the result samples importable).
 
 Imports flow shared → features → app. Shared code must not import from `features/` or `app/`, and a feature must not import from `app/`. oxlint enforces this (`no-restricted-imports` in `.oxlintrc.json`).
 
