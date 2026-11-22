@@ -1,0 +1,380 @@
+#!/usr/bin/env python3
+"""One Naabu TCP discovery job in, one shared worker result out."""
+
+import argparse
+import ipaddress
+import json
+import os
+import selectors
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+VERSION = "0.1.0"
+MAX_SAFE_INTEGER = (1 << 53) - 1
+STOP_REQUESTED = False
+
+
+def now():
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def on_stop(_signum, _frame):
+    global STOP_REQUESTED
+    STOP_REQUESTED = True
+
+
+def log(message):
+    print(f"naabu-worker: {message}", file=sys.stderr, flush=True)
+
+
+def items(value, name, numbers=False):
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        raise ValueError(f"'{name}' must be a string or an array")
+    result = []
+    for item in value:
+        if numbers and type(item) is int and item >= 0:
+            item = str(item)
+        if not isinstance(item, str):
+            raise ValueError(f"'{name}' contains an invalid item: {json.dumps(item)}")
+        result.extend(part.strip() for part in item.split(",") if part.strip())
+    return result
+
+
+def integer(job, name, default, maximum, minimum=0):
+    value = job.get(name)
+    if value is None:
+        value = default
+    if type(value) is not int or not minimum <= value <= maximum:
+        raise ValueError(f"'{name}' must be an integer in {minimum}..{maximum}")
+    return value
+
+
+def address_interval(spec):
+    try:
+        if "-" in spec:
+            first, last = (int(ipaddress.IPv4Address(part.strip())) for part in spec.split("-", 1))
+            if first > last:
+                raise ValueError("reversed range")
+            return first, last
+        network = ipaddress.IPv4Network(spec, strict=False)
+        return int(network.network_address), int(network.broadcast_address)
+    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError, ValueError) as exc:
+        raise ValueError(f"invalid IPv4 target '{spec}'") from exc
+
+
+def merge(ranges):
+    merged = []
+    for first, last in sorted(ranges):
+        if merged and first <= merged[-1][1] + 1:
+            merged[-1] = (merged[-1][0], max(last, merged[-1][1]))
+        else:
+            merged.append((first, last))
+    return merged
+
+
+def subtract(targets, excludes):
+    result = []
+    for first, last in targets:
+        parts = [(first, last)]
+        for ex_first, ex_last in excludes:
+            next_parts = []
+            for lo, hi in parts:
+                if ex_last < lo or ex_first > hi:
+                    next_parts.append((lo, hi))
+                else:
+                    if lo < ex_first:
+                        next_parts.append((lo, ex_first - 1))
+                    if ex_last < hi:
+                        next_parts.append((ex_last + 1, hi))
+            parts = next_parts
+        result.extend(parts)
+    return result
+
+
+def cidrs(ranges):
+    for first, last in ranges:
+        yield from ipaddress.summarize_address_range(
+            ipaddress.IPv4Address(first), ipaddress.IPv4Address(last)
+        )
+
+
+def port_ranges(specs):
+    ranges = []
+    for spec in specs:
+        try:
+            bounds = spec.split("-", 1)
+            if not all(bound.isdecimal() for bound in bounds):
+                raise ValueError()
+            first, last = int(bounds[0]), int(bounds[-1])
+            if not 1 <= first <= last <= 65535:
+                raise ValueError()
+            ranges.append((first, last))
+        except ValueError as exc:
+            raise ValueError(f"invalid TCP port specification '{spec}'") from exc
+    return merge(ranges)
+
+
+def parse_job(raw):
+    if not isinstance(raw, dict):
+        raise ValueError("input must be a JSON object")
+    for key in ("job_id", "scan_id", "lease_id"):
+        if raw.get(key) is not None and not isinstance(raw[key], str):
+            raise ValueError(f"'{key}' must be a string")
+    if "targets" not in raw:
+        raise ValueError("'targets' is required")
+    targets = items(raw["targets"], "targets")
+    excludes = items(raw.get("exclude") or [], "exclude")
+    if not targets:
+        raise ValueError("'targets' must not be empty")
+    effective = subtract(merge(map(address_interval, targets)), merge(map(address_interval, excludes)))
+    if not effective:
+        raise ValueError("no addresses left to scan after applying 'exclude'")
+    max_targets = int(os.environ.get("NAABU_WORKER_MAX_TARGETS", "16777216"))
+    if sum(last - first + 1 for first, last in effective) > max_targets:
+        raise ValueError(f"addresses exceed NAABU_WORKER_MAX_TARGETS={max_targets}")
+    ports = port_ranges(items(raw["ports"] if raw.get("ports") is not None else "1-65535", "ports", True))
+    if not ports:
+        raise ValueError("'ports' must not be empty")
+    rate = integer(raw, "rate", int(os.environ.get("NAABU_WORKER_DEFAULT_RATE", "1000")), 100_000_000, 1)
+    max_rate = int(os.environ.get("NAABU_WORKER_MAX_RATE", "100000"))
+    warnings = []
+    if rate > max_rate:
+        warnings.append(f"rate {rate} clamped to NAABU_WORKER_MAX_RATE={max_rate}")
+        rate = max_rate
+    retries = integer(raw, "retries", 3, 5)
+    duration = integer(raw, "max_duration_seconds", 0, 604800)
+    if raw.get("max_duration_seconds") is not None and duration == 0:
+        raise ValueError("'max_duration_seconds' must be positive")
+    scan_type = raw.get("scan_type", "connect")
+    if scan_type not in ("connect", "syn"):
+        raise ValueError("'scan_type' must be 'connect' or 'syn'")
+    shard = raw.get("shard")
+    seed = raw.get("seed")
+    if shard is not None:
+        if not isinstance(shard, dict):
+            raise ValueError("'shard' must be an object {index, total}")
+        index = integer(shard, "index", 0, 65535, 1)
+        total = integer(shard, "total", 0, 65535, 1)
+        if index > total or type(seed) is not int or not 1 <= seed <= MAX_SAFE_INTEGER:
+            raise ValueError("'shard' needs 1 <= index <= total and a shared 'seed'")
+    if seed is not None and (type(seed) is not int or not 1 <= seed <= MAX_SAFE_INTEGER):
+        raise ValueError("'seed' must be a positive safe integer")
+    if raw.get("resume_index"):
+        raise ValueError("'resume_index' is not supported by naabu-worker")
+    adapter = raw.get("adapter")
+    if adapter is not None and (not isinstance(adapter, str) or not adapter or
+                                len(adapter) > 15 or not all(c.isalnum() or c in "._-:" for c in adapter)):
+        raise ValueError("'adapter' must be a network interface name")
+    return dict(raw=raw, ranges=effective, ports=ports, rate=rate, retries=retries,
+                duration=duration, scan_type=scan_type, shard=shard, seed=seed,
+                adapter=adapter, warnings=warnings)
+
+
+def contains(ranges, value):
+    return any(first <= value <= last for first, last in ranges)
+
+
+def port_spec(ranges):
+    return ",".join(str(a) if a == b else f"{a}-{b}" for a, b in ranges)
+
+
+def result(job, started, finished, elapsed_ms, scan_ms, status, stop_reason,
+           error, findings, warnings, raw_input=None):
+    raw = job["raw"] if job else raw_input if isinstance(raw_input, dict) else {}
+    ranges = job["ranges"] if job else []
+    addresses = sum(hi - lo + 1 for lo, hi in ranges) if job else None
+    subnet = None
+    if len(ranges) == 1:
+        first, last = ranges[0]
+        size = last - first + 1
+        if size & (size - 1) == 0 and first % size == 0:
+            subnet = f"{ipaddress.IPv4Address(first)}/{32 - (size.bit_length() - 1)}"
+    hosts = []
+    for ip in sorted(findings, key=lambda value: int(ipaddress.IPv4Address(value))):
+        ports = []
+        for port in sorted(findings[ip]):
+            ports.append(dict(port=port, protocol="tcp", state="open", reason=None,
+                              service=None, identity=dict(ttl=None, sshHostKeySha256=None,
+                                                          tlsCertSha256=None), banner=None,
+                              scripts=[], http=[]))
+        hosts.append(dict(ip=ip, status="up", reason=None,
+                          observedAt=min(findings[ip].values()), latencyMs=None,
+                          hostnames=[], error=None, ports=ports))
+    up = len(hosts)
+    complete_coverage = job and status == "completed" and not job["shard"]
+    counts = dict(addresses=addresses, up=up,
+                  down=addresses - up if complete_coverage else None,
+                  timeout=0, cancelled=0 if complete_coverage else None, failed=0,
+                  openPorts=sum(len(host["ports"]) for host in hosts),
+                  httpEndpoints=0, httpRequests=0)
+    params = dict(subnet=subnet, ports=port_spec(job["ports"]) if job else None,
+                  maxParallel=1 if job else None, maxRatePerProcess=job["rate"] if job else None,
+                  hostTimeoutMs=None, httpTimeoutMs=None, maxBodyBytes=None,
+                  maxRedirects=None, nmapArgs=[])
+    scan = dict(jobId=raw.get("job_id") if isinstance(raw.get("job_id"), str) else None,
+                leaseId=raw.get("lease_id") if isinstance(raw.get("lease_id"), str) else None,
+                scanId=raw.get("scan_id") if isinstance(raw.get("scan_id"), str) else None,
+                worker=dict(id="naabu-worker", version=VERSION, nmapVersion=None),
+                status=status, stopReason=stop_reason, startedAt=started,
+                finishedAt=finished, durationMs=elapsed_ms,
+                phasesMs=dict(hostDiscovery=0, portScan=scan_ms, serviceDetection=0, http=0),
+                params=params, counts=counts, error=error)
+    for warning in warnings:
+        log(f"warning: {warning}")
+    return dict(scan=scan, hosts=hosts)
+
+
+def scan(job, findings, warnings):
+    binary = os.environ.get("NAABU_BINARY", "naabu")
+    with tempfile.TemporaryDirectory(prefix="naabu-worker-") as directory:
+        target_file = Path(directory) / "targets.txt"
+        target_file.write_text("".join(f"{network}\n" for network in cidrs(job["ranges"])))
+        args = [binary, "-list", str(target_file), "-p", port_spec(job["ports"]),
+                "-rate", str(job["rate"]), "-retries", str(job["retries"]),
+                "-scan-type", "s" if job["scan_type"] == "syn" else "c",
+                "-json", "-silent", "-no-color", "-no-stdin", "-disable-update-check"]
+        if job["shard"]:
+            args += ["-shard", f"{job['shard']['index']}/{job['shard']['total']}"]
+        if job["seed"] is not None:
+            args += ["-seed", str(job["seed"])]
+        if job["adapter"]:
+            args += ["-interface", job["adapter"]]
+        log(f"starting naabu: rate={job['rate']} ports={port_spec(job['ports'])}")
+        try:
+            process = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE, start_new_session=True)
+        except OSError as exc:
+            return "failed", "error", dict(code="scanner-unavailable", message=str(exc)), 0
+        selector = selectors.DefaultSelector()
+        selector.register(process.stdout, selectors.EVENT_READ)
+        selector.register(process.stderr, selectors.EVENT_READ)
+        pending = {process.stdout: b"", process.stderr: b""}
+        diagnostics = []
+        started = time.monotonic()
+        stop_reason = None
+        stop_at = None
+
+        def handle_line(stream, line):
+            line = line.decode("utf-8", "replace").strip()
+            if not line:
+                return
+            if stream is process.stderr:
+                log(line)
+                diagnostics.append(line)
+                del diagnostics[:-10]
+                return
+            try:
+                entry = json.loads(line)
+                ip = ipaddress.IPv4Address(entry["ip"])
+                port = entry["port"]
+                if type(port) is not int or not 1 <= port <= 65535:
+                    raise ValueError("invalid port")
+                if entry.get("protocol", "tcp").lower() != "tcp":
+                    raise ValueError("non-TCP result")
+                if not contains(job["ranges"], int(ip)) or not contains(job["ports"], port):
+                    raise ValueError("result outside assigned targets or ports")
+                findings.setdefault(str(ip), {}).setdefault(port, now())
+            except (ValueError, KeyError, TypeError, AttributeError, json.JSONDecodeError) as exc:
+                warnings.append(f"ignored invalid naabu output: {str(exc)[:120]}")
+
+        try:
+            while selector.get_map() or process.poll() is None:
+                if stop_reason is None and process.poll() is None and (STOP_REQUESTED or
+                        job["duration"] and time.monotonic() - started >= job["duration"]):
+                    stop_reason = "stop-requested" if STOP_REQUESTED else "deadline"
+                    stop_at = time.monotonic()
+                    try:
+                        os.killpg(process.pid, signal.SIGTERM)
+                    except ProcessLookupError:
+                        pass
+                if stop_at is not None and time.monotonic() - stop_at >= 5 and process.poll() is None:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    stop_at = None
+                for key, _ in selector.select(0.2):
+                    stream = key.fileobj
+                    chunk = os.read(stream.fileno(), 65536)
+                    if not chunk:
+                        if pending[stream]:
+                            handle_line(stream, pending[stream])
+                        selector.unregister(stream)
+                        continue
+                    pending[stream] += chunk
+                    while b"\n" in pending[stream]:
+                        line, pending[stream] = pending[stream].split(b"\n", 1)
+                        handle_line(stream, line)
+            code = process.wait()
+        finally:
+            selector.close()
+            if process.poll() is None:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+        elapsed = int((time.monotonic() - started) * 1000)
+        if stop_reason:
+            return "partial", stop_reason, None, elapsed
+        if code:
+            return "failed", "error", dict(code="scanner-failed", message=f"naabu exited with {code}: {'; '.join(diagnostics)[-500:]}"), elapsed
+        return "completed", None, None, elapsed
+
+
+def write_output(path, document, pretty):
+    data = json.dumps(document, ensure_ascii=False, indent=2 if pretty else None) + "\n"
+    if path == "-":
+        sys.stdout.write(data)
+        return
+    destination = Path(path)
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=destination.parent,
+                                     prefix=f".{destination.name}.", delete=False) as file:
+        file.write(data)
+        temp = file.name
+    os.replace(temp, destination)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", "--job-file", default="-")
+    parser.add_argument("--output", default="-")
+    parser.add_argument("--pretty", action="store_true")
+    parser.add_argument("--version", action="version", version=f"naabu-worker {VERSION}")
+    args = parser.parse_args()
+    signal.signal(signal.SIGTERM, on_stop)
+    signal.signal(signal.SIGINT, on_stop)
+    started, tick = now(), time.monotonic()
+    findings, warnings = {}, []
+    job = None
+    raw = None
+    scan_ms = 0
+    try:
+        source = sys.stdin if args.input == "-" else open(args.input, encoding="utf-8")
+        try:
+            raw = json.load(source)
+        finally:
+            if source is not sys.stdin:
+                source.close()
+        job = parse_job(raw)
+        warnings.extend(job["warnings"])
+        status, stop_reason, error, scan_ms = scan(job, findings, warnings)
+        code = 0 if status in ("completed", "partial") else 1
+    except (ValueError, json.JSONDecodeError) as exc:
+        status, stop_reason = "failed", "error"
+        error = dict(code="invalid-input", message=str(exc))
+        code = 2
+    except OSError as exc:
+        status, stop_reason = "failed", "error"
+        error = dict(code="io-error", message=str(exc))
+        code = 1
+    finished = now()
+    document = result(job, started, finished, int((time.monotonic() - tick) * 1000),
+                      scan_ms, status, stop_reason, error, findings, warnings, raw)
+    write_output(args.output, document, args.pretty)
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())

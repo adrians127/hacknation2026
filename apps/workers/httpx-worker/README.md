@@ -68,7 +68,7 @@ The common result schema currently has fields named `maxRatePerProcess` and
 ## Manager
 
 The manager image includes `httpx-worker` and the pinned httpx binary. Its default
-pipeline is `masscan,nmap,httpx`, and its default per-worker cap includes
+pipeline is `masscan,naabu,nmap,httpx`, and its default per-worker cap includes
 `httpx=25`. A job with `worker: "httpx"` works with `split: {"strategy":"chunk"}`
 for host objects. The manager orders overlapping work and can upload each task
 result with `task_index` and `task_count` in `--poll` mode. The backend must

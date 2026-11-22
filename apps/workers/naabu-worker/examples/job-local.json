@@ -1,0 +1,8 @@
+{
+  "job_id": "naabu-local",
+  "targets": ["127.0.0.1"],
+  "ports": [80, 443],
+  "rate": 100,
+  "scan_type": "connect",
+  "max_duration_seconds": 30
+}

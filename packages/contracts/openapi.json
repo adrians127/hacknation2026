@@ -1055,15 +1055,24 @@
                     "format": "ipv4-cidr"
                   },
                   "ports": {
-                    "type": "string",
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
                   },
                   "maxParallel": {
-                    "type": "integer",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "exclusiveMinimum": 0
                   },
                   "maxRatePerProcess": {
-                    "type": "integer",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "exclusiveMinimum": 0
                   },
                   "hostTimeoutMs": {
@@ -1074,15 +1083,24 @@
                     "exclusiveMinimum": 0
                   },
                   "httpTimeoutMs": {
-                    "type": "integer",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "exclusiveMinimum": 0
                   },
                   "maxBodyBytes": {
-                    "type": "integer",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "exclusiveMinimum": 0
                   },
                   "maxRedirects": {
-                    "type": "integer",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "minimum": 0
                   },
                   "nmapArgs": {
@@ -1108,7 +1126,10 @@
                 "type": "object",
                 "properties": {
                   "addresses": {
-                    "type": "integer",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "minimum": 0
                   },
                   "up": {
@@ -1116,7 +1137,10 @@
                     "minimum": 0
                   },
                   "down": {
-                    "type": "integer",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "minimum": 0
                   },
                   "timeout": {
@@ -1124,7 +1148,10 @@
                     "minimum": 0
                   },
                   "cancelled": {
-                    "type": "integer",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "minimum": 0
                   },
                   "failed": {
@@ -1999,15 +2026,24 @@
                         "format": "ipv4-cidr"
                       },
                       "ports": {
-                        "type": "string",
+                        "type": [
+                          "string",
+                          "null"
+                        ],
                         "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
                       },
                       "maxParallel": {
-                        "type": "integer",
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
                         "exclusiveMinimum": 0
                       },
                       "maxRatePerProcess": {
-                        "type": "integer",
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
                         "exclusiveMinimum": 0
                       },
                       "hostTimeoutMs": {
@@ -2018,15 +2054,24 @@
                         "exclusiveMinimum": 0
                       },
                       "httpTimeoutMs": {
-                        "type": "integer",
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
                         "exclusiveMinimum": 0
                       },
                       "maxBodyBytes": {
-                        "type": "integer",
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
                         "exclusiveMinimum": 0
                       },
                       "maxRedirects": {
-                        "type": "integer",
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
                         "minimum": 0
                       },
                       "nmapArgs": {
@@ -2052,7 +2097,10 @@
                     "type": "object",
                     "properties": {
                       "addresses": {
-                        "type": "integer",
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
                         "minimum": 0
                       },
                       "up": {
@@ -2060,7 +2108,10 @@
                         "minimum": 0
                       },
                       "down": {
-                        "type": "integer",
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
                         "minimum": 0
                       },
                       "timeout": {
@@ -2068,7 +2119,10 @@
                         "minimum": 0
                       },
                       "cancelled": {
-                        "type": "integer",
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
                         "minimum": 0
                       },
                       "failed": {
@@ -11388,15 +11442,24 @@
                             "format": "ipv4-cidr"
                           },
                           "ports": {
-                            "type": "string",
+                            "type": [
+                              "string",
+                              "null"
+                            ],
                             "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
                           },
                           "maxParallel": {
-                            "type": "integer",
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
                             "exclusiveMinimum": 0
                           },
                           "maxRatePerProcess": {
-                            "type": "integer",
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
                             "exclusiveMinimum": 0
                           },
                           "hostTimeoutMs": {
@@ -11407,15 +11470,24 @@
                             "exclusiveMinimum": 0
                           },
                           "httpTimeoutMs": {
-                            "type": "integer",
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
                             "exclusiveMinimum": 0
                           },
                           "maxBodyBytes": {
-                            "type": "integer",
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
                             "exclusiveMinimum": 0
                           },
                           "maxRedirects": {
-                            "type": "integer",
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
                             "minimum": 0
                           },
                           "nmapArgs": {
@@ -11441,7 +11513,10 @@
                         "type": "object",
                         "properties": {
                           "addresses": {
-                            "type": "integer",
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
                             "minimum": 0
                           },
                           "up": {
@@ -11449,7 +11524,10 @@
                             "minimum": 0
                           },
                           "down": {
-                            "type": "integer",
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
                             "minimum": 0
                           },
                           "timeout": {
@@ -11457,7 +11535,10 @@
                             "minimum": 0
                           },
                           "cancelled": {
-                            "type": "integer",
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
                             "minimum": 0
                           },
                           "failed": {

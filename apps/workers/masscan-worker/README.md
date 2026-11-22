@@ -81,7 +81,7 @@ Live hosts can be grouped into subnets with TTL-based hints (`TopologyBuilder::t
 
 A `failed` result still contains whatever masscan reported before it failed.
 
-**Differences from the contract** (`WorkerResultSchema` in `packages/contracts`): `params.hostTimeoutMs`, `httpTimeoutMs`, `maxBodyBytes` and `maxRedirects` are `null`, which the contract does not accept yet. `jobId` and `scanId` must be UUIDs there, so the job has to carry them.
+For backend upload, `jobId` and `scanId` must be UUIDs and `leaseId` must be present. The shared schema accepts the `null` params and counts of discovery workers.
 
 ## Logging
 
