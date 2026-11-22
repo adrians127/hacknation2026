@@ -121,7 +121,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
    | global scanner limits (`settings:manage`: rate, ports, ranges, time windows) | ✓ | | | |
    | users and roles | ✓ | | | |
 
-3. Guard the routes with `requirePermission(...)`, add the translations (`auth.json`: `permissions.resources.*`, `permissions.actions.*`) and run `pnpm generate`. The next start syncs the system roles.
+3. Guard the routes with `requirePermission(...)`, add a row per endpoint to `modules/roles/rbac-matrix.test.ts`, add the translations (`auth.json`: `permissions.resources.*`, `permissions.actions.*`) and run `pnpm generate`. The next start syncs the system roles.
 
 ### Accounts
 
@@ -131,7 +131,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Tests
 
-Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `src/test/global-setup.ts` creates and migrates a separate `hacknation_test` database; every test starts from truncated tables with the system roles synced. `rbac-matrix.test.ts` checks every system role against every users/roles endpoint.
+Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `src/test/global-setup.ts` creates and migrates a separate `hacknation_test` database; every test starts from truncated tables with the system roles synced. `modules/roles/rbac-matrix.test.ts` checks every system role against every protected endpoint: one row per operation with the permissions it requires. It fails when an operation the contract marks `cookieAuth` has no row, so a new endpoint adds its row in the same change.
 
 ## Prisma
 
