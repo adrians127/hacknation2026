@@ -26,7 +26,7 @@ export function AccountPanel() {
           {roleLabels.name(me.role)}
         </Badge>
       </div>
-      <Button asChild variant="ghost" size="sm" className="justify-start">
+      <Button asChild variant="ghost" size="sm" className="-ml-1.5 justify-start">
         <Link to="/app/change-password">
           <KeyRound />
           {t("account.changePassword")}

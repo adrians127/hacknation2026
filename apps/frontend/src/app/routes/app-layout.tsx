@@ -76,7 +76,7 @@ export function AppLayout() {
               end={to === "/app"}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground",
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm md:-ml-3 text-muted-foreground transition-colors hover:text-foreground",
                   isActive && "bg-brand/15 text-brand hover:text-brand",
                 )
               }
