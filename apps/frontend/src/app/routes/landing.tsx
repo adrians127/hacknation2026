@@ -5,7 +5,7 @@ import { WaveBackground } from "@/features/landing/components/wave-background";
 
 export function LandingRoute() {
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden text-white">
+    <div className="relative flex min-h-svh flex-col overflow-hidden text-foreground">
       <WaveBackground />
       <LandingHeader signInHref="/login" ctaHref="/app" />
       <main className="relative z-10 flex flex-1 flex-col justify-center gap-14 py-10">

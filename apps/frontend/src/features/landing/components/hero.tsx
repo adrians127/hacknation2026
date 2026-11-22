@@ -11,7 +11,7 @@ export function Hero({ ctaHref }: { ctaHref: string }) {
     <section className="mx-auto flex max-w-4xl flex-col items-center px-6 text-center">
       <Logo variant="full" label={t("landing.logoAlt")} className="w-64 sm:w-80" />
 
-      <h1 className="mt-6 text-3xl leading-tight font-bold tracking-tight text-white sm:text-4xl">
+      <h1 className="mt-6 text-3xl leading-tight font-bold tracking-tight text-foreground sm:text-4xl">
         {t("landing.headline.line1")}
         <br />
         <span className="text-brand">{t("landing.headline.line2")}</span>
@@ -19,7 +19,7 @@ export function Hero({ ctaHref }: { ctaHref: string }) {
 
       <Link
         to={ctaHref}
-        className="mt-8 flex items-center gap-3 rounded-full bg-brand px-8 py-4 text-lg font-medium text-white shadow-[0_0_40px_-8px] shadow-brand transition-colors hover:bg-brand/90"
+        className="mt-8 flex items-center gap-3 rounded-full bg-brand px-8 py-4 text-lg font-medium text-primary-foreground shadow-[0_0_40px_-8px] shadow-brand transition-colors hover:bg-brand/90"
       >
         {t("landing.getStarted")}
         <ArrowRight className="size-5" />
