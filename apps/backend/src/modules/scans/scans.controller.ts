@@ -19,7 +19,7 @@ import {
   type ScanChangesResponse,
 } from "@subsurf/contracts/scans/scan-changes.schema";
 import { ScanExportQuerySchema } from "@subsurf/contracts/scans/scan-export.schema";
-import { readScanJson } from "@subsurf/contracts/scans/scan-import";
+import { readScanCsv, readScanJson } from "@subsurf/contracts/scans/scan-import";
 import {
   ImportScanQuerySchema,
   type ImportScanResponse,
@@ -92,7 +92,9 @@ export const scansController = {
 
   importScan: async (req: Request, res: Response<ImportScanResponse>) => {
     const query = ImportScanQuerySchema.parse(req.query);
-    const read = readScanJson(req.body);
+    // `express.text` leaves a CSV body as a string; JSON arrives parsed.
+    const body: unknown = req.body;
+    const read = typeof body === "string" ? readScanCsv(body) : readScanJson(body);
     if (!read.ok) {
       throw new HttpError(400, "The file is not a scan this version can import", {
         code: "SCAN_IMPORT_INVALID",

@@ -10082,7 +10082,7 @@
       "post": {
         "operationId": "importScan",
         "summary": "Import a results file as a new scan",
-        "description": "Requires `scans:read` and `scans:create`; `edits=fill` also requires `hosts:update`. The body is the file itself: a scan export (`GET /scans/{id}/export`), one worker result (`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. The results are ingested the way a worker's own are. The scan takes its place among the others by when the file says it ran, so it can become the base scan of a newer one. The same content is imported once (`SCAN_ALREADY_IMPORTED` carries the existing scan's id in `details.scanId`). `SCAN_IMPORT_INVALID` lists what is wrong in `details.issues`.",
+        "description": "Requires `scans:read` and `scans:create`; `edits=fill` also requires `hosts:update`. The body is the file itself: a scan export (`GET /scans/{id}/export`) as JSON or CSV, one worker result (`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. CSV needs only an `ip` column; rows it cannot read are skipped and reported in `warnings`. The results are ingested the way a worker's own are. The scan takes its place among the others by when the file says it ran, so it can become the base scan of a newer one. The same content is imported once (`SCAN_ALREADY_IMPORTED` carries the existing scan's id in `details.scanId`). `SCAN_IMPORT_INVALID` lists what is wrong in `details.issues`.",
         "tags": [
           "Scans"
         ],
@@ -10120,6 +10120,11 @@
           "content": {
             "application/json": {
               "schema": {}
+            },
+            "text/csv": {
+              "schema": {
+                "type": "string"
+              }
             }
           }
         },
@@ -10231,7 +10236,10 @@
                               "too_many_addresses",
                               "too_many_up_hosts",
                               "too_many_results",
-                              "empty_result"
+                              "missing_ip_column",
+                              "empty_result",
+                              "invalid_row",
+                              "conflicting_status"
                             ]
                           },
                           "position": {

@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { TagsSchema } from "../common/common.schema";
+import { parseCsv } from "../common/csv";
+import { AssetNoteSchema, TriageStatusSchema, type TriageStatus } from "../hosts/hosts.schema";
 import {
   cidrToRange,
   ipv4ToInt,
@@ -9,10 +12,19 @@ import {
   type Ipv4Range,
 } from "../targets/ipv4";
 import {
+  HostStatusSchema,
+  ObservedHostSchema,
   WorkerResultSchema,
   type ObservedHost,
+  type OpenPort,
   type WorkerResult,
 } from "../workers/worker-result.schema";
+import {
+  SCAN_CSV_ALIASES,
+  SCAN_CSV_COLUMNS,
+  SCAN_CSV_LIST_SEPARATOR,
+  type ScanCsvColumn,
+} from "./scan-csv";
 import type { ScanStatus } from "./scans.schema";
 import {
   SCAN_EXPORT_FORMAT,
@@ -52,8 +64,11 @@ export const ScanImportIssueCodeSchema = z.enum([
   "too_many_addresses",
   "too_many_up_hosts",
   "too_many_results",
+  "missing_ip_column",
   // skipped parts
   "empty_result",
+  "invalid_row",
+  "conflicting_status",
 ]);
 
 export const ScanImportIssueSchema = z.object({
@@ -218,6 +233,253 @@ export function readScanJsonText(text: string): ScanImportRead {
     return failed("not_json", error instanceof Error ? error.message : "");
   }
   return readScanJson(data);
+}
+
+// A broken file can have a problem on every line.
+const MAX_COLLECTED_WARNINGS = 1000;
+
+// The export puts a `'` before a cell a spreadsheet would run as a formula.
+const unguard = (cell: string) => (/^'[=+\-@\t\r]/.test(cell) ? cell.slice(1) : cell);
+
+const isIpv4 = (value: string) => z.ipv4().safeParse(value).success;
+const isCidr = (value: string) => z.cidrv4().safeParse(value).success;
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
+function columnIndexes(header: readonly string[]): Map<ScanCsvColumn, number> {
+  const names = header.map((name) => name.trim().toLowerCase().replaceAll(/[\s-]+/g, "_"));
+  const indexes = new Map<ScanCsvColumn, number>();
+  for (const column of SCAN_CSV_COLUMNS) {
+    const index = names.findIndex((name) => SCAN_CSV_ALIASES[column].includes(name));
+    if (index !== -1) indexes.set(column, index);
+  }
+  return indexes;
+}
+
+function isoOrNull(value: string): string | null {
+  if (value === "") return null;
+  const time = Date.parse(value);
+  return Number.isNaN(time) ? null : new Date(time).toISOString();
+}
+
+function intOrNull(value: string, min: number, max: number): number | null {
+  const number = Number(value);
+  return value !== "" && Number.isInteger(number) && number >= min && number <= max ? number : null;
+}
+
+interface CellEdits {
+  triage: TriageStatus;
+  tags: string[];
+  note: string;
+}
+
+/** The edit columns of a row; values the API would reject are dropped, not the row. */
+function cellEdits(triage: string, tags: string, note: string): CellEdits {
+  const tagList = [
+    ...new Set(
+      tags
+        .split(SCAN_CSV_LIST_SEPARATOR.tags)
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  ];
+  return {
+    triage: TriageStatusSchema.safeParse(triage.toLowerCase()).data ?? "unreviewed",
+    tags: TagsSchema.safeParse(tagList).success ? tagList : [],
+    note: AssetNoteSchema.safeParse(note).success ? note : "",
+  };
+}
+
+const isEdited = (edit: CellEdits) => edit.triage !== "unreviewed" || edit.tags.length > 0 || edit.note !== "";
+
+/**
+ * Reads the CSV the scan export writes (`scan-csv.ts`): rows are grouped into hosts by `ip`,
+ * into ports by `port` and into HTTP endpoints by `scheme` and `vhost`. Headers are matched
+ * through `SCAN_CSV_ALIASES`, and only `ip` is required: a row without a status is an `up`
+ * host. A `down` row marks its address, or every address of its CIDR block, as covered: `down`
+ * unless other rows say otherwise. Rows that cannot be read are skipped with a warning; the
+ * JSON export is the lossless format.
+ */
+export function readScanCsv(text: string): ScanImportRead {
+  const [header, ...rows] = parseCsv(text);
+  if (!header) return failed("nothing_to_import");
+  const columns = columnIndexes(header);
+  if (!columns.has("ip")) return failed("missing_ip_column", header.join(", ").slice(0, 200));
+
+  const warnings: ScanImportIssue[] = [];
+  const warn = (code: ScanImportIssueCode, line: number | null, detail: string) => {
+    if (warnings.length < MAX_COLLECTED_WARNINGS) warnings.push({ code, position: line, detail });
+  };
+  const hosts = new Map<string, ObservedHost>();
+  const coverage: string[] = [];
+  const edits: ScanEdits = { hosts: [], services: [] };
+
+  for (const [index, row] of rows.entries()) {
+    // The header is line 1.
+    const line = index + 2;
+    const cell = (column: ScanCsvColumn) => {
+      const position = columns.get(column);
+      return position === undefined ? "" : unguard((row[position] ?? "").trim());
+    };
+
+    const ip = cell("ip");
+    const status = HostStatusSchema.safeParse(cell("status").toLowerCase() || "up").data;
+    if (!status) {
+      warn("invalid_row", line, `status: ${cell("status")}`);
+      continue;
+    }
+    if (isCidr(ip) && status !== "down") {
+      warn("invalid_row", line, `ip: only a down row may name a block (${ip})`);
+      continue;
+    }
+    if (!isCidr(ip) && !isIpv4(ip)) {
+      warn("invalid_row", line, `ip: ${ip}`);
+      continue;
+    }
+    // A down row only says the address was covered: one with rows of its own keeps their status.
+    if (status === "down") {
+      coverage.push(ip);
+      continue;
+    }
+
+    let host = hosts.get(ip);
+    if (!host) {
+      const names = [...new Set(cell("hostnames").split(/[\s,;|]+/).filter(Boolean))];
+      host = {
+        ip,
+        status,
+        reason: null,
+        observedAt: isoOrNull(cell("observed_at")),
+        latencyMs: intOrNull(cell("latency_ms"), 0, Number.MAX_SAFE_INTEGER),
+        // Where a name came from is not in the file.
+        hostnames: names.map((name) => ({ name, source: "ptr" })),
+        error: null,
+        ports: [],
+      };
+      hosts.set(ip, host);
+      const edit = cellEdits(cell("host_triage"), cell("host_tags"), cell("host_note"));
+      if (isEdited(edit)) edits.hosts.push({ ip, ...edit });
+    } else if (host.status !== status) {
+      warn("conflicting_status", line, `${ip}: ${host.status}, then ${status}`);
+      continue;
+    }
+
+    if (cell("port") === "") continue;
+    const number = intOrNull(cell("port"), 1, 65535);
+    const protocol = cell("protocol").toLowerCase() || "tcp";
+    if (number === null || protocol !== "tcp") {
+      warn("invalid_row", line, number === null ? `port: ${cell("port")}` : `protocol: ${protocol}`);
+      continue;
+    }
+    if (host.status !== "up") {
+      warn("invalid_row", line, `port: ${ip} is ${host.status}, so it has no open ports`);
+      continue;
+    }
+
+    let port: OpenPort | undefined = host.ports.find((candidate) => candidate.port === number);
+    if (!port) {
+      const [name, product, version] = [cell("service"), cell("product"), cell("version")];
+      const sshHostKey = cell("ssh_host_key").toLowerCase();
+      port = {
+        port: number,
+        protocol: "tcp",
+        state: "open",
+        reason: null,
+        service:
+          name || product || version
+            ? {
+                name: name || "unknown",
+                product: product || null,
+                version: version || null,
+                extraInfo: cell("extra_info") || null,
+                cpe: cell("cpe").split(/\s+/).filter(Boolean),
+                method: "table",
+                confidence: 0,
+              }
+            : null,
+        identity: {
+          ttl: null,
+          sshHostKeySha256: SHA256_HEX.test(sshHostKey) ? sshHostKey : null,
+          tlsCertSha256: null,
+        },
+        banner: null,
+        scripts: [],
+        http: [],
+      };
+      host.ports.push(port);
+      const edit = cellEdits(cell("service_triage"), cell("service_tags"), cell("service_note"));
+      const overrides = {
+        nameOverride: cell("name_override").slice(0, 200) || null,
+        productOverride: cell("product_override").slice(0, 200) || null,
+        versionOverride: cell("version_override").slice(0, 200) || null,
+      };
+      if (isEdited(edit) || Object.values(overrides).some((value) => value !== null)) {
+        edits.services.push({ ip, protocol: "tcp", port: number, ...edit, ...overrides });
+      }
+    }
+
+    const url = cell("url");
+    const scheme = cell("scheme").toLowerCase() || url.slice(0, url.indexOf(":")).toLowerCase();
+    if (scheme === "" && url === "") continue;
+    if (scheme !== "http" && scheme !== "https") {
+      warn("invalid_row", line, `scheme: ${scheme}`);
+      continue;
+    }
+    const vhost = cell("vhost") || null;
+    if (port.http.some((endpoint) => endpoint.scheme === scheme && endpoint.vhost === vhost)) {
+      warn("invalid_row", line, `endpoint: ${scheme}://${vhost ?? ip}:${number} appears twice`);
+      continue;
+    }
+    const firstUrl = url || `${scheme}://${vhost ?? ip}:${number}/`;
+    port.http.push({
+      scheme,
+      vhost,
+      url: firstUrl,
+      finalUrl: cell("final_url") || firstUrl,
+      statusCode: intOrNull(cell("status_code"), 100, 599),
+      title: cell("title") || null,
+      headers: [],
+      cookies: [],
+      redirects: [],
+      body: null,
+      favicon: null,
+      tls: null,
+      probes: [],
+      error: null,
+    });
+  }
+
+  // What the columns could not express correctly (a bad URL, an overlong name) fails here.
+  const valid = [...hosts.values()].filter((host) => {
+    const parsed = ObservedHostSchema.safeParse(host);
+    if (!parsed.success) {
+      const [issue] = parsed.error.issues;
+      warn("invalid_row", null, `${host.ip}: ${issue?.path.join(".")}: ${issue?.message}`);
+    }
+    return parsed.success;
+  });
+  const kept = new Set(valid.map((host) => host.ip));
+  const observed = valid.flatMap((host) => (host.observedAt === null ? [] : [host.observedAt])).toSorted();
+  return checked(
+    {
+      inputFormat: "csv",
+      scan: {
+        name: null,
+        status: "completed",
+        createdAt: observed[0] ?? null,
+        startedAt: observed[0] ?? null,
+        finishedAt: observed.at(-1) ?? null,
+        ports: null,
+        maxRate: null,
+      },
+      coverage,
+      hosts: valid,
+      edits: {
+        hosts: edits.hosts.filter((edit) => kept.has(edit.ip)),
+        services: edits.services.filter((edit) => kept.has(edit.ip)),
+      },
+    },
+    warnings,
+  );
 }
 
 export interface ScanImportSummary {

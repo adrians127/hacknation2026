@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { buildWorkerResult } from "../workers/worker-result.fixture";
 import { formatPortSpec, parsePortSpec, portsOutside } from "./port-spec";
 import type { ScanExportDocument } from "./scan-export.schema";
-import { readScanJson, readScanJsonText, summarizeScanImport } from "./scan-import";
+import { SCAN_CSV_COLUMNS, scanCsvDownRow, scanCsvRows } from "./scan-csv";
+import { readScanCsv, readScanJson, readScanJsonText, summarizeScanImport } from "./scan-import";
 
 const IDS = {
   scanId: "0193a000-0000-7000-8000-000000000001",
@@ -91,6 +92,66 @@ describe("readScanJson", () => {
     expect(codes(readScanJson([buildWorkerResult(IDS), other]))).toEqual(["multiple_scans"]);
     expect(codes(readScanJson([{ ...other, hosts: "none" }]))).toEqual(["invalid_result"]);
     expect(codes(readScanJson({ ...document(), coverage: ["10.0.5.300"] }))).toEqual(["invalid_document"]);
+  });
+});
+
+const line = (cells: readonly (string | number | null)[]) => cells.map((cell) => cell ?? "").join(",");
+
+describe("readScanCsv", () => {
+  it("rebuilds hosts, ports and endpoints from the rows the export writes", () => {
+    const [wiki, , timedOut] = buildWorkerResult(IDS).hosts;
+    const edits = {
+      hosts: [{ ip: wiki.ip, triage: "important" as const, tags: ["dmz", "wiki"], note: "Public" }],
+      services: [],
+    };
+    const rows = [...scanCsvRows(wiki, edits), ...scanCsvRows(timedOut, edits), scanCsvDownRow("10.0.5.0/28")];
+    // Tags hold a comma, so the cell has to be quoted, as the export's writer does.
+    const csv = [SCAN_CSV_COLUMNS.join(","), ...rows.map((row) =>
+      line(SCAN_CSV_COLUMNS.map((column) => (column === "host_tags" && row[column] ? `"${row[column]}"` : row[column]))),
+    )].join("\r\n");
+
+    const read = readScanCsv(csv);
+
+    if (!read.ok || read.import.inputFormat !== "csv") throw new Error("Expected a CSV import");
+    expect(read.warnings).toEqual([]);
+    expect(read.import.coverage).toEqual(["10.0.5.0/28"]);
+    expect(read.import.edits).toEqual(edits);
+    const [host, other] = read.import.hosts;
+    expect(other).toMatchObject({ ip: "10.0.5.9", status: "timeout", ports: [] });
+    expect(host).toMatchObject({ ip: "10.0.5.7", status: "up", latencyMs: 3 });
+    expect(host.ports.map((port) => [port.port, port.service?.product, port.http.length])).toEqual([
+      [22, "OpenSSH", 0],
+      [443, "nginx", 2],
+    ]);
+    expect(host.ports[0].identity.sshHostKeySha256).toBe(wiki.ports[0].identity.sshHostKeySha256);
+    expect(host.ports[1].http[0]).toMatchObject({
+      scheme: "https",
+      vhost: "wiki.example.org",
+      finalUrl: "https://wiki.example.org/login",
+      statusCode: 200,
+      title: "Wiki – login",
+    });
+    expect(summarizeScanImport(read.import)).toMatchObject({ addresses: 16, up: 1, down: 14, noAnswer: 1 });
+  });
+
+  it("undoes the export's formula guard and tolerates a file with only addresses", () => {
+    const guarded = readScanCsv("ip,port,service,url,title\n10.0.0.1,80,http,http://10.0.0.1/,'=SUM(A1)\n");
+    const bare = readScanCsv("IP Address\n10.0.0.1\n10.0.0.2\n");
+
+    if (!guarded.ok || guarded.import.inputFormat !== "csv") throw new Error("Expected a CSV import");
+    expect(guarded.import.hosts[0].ports[0].http[0].title).toBe("=SUM(A1)");
+    expect(bare.ok && summarizeScanImport(bare.import)).toMatchObject({ addresses: 2, up: 2, down: 0 });
+  });
+
+  it("warns about rows that contradict each other and rejects a file without addresses", () => {
+    const read = readScanCsv("ip,status,port\n10.0.0.1,up,22\n10.0.0.1,timeout,\n10.0.0.1,down,\n");
+
+    expect(read.ok && read.warnings).toEqual([
+      { code: "conflicting_status", position: 3, detail: "10.0.0.1: up, then timeout" },
+    ]);
+    expect(codes(readScanCsv("host name,port\nweb,80\n"))).toEqual(["missing_ip_column"]);
+    expect(codes(readScanCsv("ip,port\n"))).toEqual(["nothing_to_import"]);
+    expect(codes(readScanCsv(""))).toEqual(["nothing_to_import"]);
   });
 });
 

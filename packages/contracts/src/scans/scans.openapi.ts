@@ -215,8 +215,9 @@ registry.registerPath({
   summary: "Import a results file as a new scan",
   description: [
     "Requires `scans:read` and `scans:create`; `edits=fill` also requires `hosts:update`. The body",
-    "is the file itself: a scan export (`GET /scans/{id}/export`), one worker result",
-    "(`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. The results are ingested",
+    "is the file itself: a scan export (`GET /scans/{id}/export`) as JSON or CSV, one worker result",
+    "(`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. CSV needs only an `ip`",
+    "column; rows it cannot read are skipped and reported in `warnings`. The results are ingested",
     "the way a worker's own are. The scan takes its place among the others by when the file says",
     "it ran, so it can become the base scan of a newer one. The same content is imported once",
     "(`SCAN_ALREADY_IMPORTED` carries the existing scan's id in `details.scanId`).",
@@ -228,7 +229,10 @@ registry.registerPath({
     query: ImportScanQuerySchema,
     body: {
       required: true,
-      content: { "application/json": { schema: z.unknown() } },
+      content: {
+        "application/json": { schema: z.unknown() },
+        "text/csv": { schema: z.string() },
+      },
     },
   },
   responses: {

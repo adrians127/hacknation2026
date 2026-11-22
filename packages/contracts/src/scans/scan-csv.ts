@@ -139,3 +139,38 @@ export function scanCsvRows(host: ObservedHost, edits: ScanEdits): ScanCsvRow[] 
 export function scanCsvDownRow(block: string): ScanCsvRow {
   return { ...EMPTY_ROW, ip: block, status: "down" };
 }
+
+/**
+ * Header names read as each column, lowercase with `_` for spaces and dashes. Another tool's
+ * CSV is supported by adding its names here.
+ */
+export const SCAN_CSV_ALIASES: Record<ScanCsvColumn, readonly string[]> = {
+  ip: ["ip", "address", "ip_address", "host", "host_ip"],
+  status: ["status", "host_status", "state"],
+  hostnames: ["hostnames", "hostname", "dns", "fqdn", "domain"],
+  observed_at: ["observed_at", "timestamp", "seen_at", "last_seen"],
+  latency_ms: ["latency_ms", "latency", "rtt"],
+  host_triage: ["host_triage"],
+  host_tags: ["host_tags", "tags"],
+  host_note: ["host_note", "note", "notes", "comment"],
+  protocol: ["protocol", "proto"],
+  port: ["port", "port_number"],
+  service: ["service", "service_name"],
+  product: ["product", "service_product"],
+  version: ["version", "service_version"],
+  extra_info: ["extra_info", "extrainfo", "info"],
+  cpe: ["cpe"],
+  ssh_host_key: ["ssh_host_key"],
+  service_triage: ["service_triage", "triage"],
+  service_tags: ["service_tags"],
+  service_note: ["service_note"],
+  name_override: ["name_override"],
+  product_override: ["product_override"],
+  version_override: ["version_override"],
+  scheme: ["scheme"],
+  vhost: ["vhost", "virtual_host"],
+  url: ["url"],
+  final_url: ["final_url"],
+  status_code: ["status_code", "http_status", "http_code"],
+  title: ["title", "http_title", "page_title"],
+};

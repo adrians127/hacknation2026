@@ -428,7 +428,7 @@ export interface paths {
         put?: never;
         /**
          * Import a results file as a new scan
-         * @description Requires `scans:read` and `scans:create`; `edits=fill` also requires `hosts:update`. The body is the file itself: a scan export (`GET /scans/{id}/export`), one worker result (`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. The results are ingested the way a worker's own are. The scan takes its place among the others by when the file says it ran, so it can become the base scan of a newer one. The same content is imported once (`SCAN_ALREADY_IMPORTED` carries the existing scan's id in `details.scanId`). `SCAN_IMPORT_INVALID` lists what is wrong in `details.issues`.
+         * @description Requires `scans:read` and `scans:create`; `edits=fill` also requires `hosts:update`. The body is the file itself: a scan export (`GET /scans/{id}/export`) as JSON or CSV, one worker result (`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. CSV needs only an `ip` column; rows it cannot read are skipped and reported in `warnings`. The results are ingested the way a worker's own are. The scan takes its place among the others by when the file says it ran, so it can become the base scan of a newer one. The same content is imported once (`SCAN_ALREADY_IMPORTED` carries the existing scan's id in `details.scanId`). `SCAN_IMPORT_INVALID` lists what is wrong in `details.issues`.
          */
         post: operations["importScan"];
         delete?: never;
@@ -3665,6 +3665,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": unknown;
+                "text/csv": string;
             };
         };
         responses: {
@@ -3697,7 +3698,7 @@ export interface operations {
                         } | null;
                         warnings: {
                             /** @enum {string} */
-                            code: "not_json" | "unknown_format" | "unsupported_version" | "invalid_document" | "invalid_result" | "multiple_scans" | "duplicate_address" | "nothing_to_import" | "too_many_addresses" | "too_many_up_hosts" | "too_many_results" | "empty_result";
+                            code: "not_json" | "unknown_format" | "unsupported_version" | "invalid_document" | "invalid_result" | "multiple_scans" | "duplicate_address" | "nothing_to_import" | "too_many_addresses" | "too_many_up_hosts" | "too_many_results" | "missing_ip_column" | "empty_result" | "invalid_row" | "conflicting_status";
                             position: number | null;
                             detail: string;
                         }[];

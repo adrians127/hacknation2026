@@ -27,6 +27,7 @@ scansRoutes.post(
   "/import",
   requirePermission("scans:create"),
   express.json({ limit: SCAN_IMPORT_LIMITS.maxFileBytes }),
+  express.text({ type: ["text/csv", "text/plain"], limit: SCAN_IMPORT_LIMITS.maxFileBytes }),
   validate({ query: ImportScanQuerySchema }),
   c.importScan,
 );

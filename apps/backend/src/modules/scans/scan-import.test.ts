@@ -15,6 +15,7 @@ import {
 import type { ObservedHost } from "@subsurf/contracts/workers/worker-result.schema";
 import { buildWorkerResult } from "@subsurf/contracts/workers/worker-result.fixture";
 
+import { Prisma } from "~backend/generated/prisma/client";
 import { prisma } from "~backend/lib/prisma";
 import { resultsService } from "~backend/modules/results/results.service";
 import { signInAs } from "~backend/test/auth";
@@ -310,6 +311,100 @@ describe("POST /scans/import", () => {
     await importFile(client, documentOf(exampleHosts()));
 
     expect((await fetch(`${server.baseUrl}/v1/scans/import`, { method: "POST" })).status).toBe(401);
+  });
+});
+
+/** The file as the import page sends it: the raw text, not JSON. */
+const postCsv = (client: TestClient, csv: string, query = "") =>
+  fetch(`${server.baseUrl}/v1/scans/import${query}`, {
+    method: "POST",
+    headers: {
+      "content-type": "text/csv",
+      cookie: [...client.cookies].map(([name, value]) => `${name}=${value}`).join("; "),
+    },
+    body: csv,
+  });
+
+describe("POST /scans/import with CSV", () => {
+  it("imports its own CSV export: no host or service is new or gone", async () => {
+    const original = await ingestScan(withDatabaseHost);
+    const { client } = await signInAs(server, { role: "editor" });
+    const hostId = await hostIdOf("10.0.5.7");
+    await client.patch(`/v1/hosts/${hostId}`, { body: { note: "=1+1 is not a formula", tags: ["dmz"] } });
+    const csv = await (await client.get(`/v1/scans/${original}/export?format=csv`)).text();
+    // As on a system where nobody has edited these hosts yet.
+    await prisma.host.updateMany({ data: { note: Prisma.DbNull, tags: [] } });
+
+    const res = await postCsv(client, csv, "?edits=fill&name=export.csv");
+
+    expect(res.status).toBe(201);
+    const imported = ImportScanResponseSchema.parse(await res.json());
+    expect(imported).toMatchObject({
+      inputFormat: "csv",
+      hosts: { up: 2, down: 1, timeout: 1, cancelled: 1, failed: 0 },
+      openPorts: 3,
+      edits: { applied: 1, kept: 0, missing: 0 },
+      warningCount: 0,
+    });
+    const detail = ScanDetailSchema.parse(
+      await (await client.get(`/v1/scans/${imported.scanId}?base=${original}`)).json(),
+    );
+    // CSV has no headers, cookies or certificates: the HTTPS service reads as changed, never
+    // as new or gone, and the plain services are unchanged.
+    expect(detail.changes).toEqual({
+      hosts: { new: 0, gone: 0, changed: 1, unknown: 0 },
+      services: { new: 0, gone: 0, changed: 1 },
+    });
+    expect(detail.coverage).toEqual({ both: 3, onlyBase: 0, onlyCurrent: 0 });
+    const file = await exportOf(client, imported.scanId);
+    expect(file.edits.hosts).toEqual([
+      { ip: "10.0.5.7", triage: "unreviewed", tags: ["dmz"], note: "=1+1 is not a formula" },
+    ]);
+    expect(file.hosts[0].ports.map((port) => port.http.length)).toEqual([0, 2]);
+  });
+
+  it("reads another tool's columns through the aliases, skipping rows it cannot read", async () => {
+    const { client } = await signInAs(server, { role: "editor" });
+    const csv = [
+      "Address;Port;Proto;Service Name;Service Version;HTTP Title;URL;Notes",
+      "192.0.2.10;22;tcp;ssh;9.6p1;;;Bastion",
+      "192.0.2.10;443;tcp;https;;Welcome;https://192.0.2.10/;Bastion",
+      "192.0.2.11;53;udp;domain;;;;",
+      "not-an-ip;80;tcp;http;;;;",
+      "192.0.2.0/29;;;;;;;",
+    ].join("\n");
+
+    const res = await postCsv(client, csv, "?edits=fill");
+
+    expect(res.status).toBe(201);
+    const imported = ImportScanResponseSchema.parse(await res.json());
+    expect(imported).toMatchObject({
+      inputFormat: "csv",
+      // 192.0.2.11 is up (its row says so), only its UDP port is not read.
+      hosts: { up: 2, down: 0, timeout: 0, cancelled: 0, failed: 0 },
+      openPorts: 2,
+      edits: { applied: 1, kept: 0, missing: 0 },
+      warningCount: 3,
+    });
+    expect(imported.warnings).toEqual([
+      { code: "invalid_row", position: 4, detail: "protocol: udp" },
+      { code: "invalid_row", position: 5, detail: "ip: not-an-ip" },
+      { code: "invalid_row", position: 6, detail: "ip: only a down row may name a block (192.0.2.0/29)" },
+    ]);
+    const scan = await prisma.scan.findUniqueOrThrow({ where: { id: imported.scanId } });
+    expect(scan.ports).toBe("22,443");
+  });
+
+  it("rejects a CSV without an address column", async () => {
+    const { client } = await signInAs(server, { role: "editor" });
+
+    const res = await postCsv(client, "name,port\nweb,80\n");
+
+    expect(res.status).toBe(400);
+    expect(await errorOf(res)).toMatchObject({
+      code: "SCAN_IMPORT_INVALID",
+      details: { issues: [{ code: "missing_ip_column" }] },
+    });
   });
 });
 
