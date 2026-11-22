@@ -135,9 +135,9 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `s
 
 ## Targets and scan jobs
 
-`POST /targets/import` takes entries from the import form (manual, CSV or JSON, parsed in the browser by the shared parser in `@subsurf/contracts/targets/target-input`) and runs the same parser again: `validate()` rejects what it rejects, the service normalizes and deduplicates.
+`POST /targets/import` takes entries from the import page (the entry form, text, CSV or JSON, parsed in the browser by the shared parser in `@subsurf/contracts/targets/target-input`) and runs the same parser again: `validate()` rejects what it rejects, the service normalizes and deduplicates. An IP range (`10.0.0.1-10.0.0.200`) arrives as one entry and is stored as the CIDR blocks that cover it, each with the range's note.
 
-1. New values go into `Target` (`createMany` with `skipDuplicates`); values already in the inventory are counted as `skipped` and left unchanged.
+1. New values go into `Target` (`createMany` with `skipDuplicates`) with the import's optional `tags`; values already in the inventory are counted as `skipped` and left unchanged (note and tags included).
 2. With `startScan` (also requires `scans:run`): domains are resolved to A records **before** the transaction (`modules/scans/dns.ts`: 50 lookups at a time, 2 s timeout, 2 tries). Failures and reserved addresses become `warnings`; the import still succeeds.
 3. In one transaction: a `Scan` with `SCAN_DEFAULT_PORTS`, `SCAN_DEFAULT_MAX_RATE` and `SCAN_BATCH_SIZE` snapshotted, a `ScanTarget` row per entry and the `ScanJob` batches from `planScanJobs` (`modules/scans/batching.ts`): addresses merged, split in address order into batches of at most `SCAN_BATCH_SIZE`, never across two /16 blocks. Each job has a `subnet` (the smallest aligned CIDR around it), its `targets` (CIDRs/IPs) and `hosts` (resolved domain → IP pairs).
 

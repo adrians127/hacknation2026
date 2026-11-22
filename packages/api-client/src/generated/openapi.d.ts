@@ -303,8 +303,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Import IP addresses, CIDR ranges and domains
-         * @description Requires `targets:create`; with `startScan: true` also `scans:run`. Adds the entries to the target inventory; values already there are counted as `skipped`. With `startScan`, queues a scan of every entry: domains are resolved to IPv4 addresses and the addresses are split into scan jobs. Accepts IPv4, CIDRs up to /16 and domains; the body may be up to 10 MB.
+         * Import IP addresses, CIDR ranges, IP ranges and domains
+         * @description Requires `targets:create`; with `startScan: true` also `scans:run`. Adds the entries to the target inventory; values already there are counted as `skipped` and keep their note and tags (`tags` only go to the targets this import creates). With `startScan`, queues a scan of every entry: domains are resolved to IPv4 addresses and the addresses are split into scan jobs. Accepts IPv4, CIDRs up to /16, IPv4 ranges (`10.0.0.1-10.0.0.200`, stored as the CIDR blocks that cover them) and domains; the body may be up to 10 MB.
          */
         post: operations["importTargets"];
         delete?: never;
@@ -2258,6 +2258,7 @@ export interface operations {
                         note?: string;
                     }[];
                     startScan: boolean;
+                    tags?: string[];
                 };
             };
         };

@@ -57,6 +57,8 @@ export const ImportTargetsBodySchema = z
       .max(TARGET_IMPORT_LIMITS.maxEntries),
     /** Also queue a scan of every entry of this import (requires `scans:run`). */
     startScan: z.boolean(),
+    /** Given to every target this import creates; targets already in the inventory keep theirs. */
+    tags: TagsSchema.optional(),
   })
   .superRefine(({ entries }, ctx) => {
     const { issues, listErrors } = collectTargets(
