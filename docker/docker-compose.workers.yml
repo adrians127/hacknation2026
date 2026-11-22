@@ -52,6 +52,18 @@ services:
       HTTPX_WORKER_MAX_RATE: ${HTTPX_WORKER_MAX_RATE:-25}
       HTTPX_WORKER_MAX_THREADS: ${HTTPX_WORKER_MAX_THREADS:-10}
 
+  tlsx-worker:
+    profiles: ["tlsx"]
+    build:
+      context: ../apps/workers/tlsx-worker
+      args:
+        UBUNTU_IMAGE: ${UBUNTU_IMAGE:-ubuntu}
+        TLSX_VERSION: ${TLSX_VERSION:-v1.5.0}
+    image: hacknation/tlsx-worker:local
+    restart: "no"
+    environment:
+      TLSX_WORKER_MAX_RATE: ${TLSX_WORKER_MAX_RATE:-25}
+
   # One-shot CLI: one JSON job on stdin, the result on stdout (see its README).
   #   docker compose -f docker/docker-compose.workers.yml run --rm -T masscan-worker < job.json
   masscan-worker:
@@ -84,6 +96,7 @@ services:
       args:
         UBUNTU_IMAGE: ${UBUNTU_IMAGE:-ubuntu}
         NAABU_VERSION: ${NAABU_VERSION:-v2.7.0}
+        TLSX_VERSION: ${TLSX_VERSION:-v1.5.0}
     image: hacknation/naabu-worker:local
     restart: "no"
     network_mode: host
@@ -119,11 +132,11 @@ services:
     environment:
       WORKER_MANAGER_LOG_LEVEL: ${WORKER_MANAGER_LOG_LEVEL:-info}
       WORKER_MANAGER_LOG_FORMAT: ${WORKER_MANAGER_LOG_FORMAT:-text}
-      WORKER_MANAGER_STAGES: ${WORKER_MANAGER_STAGES:-masscan,naabu,nmap,httpx}
+      WORKER_MANAGER_STAGES: ${WORKER_MANAGER_STAGES:-masscan,naabu,nmap,httpx,tlsx}
       WORKER_MANAGER_MAX_RATE: ${WORKER_MANAGER_MAX_RATE:-100000}
       WORKER_MANAGER_MIN_TASK_RATE: ${WORKER_MANAGER_MIN_TASK_RATE:-1000}
       # NMAP_MAX_PARALLEL x NMAP_MAX_RATE_PER_PROCESS below; keep them in step.
-      WORKER_MANAGER_WORKER_MAX_RATE: ${WORKER_MANAGER_WORKER_MAX_RATE:-nmap=100,httpx=25}
+      WORKER_MANAGER_WORKER_MAX_RATE: ${WORKER_MANAGER_WORKER_MAX_RATE:-nmap=100,httpx=25,tlsx=25}
       WORKER_MANAGER_MAX_PARALLEL: ${WORKER_MANAGER_MAX_PARALLEL:-2}
       WORKER_MANAGER_MAX_TASKS_PER_JOB: ${WORKER_MANAGER_MAX_TASKS_PER_JOB:-16}
       WORKER_MANAGER_DEADLINE_MARGIN: ${WORKER_MANAGER_DEADLINE_MARGIN:-10}
@@ -150,6 +163,7 @@ services:
       NMAP_PRIVILEGED: "1"
       HTTPX_WORKER_MAX_RATE: ${HTTPX_WORKER_MAX_RATE:-25}
       HTTPX_WORKER_MAX_THREADS: ${HTTPX_WORKER_MAX_THREADS:-10}
+      TLSX_WORKER_MAX_RATE: ${TLSX_WORKER_MAX_RATE:-25}
     volumes:
       # Mounted, not baked in: edit example.json (or add job lists) without a rebuild.
       - ../apps/workers/worker-manager/examples:/jobs:ro

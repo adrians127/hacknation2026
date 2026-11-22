@@ -73,7 +73,7 @@ How masscan's data fills the format:
 | `scan.params` | `subnet` is the job's CIDR when its ranges are exactly one subnet, otherwise `null`. `ports` is the normalized port spec, `maxParallel` is `1`, `maxRatePerProcess` is the rate actually used. `hostTimeoutMs`, `httpTimeoutMs`, `maxBodyBytes` and `maxRedirects` are `null` (masscan has none of them), and `nmapArgs` is `[]` |
 | `scan.counts` | `addresses` (in the job), `up` (= `hosts.length`), `openPorts`. `down` (= `addresses − up`) and `cancelled` (= `0`) only for a `completed` scan without `shard` and with `resume_index` 0, otherwise `null`. `timeout`, `failed`, `httpEndpoints` and `httpRequests` are always `0` |
 | `hosts[]` | `{ip, status: "up", reason, observedAt, latencyMs: null, hostnames: [], error: null, ports[]}`. `reason` is masscan's (`syn-ack`), `observedAt` is the first reply from that host |
-| `hosts[].ports[]` | `{port, protocol: "tcp", state: "open", reason, service: null, identity: {ttl, sshHostKeySha256: null, tlsCertSha256: null}, banner: null, scripts: [], http: []}`. `identity.ttl` is the SYN-ACK TTL of that port |
+| `hosts[].ports[]` | `{port, protocol: "tcp", state: "open", reason, service: null, identity: {ttl, sshHostKeySha256: null, tlsCertSha256: null}, banner: null, scripts: [], tls: [], http: []}`. `identity.ttl` is the SYN-ACK TTL of that port |
 
 `hosts[]` lists **live hosts only**, not every address of the job: a masscan job can cover millions of addresses, while the format caps `hosts[]` at 1024 entries and expects every address. Addresses that are not listed did not answer on any scanned port.
 

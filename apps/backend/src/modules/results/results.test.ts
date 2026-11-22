@@ -106,6 +106,7 @@ describe("resultsService.ingest", () => {
         identity: port.identity,
         banner: port.banner,
         scripts: port.scripts,
+        tls: port.tls,
         http: port.http,
       });
     }
@@ -115,6 +116,26 @@ describe("resultsService.ingest", () => {
       SELECT port FROM "PortObservation"
       WHERE details @> ${JSON.stringify({ http: [{ title: "Wiki – login" }] })}::jsonb`;
     expect(byTitle).toEqual([{ port: 443 }]);
+  });
+
+  it("encrypts and restores a TLS-only certificate without an HTTP endpoint", async () => {
+    const result = await exampleResult();
+    const port = result.hosts[0].ports[1];
+    port.http = [];
+    port.tls = [{
+      vhost: "wiki.example.org", version: "tls13", cipher: "TLS_AES_128_GCM_SHA256",
+      alpn: null, cert: {
+        subjectCn: "wiki.example.org", san: ["wiki.example.org"], issuer: "Secret Issuer",
+        notBefore: "2026-01-01T00:00:00Z", notAfter: "2027-01-01T00:00:00Z",
+        serial: "123", sha256: "a".repeat(64), selfSigned: null,
+        keyAlgorithm: null, keyBits: null,
+      },
+    }];
+    await resultsService.ingest(result);
+    const stored = await prisma.portObservation.findFirstOrThrow({ where: { port: 443 } });
+    expect(JSON.stringify(stored.details)).not.toContain("Secret Issuer");
+    expect(openPortDetails(stored.details).tls).toEqual(port.tls);
+    expect(openPortDetails(stored.details).http).toEqual([]);
   });
 
   it("ignores a result resent under the same lease", async () => {

@@ -5,7 +5,7 @@ Docker Compose files. You run the backend and frontend with `pnpm dev`; only wha
 | File | Project | Services |
 |---|---|---|
 | `docker-compose.yml` | `hacknation` | Infrastructure: `postgres`, `defectdojo-*` |
-| `docker-compose.workers.yml` | `hacknation-workers` | Scan workers: `nmap-worker`, `masscan-worker`, `naabu-worker`, `worker-manager` |
+| `docker-compose.workers.yml` | `hacknation-workers` | Scan workers: `nmap-worker`, `masscan-worker`, `naabu-worker`, `httpx-worker`, `tlsx-worker`, `worker-manager` |
 
 | Service | File | Description |
 |---|---|---|
@@ -13,6 +13,7 @@ Docker Compose files. You run the backend and frontend with `pnpm dev`; only wha
 | `defectdojo-*` | `docker-compose.yml` | DefectDojo 3.5 (7 containers), UI and API on `127.0.0.1:8080` only. See [DefectDojo](#defectdojo) |
 | `masscan-worker` | `docker-compose.workers.yml` | One-shot C++ masscan sweep from `apps/workers/masscan-worker`, a job on stdin |
 | `naabu-worker` | `docker-compose.workers.yml` | One-shot Naabu TCP discovery from `apps/workers/naabu-worker`, a job on stdin |
+| `tlsx-worker` | `docker-compose.workers.yml` (profile `tlsx`) | One-shot TLS-only probing from `apps/workers/tlsx-worker`, a job on stdin |
 | `worker-manager` | `docker-compose.workers.yml` (profile `cli`) | C++ orchestrator from `apps/workers/worker-manager`: job list in (a file, or long-polled from the backend), discovery and Nmap tasks, results in `worker-results/` |
 | `nmap-worker` | `docker-compose.workers.yml` (profile `nmap`) | Long-running C++ worker from `apps/workers/nmap-worker`. Opt-in, no pnpm script |
 
@@ -34,6 +35,8 @@ pnpm workers:build                # build the masscan-worker image
 pnpm workers:masscan < job.json   # one masscan sweep, result JSON on stdout
 pnpm workers:naabu:build          # build naabu-worker
 pnpm workers:naabu < apps/workers/naabu-worker/examples/job-local.json > result.json
+pnpm workers:tlsx:build           # build and test TLSX worker
+pnpm workers:tlsx < apps/workers/tlsx-worker/examples/job-local.json > result.json
 pnpm workers:manager              # build + run worker-manager on its example.json -> worker-results/
 pnpm workers:manager:poll         # worker-manager long-polls the backend for jobs until Ctrl+C
 pnpm workers:nmap:build           # build nmap-worker and run its tests
@@ -65,6 +68,10 @@ A one-shot CLI rather than a long-running service. Build it with `pnpm workers:b
 ## naabu-worker
 
 Use `pnpm workers:naabu:build` and `pnpm workers:naabu < apps/workers/naabu-worker/examples/job-local.json > result.json` for the alternative discovery worker. Local tests run with `python3 -m unittest discover -s apps/workers/naabu-worker/tests -v` and use a fake Naabu binary. The manager example `pnpm workers:manager --input /jobs/naabu-nmap-local.json --output-dir /results` schedules Naabu before Nmap on loopback. See [`apps/workers/naabu-worker/README.md`](../apps/workers/naabu-worker/README.md).
+
+## tlsx-worker
+
+Use `pnpm workers:tlsx:build` and `pnpm workers:tlsx < apps/workers/tlsx-worker/examples/job-local.json > result.json` for TLS collection without HTTP data. The image build runs fake scanner tests and a real handshake against a local TLS server. The manager example `pnpm workers:manager --input /jobs/naabu-nmap-tlsx-local.json --output-dir /results` schedules Naabu → Nmap → TLSX with explicit targets at each stage. See [`apps/workers/tlsx-worker/README.md`](../apps/workers/tlsx-worker/README.md).
 
 ## worker-manager
 

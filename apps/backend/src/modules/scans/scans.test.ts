@@ -89,6 +89,31 @@ const masscanOnly = (hosts: ObservedHost[]) => hosts.map((host) => ({
 }));
 
 describe("GET /scans", () => {
+  it("combines TLS-only observations with Nmap service data and no HTTP endpoint", async () => {
+    const scanId = await ingestScan(withoutHttp);
+    const job = await prisma.scanJob.findFirstOrThrow({ where: { scanId }, select: { id: true } });
+    const tlsx = buildWorkerResult({ scanId, jobId: job.id, leaseId: randomUUID() });
+    const wiki = tlsx.hosts[0];
+    const port = wiki.ports.find((candidate) => candidate.port === 443)!;
+    tlsx.scan.worker = { id: "tlsx-worker", version: "0.1.0", nmapVersion: null };
+    tlsx.hosts = [{ ...wiki, ports: [{ ...port, service: null, http: [], tls: [{
+      vhost: "wiki.example.org", version: "tls13", cipher: "TLS_AES_128_GCM_SHA256",
+      alpn: null, cert: { subjectCn: "wiki.example.org", san: ["wiki.example.org"],
+        issuer: "Local CA", notBefore: "2026-01-01T00:00:00Z",
+        notAfter: "2027-01-01T00:00:00Z", serial: "123", sha256: "a".repeat(64),
+        selfSigned: null, keyAlgorithm: null, keyBits: null },
+    }] }] }];
+    await resultsService.ingest(tlsx);
+    const { client } = await signInAs(server, { role: "viewer" });
+    const detail = ScanHostDetailSchema.parse(
+      await getJson(client, `/v1/scans/${scanId}/hosts/${await hostIdOf("10.0.5.7")}`),
+    );
+    expect(detail.services.find((service) => service.port === 443)).toMatchObject({
+      observed: { product: "nginx" }, http: [],
+      tls: [{ vhost: "wiki.example.org", cert: { sha256: "a".repeat(64) } }],
+    });
+  });
+
   it("keeps Nmap service detection with Masscan when httpx is absent", async () => {
     const scanId = await ingestScan(masscanOnly, "masscan-worker");
     const job = await prisma.scanJob.findFirstOrThrow({ where: { scanId }, select: { id: true } });
