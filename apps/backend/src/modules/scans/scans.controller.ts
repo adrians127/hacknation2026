@@ -24,12 +24,17 @@ import {
   ImportScanQuerySchema,
   type ImportScanResponse,
 } from "@subsurf/contracts/scans/scan-import.schema";
-import type { ScanListResponse } from "@subsurf/contracts/scans/scans.schema";
+import type {
+  UpdatedScan,
+  ScanListResponse,
+  UpdateScanBody,
+} from "@subsurf/contracts/scans/scans.schema";
 
 import { getAuth } from "~backend/lib/auth-context";
 import { HttpError } from "~backend/lib/http-error";
 import { hostsService } from "~backend/modules/hosts/hosts.service";
 import { changesCsv, changesFileName } from "~backend/modules/scans/scan-changes-csv";
+import { scanEditsService } from "~backend/modules/scans/scan-edits.service";
 import {
   scanExportCsv,
   scanExportFileName,
@@ -46,6 +51,15 @@ export const scansController = {
   get: async (req: Request<IdParams>, res: Response<ScanDetail>) => {
     const { base } = ScanCompareQuerySchema.parse(req.query);
     res.status(200).json(await scanResultsService.get(req.params.id, base));
+  },
+
+  update: async (req: Request<IdParams, unknown, UpdateScanBody>, res: Response<UpdatedScan>) => {
+    res.status(200).json(await scanEditsService.update(req.params.id, req.body));
+  },
+
+  remove: async (req: Request<IdParams>, res: Response) => {
+    await scanEditsService.remove(req.params.id, getAuth(req).user.id);
+    res.status(204).end();
   },
 
   listHosts: async (req: Request<IdParams>, res: Response<ScanHostListResponse>) => {

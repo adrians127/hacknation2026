@@ -40,6 +40,21 @@ export const ScanSchema = z.object({
 
 export const ScanListResponseSchema = z.object({ items: z.array(ScanSchema) });
 
+export const SCAN_NAME_MAX = 200;
+export const SCAN_NOTE_MAX = 2000;
+
+/** What a user may change on a scan, in any state. Results and parameters are never edited. */
+export const UpdateScanBodySchema = z
+  .object({
+    name: z.string().max(SCAN_NAME_MAX).optional(),
+    note: z.string().max(SCAN_NOTE_MAX).optional(),
+  })
+  .refine((body) => Object.values(body).some((value) => value !== undefined), {
+    message: "Provide at least one field to update",
+  });
+
+export const UpdatedScanSchema = z.object({ id: z.uuid(), name: z.string(), note: z.string() });
+
 /** `discovery` finds open ports in address ranges; `service` identifies what listens on them. */
 export const ScanJobKindSchema = z.enum(["discovery", "service"]);
 export const ScanJobStatusSchema = z.enum(["queued", "leased", "completed", "failed", "stopped"]);
@@ -78,6 +93,8 @@ export type ScanOrigin = z.infer<typeof ScanOriginSchema>;
 export type ScanHostCounts = z.infer<typeof ScanHostCountsSchema>;
 export type Scan = z.infer<typeof ScanSchema>;
 export type ScanListResponse = z.infer<typeof ScanListResponseSchema>;
+export type UpdateScanBody = z.infer<typeof UpdateScanBodySchema>;
+export type UpdatedScan = z.infer<typeof UpdatedScanSchema>;
 export type ScanJobKind = z.infer<typeof ScanJobKindSchema>;
 export type ScanJobStatus = z.infer<typeof ScanJobStatusSchema>;
 export type ScanJobHost = z.infer<typeof ScanJobHostSchema>;

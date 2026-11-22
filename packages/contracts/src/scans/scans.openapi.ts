@@ -23,7 +23,7 @@ import {
 import { ScanChangesQuerySchema, ScanChangesResponseSchema } from "./scan-changes.schema";
 import { ScanExportDocumentSchema, ScanExportQuerySchema } from "./scan-export.schema";
 import { ImportScanQuerySchema, ImportScanResponseSchema } from "./scan-import.schema";
-import { ScanListResponseSchema } from "./scans.schema";
+import { UpdatedScanSchema, ScanListResponseSchema, UpdateScanBodySchema } from "./scans.schema";
 
 const tags = ["Scans"];
 const security = cookieAuth;
@@ -244,5 +244,56 @@ registry.registerPath({
     401: unauthenticated,
     403: forbidden,
     409: errorResponse("The file was imported before, or another import is running"),
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/scans/{id}",
+  operationId: "updateScan",
+  summary: "Change a scan's name and note",
+  description: [
+    "Requires `scans:read` and `scans:update`. Works in any state of the scan. Only the name and",
+    "the note change: what the scan found and the parameters it ran with are never edited. The",
+    "note is encrypted at rest.",
+  ].join(" "),
+  tags,
+  security,
+  request: {
+    params: IdParamsSchema,
+    body: { content: { "application/json": { schema: UpdateScanBodySchema } } },
+  },
+  responses: {
+    200: {
+      description: "The scan's name and note",
+      content: { "application/json": { schema: UpdatedScanSchema } },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/scans/{id}",
+  operationId: "deleteScan",
+  summary: "Delete a scan with everything it observed",
+  description: [
+    "Requires `scans:read` and `scans:delete`. Removes the scan, its jobs and its observations.",
+    "Hosts and services stay, with their notes, tags and triage, and the other scans are then",
+    "compared with each other. A running scan answers `409 SCAN_RUNNING`.",
+  ].join(" "),
+  tags,
+  security,
+  request: { params: IdParamsSchema },
+  responses: {
+    204: { description: "Deleted" },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+    409: errorResponse("The scan is running"),
   },
 });

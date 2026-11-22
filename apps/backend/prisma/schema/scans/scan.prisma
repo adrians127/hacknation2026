@@ -4,6 +4,8 @@ model Scan {
   status        ScanStatus @default(queued)
   /// Shown in lists; an imported scan gets its file's name.
   name          String     @default("")
+  /// { "$enc": "v1.…" } (src/lib/crypto.ts); null = no note.
+  note          Json?
   origin        ScanOrigin @default(adhoc)
   /// SHA-256 of an imported file's content: the same file is imported once.
   importKey     String?    @unique

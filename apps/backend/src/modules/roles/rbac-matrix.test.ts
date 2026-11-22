@@ -167,6 +167,13 @@ const ENDPOINTS: Endpoint[] = [
       buildWorkerResult({ scanId: randomUUID(), jobId: randomUUID(), leaseId: randomUUID() }),
   },
   { route: "GET /scans/{id}", requires: ["scans:read"], path: () => scanPath() },
+  {
+    route: "PATCH /scans/{id}",
+    requires: ["scans:read", "scans:update"],
+    path: () => scanPath(),
+    body: async () => ({ name: "Renamed" }),
+  },
+  { route: "DELETE /scans/{id}", requires: ["scans:read", "scans:delete"], path: () => scanPath() },
   { route: "GET /scans/{id}/hosts", requires: ["scans:read"], path: () => scanPath("/hosts") },
   { route: "GET /scans/{id}/hosts/{hostId}", requires: ["scans:read"], path: scanHostPath },
   { route: "GET /scans/{id}/changes", requires: ["scans:read"], path: () => scanPath("/changes") },

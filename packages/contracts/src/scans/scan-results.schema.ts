@@ -81,6 +81,8 @@ export const HostLifecycleSchema = z.object({
 export const ScanCompareQuerySchema = z.object({ base: z.uuid().optional() });
 
 export const ScanDetailSchema = ScanSchema.extend({
+  /** Free text from users; empty when there is none. */
+  note: z.string(),
   ports: z.string(),
   maxRate: z.number().int(),
   batchSize: z.number().int(),
