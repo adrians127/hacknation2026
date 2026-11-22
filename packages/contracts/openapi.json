@@ -17147,11 +17147,105 @@
                               "null"
                             ]
                           },
-                          "before": {
-                            "type": "string"
+                          "triage": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "before": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "unreviewed",
+                                      "reviewed",
+                                      "important",
+                                      "false_positive"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "unreviewed",
+                                      "important",
+                                      "accepted_risk",
+                                      "false_positive"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "after": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "unreviewed",
+                                      "reviewed",
+                                      "important",
+                                      "false_positive"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "unreviewed",
+                                      "important",
+                                      "accepted_risk",
+                                      "false_positive"
+                                    ]
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "before",
+                              "after"
+                            ]
                           },
-                          "after": {
-                            "type": "string"
+                          "tag": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "priority": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "before": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "after": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "high",
+                                      "medium",
+                                      "low"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "muted"
+                                    ]
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "before",
+                              "after"
+                            ]
                           }
                         },
                         "required": [
@@ -17163,8 +17257,9 @@
                           "change",
                           "field",
                           "key",
-                          "before",
-                          "after"
+                          "triage",
+                          "tag",
+                          "priority"
                         ]
                       },
                       "maxItems": 20

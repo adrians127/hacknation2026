@@ -105,6 +105,7 @@ export function ServicesTable({
             <TriageControl
               target={{ hostId: host.id, serviceId: service.id }}
               value={service.triage}
+              rule={service.triageRule}
               label={t("actions.triageOf", { name: `${host.ip}:${service.port}` })}
             />
           ),

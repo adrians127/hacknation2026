@@ -118,6 +118,14 @@ function Overview({ dashboard, scans }: { dashboard: DashboardResponse; scans: r
                 shown: dashboard.topChanges.length,
                 total: dashboard.priorities.high + dashboard.priorities.medium + dashboard.priorities.low,
               })}
+              {dashboard.muted > 0 && (
+                <>
+                  {" "}
+                  <Link to="/app/rules" className="underline-offset-4 hover:underline">
+                    {t("dashboard.top.muted", { count: dashboard.muted })}
+                  </Link>
+                </>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>

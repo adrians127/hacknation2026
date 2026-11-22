@@ -13,6 +13,7 @@ import { GuardedButton } from "@/components/guarded-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { RuleBadge } from "@/features/rules/components/rule-badge";
 import { useUpdateVulnerabilityTriage } from "@/features/vulnerabilities/api/update-triage";
 import { KevBadge } from "@/features/vulnerabilities/components/kev-badge";
 import { SeverityBadge } from "@/features/vulnerabilities/components/severity-badge";
@@ -98,7 +99,8 @@ function VulnerabilityItem({ serviceId, match }: { serviceId: string; match: Ser
             {t("confidence.potential")}
           </Badge>
         )}
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-1">
+          <RuleBadge rule={match.triageRule} />
           <VulnerabilityTriageControl
             serviceId={serviceId}
             canonicalId={match.canonicalId}

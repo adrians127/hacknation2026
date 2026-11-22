@@ -6067,8 +6067,16 @@ export interface operations {
                             /** @enum {string|null} */
                             field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | null;
                             key: string | null;
-                            before: string;
-                            after: string;
+                            triage: {
+                                before: ("unreviewed" | "reviewed" | "important" | "false_positive") | ("unreviewed" | "important" | "accepted_risk" | "false_positive");
+                                after: ("unreviewed" | "reviewed" | "important" | "false_positive") | ("unreviewed" | "important" | "accepted_risk" | "false_positive");
+                            } | null;
+                            tag: string | null;
+                            priority: {
+                                /** @enum {string} */
+                                before: "high" | "medium" | "low";
+                                after: ("high" | "medium" | "low") | "muted";
+                            } | null;
                         }[];
                         scan: {
                             /** Format: uuid */

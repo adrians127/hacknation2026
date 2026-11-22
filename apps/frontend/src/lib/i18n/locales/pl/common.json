@@ -41,7 +41,11 @@
       "port": "Port",
       "wholeHost": "host",
       "change": "Zmiana",
-      "what": "Co"
+      "what": "Co",
+      "muted_one": "Pominięto {{count}} zmianę wyciszoną przez reguły.",
+      "muted_few": "Pominięto {{count}} zmiany wyciszone przez reguły.",
+      "muted_many": "Pominięto {{count}} zmian wyciszonych przez reguły.",
+      "muted_other": "Pominięto {{count}} zmiany wyciszonej przez reguły."
     },
     "priority": {
       "high": "Wysoki",
@@ -599,6 +603,7 @@
     "targets": "Cele",
     "scans": "Skany",
     "reports": "Raporty",
+    "rules": "Reguły",
     "users": "Użytkownicy",
     "roles": "Role",
     "vulnerabilities": "Podatności",

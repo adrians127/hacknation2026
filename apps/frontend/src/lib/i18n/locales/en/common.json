@@ -41,7 +41,9 @@
       "port": "Port",
       "wholeHost": "host",
       "change": "Change",
-      "what": "What"
+      "what": "What",
+      "muted_one": "{{count}} change muted by rules is left out.",
+      "muted_other": "{{count}} changes muted by rules are left out."
     },
     "priority": {
       "high": "High",
@@ -555,6 +557,7 @@
     "targets": "Targets",
     "scans": "Scans",
     "reports": "Reports",
+    "rules": "Rules",
     "users": "Users",
     "roles": "Roles",
     "vulnerabilities": "Vulnerabilities",

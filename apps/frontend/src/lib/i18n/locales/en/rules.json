@@ -1,0 +1,217 @@
+{
+  "title": "Rules",
+  "description": "Verdicts, tags and change priorities set once and applied to every scan, past and future.",
+  "intro": "A rule sets a value wherever it matches: it ignores or escalates vulnerabilities, triages and tags services, marks what did not change as reviewed, or mutes and re-rates changes. Rules never overwrite what a user set, the first matching rule in the order wins, and what a rule set goes back once it no longer matches.",
+  "empty": "No rules yet. Start from a template.",
+  "expires": "until {{date}}",
+  "expired": "expired {{date}}",
+  "deleteTitle": "Delete rule",
+  "deleteDescription": "Delete “{{name}}”? What it set goes back to unreviewed (or to the next matching rule) and the tags it added are removed. Values users set stay.",
+  "badge": {
+    "setBy": "Set by the rule “{{name}}”"
+  },
+  "columns": {
+    "order": "Order",
+    "name": "Rule",
+    "definition": "Matches → does",
+    "affected": "Holds now",
+    "enabled": "On",
+    "actions": "Actions"
+  },
+  "affected": {
+    "vulnerabilities_one": "{{count}} vulnerability",
+    "vulnerabilities_other": "{{count}} vulnerabilities",
+    "services_one": "{{count}} service",
+    "services_other": "{{count}} services",
+    "hosts_one": "{{count}} host",
+    "hosts_other": "{{count}} hosts",
+    "tags_one": "{{count}} tag",
+    "tags_other": "{{count}} tags",
+    "none": "Nothing at the moment",
+    "readTime": "Applied when changes are read"
+  },
+  "actions": {
+    "add": "New rule",
+    "edit": "Edit {{name}}",
+    "delete": "Delete {{name}}",
+    "moveUp": "Move {{name}} up",
+    "moveDown": "Move {{name}} down",
+    "first": "Already first",
+    "last": "Already last",
+    "toggle": "Rule {{name}} on",
+    "mute": "Mute"
+  },
+  "toast": {
+    "created": "Rule created and applied",
+    "updated": "Rule saved and applied",
+    "deleted": "Rule deleted"
+  },
+  "kinds": {
+    "vulnerability": {
+      "name": "Vulnerabilities",
+      "description": "Sets the triage of matching vulnerabilities of services: ignore them (false positive, accepted risk) or mark them important."
+    },
+    "service": {
+      "name": "Services and applications",
+      "description": "Sets the triage of matching services (or of their hosts) and/or adds a tag."
+    },
+    "unchanged": {
+      "name": "No change",
+      "description": "Sets the triage of services (or hosts) that did not change in the latest scans. Once one changes, the value goes back to unreviewed."
+    },
+    "change_priority": {
+      "name": "Change priority",
+      "description": "Mutes or re-rates matching changes between two scans in the dashboard and the change export."
+    }
+  },
+  "targets": {
+    "service": "Services",
+    "host": "Hosts"
+  },
+  "rows": {
+    "host": "Whole host",
+    "service": "Port opened or closed",
+    "field": "Field of a service"
+  },
+  "lifecycles": {
+    "active": "Active",
+    "unstable": "Unstable",
+    "missing": "Missing",
+    "inactive": "Inactive"
+  },
+  "reasons": {
+    "version_unknown": "No version",
+    "distro_backport_possible": "Possible backport",
+    "fixed_by_backport": "Fixed by a backport",
+    "platform_condition": "Unconfirmed platform"
+  },
+  "summary": {
+    "anywhere": "Everywhere",
+    "tags": "tags {{tags}}",
+    "ports": "ports {{ports}}",
+    "products": "applications {{products}}",
+    "cvssAtLeast": "CVSS ≥ {{score}}",
+    "cvssBelow": "CVSS < {{score}}",
+    "kev": "in CISA KEV",
+    "notKev": "not in CISA KEV",
+    "anyVulnerability": "Any vulnerability",
+    "titles": "title contains {{titles}}",
+    "tag": "tag {{tag}}",
+    "unchanged_one": "{{target}} unchanged in the latest scan",
+    "unchanged_other": "{{target}} unchanged in the latest {{count}} scans",
+    "keys": "name contains {{keys}}",
+    "priorities": "rated {{priorities}}",
+    "anyChange": "Any change",
+    "priority": "Priority {{priority}}"
+  },
+  "preview": {
+    "title": "What it would do now",
+    "invalid": "Complete the rule to see what it would do.",
+    "counts": "Matches {{matched}}: would change {{changes}}, already set {{unchanged}}, left as they are {{skipped}}.",
+    "scan": "Checked on the newest scan with results ({{date}}).",
+    "skippedHint": "Left as they are: a user set them, or a rule earlier in the order already does."
+  },
+  "form": {
+    "createTitle": "New rule",
+    "editTitle": "Edit rule",
+    "description": "The rule applies to every scan as soon as it is saved, and again after every new scan.",
+    "preset": "Start from a template",
+    "presetHint": "Fills in the form; change anything before saving.",
+    "presetPlaceholder": "Choose a template",
+    "name": "Name",
+    "nameInvalid": "Give the rule a name (at most 100 characters).",
+    "kind": "Kind",
+    "scope": "Where",
+    "scopeHint": "Every filled-in field must match; empty fields match anything.",
+    "ranges": "Addresses and CIDR blocks",
+    "rangesHint": "e.g. 10.0.0.0/16, 192.0.2.10",
+    "hostTags": "Host tags",
+    "listHint": "Separated by commas; any of them",
+    "ports": "Ports",
+    "portsHint": "e.g. 22, 443, 3389",
+    "products": "Applications",
+    "productsHint": "Part of the service name or product, e.g. nginx, OpenSSH",
+    "condition": "When",
+    "vulnerabilityIds": "Vulnerabilities (CVE)",
+    "vulnerabilityIdsHint": "One or more ids; empty = any vulnerability",
+    "severities": "Severity",
+    "cvssAtLeast": "CVSS at least",
+    "cvssBelow": "CVSS below",
+    "kev": "CISA KEV",
+    "kevOptions": {
+      "any": "Any",
+      "yes": "Only KEV",
+      "no": "Not KEV"
+    },
+    "confidence": "Match",
+    "any": "Any",
+    "reasons": "Uncertain because",
+    "target": "Applies to",
+    "titles": "Page title contains",
+    "scans": "Unchanged in the latest scans",
+    "scansHint": "1 to {{max}}; each scan compared with the one before it",
+    "rows": "Kind of change",
+    "changes": "Change",
+    "fields": "Changed field",
+    "keys": "Header, cookie or path contains",
+    "keysHint": "e.g. date, etag, /admin",
+    "lifecycles": "Host lifecycle",
+    "priorities": "Built-in priority",
+    "action": "Then",
+    "setTriage": "Set triage",
+    "noTriage": "Leave the triage",
+    "tag": "Add tag",
+    "tagHint": "Removed again when the rule no longer matches",
+    "changeAction": "Do with the change",
+    "readTimeHint": "Applied whenever changes are read, so it also covers past scans; nothing is stored.",
+    "ownershipHint": "Only values that are unreviewed or were set by a rule change. A user's own verdict always stays.",
+    "note": "Why (note)",
+    "expiresAt": "Valid until",
+    "expiresHint": "Optional; afterwards what the rule set goes back",
+    "invalid": "Check this field",
+    "save": "Save and apply",
+    "create": "Create and apply"
+  },
+  "presets": {
+    "ignoreCve": {
+      "name": "Ignore a CVE on an application",
+      "description": "A known vulnerability the team accepted on this software inside the internal network."
+    },
+    "ignoreBackports": {
+      "name": "Ignore uncertain distribution matches",
+      "description": "Potential matches on distribution packages whose fix may be backported without a version change."
+    },
+    "lowSeverity": {
+      "name": "Accept low-severity findings in the lab",
+      "description": "Vulnerabilities with a CVSS score below 4 on hosts tagged lab."
+    },
+    "escalateKev": {
+      "name": "Escalate known exploited vulnerabilities",
+      "description": "Anything in the CISA KEV catalog is important."
+    },
+    "unchangedReviewed": {
+      "name": "Unchanged services are reviewed",
+      "description": "A service that did not change in the last two scans needs no new look; it goes back to unreviewed when it changes."
+    },
+    "muteCertRotation": {
+      "name": "Mute certificate rotation",
+      "description": "Renewed certificates (new certificate, issuer or expiry) are routine."
+    },
+    "muteUnstable": {
+      "name": "Mute blips of unstable hosts",
+      "description": "Unstable hosts that went quiet or did not answer are noise, not findings."
+    },
+    "riskyPortHigh": {
+      "name": "Remote access opening is high",
+      "description": "A new Telnet, SMB, RDP or VNC port is always high priority."
+    },
+    "adminPanels": {
+      "name": "Admin panels are important",
+      "description": "Services whose page title points at an admin or login panel."
+    },
+    "tagDatabases": {
+      "name": "Tag databases",
+      "description": "Database ports get the database tag."
+    }
+  }
+}
