@@ -2,6 +2,7 @@ import type {
   ScanChange,
   ScanChangeCounts,
   ScanChangeFilter,
+  ScanCoverage,
 } from "@subsurf/contracts/scans/scan-results.schema";
 
 import type { HostObservationStatus, TransportProtocol } from "~backend/generated/prisma/client";
@@ -29,21 +30,31 @@ export interface HostDiff {
   ipNumber: bigint;
   hostId: string;
   change: ScanChange | null;
+  /** The base scan's answer for the address; `null` when it did not cover it or there is none. */
+  baseStatus: HostObservationStatus | null;
   services: ServiceDiff[];
 }
 
 const keyOf = (port: { protocol: string; port: number }) => `${port.protocol}/${port.port}`;
 const byPort = (a: ServiceDiff, b: ServiceDiff) => a.port - b.port;
 
+const isConclusive = (status: HostObservationStatus) => status === "up" || status === "down";
+
+/** Up now, compared with what the base scan got: `before` is `undefined` outside its coverage. */
 function upHost(
   host: ObservedPorts,
   hostId: string,
   before: ObservedPorts | undefined,
   compared: boolean,
 ): HostDiff {
-  const base = { ip: host.ip, ipNumber: host.ipNumber, hostId };
-  if (!compared || !before) {
-    const change: ScanChange | null = compared ? "new" : null;
+  const base = { ip: host.ip, ipNumber: host.ipNumber, hostId, baseStatus: before?.status ?? null };
+  if (!compared || before?.status !== "up") {
+    // Only a conclusive `down` makes it new: no answer, or no scan of it, says nothing.
+    const change: ScanChange | null = !compared
+      ? null
+      : before?.status === "down"
+        ? "new"
+        : "unknown";
     const services = host.ports.map(
       (port): ServiceDiff => ({ ...port, change, observedIn: "current" }),
     );
@@ -73,30 +84,31 @@ function upHost(
 /**
  * Compares a scan with its base scan (docs/worker-result-format.md, "What the backend derives").
  * - `current`: this scan's `up` observations, plus its observations of the base scan's up hosts.
- * - `base`: the base scan's `up` observations; `null` when there is no base scan (no changes).
- * Only conclusive answers count: an address that timed out is `unknown`, never `gone`, and an
- * address outside this scan's coverage is left out.
+ * - `base`: the base scan's observations of those addresses, any status; `null` when there is
+ *   no base scan (no changes).
+ * Only conclusive answers count: an address either scan got no answer for, or the base scan did
+ * not cover, is `unknown`, never `new` or `gone`. A base host outside this scan's coverage is
+ * left out.
  */
 export function diffScan(
   current: readonly ObservedPorts[],
   base: readonly ObservedPorts[] | null,
 ): HostDiff[] {
-  const upBefore = new Map(
-    (base ?? []).filter((host) => host.status === "up").map((host) => [host.ip, host]),
-  );
+  const before = new Map((base ?? []).map((host) => [host.ip, host]));
   const entries: HostDiff[] = [];
   for (const host of current) {
-    const before = upBefore.get(host.ip);
+    const earlier = before.get(host.ip);
     if (host.status === "up" && host.hostId) {
-      entries.push(upHost(host, host.hostId, before, base !== null));
-    } else if (host.status !== "up" && before?.hostId) {
+      entries.push(upHost(host, host.hostId, earlier, base !== null));
+    } else if (host.status !== "up" && earlier?.status === "up" && earlier.hostId) {
       const change: ScanChange = host.status === "down" ? "gone" : "unknown";
       entries.push({
         ip: host.ip,
         ipNumber: host.ipNumber,
-        hostId: before.hostId,
+        hostId: earlier.hostId,
         change,
-        services: before.ports
+        baseStatus: "up",
+        services: earlier.ports
           .map((port) => ({ ...port, change, observedIn: "base" as const }))
           .toSorted(byPort),
       });
@@ -105,6 +117,24 @@ export function diffScan(
   return entries.toSorted((a, b) =>
     a.ipNumber < b.ipNumber ? -1 : a.ipNumber > b.ipNumber ? 1 : 0,
   );
+}
+
+/** Addresses with a conclusive answer in both scans, or only in one of them. */
+export function countCoverage(
+  current: readonly Pick<ObservedPorts, "ip" | "status">[],
+  base: readonly Pick<ObservedPorts, "ip" | "status">[],
+): ScanCoverage {
+  const answeredBefore = new Set(
+    base.filter((host) => isConclusive(host.status)).map((host) => host.ip),
+  );
+  let both = 0;
+  let onlyCurrent = 0;
+  for (const host of current) {
+    if (!isConclusive(host.status)) continue;
+    if (answeredBefore.has(host.ip)) both += 1;
+    else onlyCurrent += 1;
+  }
+  return { both, onlyBase: answeredBefore.size - both, onlyCurrent };
 }
 
 export function matchesChange(change: ScanChange | null, filter: ScanChangeFilter): boolean {

@@ -23,6 +23,7 @@
     "db:reset": "prisma migrate reset --force && prisma db seed",
     "db:seed": "prisma db seed",
     "db:seed:hosts": "tsx prisma/seed-hosts.ts",
+    "db:refingerprint": "tsx prisma/refingerprint.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {

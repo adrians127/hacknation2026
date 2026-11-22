@@ -274,9 +274,10 @@ The worker result does not contain these. The backend computes them from stored 
 | Targets a host belongs to | Address in the range of an `ip`/`cidr` target, or in the DNS resolution of a `domain` target at scan time. Nested targets simply give a host several targets |
 | Detections (CMS, framework, application server, IoT, admin panel, staging, interesting headers and cookies, custom signatures) | Signatures evaluated on `headers`, `cookies`, `body.content`, `favicon`, `probes`, `banner` and `service`. Built-in fingerprints and custom signatures run on the same engine, each with a `confidence` |
 | Coverage of a scan | `up`/`down` hosts of its jobs |
-| New, gone and changed hosts/services/endpoints | Comparison with a base scan, only within the current scan's coverage. Keys: host `ip`, service `ip + protocol + port`, endpoint `ip + port + scheme + vhost` |
+| New, gone and changed hosts/services/endpoints | Comparison of two scans (by default the previous scan with results), only where both have a conclusive answer: an address that either scan did not cover or got no `up`/`down` for is `unknown`. Keys: host `ip`, service `ip + protocol + port`, endpoint `ip + port + scheme + vhost` |
+| What changed in a service | A field-level comparison of one normalized view of the port (service identity, SSH host key, and per endpoint: status, title, redirect path, technology and security headers, cookie names and flags, certificate, TLS version, favicon, probe statuses). The port fingerprint is a hash of the same view |
 | Likely machines behind one IP | Ports grouped by matching `identity` signals |
-| Host lifecycle (active, unstable, inactive) | Consecutive misses within coverage |
+| Host lifecycle (active, unstable, missing, inactive) | Consecutive misses (`down`) and up/down flips over the scans that covered the address; `timeout`, `cancelled` and `failed` count as no information |
 
 ## Where it lives in code
 

@@ -141,7 +141,7 @@ async function writeJson(dir: string, run: DemoRun, results: DemoJobResult[]) {
 }
 
 /**
- * Seeds two demo scans of a /18 through the real ingest path. Idempotent: existing scans are
+ * Seeds four demo scans of a /18 through the real ingest path. Idempotent: existing scans are
  * kept, and results already ingested (same lease) are skipped.
  */
 export async function seedDemoHosts(

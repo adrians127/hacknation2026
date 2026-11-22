@@ -1,13 +1,18 @@
-import { Play } from "lucide-react";
+import { Columns2, Play } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
+import type { Scan } from "@subsurf/contracts/scans/scans.schema";
+
 import { GuardedButton } from "@/components/guarded-button";
 import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScans } from "@/features/scans/api/get-scans";
 import { ScansTable } from "@/features/scans/components/scans-table";
+import { compareUrl, orderPair } from "@/features/scans/lib/pair";
 import { useErrorMessage } from "@/hooks/use-error-message";
 
 export function ScansRoute() {
@@ -15,6 +20,28 @@ export function ScansRoute() {
   const navigate = useNavigate();
   const errorMessage = useErrorMessage();
   const scans = useScans();
+  // At most two: picking a third drops the one picked first.
+  const [selected, setSelected] = useState<readonly string[]>([]);
+  const toggle = useCallback(
+    (scan: Scan) =>
+      setSelected((previous) =>
+        previous.includes(scan.id)
+          ? previous.filter((id) => id !== scan.id)
+          : [...previous, scan.id].slice(-2),
+      ),
+    [],
+  );
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+
+  const compare = () => {
+    const [first, second] = selected;
+    if (first && second && scans.data) {
+      const [base, target] = orderPair(scans.data.items, first, second);
+      void navigate(compareUrl({ base, target }));
+    } else {
+      void navigate("/app/scans/compare");
+    }
+  };
 
   return (
     <div className="grid gap-6">
@@ -22,14 +49,23 @@ export function ScansRoute() {
         title={t("scans.title")}
         description={t("scans.subtitle")}
         actions={
-          // Scans are queued by importing targets with "Start a scan right away".
-          <GuardedButton
-            permissions={["targets:create", "scans:run"]}
-            onClick={() => void navigate("/app/targets/new")}
-          >
-            <Play />
-            {t("scans.start")}
-          </GuardedButton>
+          <>
+            <span className="self-center text-sm text-muted-foreground" aria-live="polite">
+              {selected.length > 0 && t("scans.compare.selected", { count: selected.length })}
+            </span>
+            <Button variant="outline" onClick={compare}>
+              <Columns2 />
+              {t("scans.compare.open")}
+            </Button>
+            {/* Scans are queued by importing targets with "Start a scan right away". */}
+            <GuardedButton
+              permissions={["targets:create", "scans:run"]}
+              onClick={() => void navigate("/app/targets/new")}
+            >
+              <Play />
+              {t("scans.start")}
+            </GuardedButton>
+          </>
         }
       />
 
@@ -42,7 +78,7 @@ export function ScansRoute() {
       ) : (
         <Card>
           <CardContent>
-            <ScansTable scans={scans.data.items} />
+            <ScansTable scans={scans.data.items} selected={selectedSet} onToggle={toggle} />
           </CardContent>
         </Card>
       )}

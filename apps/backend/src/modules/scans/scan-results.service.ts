@@ -1,12 +1,16 @@
 import type { TriageStatus } from "@subsurf/contracts/hosts/hosts.schema";
 import {
   HOST_HISTORY_LIMIT,
+  LIFECYCLE_WINDOW,
   type HostHistoryEntry,
+  type HostLifecycle,
   type ScanDetail,
   type ScanHostDetail,
   type ScanHostListQuery,
   type ScanHostListResponse,
+  type ScanCoverage,
 } from "@subsurf/contracts/scans/scan-results.schema";
+import type { ScanChangesResponse } from "@subsurf/contracts/scans/scan-changes.schema";
 import type { Scan, ScanHostCounts, ScanJobStatus } from "@subsurf/contracts/scans/scans.schema";
 import type { Ipv4Range } from "@subsurf/contracts/targets/ipv4";
 
@@ -17,14 +21,17 @@ import {
 } from "~backend/generated/prisma/client";
 import { HttpError } from "~backend/lib/http-error";
 import { prisma } from "~backend/lib/prisma";
+import { hostLifecycle } from "~backend/modules/scans/host-lifecycle";
 import {
   countChanges,
+  countCoverage,
   diffScan,
   matchesChange,
   type HostDiff,
 } from "~backend/modules/scans/scan-diff";
 import {
   OBSERVATION_INCLUDE,
+  toChangeRows,
   toScan,
   toScanHost,
   toScanHostDetail,
@@ -97,13 +104,27 @@ async function findScan(id: string): Promise<ScanRow> {
   return scan;
 }
 
-/** The previous scan that has results: what "new", "gone" and "changed" are relative to. */
-function findBaseScan(scan: ScanRow): Promise<BaseScan | null> {
-  return prisma.scan.findFirst({
-    where: { createdAt: { lt: scan.createdAt }, results: { some: {} } },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, startedAt: true },
+/**
+ * What "new", "gone" and "changed" are relative to: the requested scan, which must be older,
+ * or the previous scan that has results.
+ */
+async function resolveBase(scan: ScanRow, baseId: string | undefined): Promise<BaseScan | null> {
+  if (baseId === undefined) {
+    return prisma.scan.findFirst({
+      where: { createdAt: { lt: scan.createdAt }, results: { some: {} } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, startedAt: true },
+    });
+  }
+  const base = await prisma.scan.findUnique({
+    where: { id: baseId },
+    select: { id: true, startedAt: true, createdAt: true },
   });
+  if (!base) throw HttpError.notFound("Base scan not found");
+  if (base.createdAt >= scan.createdAt) {
+    throw HttpError.badRequest("The base scan must be older than the scan", "BASE_SCAN_NOT_OLDER");
+  }
+  return { id: base.id, startedAt: base.startedAt };
 }
 
 async function scanSummaries(scanIds: readonly string[]): Promise<Map<string, ScanSummary>> {
@@ -128,23 +149,33 @@ async function scanSummaries(scanIds: readonly string[]): Promise<Map<string, Sc
   return summaries;
 }
 
-async function diffWithBase(scan: ScanRow, base: BaseScan | null): Promise<HostDiff[]> {
+interface ScanComparison {
+  entries: HostDiff[];
+  /** `null` without a base scan. */
+  coverage: ScanCoverage | null;
+}
+
+async function diffWithBase(scan: ScanRow, base: BaseScan | null): Promise<ScanComparison> {
   const ids = await effectiveIds(base ? [scan.id, base.id] : [scan.id]);
   const observations = await prisma.hostObservation.findMany({
     where: { id: { in: ids } },
     select: { ...DIFF_SELECT, scanId: true },
   });
-  const upNow = observations.filter((host) => host.scanId === scan.id && host.status === "up");
-  if (!base) return diffScan(upNow, null);
+  const now = observations.filter((host) => host.scanId === scan.id);
+  const upNow = now.filter((host) => host.status === "up");
+  if (!base) return { entries: diffScan(upNow, null), coverage: null };
 
-  const upBefore = observations.filter((host) => host.scanId === base.id && host.status === "up");
+  const before = observations.filter((host) => host.scanId === base.id);
   const stillUp = new Set(upNow.map((host) => host.ip));
-  const missing = new Set(upBefore.filter((host) => !stillUp.has(host.ip)).map((host) => host.ip));
+  const missing = new Set(
+    before.filter((host) => host.status === "up" && !stillUp.has(host.ip)).map((host) => host.ip),
+  );
   const answeredOtherwise =
-    missing.size === 0
-      ? []
-      : observations.filter((host) => host.scanId === scan.id && missing.has(host.ip));
-  return diffScan([...upNow, ...answeredOtherwise], upBefore);
+    missing.size === 0 ? [] : now.filter((host) => host.status !== "up" && missing.has(host.ip));
+  return {
+    entries: diffScan([...upNow, ...answeredOtherwise], before),
+    coverage: countCoverage(now, before),
+  };
 }
 
 /** `ranges` sorted and merged (`mergeRanges`). */
@@ -229,19 +260,63 @@ async function filteredHostIds(
   return new Set(first.filter((id) => others.every((ids) => ids.has(id))));
 }
 
+/** Hosts loaded per query when every change is needed: keeps the IP lists well under the bind limit. */
+const CHANGES_BATCH = 500;
+
+const scanRef = (scan: { id: string; startedAt: Date | null }) => ({
+  id: scan.id,
+  startedAt: scan.startedAt?.toISOString() ?? null,
+});
+
+/** Scans that did not cover an address, or got no answer, do not count: look further back. */
+const LIFECYCLE_SCANS = LIFECYCLE_WINDOW * 3;
+
+/** Addresses per lifecycle query: each one is a bind parameter. */
+const LIFECYCLE_BATCH = 10_000;
+
+/** Each address's lifecycle as of `scan`, from its answers in that scan and earlier ones. */
+async function lifecycles(
+  scan: ScanRow,
+  ips: readonly string[],
+): Promise<Map<string, HostLifecycle>> {
+  if (ips.length === 0) return new Map();
+  const scans = await prisma.scan.findMany({
+    where: { createdAt: { lte: scan.createdAt }, results: { some: {} } },
+    orderBy: { createdAt: "desc" },
+    take: LIFECYCLE_SCANS,
+    select: { id: true },
+  });
+  const age = new Map(scans.map((row, index) => [row.id, index]));
+  const scanIds = scans.map((row) => row.id);
+  const rows: EffectiveRow[] = [];
+  for (let start = 0; start < ips.length; start += LIFECYCLE_BATCH) {
+    rows.push(
+      ...(await prisma.$queryRaw<EffectiveRow[]>(
+        effectiveSql(scanIds, ips.slice(start, start + LIFECYCLE_BATCH)),
+      )),
+    );
+  }
+  const statuses = new Map<string, HostObservationStatus[]>();
+  for (const row of rows.toSorted((a, b) => (age.get(a.scanId) ?? 0) - (age.get(b.scanId) ?? 0))) {
+    statuses.set(row.ip, [...(statuses.get(row.ip) ?? []), row.status]);
+  }
+  return new Map(ips.map((ip) => [ip, hostLifecycle(statuses.get(ip) ?? [])]));
+}
+
 /** Loads the assets and both scans' observations for the given entries of a diff. */
 async function hostsInScan(
-  scanId: string,
+  scan: ScanRow,
   base: BaseScan | null,
   entries: readonly HostDiff[],
 ): Promise<HostInScan[]> {
+  const scanId = scan.id;
   const ips = entries.map((entry) => entry.ip);
   if (ips.length === 0) return [];
   const ids = await effectiveIds(base ? [scanId, base.id] : [scanId], ips);
   const shownServices = new Map(
     entries.map((entry) => [entry.hostId, entry.services.map((service) => service.serviceId)]),
   );
-  const [hosts, current, before, summaries] = await Promise.all([
+  const [hosts, current, before, summaries, lifecycleByIp] = await Promise.all([
     prisma.host.findMany({
       where: { id: { in: entries.map((entry) => entry.hostId) } },
       include: { services: true },
@@ -254,6 +329,7 @@ async function hostsInScan(
         })
       : [],
     vulnerabilitiesService.summaries(shownServices),
+    lifecycles(scan, ips),
   ]);
   const hostById = new Map(hosts.map((host) => [host.id, host]));
   const currentByIp = new Map(current.map((row) => [row.ip, row]));
@@ -268,6 +344,7 @@ async function hostsInScan(
             host,
             current: observation,
             base: baseByIp.get(diff.ip),
+            lifecycle: lifecycleByIp.get(diff.ip) ?? hostLifecycle([]),
             vulnerabilities: {
               host: summaries.groups.get(diff.hostId) ?? EMPTY_SUMMARY,
               services: summaries.services,
@@ -313,6 +390,26 @@ async function history(ip: string): Promise<HostHistoryEntry[]> {
  * base scan. Read-only; host and service edits go through `hostsService`.
  */
 export const scanResultsService = {
+  /** The newest scan with results, which the dashboard shows. */
+  latestWithResults(): Promise<{ id: string } | null> {
+    return prisma.scan.findFirst({
+      where: { results: { some: {} } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+  },
+
+  /** How many known hosts are unstable or inactive as of the scan. */
+  async lifecycleCounts(scanId: string): Promise<{ unstable: number; inactive: number }> {
+    const scan = await findScan(scanId);
+    const hosts = await prisma.host.findMany({ select: { ip: true } });
+    const states = [...(await lifecycles(scan, hosts.map((host) => host.ip))).values()];
+    return {
+      unstable: states.filter((lifecycle) => lifecycle.state === "unstable").length,
+      inactive: states.filter((lifecycle) => lifecycle.state === "inactive").length,
+    };
+  },
+
   async list(): Promise<Scan[]> {
     const scans = await prisma.scan.findMany({ orderBy: { createdAt: "desc" } });
     const summaries = await scanSummaries(scans.map((scan) => scan.id));
@@ -322,10 +419,10 @@ export const scanResultsService = {
     });
   },
 
-  async get(id: string): Promise<ScanDetail> {
+  async get(id: string, baseId?: string): Promise<ScanDetail> {
     const scan = await findScan(id);
-    const base = await findBaseScan(scan);
-    const [summaries, jobs, entries] = await Promise.all([
+    const base = await resolveBase(scan, baseId);
+    const [summaries, jobs, { entries, coverage }] = await Promise.all([
       scanSummaries([scan.id]),
       prisma.scanJob.groupBy({ by: ["status"], where: { scanId: scan.id }, _count: { status: true } }),
       diffWithBase(scan, base),
@@ -348,20 +445,21 @@ export const scanResultsService = {
       jobs: jobCounts,
       baseScan: base && { id: base.id, startedAt: base.startedAt?.toISOString() ?? null },
       changes: base ? countChanges(entries) : null,
+      coverage,
     };
   },
 
   async listHosts(scanId: string, query: ScanHostListQuery): Promise<ScanHostListResponse> {
     const scan = await findScan(scanId);
-    const base = await findBaseScan(scan);
-    let entries = await diffWithBase(scan, base);
+    const base = await resolveBase(scan, query.base);
+    let { entries } = await diffWithBase(scan, base);
     const { change } = query;
     if (change) entries = entries.filter((entry) => matchesChange(entry.change, change));
     const ids = await filteredHostIds(query, base ? [scan.id, base.id] : [scan.id]);
     if (ids) entries = entries.filter((entry) => ids.has(entry.hostId));
 
     const start = (query.page - 1) * query.pageSize;
-    const page = await hostsInScan(scan.id, base, entries.slice(start, start + query.pageSize));
+    const page = await hostsInScan(scan, base, entries.slice(start, start + query.pageSize));
     return {
       items: page.map(toScanHost),
       total: entries.length,
@@ -370,18 +468,33 @@ export const scanResultsService = {
     };
   },
 
+  /** Every change since the base scan, one row each, rated (export and dashboard). */
+  async changes(scanId: string, baseId?: string): Promise<ScanChangesResponse> {
+    const scan = await findScan(scanId);
+    const base = await resolveBase(scan, baseId);
+    if (!base) return { scan: scanRef(scan), baseScan: null, items: [] };
+    const { entries } = await diffWithBase(scan, base);
+    const changed = entries.filter((entry) => entry.change !== null && entry.change !== "unchanged");
+    const items = [];
+    for (let start = 0; start < changed.length; start += CHANGES_BATCH) {
+      const page = await hostsInScan(scan, base, changed.slice(start, start + CHANGES_BATCH));
+      items.push(...page.flatMap(toChangeRows));
+    }
+    return { scan: scanRef(scan), baseScan: scanRef(base), items };
+  },
+
   /** Host assets the scan lists (gone and unknown included) inside `ranges` (sorted, merged). */
   async hostIdsIn(scanId: string, ranges: readonly Ipv4Range[]): Promise<string[]> {
     const scan = await findScan(scanId);
-    const entries = await diffWithBase(scan, await findBaseScan(scan));
+    const { entries } = await diffWithBase(scan, await resolveBase(scan, undefined));
     return entries
       .filter((entry) => inRanges(ranges, Number(entry.ipNumber)))
       .map((entry) => entry.hostId);
   },
 
-  async getHost(scanId: string, hostId: string): Promise<ScanHostDetail> {
+  async getHost(scanId: string, hostId: string, baseId?: string): Promise<ScanHostDetail> {
     const scan = await findScan(scanId);
-    const base = await findBaseScan(scan);
+    const base = await resolveBase(scan, baseId);
     const host = await prisma.host.findUnique({ where: { id: hostId }, select: { ip: true } });
     if (!host) throw HttpError.notFound("Host not found");
 
@@ -391,11 +504,11 @@ export const scanResultsService = {
       select: { ...DIFF_SELECT, scanId: true },
     });
     const current = observations.find((row) => row.scanId === scan.id);
-    const before = observations.find((row) => row.scanId === base?.id && row.status === "up");
+    const before = observations.find((row) => row.scanId === base?.id);
     const [diff] = current ? diffScan([current], base ? (before ? [before] : []) : null) : [];
     if (!diff) throw HttpError.notFound("The host is not part of this scan");
 
-    const [entry] = await hostsInScan(scan.id, base, [diff]);
+    const [entry] = await hostsInScan(scan, base, [diff]);
     if (!entry) throw HttpError.notFound("The host is not part of this scan");
     const [entries, matches] = await Promise.all([
       history(entry.host.ip),

@@ -13,6 +13,9 @@ export const DEMO_SCAN_PORTS =
 
 export type DemoHostState = "up" | "down" | "timeout";
 
+/** Four runs: nights of 20 and 21 November, the afternoon of the 21st, and the night of the 22nd. */
+export type DemoRunNumber = 1 | 2 | 3 | 4;
+
 export interface DemoHost {
   ip: string;
   profile: ProfileKey;
@@ -21,9 +24,10 @@ export interface DemoHost {
   /** Domains given as targets that resolve to this IP: one HTTP endpoint (`vhost`) each. */
   domains: string[];
   ptr: string | null;
-  states: { 1: DemoHostState; 2: DemoHostState };
-  /** How the host differs in the second run. */
+  states: Record<DemoRunNumber, DemoHostState>;
+  /** How the host differs from the first run, from run `changesFrom` on. */
   changes: DemoChange[];
+  changesFrom: DemoRunNumber;
 }
 
 interface HostOptions {
@@ -31,9 +35,26 @@ interface HostOptions {
   ptr?: string;
   label?: string;
   variant?: number;
+  /** The first two runs default to `up`; later ones to the run before, a timeout to `up`. */
   run1?: DemoHostState;
   run2?: DemoHostState;
+  run3?: DemoHostState;
+  run4?: DemoHostState;
   changes?: DemoChange[];
+  changesFrom?: DemoRunNumber;
+}
+
+const RUN_OPTIONS = ["run1", "run2", "run3", "run4"] as const;
+
+function states(options: HostOptions): Record<DemoRunNumber, DemoHostState> {
+  const list: DemoHostState[] = [];
+  for (const [index, key] of RUN_OPTIONS.entries()) {
+    const previous = list.at(-1);
+    const fallback = index < 2 || previous === undefined || previous === "timeout" ? "up" : previous;
+    list.push(options[key] ?? fallback);
+  }
+  const [run1 = "up", run2 = "up", run3 = "up", run4 = "up"] = list;
+  return { 1: run1, 2: run2, 3: run3, 4: run4 };
 }
 
 const d = (name: string) => `${name}.${DEMO_DOMAIN}`;
@@ -47,8 +68,9 @@ function host(ip: string, profile: ProfileKey, options: HostOptions = {}): DemoH
     label: options.label ?? domains[0] ?? options.ptr ?? ip,
     domains,
     ptr: options.ptr ?? null,
-    states: { 1: options.run1 ?? "up", 2: options.run2 ?? "up" },
+    states: states(options),
     changes: options.changes ?? [],
+    changesFrom: options.changesFrom ?? 2,
   };
 }
 
@@ -127,9 +149,18 @@ const NAMED_HOSTS: DemoHost[] = [
   host("10.40.4.13", "tomcat", { domains: [d("test-aplikacje")], variant: 1 }),
   // Appears in the second run: a CI server someone exposed on the staging network.
   host("10.40.4.14", "jenkins", { domains: [d("ci-staging")], variant: 1, run1: "down" }),
-  host("10.40.4.15", "nginxDefault", { ptr: d("test-proxy"), run2: "down" }),
-  // Unstable: timed out in the first run, answers in the second.
+  // Unstable: gone at night, back in the afternoon run.
+  host("10.40.4.15", "nginxDefault", { ptr: d("test-proxy"), run2: "down", run3: "up" }),
+  // Timed out in the first run: unknown, not new, in the second.
   host("10.40.4.16", "grafana", { domains: [d("grafana-test")], run1: "timeout" }),
+  // Exposed in the last run: a database admin panel on the staging network.
+  host("10.40.4.17", "phpmyadmin", {
+    domains: [d("pma-test")],
+    run1: "down",
+    run2: "down",
+    run3: "down",
+    run4: "up",
+  }),
 ];
 
 interface Population {
@@ -141,7 +172,10 @@ interface Population {
   to: string;
   ptr?: (index: number) => string;
   /** Fates by position: the k-th host of the population gets `fates[k]`. */
-  fates?: Record<number, Partial<Pick<HostOptions, "run1" | "run2" | "changes">>>;
+  fates?: Record<
+    number,
+    Partial<Pick<HostOptions, "run1" | "run2" | "run3" | "run4" | "changes" | "changesFrom">>
+  >;
 }
 
 /** Bulk hosts: a realistic background of lab machines, Windows hosts, devices and databases. */
@@ -168,7 +202,8 @@ const POPULATIONS: Population[] = [
       27: { changes: ["upgrade"] },
       35: { changes: ["upgrade", "open-port"] },
       43: { changes: ["upgrade"] },
-      7: { run2: "down" },
+      // Gone at night, back in the afternoon, gone again: unstable.
+      7: { run2: "down", run3: "up", run4: "down" },
       23: { run2: "down" },
       51: { run2: "down" },
       14: { run2: "timeout" },
@@ -237,6 +272,11 @@ const POPULATIONS: Population[] = [
       16: { run2: "down" },
       26: { run1: "down" },
       33: { run1: "down" },
+      // Rebooted for updates during the afternoon run: back at night, unstable.
+      10: { run3: "down", run4: "up" },
+      12: { run3: "down", run4: "up" },
+      // Remote desktop enabled before the last run.
+      35: { changes: ["open-port"], changesFrom: 4 },
     },
   },
   {

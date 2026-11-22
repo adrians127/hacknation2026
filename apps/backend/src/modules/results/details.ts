@@ -9,6 +9,7 @@ import {
   type OpenPort,
 } from "@subsurf/contracts/workers/worker-result.schema";
 
+import type { PortObservation } from "~backend/generated/prisma/client";
 import { decryptJson, encryptJson, encryptNullable } from "~backend/lib/crypto";
 
 const EncryptedSchema = z.strictObject({ $enc: z.string() });
@@ -95,4 +96,45 @@ const StoredHttpSummariesSchema = z.object({ http: z.array(HttpSummarySchema) })
 /** The plaintext fields of `details.http[]`, without decrypting anything (list views). */
 export function httpSummaries(stored: unknown): HttpSummary[] {
   return StoredHttpSummariesSchema.parse(stored).http;
+}
+
+export type StoredPortRow = Pick<
+  PortObservation,
+  | "protocol"
+  | "port"
+  | "reason"
+  | "serviceName"
+  | "serviceProduct"
+  | "serviceVersion"
+  | "serviceExtraInfo"
+  | "serviceCpe"
+  | "serviceMethod"
+  | "serviceConfidence"
+  | "details"
+>;
+
+/** The worker's port object again, from a stored row (decrypts `details` unless given). */
+export function storedOpenPort(
+  row: StoredPortRow,
+  details: PortDetails = openPortDetails(row.details),
+): OpenPort {
+  return {
+    port: row.port,
+    protocol: row.protocol,
+    state: "open",
+    reason: row.reason,
+    service:
+      row.serviceName === null
+        ? null
+        : {
+            name: row.serviceName,
+            product: row.serviceProduct,
+            version: row.serviceVersion,
+            extraInfo: row.serviceExtraInfo,
+            cpe: row.serviceCpe,
+            method: row.serviceMethod === "table" ? "table" : "probed",
+            confidence: row.serviceConfidence ?? 0,
+          },
+    ...details,
+  };
 }

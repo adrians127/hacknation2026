@@ -12,25 +12,62 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "The most important findings from recent scans",
+    "subtitle": "What changed in the newest scan, and what deserves a look first.",
+    "noScans": "No scan has results yet. Import targets and start a scan.",
+    "newest": "Newest scan of {{date}}, compared with the scan of {{base}}.",
+    "newestFirst": "Newest scan of {{date}}. It is the first one, so there is nothing to compare it with yet.",
+    "compare": "Compare side by side",
     "stats": {
-      "activeHosts": "Active hosts",
-      "newServices": "New services",
-      "disappeared": "Disappeared services",
-      "changed": "Changed services"
+      "hostsUp": "Hosts up",
+      "openPorts": "Open ports",
+      "newHosts": "New hosts",
+      "goneHosts": "Hosts gone",
+      "serviceChanges": "Service changes",
+      "serviceChangesHint": "{{new}} opened · {{gone}} closed · {{changed}} changed",
+      "unstable": "Unstable hosts",
+      "inactive": "Inactive hosts",
+      "lifecycleHint": "Across every known host",
+      "sinceBase": "{{delta}} since the previous scan",
+      "trend": "{{label}} per scan",
+      "trendPoint": "{{date}}: {{value}}"
     },
-    "recent": {
-      "title": "Recent changes",
-      "kind": "Change",
+    "top": {
+      "title": "Most important changes",
+      "empty": "Nothing changed since the previous scan.",
+      "count": "{{high}} high · {{medium}} medium · {{low}} low",
+      "shown": "The {{shown}} most important of {{total}}.",
+      "priority": "Priority",
       "host": "Host",
-      "service": "Service",
-      "detail": "Detail",
-      "detected": "Detected",
-      "kinds": {
-        "new": "New",
-        "disappeared": "Disappeared",
-        "changed": "Changed"
-      }
+      "port": "Port",
+      "wholeHost": "host",
+      "change": "Change",
+      "what": "What"
+    },
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "reasons": {
+      "new-host": "new host",
+      "returning-host": "came back",
+      "risky-port": "risky port opened",
+      "new-service": "port opened",
+      "admin-panel": "admin path answers",
+      "ssh-key-changed": "SSH host key changed",
+      "self-signed": "self-signed certificate",
+      "version-change": "software changed",
+      "new-endpoint": "new HTTP endpoint",
+      "page-change": "page changed",
+      "cert-change": "certificate changed",
+      "security-header-removed": "security header removed",
+      "cookie-flags-weakened": "cookie flags weakened",
+      "technology-header": "technology header changed",
+      "host-inactive": "inactive",
+      "host-gone": "stopped answering",
+      "service-gone": "port closed",
+      "no-answer": "no answer",
+      "other": "other change"
     }
   },
   "targets": {
@@ -285,9 +322,42 @@
         "new": "new hosts",
         "gone": "hosts gone",
         "changed": "hosts changed",
-        "unknown": "hosts without an answer"
+        "unknown": "hosts with nothing to compare"
       },
       "serviceChanges": "Services: {{new}} new, {{gone}} gone, {{changed}} changed."
+    },
+    "compare": {
+      "title": "Compare scans",
+      "subtitle": "Two scans side by side: which hosts appeared, went or changed, port by port. Only addresses both scans answered for count as new or gone.",
+      "open": "Compare",
+      "openSideBySide": "Compare side by side",
+      "selected_one": "{{count}} of 2 scans selected",
+      "selected_other": "{{count}} of 2 scans selected",
+      "selectScan": "Select the scan of {{date}} for comparison",
+      "base": "Before (A)",
+      "target": "After (B)",
+      "pickScan": "Choose a scan",
+      "noBase": "There is no older scan with results to compare this one with. Choose another scan as B.",
+      "noScans": "Comparing needs at least two scans with results.",
+      "metric": "Metric",
+      "delta": "Change",
+      "stats": {
+        "addresses": "Addresses",
+        "up": "Hosts up",
+        "down": "Hosts down",
+        "noAnswer": "No answer",
+        "openPorts": "Open ports",
+        "duration": "Duration"
+      },
+      "coverage": "Both scans answered for {{both}} addresses. Only A: {{onlyBase}}, only B: {{onlyCurrent}}. A host outside the common part is unknown, never new or gone.",
+      "columns": {
+        "host": "Host",
+        "change": "Change",
+        "base": "A · {{date}}",
+        "target": "B · {{date}}"
+      },
+      "export": "Export changes as {{format}}",
+      "exportFailed": "The export failed: {{message}}"
     }
   },
   "language": {
@@ -372,6 +442,7 @@
     "EMAIL_TAKEN": "A user with this email already exists.",
     "ROLE_NAME_TAKEN": "A role with this name already exists.",
     "PACKAGE_MAPPING_EXISTS": "This mapping already exists.",
-    "SOURCE_DISABLED": "The source is disabled. Enable it first."
+    "SOURCE_DISABLED": "The source is disabled. Enable it first.",
+    "BASE_SCAN_NOT_OLDER": "The scan to compare with must be older than the compared scan."
   }
 }

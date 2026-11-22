@@ -14,7 +14,7 @@
       "new": "New",
       "gone": "Gone",
       "changed": "Changed",
-      "unknown": "No answer"
+      "unknown": "Unknown"
     }
   },
   "change": {
@@ -22,7 +22,7 @@
     "gone": "Gone",
     "changed": "Changed",
     "unchanged": "Unchanged",
-    "unknown": "No answer"
+    "unknown": "Unknown"
   },
   "triage": {
     "unreviewed": "Unreviewed",
@@ -174,5 +174,79 @@
     "hostSaved": "Host saved",
     "serviceSaved": "Service saved",
     "triageSaved": "Triage status saved"
+  },
+  "lifecycle": {
+    "label": "Lifecycle",
+    "active": "Active",
+    "unstable": "Unstable",
+    "missing": "Missing {{misses}}/{{max}}",
+    "inactive": "Inactive",
+    "hint": {
+      "active": "Answered in the latest scans that reached it.",
+      "unstable": "Switched between up and down {{flips}} times in its latest scans.",
+      "missing": "No answer in the last {{misses}} scans; inactive after {{max}}.",
+      "inactive": "No answer in the last {{misses}} scans."
+    }
+  },
+  "timeline": {
+    "title": "Presence over time",
+    "hint": "Each dot is a scan, oldest on the left. Pick one to compare with it.",
+    "dot": "{{date}}: {{status}}, {{ports}} open ports",
+    "base": "A",
+    "target": "B"
+  },
+  "fieldChange": {
+    "title": "What changed",
+    "hostTitle": "Host",
+    "none": "Nothing that is compared changed.",
+    "yes": "yes",
+    "no": "no",
+    "fields": {
+      "service": {
+        "name": "Service",
+        "product": "Product",
+        "version": "Version",
+        "extraInfo": "Details",
+        "cpe": "CPE"
+      },
+      "ssh": {
+        "hostKey": "SSH host key"
+      },
+      "http": {
+        "endpoint": "HTTP endpoint",
+        "status": "Status code",
+        "title": "Page title",
+        "redirect": "Redirect target",
+        "header": "Header",
+        "securityHeader": "Security header",
+        "cookie": "Cookie",
+        "cookieFlags": "Cookie flags",
+        "favicon": "Favicon (mmh3)",
+        "probe": "Probed path"
+      },
+      "tls": {
+        "cert": "Certificate",
+        "issuer": "Certificate issuer",
+        "expiry": "Certificate valid until",
+        "selfSigned": "Self-signed certificate",
+        "version": "TLS version"
+      },
+      "host": {
+        "hostname": "Hostname"
+      }
+    }
+  },
+  "compare": {
+    "notScanned": "Not in scan",
+    "notOpen": "not open",
+    "openInScan": "Open in the scan view",
+    "services": "Ports side by side",
+    "endpointAdded": "new endpoint",
+    "endpointRemoved": "endpoint gone",
+    "securityHeaders": "Security headers",
+    "techHeaders": "Technology headers",
+    "cookies": "Cookies",
+    "probes": "Probed paths",
+    "tls": "TLS"
   }
 }

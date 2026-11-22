@@ -11,21 +11,31 @@ import type {
 } from "@subsurf/contracts/workers/worker-result.schema";
 
 import { requestCount } from "~backend/demo/http";
-import { DEMO_SCAN_PORTS, demoNetwork, type DemoHost } from "~backend/demo/network";
+import {
+  DEMO_SCAN_PORTS,
+  demoNetwork,
+  type DemoHost,
+  type DemoRunNumber,
+} from "~backend/demo/network";
 import type { HostContext } from "~backend/demo/ports";
 import { PROFILES } from "~backend/demo/profiles";
 import { createRandom } from "~backend/demo/random";
 
 export interface DemoRun {
-  number: 1 | 2;
+  number: DemoRunNumber;
   scanId: string;
   startedAt: string;
 }
 
-/** Two nightly runs, a day apart. Fixed ids make the seed idempotent. */
+/**
+ * Three nightly runs and one in the afternoon, so hosts that answer only at some hours show up
+ * as unstable. Fixed ids make the seed idempotent.
+ */
 export const DEMO_RUNS = [
   { number: 1, scanId: "0193f0d0-0000-7000-8000-000000000001", startedAt: "2026-11-20T01:00:00Z" },
   { number: 2, scanId: "0193f0d0-0000-7000-8000-000000000002", startedAt: "2026-11-21T01:00:00Z" },
+  { number: 3, scanId: "0193f0d0-0000-7000-8000-000000000003", startedAt: "2026-11-21T13:00:00Z" },
+  { number: 4, scanId: "0193f0d0-0000-7000-8000-000000000004", startedAt: "2026-11-22T01:00:00Z" },
 ] as const satisfies readonly DemoRun[];
 
 export interface DemoJob {
@@ -92,7 +102,7 @@ function hostContext(run: DemoRun, demoHost: DemoHost, observedAt: string): Host
     domains: demoHost.domains,
     observedAt,
     ttl: PROFILES[demoHost.profile].ttl,
-    changed: (change) => run.number === 2 && demoHost.changes.includes(change),
+    changed: (change) => run.number >= demoHost.changesFrom && demoHost.changes.includes(change),
   };
 }
 

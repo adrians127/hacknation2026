@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { authRoutes } from "~backend/modules/auth/auth.routes";
+import { dashboardRoutes } from "~backend/modules/dashboard/dashboard.routes";
 import { healthRoutes } from "~backend/modules/health/health.routes";
 import { hostsRoutes } from "~backend/modules/hosts/hosts.routes";
 import { rolesRoutes } from "~backend/modules/roles/roles.routes";
@@ -17,6 +18,7 @@ import { workersRoutes } from "~backend/modules/workers/workers.routes";
 export const apiRouter = Router();
 
 apiRouter.use("/auth", authRoutes);
+apiRouter.use("/dashboard", dashboardRoutes);
 apiRouter.use("/health", healthRoutes);
 apiRouter.use("/hosts", hostsRoutes);
 apiRouter.use("/roles", rolesRoutes);

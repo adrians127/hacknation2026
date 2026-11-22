@@ -24,7 +24,8 @@ pnpm --filter @subsurf/backend test         # vitest, integration tests: needs `
 pnpm --filter @subsurf/backend db:migrate   # prisma migrate dev (new migration)
 pnpm --filter @subsurf/backend db:studio    # Prisma Studio
 pnpm --filter @subsurf/backend db:seed      # system roles, admin, demo accounts (idempotent)
-pnpm --filter @subsurf/backend db:seed:hosts  # demo scan data: two scans of a /18 (see "Demo data")
+pnpm --filter @subsurf/backend db:seed:hosts  # demo scan data: four scans of a /18 (see "Demo data")
+pnpm --filter @subsurf/backend db:refingerprint  # recompute stored port fingerprints after comparable.ts changes
 pnpm db:reset                                  # from the repo root: drop + all migrations + seed
 pnpm vulns:sync                                # from the repo root: the vulnerability sync process (see "Vulnerabilities")
 pnpm vulns:sync --once [--source nvd|osv] [--full] [--rematch]   # one pass, then exit
@@ -173,7 +174,7 @@ The result a worker sends for a job is fixed in [`docs/worker-result-format.md`]
 - **Scope:** the job must exist and belong to `scan.scanId` (404 / 400). Every address must be inside the job's `targets`, and every open port inside the scan's `ports` (400 otherwise, nothing is written).
 - **Separate runs:** `(resultId, ip)` is unique. A new lease writes its own host and port observations, even when another result in the same scan reported the same address. Same-lease resends remain idempotent.
 - **Seen window:** results may arrive out of order, so ingest only ever widens `firstSeenAt`/`lastSeenAt`.
-- **Fingerprint** (`fingerprint.ts`): SHA-256 over the service detection and, per HTTP endpoint, status, title, final path, software headers (`server`, `x-powered-by`, …), certificate and favicon hashes. Request-dependent values (dates, cookie values, body hashes, query strings) are left out so unchanged pages do not show up as changed.
+- **Fingerprint** (`fingerprint.ts`): SHA-256 over the port's comparable view (`comparable.ts`): service detection, SSH host key and, per HTTP endpoint, status, title, final path, technology headers by value and security headers by presence (lists in `contracts/src/scans/compared-fields.ts`), cookie names and flags, certificate, TLS version, favicon and probe statuses. Request-dependent values (dates, cookie values, body hashes, query strings) are left out so unchanged pages do not show up as changed. After changing the view, run `db:refingerprint`: it rebuilds each stored port from its columns and decrypted `details` and rewrites fingerprints that differ.
 - `ScanJob` itself (status, timings) is not touched: its lifecycle belongs to the lease handlers.
 
 ## Browsing scan results
@@ -183,9 +184,11 @@ Users reach hosts through scans: `/scans` → a scan → the hosts it saw (`modu
 | Endpoint | What it returns |
 |---|---|
 | `GET /scans` | Every scan, newest first: status, timing, hosts by status (`up`, `down`, `timeout`, `cancelled`, `failed`) and open ports |
-| `GET /scans/{id}` | The same plus parameters, jobs by status, the base scan and the change counts |
+| `GET /scans/{id}` | The same plus parameters, jobs by status, the base scan, the change counts and the coverage of both scans |
 | `GET /scans/{id}/hosts` | The scan's hosts with their services, as this scan saw them, paged in address order. Filters: `q` (IP prefix, hostname, tag, port, service name/product, HTTP title), `triage` (host or any service), `change` |
-| `GET /scans/{id}/hosts/{hostId}` | One host in that scan: decrypted HTTP details, banner, NSE scripts, and the address's scan history |
+| `GET /scans/{id}/hosts/{hostId}` | One host in that scan: decrypted HTTP details, banner, NSE scripts, the base scan's observation of each port (`before`), what changed field by field, and the address's scan history |
+
+All three scan endpoints take `?base=<scanId>` to compare with a chosen scan instead of the previous one; it must be older (`400 BASE_SCAN_NOT_OLDER` otherwise, 404 if it does not exist). The frontend's compare page (`/app/scans/compare`) is built on it.
 
 When several worker results in one scan report the same IP, the stored observations remain
 separate. These endpoints select one effective observation per IP: `up` takes precedence over
@@ -193,11 +196,25 @@ separate. These endpoints select one effective observation per IP: `up` takes pr
 precedence over discovery, then the latest observation. Scan counters, diffs and history
 use that same selection, so a retry does not duplicate a host in the scan view.
 
-**Changes** (`scan-diff.ts`, PDF items 8–9) compare a scan with its **base scan**, the previous scan (by `createdAt`) that has results. They follow the rules in [`docs/worker-result-format.md`](../../docs/worker-result-format.md#what-the-backend-derives):
+**Changes** (`scan-diff.ts`, PDF items 8–9) compare a scan with its **base scan**: `?base=` if given, otherwise the previous scan (by `createdAt`) that has results. They follow the rules in [`docs/worker-result-format.md`](../../docs/worker-result-format.md#what-the-backend-derives):
 - Hosts are keyed by IP and services by IP + protocol + port. A service is `changed` when its `fingerprint` differs.
-- A host is `new` (up now, not before), `gone` (up before, `down` now), `changed` (a service is new, gone or changed), `unchanged`, or `unknown` (up before, `timeout`/`cancelled`/`failed` now). Unknown is never gone, and addresses outside this scan's coverage are left out.
+- A host is `new` (up now, answered `down` in the base scan), `gone` (up before, `down` now), `changed` (a service is new, gone or changed), `unchanged`, or `unknown`: up before and `timeout`/`cancelled`/`failed` now, or up now while the base scan got no answer from it or did not cover it. Only conclusive answers count, and a base host outside this scan's coverage is left out. Each host carries `baseStatus` (what the base scan got, `null` if it did not cover the address).
+- `coverage` on the scan counts addresses with a conclusive answer in both scans, only in the base scan, or only in this one.
 - The first scan has no base scan: every `change` is `null`.
-- The diff reads only IPs, statuses and fingerprints, so it runs over a whole scan per request; details are loaded for the requested page only. The list's plaintext HTTP summaries come from `httpSummaries()`, without decrypting anything.
+- The diff reads only IPs, statuses and fingerprints, so it runs over a whole scan per request; details are loaded for the requested page only. The list's plaintext HTTP summaries come from `httpSummaries()`, without decrypting anything; each service's `before` is the base scan's plaintext summary of the port.
+
+**What changed** (`field-changes.ts`): the host detail compares the two observations of each `changed` port on the same comparable view the fingerprint hashes, and returns `fieldChanges` as `{ field, endpoint, key, before, after }` (`service.version`, `http.title`, `http.header` with the header name as `key`, `tls.cert`, `http.probe`, …; `null` = absent on that side). Hostnames that appeared or went are host-level `fieldChanges`. Only the detail decrypts, so the list stays cheap.
+
+**Lifecycle** (`host-lifecycle.ts`, the PDF's "after how long without an answer is a host inactive?"): every host in a scan carries its lifecycle as of that scan, from its latest 10 conclusive answers (`up`/`down`) in that scan and earlier ones; `timeout`, `cancelled` and `failed` say nothing. `inactive` after 3 `down` in a row, `unstable` after 2 up/down switches, `missing` after fewer misses, `active` otherwise (constants in `scan-results.schema.ts`). A pair comparison still reports a host `gone` after one `down`: the lifecycle tells a blip from a host that is really gone.
+
+**Export and priorities** (`GET /scans/{id}/changes?base=&format=json|csv`): every change between the two scans, one row each. A row is a host that is new, gone or unknown (`before`/`after` are the statuses), a port that opened or closed (`before`/`after` name the service), or one changed field. `change-priority.ts` rates each row `high`, `medium` or `low` with a `reason`:
+- **high:** a new host; a risky port opening (remote access, file sharing, databases); an admin or login path that started answering 2xx; a changed SSH host key; a self-signed certificate;
+- **medium:** software, page, certificate or technology-header changes; a removed security header; weakened cookie flags; a gone host that is `inactive`; a host that came back while `unstable`;
+- **low:** everything else. A returning unstable host's ports are `low`: they are not newly exposed.
+
+CSV is RFC 4180 with a leading `'` on cells that start with `=`, `+`, `-` or `@`, so spreadsheets do not run them (CSV injection). The comparison page downloads both formats.
+
+**Dashboard** (`modules/dashboard`, `GET /dashboard`, `scans:read`): the newest scan with results against its base scan: hosts up and open ports, change counts, how many known hosts are `unstable` or `inactive` as of that scan, and the 20 most important changes. Rows are grouped by `top-changes.ts` into one item per new, gone or unknown host (with the ports it opened or closed) and one per changed service; an item is as important as its most important row.
 
 **Edits** (`modules/hosts/`, `hosts:update`): `PATCH /hosts/{id}` (note, tags, triage) and `PATCH /hosts/{id}/services/{serviceId}` (the same plus `nameOverride`/`productOverride`/`versionOverride`, `null` clears one). They write the `Host`/`Service` assets, which ingest never touches, so an edit made from any scan shows in every scan and survives later ones (PDF item 14). Triage is `unreviewed | reviewed | important | false_positive`.
 
@@ -260,10 +277,12 @@ The tables take about 1 GB (`Vulnerability` 592 MB, `VulnerabilityCriterion` 418
 
 `pnpm db:seed:hosts` (after `pnpm db:reset` or `pnpm db:seed`, which create the admin who owns the scans) fills the database with realistic scan results to build features on (`src/demo/`, entry `prisma/seed-hosts.ts`):
 - **Network:** 10.40.0.0/18 (16,384 addresses, 64 jobs of 256), about 250 live hosts with domains under `campus.example`: CMSs (WordPress, Joomla, Drupal, Moodle, MediaWiki), CI and admin panels (Jenkins, GitLab, Tomcat manager, phpMyAdmin, Grafana, Kibana, Zabbix), staging (`x-environment: staging`, Django debug page, Swagger UI), databases, Linux and Windows servers, cameras, printers, UPS, BMCs and NAS boxes. Certificates include self-signed, expired and expiring ones; cookies lack `Secure`/`HttpOnly` here and there.
-- **Two nightly runs** (2026-11-20 and 2026-11-21, 01:00 UTC) through the real `resultsService.ingest()`. The second run has new, gone and unstable hosts, upgraded software, opened and closed ports, a renewed certificate and a maintenance page, and its last job stops at the deadline (`partial`, `stopReason: "deadline"`, 128 addresses `cancelled`), so the scan ends `stopped`.
+- **Four runs** through the real `resultsService.ingest()`: nights of 2026-11-20, -21 and -22 (01:00 UTC) and the afternoon of the 21st (13:00 UTC).
+  - The second run has new, gone and unknown hosts, upgraded software, opened and closed ports, a renewed certificate and a maintenance page, and its last job stops at the deadline (`partial`, `stopReason: "deadline"`, 128 addresses `cancelled`), so the scan ends `stopped`.
+  - Runs 3 and 4 exercise the lifecycle: hosts gone in run 2 stay down (inactive by run 4), two workstations reboot during the afternoon run and a lab host and a test proxy come and go (unstable), RDP opens on a workstation and a phpMyAdmin panel appears in run 4. Runs 1 and 2 are the same as before they were added, so a database seeded earlier only gains runs 3 and 4.
 - **Deterministic and idempotent:** fixed scan ids and lease ids, a seeded PRNG. Re-running skips what is already there; a fresh copy needs `pnpm db:reset` first. It takes about 10 s.
 - `pnpm db:seed:hosts --json <dir>` also writes every worker result as `run-N/job-NNN.json`, e.g. for testing an import of scan results.
-- The generator's tests (`src/demo/demo.test.ts`) check that every result passes `WorkerResultSchema` and that the second run really differs.
+- The generator's tests (`src/demo/demo.test.ts`) check that every result passes `WorkerResultSchema`, that the second run really differs and that the fourth has unstable and inactive hosts.
 - **Vulnerabilities:** before the runs, the seed loads `src/demo/vulnerabilities/{nvd,osv}.json` (real NVD and OSV records for the demo network's software) through the sources' parsers, and re-matches services after each run, so the second run's upgrades retract what they fixed. The slice leaves the sources' cursors alone: the first real sync is still a full one. `src/demo/vulnerabilities/build-fixture.ts` rebuilds it from a database with the demo scans and a full sync of every source.
 
 ## Environment variables
