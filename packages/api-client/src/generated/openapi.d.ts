@@ -969,22 +969,22 @@ export interface components {
                 };
                 params: {
                     /** Format: ipv4-cidr */
-                    subnet: string;
-                    ports: string;
-                    maxParallel: number;
-                    maxRatePerProcess: number;
-                    hostTimeoutMs: number;
-                    httpTimeoutMs: number;
-                    maxBodyBytes: number;
-                    maxRedirects: number;
+                    subnet: string | null;
+                    ports: string | null;
+                    maxParallel: number | null;
+                    maxRatePerProcess: number | null;
+                    hostTimeoutMs: number | null;
+                    httpTimeoutMs: number | null;
+                    maxBodyBytes: number | null;
+                    maxRedirects: number | null;
                     nmapArgs: string[];
                 };
                 counts: {
-                    addresses: number;
+                    addresses: number | null;
                     up: number;
-                    down: number;
+                    down: number | null;
                     timeout: number;
-                    cancelled: number;
+                    cancelled: number | null;
                     failed: number;
                     openPorts: number;
                     httpEndpoints: number;
@@ -1156,22 +1156,22 @@ export interface components {
                     };
                     params: {
                         /** Format: ipv4-cidr */
-                        subnet: string;
-                        ports: string;
-                        maxParallel: number;
-                        maxRatePerProcess: number;
-                        hostTimeoutMs: number;
-                        httpTimeoutMs: number;
-                        maxBodyBytes: number;
-                        maxRedirects: number;
+                        subnet: string | null;
+                        ports: string | null;
+                        maxParallel: number | null;
+                        maxRatePerProcess: number | null;
+                        hostTimeoutMs: number | null;
+                        httpTimeoutMs: number | null;
+                        maxBodyBytes: number | null;
+                        maxRedirects: number | null;
                         nmapArgs: string[];
                     };
                     counts: {
-                        addresses: number;
+                        addresses: number | null;
                         up: number;
-                        down: number;
+                        down: number | null;
                         timeout: number;
-                        cancelled: number;
+                        cancelled: number | null;
                         failed: number;
                         openPorts: number;
                         httpEndpoints: number;
@@ -4624,22 +4624,22 @@ export interface operations {
                         };
                         params: {
                             /** Format: ipv4-cidr */
-                            subnet: string;
-                            ports: string;
-                            maxParallel: number;
-                            maxRatePerProcess: number;
-                            hostTimeoutMs: number;
-                            httpTimeoutMs: number;
-                            maxBodyBytes: number;
-                            maxRedirects: number;
+                            subnet: string | null;
+                            ports: string | null;
+                            maxParallel: number | null;
+                            maxRatePerProcess: number | null;
+                            hostTimeoutMs: number | null;
+                            httpTimeoutMs: number | null;
+                            maxBodyBytes: number | null;
+                            maxRedirects: number | null;
                             nmapArgs: string[];
                         };
                         counts: {
-                            addresses: number;
+                            addresses: number | null;
                             up: number;
-                            down: number;
+                            down: number | null;
                             timeout: number;
-                            cancelled: number;
+                            cancelled: number | null;
                             failed: number;
                             openPorts: number;
                             httpEndpoints: number;
