@@ -360,6 +360,10 @@
       },
       "serviceChanges": "Usługi: nowe {{new}}, zniknięte {{gone}}, zmienione {{changed}}."
     },
+    "export": {
+      "button": "Eksportuj {{format}}",
+      "failed": "Eksport nie powiódł się: {{message}}"
+    },
     "compare": {
       "title": "Porównanie skanów",
       "subtitle": "Dwa skany obok siebie: które hosty się pojawiły, zniknęły lub zmieniły, port po porcie. Za nowe lub zniknięte uznajemy tylko adresy, które odpowiedziały w obu skanach.",
@@ -517,6 +521,9 @@
     "DEFECTDOJO_UNAVAILABLE": "DefectDojo nie odpowiada albo odrzucił token API.",
     "DEFECTDOJO_SYNC_RUNNING": "Synchronizacja z DefectDojo już trwa.",
     "DEFECTDOJO_PUSH_RUNNING": "Wysyłka do DefectDojo już trwa.",
-    "NOTHING_TO_PUSH": "Nie ma czego wysłać: brak otwartych usług w tym skanie lub zaznaczeniu."
+    "NOTHING_TO_PUSH": "Nie ma czego wysłać: brak otwartych usług w tym skanie lub zaznaczeniu.",
+    "SCAN_IMPORT_INVALID": "Plik nie jest eksportem skanu, wynikiem workera ani plikiem CSV z wynikami w formacie, który ta wersja potrafi odczytać.",
+    "SCAN_ALREADY_IMPORTED": "Ten plik został już zaimportowany.",
+    "SCAN_IMPORT_RUNNING": "Trwa inny import. Spróbuj ponownie, gdy się zakończy."
   }
 }

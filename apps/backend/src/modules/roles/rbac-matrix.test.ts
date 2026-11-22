@@ -160,6 +160,7 @@ const ENDPOINTS: Endpoint[] = [
   { route: "GET /scans/{id}/hosts", requires: ["scans:read"], path: () => scanPath("/hosts") },
   { route: "GET /scans/{id}/hosts/{hostId}", requires: ["scans:read"], path: scanHostPath },
   { route: "GET /scans/{id}/changes", requires: ["scans:read"], path: () => scanPath("/changes") },
+  { route: "GET /scans/{id}/export", requires: ["scans:read"], path: () => scanPath("/export") },
   {
     route: "POST /scans/{id}/hosts/tags",
     requires: ["scans:read", "hosts:update"],

@@ -326,6 +326,10 @@
       },
       "serviceChanges": "Services: {{new}} new, {{gone}} gone, {{changed}} changed."
     },
+    "export": {
+      "button": "Export {{format}}",
+      "failed": "The export failed: {{message}}"
+    },
     "compare": {
       "title": "Compare scans",
       "subtitle": "Two scans side by side: which hosts appeared, went or changed, port by port. Only addresses both scans answered for count as new or gone.",
@@ -477,6 +481,9 @@
     "DEFECTDOJO_UNAVAILABLE": "DefectDojo did not answer or refused the API token.",
     "DEFECTDOJO_SYNC_RUNNING": "A DefectDojo sync is already running.",
     "DEFECTDOJO_PUSH_RUNNING": "A push to DefectDojo is already running.",
-    "NOTHING_TO_PUSH": "There is nothing to push: no open services in this scan or selection."
+    "NOTHING_TO_PUSH": "There is nothing to push: no open services in this scan or selection.",
+    "SCAN_IMPORT_INVALID": "The file is not a scan export, a worker result or a results CSV this version can read.",
+    "SCAN_ALREADY_IMPORTED": "This file was imported before.",
+    "SCAN_IMPORT_RUNNING": "Another import is running. Try again when it finishes."
   }
 }

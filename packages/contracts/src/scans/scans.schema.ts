@@ -2,6 +2,12 @@ import { z } from "zod";
 
 export const ScanStatusSchema = z.enum(["queued", "running", "completed", "stopped", "failed"]);
 
+/**
+ * How a scan came to be: `adhoc` from the target import form, `manual` and `scheduled` from a
+ * scan configuration, `imported` from a results file.
+ */
+export const ScanOriginSchema = z.enum(["adhoc", "manual", "scheduled", "imported"]);
+
 const CountSchema = z.number().int().nonnegative();
 
 /** Addresses of a scan by what the workers answered (docs/worker-result-format.md). */
@@ -16,6 +22,9 @@ export const ScanHostCountsSchema = z.object({
 export const ScanSchema = z.object({
   id: z.uuid(),
   status: ScanStatusSchema,
+  /** Empty when nobody named it; an imported scan starts with its file's name. */
+  name: z.string(),
+  origin: ScanOriginSchema,
   createdAt: z.iso.datetime(),
   startedAt: z.iso.datetime().nullable(),
   finishedAt: z.iso.datetime().nullable(),
@@ -65,6 +74,7 @@ export const QueuedScanSchema = z.object({
 });
 
 export type ScanStatus = z.infer<typeof ScanStatusSchema>;
+export type ScanOrigin = z.infer<typeof ScanOriginSchema>;
 export type ScanHostCounts = z.infer<typeof ScanHostCountsSchema>;
 export type Scan = z.infer<typeof ScanSchema>;
 export type ScanListResponse = z.infer<typeof ScanListResponseSchema>;

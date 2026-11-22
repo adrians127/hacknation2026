@@ -19,7 +19,14 @@ import { prisma } from "~backend/lib/prisma";
 import { resultsService } from "~backend/modules/results/results.service";
 import { signInAs } from "~backend/test/auth";
 import { startTestServer, TestClient, type TestServer } from "~backend/test/http";
-import { databaseHost, hostIdOf, ingestScan, serviceIdOf } from "~backend/test/scans";
+import {
+  databaseHost,
+  hostIdOf,
+  ingestHttpx,
+  ingestScan,
+  serviceIdOf,
+  withoutHttp,
+} from "~backend/test/scans";
 
 let server: TestServer;
 
@@ -69,31 +76,6 @@ async function getJson(client: TestClient, path: string): Promise<unknown> {
   expect(res.status).toBe(200);
   return res.json();
 }
-
-async function ingestHttpx(scanId: string, title: string): Promise<void> {
-  const job = await prisma.scanJob.findFirstOrThrow({ where: { scanId }, select: { id: true } });
-  const result = buildWorkerResult({ scanId, jobId: job.id, leaseId: randomUUID() });
-  const wiki = result.hosts[0];
-  const https = wiki.ports.find((port) => port.port === 443);
-  if (!https?.http[0]) throw new Error("The example needs an HTTPS endpoint");
-  result.scan.worker = { id: "httpx-worker", version: "0.1.0", nmapVersion: null };
-  result.hosts = [{
-    ...wiki,
-    ports: [{
-      ...https,
-      service: null,
-      banner: null,
-      scripts: [],
-      http: [{ ...https.http[0], title }],
-    }],
-  }];
-  await resultsService.ingest(result);
-}
-
-const withoutHttp = (hosts: ObservedHost[]) => hosts.map((host) => ({
-  ...host,
-  ports: host.ports.map((port) => ({ ...port, http: [] })),
-}));
 
 const masscanOnly = (hosts: ObservedHost[]) => hosts.map((host) => ({
   ...host,

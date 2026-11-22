@@ -6,6 +6,10 @@ export const hasResults = (scan: Scan) => scan.hosts.up + scan.hosts.down > 0;
 
 export const scanDate = (scan: Pick<Scan, "startedAt" | "createdAt">) => scan.startedAt ?? scan.createdAt;
 
+/** `2026-11-21-01-00`, for the name of a file about the scan. */
+export const fileStamp = (scan: Pick<Scan, "startedAt" | "createdAt"> | undefined) =>
+  scan ? scanDate(scan).slice(0, 16).replaceAll(/[:T]/g, "-") : "scan";
+
 /** Orders two scans as (older, newer): "before" is always the base scan. */
 export function orderPair(scans: readonly Scan[], first: string, second: string): [string, string] {
   const createdAt = (id: string) => scans.find((scan) => scan.id === id)?.createdAt ?? "";

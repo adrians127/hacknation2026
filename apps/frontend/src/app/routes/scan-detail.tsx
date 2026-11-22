@@ -30,6 +30,7 @@ import { HostSheet } from "@/features/hosts/components/host-sheet";
 import { HostsTable } from "@/features/hosts/components/hosts-table";
 import { ServiceEditDialog } from "@/features/hosts/components/service-edit-dialog";
 import { useScan } from "@/features/scans/api/get-scan";
+import { ScanExportButtons } from "@/features/scans/components/scan-export-buttons";
 import { ScanSummary } from "@/features/scans/components/scan-summary";
 import { SCAN_STATUS_VARIANT } from "@/features/scans/lib/status";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -178,6 +179,7 @@ export function ScanDetailRoute() {
         description={t("scans.detail.subtitle")}
         actions={
           <>
+            <ScanExportButtons scan={scanData} />
             <GuardedButton
               variant="outline"
               permissions={["hosts:update"]}

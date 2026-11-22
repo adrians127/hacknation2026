@@ -1,3 +1,6 @@
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+
 import type { Request, Response } from "express";
 
 import type { IdParams } from "@subsurf/contracts/common/common.schema";
@@ -15,10 +18,16 @@ import {
   ScanChangesQuerySchema,
   type ScanChangesResponse,
 } from "@subsurf/contracts/scans/scan-changes.schema";
+import { ScanExportQuerySchema } from "@subsurf/contracts/scans/scan-export.schema";
 import type { ScanListResponse } from "@subsurf/contracts/scans/scans.schema";
 
 import { hostsService } from "~backend/modules/hosts/hosts.service";
 import { changesCsv, changesFileName } from "~backend/modules/scans/scan-changes-csv";
+import {
+  scanExportCsv,
+  scanExportFileName,
+  scanExportJson,
+} from "~backend/modules/scans/scan-export";
 import { scanResultsService } from "~backend/modules/scans/scan-results.service";
 
 export const scansController = {
@@ -54,6 +63,23 @@ export const scansController = {
       .type("text/csv; charset=utf-8")
       .attachment(changesFileName(changes))
       .send(changesCsv(changes));
+  },
+
+  exportScan: async (req: Request<IdParams>, res: Response) => {
+    const { format } = ScanExportQuerySchema.parse(req.query);
+    const source = await scanResultsService.forExport(req.params.id);
+    const chunks = format === "json" ? scanExportJson(source, new Date()) : scanExportCsv(source);
+    res
+      .status(200)
+      .type(format === "json" ? "application/json" : "text/csv; charset=utf-8")
+      .attachment(scanExportFileName(source, format));
+    try {
+      await pipeline(Readable.from(chunks), res);
+    } catch (error) {
+      // The status line is sent: a cut connection is the only way left to fail the download.
+      req.log.error({ err: error }, "Scan export failed midway");
+      res.destroy();
+    }
   },
 
   tagHosts: async (

@@ -20,6 +20,7 @@ import {
   TagScanHostsResponseSchema,
 } from "./scan-results.schema";
 import { ScanChangesQuerySchema, ScanChangesResponseSchema } from "./scan-changes.schema";
+import { ScanExportDocumentSchema, ScanExportQuerySchema } from "./scan-export.schema";
 import { ScanListResponseSchema } from "./scans.schema";
 
 const tags = ["Scans"];
@@ -164,6 +165,37 @@ registry.registerPath({
       description: "The changes",
       content: {
         "application/json": { schema: ScanChangesResponseSchema },
+        "text/csv": { schema: z.string() },
+      },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/scans/{id}/export",
+  operationId: "exportScan",
+  summary: "Export a scan's results, with the users' edits, as JSON or CSV",
+  description: [
+    "Requires `scans:read`. Every address the scan covered as this scan saw it, sensitive fields",
+    "decrypted, plus the notes, tags, triage and service corrections of its hosts. JSON lists the",
+    "addresses that are not `down` in the worker result's host shape and names the covered blocks",
+    "in `coverage` (an address in them without an entry is `down`); `POST /scans/import` reads the",
+    "file back. CSV has one row per HTTP endpoint and leaves out headers, cookies, certificates,",
+    "banners and probes; cells that start with `=`, `+`, `-` or `@` get a leading `'`.",
+  ].join(" "),
+  tags,
+  security,
+  request: { params: IdParamsSchema, query: ScanExportQuerySchema },
+  responses: {
+    200: {
+      description: "The scan as a file",
+      content: {
+        "application/json": { schema: ScanExportDocumentSchema },
         "text/csv": { schema: z.string() },
       },
     },

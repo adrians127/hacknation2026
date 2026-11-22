@@ -2,6 +2,11 @@
 model Scan {
   id            String     @id @default(uuid(7)) @db.Uuid
   status        ScanStatus @default(queued)
+  /// Shown in lists; an imported scan gets its file's name.
+  name          String     @default("")
+  origin        ScanOrigin @default(adhoc)
+  /// SHA-256 of an imported file's content: the same file is imported once.
+  importKey     String?    @unique
   /// Parameters snapshotted from the backend's defaults when the scan was queued.
   ports         String
   maxRate       Int
@@ -26,6 +31,15 @@ model Scan {
 
   @@index([requestedById])
   @@index([status, createdAt])
+}
+
+/// How a scan came to be: started from the target import form, from a scan configuration by
+/// hand or on its schedule, or read from a results file.
+enum ScanOrigin {
+  adhoc
+  manual
+  scheduled
+  imported
 }
 
 enum ScanStatus {
