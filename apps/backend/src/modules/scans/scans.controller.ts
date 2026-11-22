@@ -19,8 +19,15 @@ import {
   type ScanChangesResponse,
 } from "@subsurf/contracts/scans/scan-changes.schema";
 import { ScanExportQuerySchema } from "@subsurf/contracts/scans/scan-export.schema";
+import { readScanJson } from "@subsurf/contracts/scans/scan-import";
+import {
+  ImportScanQuerySchema,
+  type ImportScanResponse,
+} from "@subsurf/contracts/scans/scan-import.schema";
 import type { ScanListResponse } from "@subsurf/contracts/scans/scans.schema";
 
+import { getAuth } from "~backend/lib/auth-context";
+import { HttpError } from "~backend/lib/http-error";
 import { hostsService } from "~backend/modules/hosts/hosts.service";
 import { changesCsv, changesFileName } from "~backend/modules/scans/scan-changes-csv";
 import {
@@ -28,6 +35,7 @@ import {
   scanExportFileName,
   scanExportJson,
 } from "~backend/modules/scans/scan-export";
+import { scanImportService } from "~backend/modules/scans/scan-import.service";
 import { scanResultsService } from "~backend/modules/scans/scan-results.service";
 
 export const scansController = {
@@ -80,6 +88,23 @@ export const scansController = {
       req.log.error({ err: error }, "Scan export failed midway");
       res.destroy();
     }
+  },
+
+  importScan: async (req: Request, res: Response<ImportScanResponse>) => {
+    const query = ImportScanQuerySchema.parse(req.query);
+    const read = readScanJson(req.body);
+    if (!read.ok) {
+      throw new HttpError(400, "The file is not a scan this version can import", {
+        code: "SCAN_IMPORT_INVALID",
+        details: { issues: read.errors },
+      });
+    }
+    const imported = await scanImportService.importScan(getAuth(req), read.import, query, read.warnings);
+    req.log.info(
+      { scanId: imported.scanId, format: imported.inputFormat, jobs: imported.jobs, hosts: imported.hosts },
+      "scan imported",
+    );
+    res.status(201).json(imported);
   },
 
   tagHosts: async (

@@ -417,6 +417,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scans/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import a results file as a new scan
+         * @description Requires `scans:read` and `scans:create`; `edits=fill` also requires `hosts:update`. The body is the file itself: a scan export (`GET /scans/{id}/export`), one worker result (`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. The results are ingested the way a worker's own are. The scan takes its place among the others by when the file says it ran, so it can become the base scan of a newer one. The same content is imported once (`SCAN_ALREADY_IMPORTED` carries the existing scan's id in `details.scanId`). `SCAN_IMPORT_INVALID` lists what is wrong in `details.issues`.
+         */
+        post: operations["importScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/targets/import": {
         parameters: {
             query?: never;
@@ -3623,6 +3643,97 @@ export interface operations {
             };
             /** @description Not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    importScan: {
+        parameters: {
+            query?: {
+                edits?: "skip" | "fill";
+                name?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown;
+            };
+        };
+        responses: {
+            /** @description The scan the file became */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        scanId: string;
+                        /** Format: date-time */
+                        placedAt: string;
+                        /** @enum {string} */
+                        inputFormat: "subsurf-scan" | "worker-results" | "csv";
+                        jobs: number;
+                        hosts: {
+                            up: number;
+                            down: number;
+                            timeout: number;
+                            cancelled: number;
+                            failed: number;
+                        };
+                        openPorts: number;
+                        edits: {
+                            applied: number;
+                            kept: number;
+                            missing: number;
+                        } | null;
+                        warnings: {
+                            /** @enum {string} */
+                            code: "not_json" | "unknown_format" | "unsupported_version" | "invalid_document" | "invalid_result" | "multiple_scans" | "duplicate_address" | "nothing_to_import" | "too_many_addresses" | "too_many_up_hosts" | "too_many_results" | "empty_result";
+                            position: number | null;
+                            detail: string;
+                        }[];
+                        warningCount: number;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The file was imported before, or another import is running */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

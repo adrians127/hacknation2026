@@ -10078,6 +10078,244 @@
         }
       }
     },
+    "/scans/import": {
+      "post": {
+        "operationId": "importScan",
+        "summary": "Import a results file as a new scan",
+        "description": "Requires `scans:read` and `scans:create`; `edits=fill` also requires `hosts:update`. The body is the file itself: a scan export (`GET /scans/{id}/export`), one worker result (`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. The results are ingested the way a worker's own are. The scan takes its place among the others by when the file says it ran, so it can become the base scan of a newer one. The same content is imported once (`SCAN_ALREADY_IMPORTED` carries the existing scan's id in `details.scanId`). `SCAN_IMPORT_INVALID` lists what is wrong in `details.issues`.",
+        "tags": [
+          "Scans"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "skip",
+                "fill"
+              ],
+              "default": "skip"
+            },
+            "required": false,
+            "name": "edits",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "name",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The scan the file became",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scanId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "placedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "inputFormat": {
+                      "type": "string",
+                      "enum": [
+                        "subsurf-scan",
+                        "worker-results",
+                        "csv"
+                      ]
+                    },
+                    "jobs": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "hosts": {
+                      "type": "object",
+                      "properties": {
+                        "up": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "down": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "timeout": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "cancelled": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "failed": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "up",
+                        "down",
+                        "timeout",
+                        "cancelled",
+                        "failed"
+                      ]
+                    },
+                    "openPorts": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "edits": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "applied": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "kept": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "missing": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "applied",
+                        "kept",
+                        "missing"
+                      ]
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "not_json",
+                              "unknown_format",
+                              "unsupported_version",
+                              "invalid_document",
+                              "invalid_result",
+                              "multiple_scans",
+                              "duplicate_address",
+                              "nothing_to_import",
+                              "too_many_addresses",
+                              "too_many_up_hosts",
+                              "too_many_results",
+                              "empty_result"
+                            ]
+                          },
+                          "position": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "detail": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "position",
+                          "detail"
+                        ]
+                      },
+                      "maxItems": 100
+                    },
+                    "warningCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "scanId",
+                    "placedAt",
+                    "inputFormat",
+                    "jobs",
+                    "hosts",
+                    "openPorts",
+                    "edits",
+                    "warnings",
+                    "warningCount"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The file was imported before, or another import is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/targets/import": {
       "post": {
         "operationId": "importTargets",

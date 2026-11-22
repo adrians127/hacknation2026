@@ -3,6 +3,7 @@ import { z } from "zod";
 import { registry } from "../../scripts/registry";
 import {
   cookieAuth,
+  errorResponse,
   forbidden,
   notFound,
   unauthenticated,
@@ -21,6 +22,7 @@ import {
 } from "./scan-results.schema";
 import { ScanChangesQuerySchema, ScanChangesResponseSchema } from "./scan-changes.schema";
 import { ScanExportDocumentSchema, ScanExportQuerySchema } from "./scan-export.schema";
+import { ImportScanQuerySchema, ImportScanResponseSchema } from "./scan-import.schema";
 import { ScanListResponseSchema } from "./scans.schema";
 
 const tags = ["Scans"];
@@ -203,5 +205,40 @@ registry.registerPath({
     401: unauthenticated,
     403: forbidden,
     404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/scans/import",
+  operationId: "importScan",
+  summary: "Import a results file as a new scan",
+  description: [
+    "Requires `scans:read` and `scans:create`; `edits=fill` also requires `hosts:update`. The body",
+    "is the file itself: a scan export (`GET /scans/{id}/export`), one worker result",
+    "(`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. The results are ingested",
+    "the way a worker's own are. The scan takes its place among the others by when the file says",
+    "it ran, so it can become the base scan of a newer one. The same content is imported once",
+    "(`SCAN_ALREADY_IMPORTED` carries the existing scan's id in `details.scanId`).",
+    "`SCAN_IMPORT_INVALID` lists what is wrong in `details.issues`.",
+  ].join(" "),
+  tags,
+  security,
+  request: {
+    query: ImportScanQuerySchema,
+    body: {
+      required: true,
+      content: { "application/json": { schema: z.unknown() } },
+    },
+  },
+  responses: {
+    201: {
+      description: "The scan the file became",
+      content: { "application/json": { schema: ImportScanResponseSchema } },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    409: errorResponse("The file was imported before, or another import is running"),
   },
 });

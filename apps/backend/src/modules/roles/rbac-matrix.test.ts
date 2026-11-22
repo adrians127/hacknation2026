@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -7,6 +9,7 @@ import {
   type Permission,
 } from "@subsurf/contracts/auth/permissions";
 import { ErrorResponseSchema } from "@subsurf/contracts/common/common.schema";
+import { buildWorkerResult } from "@subsurf/contracts/workers/worker-result.fixture";
 
 import { buildApiDocs } from "~backend/lib/api-docs";
 import { prisma } from "~backend/lib/prisma";
@@ -156,6 +159,13 @@ const ENDPOINTS: Endpoint[] = [
 
   // scans
   { route: "GET /scans", requires: ["scans:read"], path: async () => "/v1/scans" },
+  {
+    route: "POST /scans/import",
+    requires: ["scans:read", "scans:create"],
+    path: async () => "/v1/scans/import",
+    body: async () =>
+      buildWorkerResult({ scanId: randomUUID(), jobId: randomUUID(), leaseId: randomUUID() }),
+  },
   { route: "GET /scans/{id}", requires: ["scans:read"], path: () => scanPath() },
   { route: "GET /scans/{id}/hosts", requires: ["scans:read"], path: () => scanPath("/hosts") },
   { route: "GET /scans/{id}/hosts/{hostId}", requires: ["scans:read"], path: scanHostPath },
