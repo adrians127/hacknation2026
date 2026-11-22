@@ -1,0 +1,7 @@
+{
+  "job_id": "tls-local",
+  "targets": [{"ip": "127.0.0.1", "ports": [443], "domains": ["local.test"]}],
+  "ports": [443],
+  "rate": 10,
+  "max_duration_seconds": 30
+}

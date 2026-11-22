@@ -3,8 +3,11 @@ import { z } from "zod";
 /** `paused`: the pipeline's time window closed with jobs left; the next run time resumes it. */
 export const ScanStatusSchema = z.enum(["queued", "running", "paused", "completed", "stopped", "failed"]);
 
-/** What queued the scan: a target import, "Run now" on a pipeline, or the pipeline's schedule. */
-export const ScanTriggerSchema = z.enum(["import", "manual", "schedule"]);
+/**
+ * What queued the scan: a target import, "Run now" on a pipeline or the pipeline's schedule.
+ * `results_import`: nothing did, the scan was read from a results file.
+ */
+export const ScanTriggerSchema = z.enum(["import", "manual", "schedule", "results_import"]);
 
 const CountSchema = z.number().int().nonnegative();
 
@@ -20,6 +23,8 @@ export const ScanHostCountsSchema = z.object({
 export const ScanSchema = z.object({
   id: z.uuid(),
   status: ScanStatusSchema,
+  /** Empty when nobody named it; an imported scan starts with its file's name. */
+  name: z.string(),
   createdAt: z.iso.datetime(),
   startedAt: z.iso.datetime().nullable(),
   finishedAt: z.iso.datetime().nullable(),
@@ -39,6 +44,21 @@ export const ScanSchema = z.object({
 });
 
 export const ScanListResponseSchema = z.object({ items: z.array(ScanSchema) });
+
+export const SCAN_NAME_MAX = 200;
+export const SCAN_NOTE_MAX = 2000;
+
+/** What a user may change on a scan, in any state. Results and parameters are never edited. */
+export const UpdateScanBodySchema = z
+  .object({
+    name: z.string().max(SCAN_NAME_MAX).optional(),
+    note: z.string().max(SCAN_NOTE_MAX).optional(),
+  })
+  .refine((body) => Object.values(body).some((value) => value !== undefined), {
+    message: "Provide at least one field to update",
+  });
+
+export const UpdatedScanSchema = z.object({ id: z.uuid(), name: z.string(), note: z.string() });
 
 /** `discovery` finds open ports in address ranges; `service` identifies what listens on them. */
 export const ScanJobKindSchema = z.enum(["discovery", "service"]);
@@ -78,6 +98,8 @@ export type ScanTrigger = z.infer<typeof ScanTriggerSchema>;
 export type ScanHostCounts = z.infer<typeof ScanHostCountsSchema>;
 export type Scan = z.infer<typeof ScanSchema>;
 export type ScanListResponse = z.infer<typeof ScanListResponseSchema>;
+export type UpdateScanBody = z.infer<typeof UpdateScanBodySchema>;
+export type UpdatedScan = z.infer<typeof UpdatedScanSchema>;
 export type ScanJobKind = z.infer<typeof ScanJobKindSchema>;
 export type ScanJobStatus = z.infer<typeof ScanJobStatusSchema>;
 export type ScanJobHost = z.infer<typeof ScanJobHostSchema>;

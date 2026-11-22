@@ -2,6 +2,12 @@
 model Scan {
   id            String      @id @default(uuid(7)) @db.Uuid
   status        ScanStatus  @default(queued)
+  /// Shown in lists; an imported scan gets its file's name.
+  name          String      @default("")
+  /// { "$enc": "v1.…" } (src/lib/crypto.ts); null = no note.
+  note          Json?
+  /// SHA-256 of an imported file's content: the same file is imported once.
+  importKey     String?     @unique
   /// Null for an import's scan, or once the pipeline was deleted.
   pipelineId    String?     @db.Uuid
   trigger       ScanTrigger @default(import)
@@ -16,8 +22,8 @@ model Scan {
   targetCount   Int
   addressCount  Int
   jobCount      Int
-  /// ImportWarning[] from @subsurf/contracts (domains that could not be scanned).
-  warnings      Json        @default("[]")
+  /// { "$enc": "v1.…" } holding ImportWarning[] (domains that could not be scanned); null = none.
+  warnings      Json?
   requestedById String      @db.Uuid
   createdAt     DateTime    @default(now())
   startedAt     DateTime?
@@ -51,4 +57,6 @@ enum ScanTrigger {
   import
   manual
   schedule
+  /// Not queued at all: read from a results file (POST /scans/import).
+  results_import
 }

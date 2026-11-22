@@ -90,6 +90,9 @@ function byDisplayOrder(a: MatchRow, b: MatchRow): number {
 }
 
 export const vulnerabilitiesService = {
+  /** For changes elsewhere that move a service's newest observation (a deleted scan). */
+  requestRematch,
+
   async listSources(): Promise<VulnerabilitySourceListResponse> {
     await ensureSources();
     const adapters = configuredSources();

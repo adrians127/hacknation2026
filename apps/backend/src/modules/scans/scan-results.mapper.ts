@@ -9,11 +9,16 @@ import type {
   ServiceObservation,
   ServiceSnapshot,
 } from "@subsurf/contracts/scans/scan-results.schema";
+import type { ScanEdits } from "@subsurf/contracts/scans/scan-export.schema";
 import type { Scan, ScanHostCounts } from "@subsurf/contracts/scans/scans.schema";
 import type {
   ServiceVulnerability,
   VulnerabilitySummary,
 } from "@subsurf/contracts/vulnerabilities/vulnerabilities.schema";
+import {
+  WorkerErrorSchema,
+  type ObservedHost,
+} from "@subsurf/contracts/workers/worker-result.schema";
 
 import type { Prisma, Scan as ScanRow } from "~backend/generated/prisma/client";
 import { decryptText } from "~backend/lib/crypto";
@@ -62,6 +67,7 @@ export function toScan(scan: ScanWithPipeline, hosts: ScanHostCounts, openPorts:
   return {
     id: scan.id,
     status: scan.status,
+    name: scan.name,
     createdAt: scan.createdAt.toISOString(),
     startedAt: scan.startedAt?.toISOString() ?? null,
     finishedAt: scan.finishedAt?.toISOString() ?? null,
@@ -87,6 +93,61 @@ export function hostnames(observation: ObservationRow | undefined): string[] {
     (a, b) => HOSTNAME_ORDER[a.source] - HOSTNAME_ORDER[b.source] || a.name.localeCompare(b.name),
   );
   return [...new Set(sorted.map((hostname) => hostname.name))];
+}
+
+const HOSTNAME_SOURCE = { job: "job", ptr: "ptr", tls_san: "tls-san" } as const;
+
+/** The observation in the worker result's host shape again, with the sensitive fields decrypted. */
+export function toObservedHost(observation: ObservationRow): ObservedHost {
+  return {
+    ip: observation.ip,
+    status: observation.status,
+    reason: observation.reason,
+    observedAt: observation.observedAt?.toISOString() ?? null,
+    latencyMs: observation.latencyMs,
+    hostnames: observation.hostnames.map(({ name, source }) => ({
+      name,
+      source: HOSTNAME_SOURCE[source],
+    })),
+    error: WorkerErrorSchema.nullable().parse(observation.error),
+    ports: observation.ports
+      .toSorted((a, b) => a.port - b.port)
+      .map((port) => storedOpenPort(port)),
+  };
+}
+
+const isEdited = (asset: { triage: string; tags: readonly string[]; note: unknown }) =>
+  asset.triage !== "unreviewed" || asset.tags.length > 0 || asset.note !== null;
+
+/** What users set on the host and on the services this observation saw open; defaults are left out. */
+export function toScanEdits(observation: ObservationRow, host: HostRow | undefined): ScanEdits {
+  if (!host) return { hosts: [], services: [] };
+  const open = new Set(observation.ports.map((port) => port.serviceId));
+  const edited = { triage: host.triage, tags: host.tags, note: decryptText(host.note) };
+  return {
+    hosts: isEdited(host) ? [{ ip: host.ip, ...edited }] : [],
+    services: host.services
+      .filter(
+        (service) =>
+          open.has(service.id) &&
+          (isEdited(service) ||
+            service.nameOverride !== null ||
+            service.productOverride !== null ||
+            service.versionOverride !== null),
+      )
+      .toSorted((a, b) => a.port - b.port)
+      .map((service) => ({
+        ip: host.ip,
+        protocol: service.protocol,
+        port: service.port,
+        triage: service.triage,
+        tags: service.tags,
+        note: decryptText(service.note),
+        nameOverride: service.nameOverride,
+        productOverride: service.productOverride,
+        versionOverride: service.versionOverride,
+      })),
+  };
 }
 
 export interface ResolvedService {
@@ -188,6 +249,7 @@ function observationOf(port: PortRow): ServiceObservation {
     banner: details.banner,
     scripts: details.scripts,
     http: details.http,
+    tls: details.tls,
   };
 }
 

@@ -65,6 +65,7 @@
     "collapse": "Hide the services of {{ip}}",
     "details": "Details of {{ip}}",
     "edit": "Edit",
+    "ipReport": "IP report",
     "editHost": "Edit {{ip}}",
     "editService": "Edit service {{name}}",
     "select": "Select {{name}}",
@@ -239,7 +240,9 @@
         "issuer": "Certificate issuer",
         "expiry": "Certificate valid until",
         "selfSigned": "Self-signed certificate",
-        "version": "TLS version"
+        "version": "TLS version",
+        "cipher": "TLS cipher",
+        "endpoint": "TLS endpoint"
       },
       "host": {
         "hostname": "Hostname"

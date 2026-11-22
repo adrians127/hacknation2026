@@ -12,6 +12,9 @@ function scanRow(overrides: Partial<Scan> = {}): Scan {
   return {
     id: "0193a0f2-1b2c-7d3e-8f40-516273849506",
     status: "running",
+    name: "",
+    note: null,
+    importKey: null,
     pipelineId: null,
     trigger: "manual",
     steps: defaultSteps(),
@@ -22,7 +25,7 @@ function scanRow(overrides: Partial<Scan> = {}): Scan {
     targetCount: 1,
     addressCount: 256,
     jobCount: 1,
-    warnings: [],
+    warnings: null,
     requestedById: "0193a0f2-1b2c-7d3e-8f40-000000000001",
     createdAt: NOW,
     startedAt: NOW,

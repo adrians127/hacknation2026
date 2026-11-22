@@ -4,6 +4,7 @@ import { parseArgs } from "node:util";
 
 import { seedDemoHosts } from "~backend/demo/seed";
 import { loadDemoVulnerabilities } from "~backend/demo/vulnerabilities/load";
+import { encryptLegacyRows } from "~backend/lib/encrypt-legacy";
 import { logger } from "~backend/lib/logger";
 import { prisma } from "~backend/lib/prisma";
 import { rematch } from "~backend/modules/vulnerabilities/matching/matching.service";
@@ -22,6 +23,8 @@ async function main(): Promise<void> {
     );
   }
 
+  // Notes written before they were encrypted would make the inventory unreadable.
+  await encryptLegacyRows();
   const started = performance.now();
   await loadDemoVulnerabilities((message) => console.log(message));
   const summary = await seedDemoHosts(prisma, {

@@ -11,6 +11,7 @@ import { IdParamsSchema } from "../common/common.schema";
 import {
   ImportTargetsBodySchema,
   ImportTargetsResponseSchema,
+  TargetListQuerySchema,
   TargetListResponseSchema,
   TargetSchema,
   UpdateTargetBodySchema,
@@ -19,8 +20,8 @@ import {
 const tags = ["Targets"];
 const security = cookieAuth;
 
-const Target = registry.register("Target", TargetSchema);
 const ImportTargetsResponse = registry.register("ImportTargetsResponse", ImportTargetsResponseSchema);
+const Target = registry.register("Target", TargetSchema);
 
 registry.registerPath({
   method: "get",
@@ -28,17 +29,20 @@ registry.registerPath({
   operationId: "listTargets",
   summary: "List the target inventory",
   description: [
-    "Requires `targets:read`. Every target by value. `lastScanAt` is when the newest scan that",
-    "covered the target started; `activeHosts` counts the addresses up in that scan (for a domain:",
-    "the addresses it resolved to).",
+    "Requires `targets:read`. One page in address order: a block before the addresses and blocks",
+    "it contains, domains last. `q` matches part of the value, a tag, or, when it is an IPv4",
+    "address, every target that contains it. Each target carries its last scan with results and",
+    "how many of its addresses were up in it.",
   ].join(" "),
   tags,
   security,
+  request: { query: TargetListQuerySchema },
   responses: {
     200: {
-      description: "All targets",
+      description: "One page of targets",
       content: { "application/json": { schema: TargetListResponseSchema } },
     },
+    400: validationFailed,
     401: unauthenticated,
     403: forbidden,
   },
@@ -48,8 +52,12 @@ registry.registerPath({
   method: "patch",
   path: "/targets/{id}",
   operationId: "updateTarget",
-  summary: "Change a target's note or tags",
-  description: "Requires `targets:update`. `tags` replaces all of the target's tags.",
+  summary: "Change a target's note and tags",
+  description: [
+    "Requires `targets:update`. The value cannot change: past scans refer to it. Delete the",
+    "target and import the new one instead. A later import of the same value leaves the note",
+    "and tags as they are.",
+  ].join(" "),
   tags,
   security,
   request: {
@@ -57,7 +65,7 @@ registry.registerPath({
     body: { content: { "application/json": { schema: UpdateTargetBodySchema } } },
   },
   responses: {
-    200: { description: "The changed target", content: { "application/json": { schema: Target } } },
+    200: { description: "The target", content: { "application/json": { schema: Target } } },
     400: validationFailed,
     401: unauthenticated,
     403: forbidden,
@@ -71,14 +79,15 @@ registry.registerPath({
   operationId: "deleteTarget",
   summary: "Remove a target from the inventory",
   description: [
-    "Requires `targets:delete`. Scans that covered it keep their jobs and results; pipelines",
-    "stop scanning it.",
+    "Requires `targets:delete`. New scans no longer cover it. Past scans keep their results, and",
+    "the hosts found in it keep their notes, tags and triage.",
   ].join(" "),
   tags,
   security,
   request: { params: IdParamsSchema },
   responses: {
-    204: { description: "Target removed" },
+    204: { description: "Removed" },
+    400: validationFailed,
     401: unauthenticated,
     403: forbidden,
     404: notFound,

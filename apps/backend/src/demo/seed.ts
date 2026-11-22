@@ -9,6 +9,7 @@ import { buildDemoRun, DEMO_RUNS, type DemoJobResult, type DemoRun } from "~back
 import type { PrismaClient } from "~backend/generated/prisma/client";
 import { resultsService } from "~backend/modules/results/results.service";
 import { planScanJobs } from "~backend/modules/scans/batching";
+import { targetRow } from "~backend/modules/targets/target-row";
 
 const BATCH_SIZE = 256;
 const MAX_RATE = 100;
@@ -31,20 +32,24 @@ export interface SeedDemoSummary {
 
 async function ensureTargets(prisma: PrismaClient, requestedById: string) {
   const domains = demoDomainHosts();
+  const owner = { createdById: requestedById };
   await prisma.target.createMany({
     data: [
-      {
-        kind: "cidr",
-        value: DEMO_NETWORK,
-        note: "Demo network (db:seed:hosts)",
-        createdById: requestedById,
-      },
-      ...domains.map(({ domain }) => ({
-        kind: "domain" as const,
-        value: domain,
-        note: "Demo domain (db:seed:hosts)",
-        createdById: requestedById,
-      })),
+      targetRow(
+        {
+          kind: "cidr",
+          value: DEMO_NETWORK,
+          note: "Demo network (db:seed:hosts)",
+          range: cidrToRange(parseCidr(DEMO_NETWORK)),
+        },
+        owner,
+      ),
+      ...domains.map(({ domain }) =>
+        targetRow(
+          { kind: "domain", value: domain, note: "Demo domain (db:seed:hosts)", range: null },
+          owner,
+        ),
+      ),
     ],
     skipDuplicates: true,
   });

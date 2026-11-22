@@ -3,8 +3,9 @@ import { intersectRanges, ipv4ToInt, mergeRanges, rangeSize, type Ipv4Range } fr
 import { parseTargetValue, type TargetKind } from "@subsurf/contracts/targets/target-input";
 import type { ImportWarning } from "@subsurf/contracts/targets/targets.schema";
 
-import type { Prisma } from "~backend/generated/prisma/client";
+import { Prisma } from "~backend/generated/prisma/client";
 import { chunks } from "~backend/lib/chunks";
+import { encryptJson } from "~backend/lib/crypto";
 import { hostTargets, jobParams, scanLimits, type ScanStepSnapshot } from "~backend/modules/pipelines/steps";
 import { planScanJobs, type ScanJobPlan } from "~backend/modules/scans/batching";
 import type { DnsResolution } from "~backend/modules/scans/dns";
@@ -147,7 +148,7 @@ export async function queueRun(
       targetCount: targets.length,
       addressCount,
       jobCount,
-      warnings: input.dns.warnings,
+      warnings: input.dns.warnings.length > 0 ? encryptJson(input.dns.warnings) : Prisma.DbNull,
       requestedById: input.requestedById,
     },
   });

@@ -27,16 +27,16 @@ pnpm --filter @subsurf/frontend exec shadcn add <component>
 main.tsx                 bootstrap: i18n, App, CSS
 app/                     app.tsx (RouterProvider), router.tsx, provider.tsx, routes/
 api/                     client.ts (apiClient + `api` hooks + session refresh), query-client.ts, mock.ts (mock helpers)
-components/              shared components: data-table, page-header, guarded-button, icon-action, confirm-dialog, language-toggle, logo
+components/              shared components: data-table, page-header, guarded-button, icon-action, confirm-dialog, file-input, language-toggle, logo
 components/ui/           shadcn components (excluded from lint)
 config/                  typed env variables (fail-fast)
 features/<name>/         api/, components/, hooks/, lib/, types/ (no barrel files)
 hooks/ lib/ stores/ types/   shared code
 lib/auth/                useMe, useCan/usePermissions, role and permission labels, safe redirects
-lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin,hosts,vulnerabilities}.json, parity test
+lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin,hosts,vulnerabilities,reports}.json, parity test
 ```
 
-Outside `src/`, `public/` is served as-is; `public/samples/targets.{csv,json}` are the sample files linked from the target import page.
+Outside `src/`, `public/` is served as-is; `public/samples/targets.{csv,json}` and `scan-results.{csv,json}` are the sample files linked from the target and results import pages (`features/scans/lib/samples.test.ts` keeps the result samples importable).
 
 Imports flow shared → features → app. Shared code must not import from `features/` or `app/`, and a feature must not import from `app/`. oxlint enforces this (`no-restricted-imports` in `.oxlintrc.json`).
 
@@ -48,7 +48,7 @@ Types and paths come from `openapi.json`, so a wrong path, parameter or response
 import { api } from "@/api/client";
 
 const health = api.useQuery("get", "/health");
-const create = api.useMutation("post", "/targets");   // once the endpoint exists
+const update = api.useMutation("patch", "/targets/{id}");
 ```
 
 Query keys are built from the method, path and parameters, so there is no separate key registry to maintain. Forms can use the zod schemas from `@subsurf/contracts`, the same ones the backend validates with.
@@ -57,13 +57,13 @@ A feature's data goes through hooks in `features/<name>/api/`, one file per endp
 
 ## Mocking endpoints the backend doesn't have yet
 
-The frontend moves faster than the backend, so features start on mocked data. A mock lives **only in the feature's `api/` hooks**, behind TanStack Query. Components see the same `useQuery`/`useMutation` result (loading, error, cache, invalidation) they will see against the real backend. Switching an endpoint to the backend then changes one function in one file.
+The frontend moves faster than the backend, so features start on mocked data. Nothing is mocked at the moment (`grep -rn "MOCK:" apps/frontend/src` is empty); the examples below use a feature that does not exist yet. A mock lives **only in the feature's `api/` hooks**, behind TanStack Query. Components see the same `useQuery`/`useMutation` result (loading, error, cache, invalidation) they will see against the real backend. Switching an endpoint to the backend then changes one function in one file.
 
 Rules:
 
 - **Mock only in `features/<name>/api/`.** Components and routes import the hooks, never `mocks.ts` or `@/api/mock`.
 - **Types come from contracts.** First write the zod schema and `z.infer` type in `packages/contracts/src/<feature>/<feature>.schema.ts` (step 1 of [adding an endpoint](../../packages/contracts/README.md#adding-an-endpoint)). The path doesn't need to be registered yet. If the shape isn't settled, a temporary type in `features/<name>/types/` is fine, marked `// MOCK:`.
-- **Use the same query keys as openapi-react-query**: `["get", "/targets"]`, or `["get", "/targets/{id}", { params: { path: { id } } }]` with parameters. Invalidations you write now keep working after the swap.
+- **Use the same query keys as openapi-react-query**: `["get", "/signatures"]`, or `["get", "/signatures/{id}", { params: { path: { id } } }]` with parameters. Invalidations you write now keep working after the swap.
 - **Mutations take `{ body, params }`**, like `api.useMutation`, so the `mutate(...)` calls in components don't change.
 - **Fixtures live in `features/<name>/api/mocks.ts`** as in-memory data. Mocked mutations modify that data, so lists refresh after invalidation as they will with the backend. A page reload resets it.
 - **Mark every mock with `// MOCK: <target api call>`.** `grep -rn "MOCK:" apps/frontend/src` lists what is still left to integrate.
@@ -73,31 +73,31 @@ Rules:
 A mocked query and a mocked mutation:
 
 ```ts
-// features/targets/api/get-targets.ts
-import type { TargetListResponse } from "@subsurf/contracts/targets/targets.schema";
+// features/signatures/api/get-signatures.ts
+import type { SignatureListResponse } from "@subsurf/contracts/signatures/signatures.schema";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
 import { mockResponse } from "@/api/mock";
-import { mockTargets } from "@/features/targets/api/mocks";
+import { mockSignatures } from "@/features/signatures/api/mocks";
 
-// MOCK: api.queryOptions("get", "/targets")
-export const targetsQueryOptions = () =>
+// MOCK: api.queryOptions("get", "/signatures")
+export const signaturesQueryOptions = () =>
   queryOptions({
-    queryKey: ["get", "/targets"] as const,
-    queryFn: (): Promise<TargetListResponse> => mockResponse(mockTargets.list()),
+    queryKey: ["get", "/signatures"] as const,
+    queryFn: (): Promise<SignatureListResponse> => mockResponse(mockSignatures.list()),
   });
 
-export const useTargets = () => useQuery(targetsQueryOptions());
+export const useSignatures = () => useQuery(signaturesQueryOptions());
 ```
 
 ```ts
-// features/targets/api/create-target.ts
-// MOCK: api.useMutation("post", "/targets", { onSuccess })
-export function useCreateTarget() {
+// features/signatures/api/create-signature.ts
+// MOCK: api.useMutation("post", "/signatures", { onSuccess })
+export function useCreateSignature() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ body }: { body: CreateTargetBody }) => mockResponse(mockTargets.add(body)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["get", "/targets"] }),
+    mutationFn: ({ body }: { body: CreateSignatureBody }) => mockResponse(mockSignatures.add(body)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["get", "/signatures"] }),
   });
 }
 ```
@@ -105,12 +105,12 @@ export function useCreateTarget() {
 Once the backend ships the endpoint, only the function body changes:
 
 ```ts
-export const targetsQueryOptions = () => api.queryOptions("get", "/targets");
+export const signaturesQueryOptions = () => api.queryOptions("get", "/signatures");
 
-export function useCreateTarget() {
+export function useCreateSignature() {
   const queryClient = useQueryClient();
-  return api.useMutation("post", "/targets", {
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["get", "/targets"] }),
+  return api.useMutation("post", "/signatures", {
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["get", "/signatures"] }),
   });
 }
 ```
@@ -146,13 +146,24 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 - Lists use `DataTable` (`components/data-table.tsx`), a sortable table on TanStack Table v9. Define columns with `createDataTableColumns<T>().columns([...])` from `lib/data-table.ts`, inside `useMemo`: v9 rebuilds the table whenever `columns` or `data` change identity. `meta: { className }` styles a column's header and cells (e.g. `text-right`). Dates and numbers go through `lib/format.ts`.
   - `renderExpanded(row)` adds a full-width row under a row (return `null` while it is collapsed); the scan's host table uses it for each host's services.
   - Lists the server pages (`page`, `pageSize`, `total` in the response) put `DataTablePagination` under the table and disable column sorting (`enableSorting: false`), since sorting one page would mislead.
-  - Filters, the page number and an open side panel live in the URL (`useSearchParams`), so a filtered view can be reloaded and shared (see `app/routes/scan-detail.tsx`).
+  - Filters, the page number and an open side panel live in the URL (`useSearchParams`), so a filtered view can be reloaded and shared (see `app/routes/scan-detail.tsx` and `app/routes/targets.tsx`; `lib/search-params.ts` reads the page and the enum filters).
 - **Comparing scans** (`app/routes/scan-compare.tsx`, `/app/scans/compare?base=&target=`): scan A is always the older one (`orderPair` in `features/scans/lib/pair.ts` puts a pair given the wrong way round in order, so links can pass either order); without parameters B is the newest scan with results and A its base scan. Hosts come from `GET /scans/{target}/hosts?base=` and the side-by-side panel from `GET /scans/{target}/hosts/{id}?base=`, with each port's `before` and `fieldChanges`. Entry points: the scan list's checkboxes, "Compare side by side" on a scan and on its host panel, and the host timeline (`HostTimeline`), whose dots switch the compared scan.
+- **Scan name, note and removal** (`features/scans/components/scan-actions.tsx`): the scan page's "Name and note" dialog and "Delete" confirmation. Deleting invalidates every query except the deleted scan's own: refetching those would answer 404 and replace the page before it navigates back to the list.
+- **Export and import of a scan** (`features/scans`): the scan page's "Export CSV" / "Export JSON" buttons download `GET /scans/{id}/export` as a blob. `/app/scans/import` (`scans:create`, `app/routes/scan-import.tsx`) reads the chosen file in the browser with the reader the API uses (`@subsurf/contracts/scans/scan-import`) and shows what the import adds, or why the file cannot be imported, before anything is sent. The file itself is then uploaded (`bodySerializer` returns the text as it is), not the parsed result. A file imported before links to the scan it became (`error.details.scanId`).
 - **Dashboard** (`features/dashboard`, `GET /dashboard`): stat tiles for the newest scan (hosts up and open ports with the change since the previous scan and a per-scan trend from `GET /scans`; new and gone hosts and service changes link into the comparison) and the most important changes, each opening in the comparison. The trend line is a native range input over an SVG, so the pointer and the arrow keys both step through the scans.
 - A list whose rows hold inputs (the target entry form's list) uses the `Table` primitives with keys from the data instead of `DataTable`: `DataTable` rebuilds when `data` changes, which would remount an input while someone types in it.
 - A page with unsaved input the user built up (the target entry form) asks before leaving: `useLeaveGuard` in `features/targets/hooks/` (`useBlocker` + `beforeunload`).
 - Details that do not fit a row open in a `Sheet` (`components/ui/sheet.tsx`, a side panel on the Radix dialog). It was written by hand: `shadcn add sheet` also tried to add an unrelated npm package.
 - The app is dark-only (`class="dark"` in `index.html`); `brand` is the accent color (`text-brand`, `bg-brand/15`).
+
+## Reports
+
+`features/reports` renders the backend's `/reports/*` endpoints ([backend README](../backend/README.md#reports)) under `/app/reports` (`scans:read`). The hub (`/app/reports`) picks a scan, two scans or an IP address; the scan page links to its summary report and the host panel to the host's IP report.
+
+- **Routes:** `scans/:scanId/:kind` (`summary`, `findings`, `technologies`, `exposure`, `triage`, `tags`), `diff?from=&to=`, `ips/:ip`, `stability?window=&inactiveAfter=`, `time-of-day?scans=`. Options live in the URL, so a report can be shared and reloaded.
+- **`ReportShell`** (`components/report-parts.tsx`) gives every report its header, the generated-at line and three actions: **Print / PDF** (`window.print()`), **JSON** (the API response as is) and **CSV** (one flat table per report, built in the report's component).
+- **Print:** the `@media print` block in `index.css` switches the dark tokens to light ones; the sidebar, controls and buttons carry `print:hidden`. `ReportTable` shows the first rows on screen with a toggle, but every row on paper.
+- **CSV** (`lib/export.ts`): UTF-8 with a BOM for Excel, and cells starting with `=`, `+`, `-` or `@` are prefixed with `'` so a spreadsheet does not run them as formulas.
 
 ## Translations
 

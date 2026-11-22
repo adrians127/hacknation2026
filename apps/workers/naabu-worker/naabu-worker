@@ -203,7 +203,7 @@ def result(job, started, finished, elapsed_ms, scan_ms, status, stop_reason,
             ports.append(dict(port=port, protocol="tcp", state="open", reason=None,
                               service=None, identity=dict(ttl=None, sshHostKeySha256=None,
                                                           tlsCertSha256=None), banner=None,
-                              scripts=[], http=[]))
+                              scripts=[], tls=[], http=[]))
         hosts.append(dict(ip=ip, status="up", reason=None,
                           observedAt=min(findings[ip].values()), latencyMs=None,
                           hostnames=[], error=None, ports=ports))

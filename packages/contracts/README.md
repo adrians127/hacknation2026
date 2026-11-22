@@ -46,6 +46,14 @@ The package is otherwise schemas only. `src/targets/target-input.ts` (with `ipv4
 - Issue and list-error codes are zod enums, so the frontend translates them.
 - Tests: `pnpm --filter @subsurf/contracts test` (Vitest, next to the code). Code here must stay free of Node- and DOM-only APIs, since both apps compile it.
 
+## Shared runtime logic: the results file reader
+
+The second exception: `src/scans/scan-import.ts` reads a results file for `POST /scans/import` (a scan export, worker results or a CSV), with `scan-csv.ts` (the CSV columns, the export's row builder and the header aliases), `port-spec.ts` and `common/csv.ts` (an RFC 4180 tokenizer). The import page previews with it and the backend runs the same code on the uploaded file. The format is described in [`docs/scan-export-format.md`](../../docs/scan-export-format.md).
+
+- `readScanJson` / `readScanJsonText` / `readScanCsv` return either the import in one of two shapes (worker results to replay, or hosts with covered blocks and edits) or the reasons the file cannot be imported. Issue codes are a zod enum, so the frontend translates them.
+- Another tool's CSV is supported by adding its header names to `SCAN_CSV_ALIASES`.
+- `summarizeScanImport` counts what an import adds; the limits are in `SCAN_IMPORT_LIMITS`.
+
 ## Notes
 
 - Registration order determines the order in `openapi.json`. That is why `import-registries.ts` imports the files sorted and one by one, so every regeneration produces an identical file.

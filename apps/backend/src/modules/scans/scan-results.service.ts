@@ -16,13 +16,20 @@ import type {
   ScanJobListResponse,
 } from "@subsurf/contracts/scans/scan-jobs.schema";
 import type { Scan, ScanHostCounts, ScanJobStatus } from "@subsurf/contracts/scans/scans.schema";
-import type { Ipv4Range } from "@subsurf/contracts/targets/ipv4";
+import {
+  formatCidr,
+  ipv4ToInt,
+  mergeRanges,
+  rangeToCidrs,
+  type Ipv4Range,
+} from "@subsurf/contracts/targets/ipv4";
 
 import {
   Prisma,
   type HostObservationStatus,
   type Scan as ScanRow,
 } from "~backend/generated/prisma/client";
+import { decryptText } from "~backend/lib/crypto";
 import { HttpError } from "~backend/lib/http-error";
 import { prisma } from "~backend/lib/prisma";
 import { hostLifecycle } from "~backend/modules/scans/host-lifecycle";
@@ -42,6 +49,7 @@ import {
   toScanHost,
   toScanHostDetail,
   type HostInScan,
+  type HostRow,
   type ScanWithPipeline,
   type ObservationRow,
 } from "~backend/modules/scans/scan-results.mapper";
@@ -51,9 +59,25 @@ import { vulnerabilitiesService } from "~backend/modules/vulnerabilities/vulnera
 
 const NO_HOSTS: ScanHostCounts = { up: 0, down: 0, timeout: 0, cancelled: 0, failed: 0 };
 
-interface ScanSummary {
+export interface ScanSummary {
   hosts: ScanHostCounts;
   openPorts: number;
+}
+
+/** One address a scan export lists, with the asset that holds its edits (none unless it was up). */
+export interface ExportedHost {
+  observation: ObservationRow;
+  host: HostRow | undefined;
+}
+
+/** One scan as its own observations describe it, for `GET /scans/{id}/export`. */
+export interface ScanExport {
+  scan: ScanRow;
+  counts: ScanSummary;
+  /** CIDR blocks holding every address the scan has an observation of. */
+  coverage: string[];
+  /** Every address that is not `down`, in address order. */
+  batches(): AsyncGenerator<ExportedHost[]>;
 }
 
 interface EffectiveRow {
@@ -68,7 +92,7 @@ interface EffectiveRow {
  * Conclusive answers win; for two "up" answers prefer Nmap, then httpx, then
  * Masscan. The selected row supplies host status, not the complete set of ports.
  */
-function effectiveSql(scanIds: readonly string[], ips?: readonly string[]): Prisma.Sql {
+export function effectiveSql(scanIds: readonly string[], ips?: readonly string[]): Prisma.Sql {
   return Prisma.sql`
     SELECT DISTINCT ON (h."scanId", h.ip) h.id, h."scanId", h.ip, h.status
     FROM "HostObservation" h
@@ -113,7 +137,10 @@ function stageSql(scanIds: readonly string[], ips?: readonly string[]): Prisma.S
   `;
 }
 
-async function effectiveIds(scanIds: readonly string[], ips?: readonly string[]): Promise<string[]> {
+export async function effectiveIds(
+  scanIds: readonly string[],
+  ips?: readonly string[],
+): Promise<string[]> {
   if (scanIds.length === 0 || ips?.length === 0) return [];
   const rows = await prisma.$queryRaw<EffectiveRow[]>(effectiveSql(scanIds, ips));
   return rows.map((row) => row.id);
@@ -140,12 +167,12 @@ async function effectiveObservations(
   );
 }
 
-interface BaseScan {
+export interface BaseScan {
   id: string;
   startedAt: Date | null;
 }
 
-async function findScan(id: string): Promise<ScanWithPipeline> {
+export async function findScan(id: string): Promise<ScanWithPipeline> {
   const scan = await prisma.scan.findUnique({ where: { id }, include: SCAN_INCLUDE });
   if (!scan) throw HttpError.notFound("Scan not found");
   return scan;
@@ -493,6 +520,7 @@ export const scanResultsService = {
 
     return {
       ...toScan(scan, summaries.get(scan.id)?.hosts ?? NO_HOSTS, summaries.get(scan.id)?.openPorts ?? 0),
+      note: decryptText(scan.note),
       ports: scan.ports,
       maxRate: scan.maxRate,
       batchSize: scan.batchSize,
@@ -553,6 +581,63 @@ export const scanResultsService = {
       hosts.push(...(await hostsInScan(scan, base, entries.slice(start, start + CHANGES_BATCH))));
     }
     return { scan, hosts };
+  },
+
+  /** The scan's effective observation of every address it covered, whatever the base scan saw. */
+  async forExport(scanId: string): Promise<ScanExport> {
+    const scan = await findScan(scanId);
+    const [rows, summaries] = await Promise.all([
+      prisma.$queryRaw<EffectiveRow[]>(effectiveSql([scan.id])),
+      scanSummaries([scan.id]),
+    ]);
+    const addresses = rows.map((row) => ({ ...row, address: ipv4ToInt(row.ip) }));
+    const listed = addresses
+      .filter((row) => row.status !== "down")
+      .toSorted((a, b) => a.address - b.address)
+      .map((row) => row.ip);
+    return {
+      scan,
+      counts: summaries.get(scan.id) ?? { hosts: { ...NO_HOSTS }, openPorts: 0 },
+      coverage: mergeRanges(addresses.map(({ address }) => ({ start: address, end: address })))
+        .flatMap(rangeToCidrs)
+        .map(formatCidr),
+      async *batches() {
+        for (let start = 0; start < listed.length; start += CHANGES_BATCH) {
+          const ips = listed.slice(start, start + CHANGES_BATCH);
+          const [observations, hosts] = await Promise.all([
+            effectiveObservations([scan.id], ips),
+            prisma.host.findMany({ where: { ip: { in: ips } }, include: { services: true } }),
+          ]);
+          const hostByIp = new Map(hosts.map((host) => [host.ip, host]));
+          yield observations
+            .toSorted((a, b) => (a.ipNumber < b.ipNumber ? -1 : a.ipNumber > b.ipNumber ? 1 : 0))
+            .map((observation) => ({ observation, host: hostByIp.get(observation.ip) }));
+        }
+      },
+    };
+  },
+
+  /**
+   * Like `hostsForExport`, compared with `baseScanId` instead of the base scan when given
+   * (`null` = compare with nothing). Reports use it for any pair of scans, in either order.
+   */
+  async hostsForReport(
+    scanId: string,
+    baseScanId?: string | null,
+  ): Promise<{ scan: ScanRow; base: BaseScan | null; hosts: HostInScan[] }> {
+    const scan = await findScan(scanId);
+    const base =
+      baseScanId === undefined
+        ? await resolveBase(scan, undefined)
+        : baseScanId === null
+          ? null
+          : await findScan(baseScanId);
+    const { entries } = await diffWithBase(scan, base);
+    const hosts: HostInScan[] = [];
+    for (let start = 0; start < entries.length; start += CHANGES_BATCH) {
+      hosts.push(...(await hostsInScan(scan, base, entries.slice(start, start + CHANGES_BATCH))));
+    }
+    return { scan, base, hosts };
   },
 
   /** Every change since the base scan, one row each, rated (export and dashboard). */

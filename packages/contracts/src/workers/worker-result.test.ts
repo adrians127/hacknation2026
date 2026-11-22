@@ -1,4 +1,8 @@
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { buildWorkerResult } from "./worker-result.fixture";
@@ -13,6 +17,45 @@ describe("WorkerResultSchema", () => {
     const path = new URL("../../../../apps/workers/naabu-worker/examples/result.json", import.meta.url);
     const result: unknown = JSON.parse(readFileSync(path, "utf8"));
     expect(WorkerResultSchema.safeParse(result).error).toBeUndefined();
+  });
+
+  it("validates a TLS-only result emitted by tlsx-worker", () => {
+    const directory = mkdtempSync(join(tmpdir(), "tlsx-contract-"));
+    try {
+      const worker = new URL("../../../../apps/workers/tlsx-worker/tlsx-worker", import.meta.url);
+      const fake = new URL("../../../../apps/workers/tlsx-worker/tests/fake_tlsx.py", import.meta.url);
+      const result: unknown = JSON.parse(execFileSync("python3", [worker.pathname], {
+        input: JSON.stringify({
+          job_id: "0193a1f2-1b2c-7d3e-8f40-516273849506",
+          scan_id: "0193a0f2-1b2c-7d3e-8f40-516273849506",
+          lease_id: "lease-1",
+          targets: [{ ip: "127.0.0.1", ports: [443], domains: ["local.test"] }],
+          ports: [443], rate: 25, max_duration_seconds: 5,
+        }),
+        encoding: "utf8",
+        env: { ...process.env, TLSX_BINARY: fake.pathname, FAKE_TLSX_ARGS: join(directory, "args") },
+      }));
+      const parsed = WorkerResultSchema.parse(result);
+      expect(parsed.hosts[0].ports[0].http).toEqual([]);
+      expect(parsed.hosts[0].ports[0].tls).toHaveLength(2);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects duplicate TLS SNI on one port", () => {
+    const result = buildWorkerResult();
+    const port = result.hosts[0].ports[1];
+    port.tls = [{ vhost: null, version: "TLSv1.3", cipher: null, alpn: null, cert: null }];
+    port.tls.push({ ...port.tls[0] });
+    expect(WorkerResultSchema.safeParse(result).success).toBe(false);
+  });
+
+  it("requires the TLS field even when no TLS was probed", () => {
+    const result = buildWorkerResult();
+    const { tls: _omitted, ...port } = result.hosts[0].ports[0];
+    const invalid = { ...result, hosts: [{ ...result.hosts[0], ports: [port] }] };
+    expect(WorkerResultSchema.safeParse(invalid).success).toBe(false);
   });
 
   it("accepts HTTP-only worker params without an aligned subnet or Nmap timeout", () => {

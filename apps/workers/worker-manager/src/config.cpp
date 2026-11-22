@@ -159,10 +159,10 @@ std::vector<std::string> parse_stages(std::string_view text) {
 Config read_config() {
     return Config{
         .workers =
-            parse_worker_binaries(env_or("WORKER_MANAGER_WORKERS", "masscan=masscan-worker,naabu=naabu-worker,nmap=nmap-worker,httpx=httpx-worker")),
+            parse_worker_binaries(env_or("WORKER_MANAGER_WORKERS", "masscan=masscan-worker,naabu=naabu-worker,nmap=nmap-worker,httpx=httpx-worker,tlsx=tlsx-worker")),
         .worker_rate_caps =
-            parse_worker_rate_caps(env_or("WORKER_MANAGER_WORKER_MAX_RATE", "nmap=100,httpx=25")),
-        .stages = parse_stages(env_or("WORKER_MANAGER_STAGES", "masscan,naabu,nmap,httpx")),
+            parse_worker_rate_caps(env_or("WORKER_MANAGER_WORKER_MAX_RATE", "nmap=100,httpx=25,tlsx=25")),
+        .stages = parse_stages(env_or("WORKER_MANAGER_STAGES", "masscan,naabu,nmap,httpx,tlsx")),
         .max_parallel = env_number("WORKER_MANAGER_MAX_PARALLEL", 2, 1, 256),
         .max_rate = env_number("WORKER_MANAGER_MAX_RATE", 100'000, 1, 100'000'000),
         .min_task_rate = env_number("WORKER_MANAGER_MIN_TASK_RATE", 1'000, 1, 100'000'000),

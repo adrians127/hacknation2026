@@ -11,6 +11,7 @@ const target = (id: string, kind: Target["kind"], value: string, tags: string[] 
   note: "",
   tags,
   activeHosts: 0,
+  lastScanId: null,
   lastScanAt: null,
   createdAt: "2026-11-22T00:00:00.000Z",
 });

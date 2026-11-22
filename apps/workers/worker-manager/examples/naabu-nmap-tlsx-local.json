@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "jobs": [
+    {
+      "job_id": "0193a1f2-1b2c-7d3e-8f40-516273849501",
+      "worker": "naabu",
+      "split": {
+        "strategy": "none"
+      },
+      "params": {
+        "targets": [
+          "127.0.0.1"
+        ],
+        "ports": [
+          443
+        ],
+        "rate": 20,
+        "scan_type": "connect",
+        "max_duration_seconds": 30
+      },
+      "scan_id": "0193a0f2-1b2c-7d3e-8f40-516273849506",
+      "lease_id": "0193a2f2-1b2c-7d3e-8f40-516273849501"
+    },
+    {
+      "job_id": "0193a1f2-1b2c-7d3e-8f40-516273849502",
+      "worker": "nmap",
+      "split": {
+        "strategy": "none"
+      },
+      "params": {
+        "targets": [
+          {
+            "ip": "127.0.0.1",
+            "ports": [
+              443
+            ],
+            "domains": [
+              "local.test"
+            ]
+          }
+        ],
+        "ports": [
+          443
+        ],
+        "rate": 20,
+        "max_duration_seconds": 45,
+        "host_timeout_ms": 10000
+      },
+      "scan_id": "0193a0f2-1b2c-7d3e-8f40-516273849506",
+      "lease_id": "0193a2f2-1b2c-7d3e-8f40-516273849502"
+    },
+    {
+      "job_id": "0193a1f2-1b2c-7d3e-8f40-516273849503",
+      "worker": "tlsx",
+      "split": {
+        "strategy": "none"
+      },
+      "params": {
+        "targets": [
+          "127.0.0.1"
+        ],
+        "ports": [
+          443
+        ],
+        "rate": 10,
+        "tls_timeout_ms": 5000,
+        "max_duration_seconds": 30
+      },
+      "scan_id": "0193a0f2-1b2c-7d3e-8f40-516273849506",
+      "lease_id": "0193a2f2-1b2c-7d3e-8f40-516273849503"
+    }
+  ]
+}

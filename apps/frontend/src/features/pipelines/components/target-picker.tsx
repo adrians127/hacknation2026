@@ -16,7 +16,7 @@ import {
   selectionCoverage,
   type TargetSelection,
 } from "@/features/pipelines/lib/target-selection";
-import { useTargets } from "@/features/targets/api/get-targets";
+import { useAllTargets } from "@/features/targets/api/get-targets";
 import { TargetKindBadge } from "@/features/targets/components/target-kind-badge";
 import { useErrorMessage } from "@/hooks/use-error-message";
 import { useCan } from "@/lib/auth/use-can";
@@ -49,7 +49,7 @@ export function TargetPicker({
   const errorMessage = useErrorMessage();
   const idPrefix = useId();
   const canRead = useCan("targets:read");
-  const targets = useTargets({ enabled: canRead });
+  const targets = useAllTargets({ enabled: canRead });
   const [search, setSearch] = useState("");
   const query = useDeferredValue(search.trim().toLowerCase());
 
