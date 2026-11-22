@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 import { prisma } from "~backend/lib/prisma";
 
 const STATE_ID = 1;
@@ -41,6 +43,29 @@ export async function renewLease(holder: string): Promise<boolean> {
     SET "lockExpiresAt" = now() + make_interval(secs => ${LEASE_SECONDS}), "updatedAt" = now()
     WHERE id = ${STATE_ID} AND "lockedBy" = ${holder} AND "lockExpiresAt" > now()`;
   return updated === 1;
+}
+
+/**
+ * Renews the lease every `LEASE_RENEW_MS` while work runs; losing it aborts `controller` (the
+ * work stops at its next check instead of writing as a second holder). Returns the stop function.
+ */
+export function keepLease(
+  holder: string,
+  controller: AbortController,
+  log: Logger,
+  everyMs = LEASE_RENEW_MS,
+): () => void {
+  const timer = setInterval(() => {
+    renewLease(holder)
+      .then((held) => {
+        if (!held) {
+          log.warn("Lost the vulnerability sync lease");
+          controller.abort(new LeaseLostError(holder));
+        }
+      })
+      .catch((error: unknown) => log.error({ err: error }, "Lease renewal failed"));
+  }, everyMs);
+  return () => clearInterval(timer);
 }
 
 export async function releaseLease(holder: string): Promise<void> {

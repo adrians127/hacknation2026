@@ -20,7 +20,11 @@ import {
   sourceById,
 } from "~backend/modules/vulnerabilities/sources/registry";
 import type { VulnerabilitySource } from "~backend/modules/vulnerabilities/sources/source";
-import { acquireLease, releaseLease } from "~backend/modules/vulnerabilities/sync/lease";
+import {
+  acquireLease,
+  keepLease,
+  releaseLease,
+} from "~backend/modules/vulnerabilities/sync/lease";
 import { writeRecords } from "~backend/modules/vulnerabilities/sync/records";
 import { VulnerabilityScheduler } from "~backend/modules/vulnerabilities/sync/scheduler";
 import { markInterruptedRuns } from "~backend/modules/vulnerabilities/sync/sync.service";
@@ -60,11 +64,14 @@ async function withLease(work: () => Promise<void>): Promise<void> {
   if (!(await acquireLease(holder))) {
     throw new Error("Another vuln-sync process is working (it holds the lease); try again later");
   }
+  // A full sync takes minutes: renew the lease meanwhile, or the run loses it halfway.
+  const stopRenewing = keepLease(holder, controller, log);
   try {
     await ensureSources();
     await markInterruptedRuns();
     await work();
   } finally {
+    stopRenewing();
     await releaseLease(holder);
   }
 }

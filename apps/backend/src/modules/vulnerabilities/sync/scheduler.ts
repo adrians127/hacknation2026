@@ -14,9 +14,8 @@ import { ensureSources, sourceById } from "~backend/modules/vulnerabilities/sour
 import type { VulnerabilitySource } from "~backend/modules/vulnerabilities/sources/source";
 import {
   acquireLease,
-  LEASE_RENEW_MS,
+  keepLease,
   releaseLease,
-  renewLease,
 } from "~backend/modules/vulnerabilities/sync/lease";
 import { dueMode, type Schedule } from "~backend/modules/vulnerabilities/sync/schedule";
 import {
@@ -149,18 +148,7 @@ export class VulnerabilityScheduler {
       const work = new AbortController();
       const stop = () => work.abort(signal.reason);
       signal.addEventListener("abort", stop, { once: true });
-      const heartbeat = setInterval(() => {
-        renewLease(this.options.holder)
-          .then((held) => {
-            if (!held && this.holding) {
-              this.options.log.warn("Lost the vulnerability sync lease");
-              work.abort(new Error("Lease lost"));
-            }
-          })
-          .catch((error: unknown) =>
-            this.options.log.error({ err: error }, "Lease renewal failed"),
-          );
-      }, LEASE_RENEW_MS);
+      const stopRenewing = keepLease(this.options.holder, work, this.options.log);
       try {
         await this.tick(work.signal);
       } catch (error) {
@@ -168,7 +156,7 @@ export class VulnerabilityScheduler {
           this.options.log.error({ err: error }, "Vulnerability sync failed");
         }
       } finally {
-        clearInterval(heartbeat);
+        stopRenewing();
         signal.removeEventListener("abort", stop);
       }
       await new Promise((resolve) => {

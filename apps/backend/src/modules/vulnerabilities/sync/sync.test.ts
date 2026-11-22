@@ -10,6 +10,7 @@ import type {
 import {
   acquireLease,
   assertLease,
+  keepLease,
   releaseLease,
 } from "~backend/modules/vulnerabilities/sync/lease";
 import { runSync, type SyncOptions } from "~backend/modules/vulnerabilities/sync/sync.service";
@@ -182,5 +183,20 @@ describe("lease", () => {
       UPDATE "VulnerabilitySyncState" SET "lockExpiresAt" = now() - interval '1 minute'`;
     expect(await acquireLease("other")).toBe(true);
     await expect(assertLease(HOLDER)).rejects.toThrow(/no longer held/);
+  });
+
+  it("keeps the lease while work runs, and aborts the work once it is taken", async () => {
+    const work = new AbortController();
+    const stop = keepLease(HOLDER, work, pino({ level: "silent" }), 20);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(work.signal.aborted).toBe(false);
+    await assertLease(HOLDER);
+
+    await prisma.$executeRaw`
+      UPDATE "VulnerabilitySyncState" SET "lockExpiresAt" = now() - interval '1 minute'`;
+    await acquireLease("other");
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    stop();
+    expect(work.signal.aborted).toBe(true);
   });
 });
