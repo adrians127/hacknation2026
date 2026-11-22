@@ -1,53 +1,78 @@
 # SubSurf
 
-SubSurf is an attack surface intelligence prototype for recurring discovery scans of large infrastructure (>10,000 IP addresses): detecting live hosts, services, web technologies, CMSs, headers and cookies, and tracking changes between scans. Built for HackNation 2026 on a task set by the AGH Information Security Center ([`hackathon-zadanie.pdf`](hackathon-zadanie.pdf), in Polish).
+SubSurf is an attack surface intelligence prototype for recurring discovery scans of large networks (more than 10,000 IP addresses). It:
+
+- finds live hosts and open services;
+- fingerprints HTTP/HTTPS: technologies, CMSs, headers, cookies and TLS;
+- shows what changed between scans;
+- adds RBAC, encryption at rest, CSV/JSON import and export, and DefectDojo integration.
+
+It was built for HackNation 2026 on a task set by the AGH Information Security Center ([`hackathon-zadanie.pdf`](hackathon-zadanie.pdf), in Polish).
 
 ## Project structure
 
-| Workspace | Description | Docs |
+A pnpm + turbo monorepo:
+
+| Path | What it is | Docs |
 |---|---|---|
-| `apps/frontend` | React 19 + Vite 8 + React Router 8, Tailwind 4 + shadcn/ui, EN/PL | [README](apps/frontend/README.md) |
-| `apps/backend` | Express 5 + Prisma 7 (PostgreSQL), REST API under `/v1` | [README](apps/backend/README.md) |
-| `apps/workers/*` | C++23 scanning workers (nmap), built in Docker | [README](apps/workers/README.md) |
-| `packages/contracts` | zod schemas that `openapi.json` is generated from | [README](packages/contracts/README.md) |
-| `packages/api-client` | Typed client (openapi-typescript + openapi-fetch) | [README](packages/api-client/README.md) |
-| `docker/` | PostgreSQL 19 and the worker in Docker Compose | [README](docker/README.md) |
+| `apps/frontend` | Web UI: React 19, Vite, Tailwind + shadcn/ui, EN/PL | [README](apps/frontend/README.md) |
+| `apps/backend` | REST API under `/v1`: Express 5, Prisma 7, PostgreSQL | [README](apps/backend/README.md) |
+| `apps/workers/*` | Scanning workers (masscan, naabu, nmap, httpx, tlsx) and the `worker-manager` that runs them; C++23, built in Docker | [README](apps/workers/README.md) |
+| `packages/contracts` | zod schemas shared by the frontend and backend; `openapi.json` is generated from them | [README](packages/contracts/README.md) |
+| `packages/api-client` | Typed API client generated from `openapi.json` | [README](packages/api-client/README.md) |
+| `docker/` | Docker Compose: PostgreSQL, DefectDojo, the app, the workers and a test lab | [README](docker/README.md) |
 
-## Getting started
+## Running the project
 
-### Requirements
+### Everything in Docker: one command, no Node or pnpm needed
 
-- **Node 26.13.1** (version pinned in `.nvmrc`: `nvm install && nvm use`)
-- **pnpm 12**: `npm i -g pnpm` (Node 25+ no longer ships corepack; the `packageManager` field in `package.json` enforces the right version)
-- **Docker** (Postgres and the workers)
+You only need Docker (Engine 28+, Compose 2.33+) on Linux. From the repo root:
 
-### Install and run
+```bash
+docker compose -f docker/docker-compose.full.yml up -d --build
+```
+
+This command:
+
+- starts the app with demo data, DefectDojo and a scanning worker-manager;
+- starts a test network (`docker/lab`) on `10.50.0.0/24`;
+- starts a scan of that test network.
+
+| | |
+|---|---|
+| App | `http://localhost:3000` |
+| API docs (Swagger) | `http://localhost:3001/docs` |
+| DefectDojo | `http://localhost:8080` (`admin` / `hacknation`) |
+
+Follow the seeding and the first scan with `docker compose -f docker/docker-compose.full.yml logs -f bootstrap`. Stop everything with `docker compose -f docker/docker-compose.full.yml down`; add `-v` to wipe the data too. Details: [`docker/README.md`](docker/README.md#full-stack-with-the-lab).
+
+### Development with pnpm
+
+Install first:
+
+- **Node 26.13.1**, the version pinned in `.nvmrc`. With [nvm](https://github.com/nvm-sh/nvm): `nvm install && nvm use`.
+- **pnpm 12**: `npm i -g pnpm`. Node 25+ no longer ships corepack, and the `packageManager` field in `package.json` enforces the right version.
+- **Docker**, for PostgreSQL and the workers.
+
+Then:
 
 ```bash
 pnpm install          # dependencies + prisma generate
-pnpm project:setup    # .env.example -> .env in every app (re-run after a pull: adds new variables)
+pnpm project:setup    # .env.example -> .env in every app (re-run after a pull)
 pnpm db:up            # PostgreSQL in Docker
-pnpm db:reset         # migrations + seed: system roles, admin and demo accounts
+pnpm db:reset         # migrations + seed: roles, admin and demo accounts
+pnpm db:seed:hosts    # optional: demo scan data
 pnpm dev              # backend :3001 (Swagger: /docs) + frontend :3000
+pnpm workers:manager:poll   # optional, another terminal: a worker-manager that runs the scans
 ```
 
-Sign in at `http://localhost:3000` with the accounts from `apps/backend/.env.example` (change them outside local development):
+Other commands: `pnpm lint`, `pnpm check-types`, `pnpm test` (the backend tests need `pnpm db:up`), `pnpm build`, and `pnpm generate` after a contract change. Docker-related commands are in [`docker/README.md`](docker/README.md).
+
+### Accounts
+
+Both ways of running create the same local accounts (from `apps/backend/.env.example`; change them outside local development):
 
 | Account | Role | Password |
 |---|---|---|
-| `admin@hacknation.local` | Administrator | `ADMIN_PASSWORD` (`admin-change-me-now`) |
-| `editor@hacknation.local`, `analyst@hacknation.local`, `viewer@hacknation.local` | Editor, Analyst, Viewer | `DEMO_USER_PASSWORD` (`demo-password-2026`) |
-
-**Everything in Docker** (no Node or pnpm on the machine): copy `docker/.env.example` to `docker/.env`, fill in its secrets and run `docker compose -f docker/docker-compose.yml --profile app up -d --build`; the app is on `http://localhost:3000`. Step by step: [`docker/README.md`](docker/README.md#everything-in-docker).
-
-Workers have their own compose file (`docker/docker-compose.workers.yml`): `pnpm workers:build` builds the masscan worker, `pnpm workers:masscan < job.json` runs one sweep. The nmap worker is opt-in (see [`docker/README.md`](docker/README.md)).
-
-### Other commands
-
-```bash
-pnpm lint             # oxlint (type-aware)
-pnpm check-types      # TypeScript 7
-pnpm test             # Vitest (backend tests need `pnpm db:up`)
-pnpm build
-pnpm generate         # after a contract change: openapi.json + client types
-```
+| `admin@hacknation.local` | Administrator | `admin-change-me-now` |
+| `editor@hacknation.local`, `analyst@hacknation.local`, `viewer@hacknation.local` | Editor, Analyst, Viewer | `demo-password-2026` |

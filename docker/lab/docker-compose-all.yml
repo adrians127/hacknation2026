@@ -1,0 +1,293 @@
+# Every lab stack at once, for docker/docker-compose.full.yml (included there; not run alone).
+# Each service gets its own address on the `lab` network (${LAB_NET}.0/24, default 10.50.0.0/24)
+# and publishes no host port: no clashes with the app or each other, and the deliberately
+# vulnerable services stay off the LAN. worker-manager scans the subnet from inside it.
+#
+#   .10-.14  modern          WordPress, MariaDB, phpMyAdmin, Redis, Nginx Proxy Manager
+#   .20-.25  modern-proxy    Traefik, Toxiproxy (+ init), WordPress, MariaDB, Redis
+#   .30-.34  vulnerable      WordPress 4.7, MySQL 5.7, Adminer, vsftpd, DVWA
+#   .40-.44  custom-network  httpbin, PostgreSQL, RabbitMQ, Gitea, nginx ("flask-app")
+#
+# Toxiproxy toxics read docker/lab/.env like docker-compose-modern-proxy.yml (ENABLE_LATENCY …).
+
+services:
+  # ---- modern ----
+  lab-modern-wordpress:
+    image: wordpress:latest
+    environment:
+      WORDPRESS_DB_HOST: lab-modern-mariadb
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpresspass
+      WORDPRESS_DB_NAME: wordpress
+    depends_on:
+      lab-modern-mariadb:
+        condition: service_healthy
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.10
+
+  lab-modern-mariadb:
+    image: mariadb:11
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpresspass
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - lab-modern-mariadb-data:/var/lib/mysql
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.11
+
+  lab-modern-phpmyadmin:
+    image: phpmyadmin:latest
+    environment:
+      PMA_HOST: lab-modern-mariadb
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.12
+
+  lab-modern-redis:
+    image: redis:7
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.13
+
+  lab-modern-npm:
+    image: jc21/nginx-proxy-manager:latest
+    volumes:
+      - lab-npm-data:/data
+      - lab-npm-letsencrypt:/etc/letsencrypt
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.14
+
+  # ---- modern-proxy: Traefik -> Toxiproxy -> WordPress ----
+  lab-proxy-traefik:
+    image: traefik:v3.1
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+    volumes:
+      - ./traefik:/etc/traefik/dynamic:ro
+    depends_on:
+      - lab-proxy-toxiproxy
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.20
+
+  lab-proxy-toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    healthcheck:
+      test: ["CMD", "/toxiproxy-cli", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.21
+        # traefik/wordpress.yml points at http://toxiproxy:8666.
+        aliases: [toxiproxy]
+
+  lab-proxy-toxiproxy-init:
+    image: curlimages/curl:8.10.1
+    restart: "no"
+    depends_on:
+      lab-proxy-toxiproxy:
+        condition: service_healthy
+      lab-proxy-wordpress:
+        condition: service_started
+    environment:
+      API: http://toxiproxy:8474
+      PROXY: wordpress
+      ENABLE_LATENCY: ${ENABLE_LATENCY:-false}
+      LATENCY_MS: ${LATENCY_MS:-200}
+      LATENCY_JITTER: ${LATENCY_JITTER:-50}
+      ENABLE_BANDWIDTH: ${ENABLE_BANDWIDTH:-false}
+      BANDWIDTH_KBPS: ${BANDWIDTH_KBPS:-100}
+      ENABLE_TIMEOUT: ${ENABLE_TIMEOUT:-false}
+      TIMEOUT_MS: ${TIMEOUT_MS:-1000}
+      ENABLE_SLOW_CLOSE: ${ENABLE_SLOW_CLOSE:-false}
+      SLOW_CLOSE_MS: ${SLOW_CLOSE_MS:-1000}
+    entrypoint: ["sh", "-ec"]
+    # $$ = a shell variable (from `environment`), not a compose one.
+    command:
+      - |
+        until curl -fs "$$API/version" >/dev/null; do sleep 2; done
+        curl -fsS -X DELETE "$$API/proxies/$$PROXY" >/dev/null 2>&1 || true
+        curl -fsS -X POST "$$API/proxies" -H "Content-Type: application/json" \
+          -d "{\"name\":\"$$PROXY\",\"listen\":\"0.0.0.0:8666\",\"upstream\":\"lab-proxy-wordpress:80\"}"
+        toxic() {
+          curl -fsS -X POST "$$API/proxies/$$PROXY/toxics" -H "Content-Type: application/json" \
+            -d "{\"name\":\"$$1_downstream\",\"type\":\"$$1\",\"stream\":\"downstream\",\"attributes\":$$2}" || true
+        }
+        [ "$$ENABLE_LATENCY" = "true" ] && toxic latency "{\"latency\":$$LATENCY_MS,\"jitter\":$$LATENCY_JITTER}"
+        [ "$$ENABLE_BANDWIDTH" = "true" ] && toxic bandwidth "{\"rate\":$$BANDWIDTH_KBPS}"
+        [ "$$ENABLE_TIMEOUT" = "true" ] && toxic timeout "{\"timeout\":$$TIMEOUT_MS}"
+        [ "$$ENABLE_SLOW_CLOSE" = "true" ] && toxic slow_close "{\"delay\":$$SLOW_CLOSE_MS}"
+        echo "Toxiproxy configuration complete."
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.22
+
+  lab-proxy-wordpress:
+    image: wordpress:latest
+    environment:
+      WORDPRESS_DB_HOST: lab-proxy-mariadb
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:-wordpress}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:-wordpress}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:-wordpresspass}
+    depends_on:
+      lab-proxy-mariadb:
+        condition: service_healthy
+    volumes:
+      - lab-proxy-wordpress-data:/var/www/html
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.23
+
+  lab-proxy-mariadb:
+    image: mariadb:11
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${WORDPRESS_DB_NAME:-wordpress}
+      MYSQL_USER: ${WORDPRESS_DB_USER:-wordpress}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD:-wordpresspass}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - lab-proxy-mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.24
+
+  lab-proxy-redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - lab-proxy-redis-data:/data
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.25
+
+  # ---- vulnerable: old software and default credentials on purpose ----
+  lab-vuln-wordpress:
+    image: wordpress:4.7
+    environment:
+      WORDPRESS_DB_HOST: lab-vuln-mysql
+      WORDPRESS_DB_USER: wpuser
+      WORDPRESS_DB_PASSWORD: wppass
+      WORDPRESS_DB_NAME: wordpress
+    depends_on:
+      lab-vuln-mysql:
+        condition: service_healthy
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.30
+
+  lab-vuln-mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wpuser
+      MYSQL_PASSWORD: wppass
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.31
+
+  lab-vuln-adminer:
+    image: adminer
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.32
+
+  lab-vuln-ftp:
+    image: fauria/vsftpd
+    environment:
+      FTP_USER: test
+      FTP_PASS: test123
+      PASV_ADDRESS: ${LAB_NET:-10.50.0}.33
+      PASV_MIN_PORT: 21000
+      PASV_MAX_PORT: 21010
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.33
+
+  lab-vuln-dvwa:
+    image: vulnerables/web-dvwa
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.34
+
+  # ---- custom-network ----
+  lab-net-httpbin:
+    image: kennethreitz/httpbin
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.40
+
+  lab-net-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: StrongPassword123
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.41
+
+  lab-net-rabbitmq:
+    image: rabbitmq:3-management
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.42
+
+  lab-net-gitea:
+    image: gitea/gitea:latest
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.43
+
+  # The quickstart's service that disappears and comes back (`stop` / `start lab-net-web`).
+  lab-net-web:
+    image: nginx:alpine
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.44
+
+networks:
+  lab:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${LAB_NET:-10.50.0}.0/24
+          gateway: ${LAB_NET:-10.50.0}.1
+
+volumes:
+  lab-modern-mariadb-data:
+  lab-npm-data:
+  lab-npm-letsencrypt:
+  lab-proxy-wordpress-data:
+  lab-proxy-mariadb-data:
+  lab-proxy-redis-data:

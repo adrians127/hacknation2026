@@ -1,0 +1,99 @@
+# The whole project plus a network to scan, with one command (from the repo root):
+#
+#   docker compose -f docker/docker-compose.full.yml up -d --build      # pnpm full:up
+#
+# - docker-compose.yml with the app on (full/app.override.yml): PostgreSQL, migrations,
+#   backend (development mode, README accounts), frontend on :3000, DefectDojo on :8080
+# - bootstrap: `pnpm db:seed` (roles, admin, demo accounts) + `pnpm db:seed:hosts`, then imports
+#   the lab subnet as a target and starts a scan of it (again on every `up`: a new run to diff)
+# - worker-manager in poll mode (`pnpm workers:manager:poll`), scanning from inside the lab
+# - lab/docker-compose-all.yml: every docker/lab stack on its own 10.50.0.0/24 network
+#
+# Local testing only: development secrets, vulnerable services. Needs Docker Engine 28+ and
+# Compose 2.33+ (gw_priority), on Linux (raw-socket scanning). See docker/README.md.
+name: hacknation
+
+include:
+  - path:
+      - docker-compose.yml
+      - full/app.override.yml
+  - lab/docker-compose-all.yml
+
+x-tools-env: &tools-env
+  NODE_ENV: development
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: ${POSTGRES_DB:-hacknation}
+  DB_USER: ${POSTGRES_USER:-hacknation}
+  DB_PASSWORD: ${POSTGRES_PASSWORD:-hacknation}
+  DB_SSLMODE: disable
+  JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-change-me-in-production}
+  DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-ZGV2LW9ubHktZGF0YS1rZXktY2hhbmdlLW1lLTAwMDA=}
+  WORKER_TOKEN: ${WORKER_TOKEN:-dev-only-worker-token-change-me}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@hacknation.local}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin-change-me-now}
+  SEED_DEMO_USERS: ${SEED_DEMO_USERS:-true}
+  DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-demo-password-2026}
+
+services:
+  # One-shot. The backend image has no tsx or sources, so this runs the build stage instead.
+  bootstrap:
+    build:
+      context: ..
+      dockerfile: apps/backend/Dockerfile
+      target: builder
+    image: hacknation/backend-tools:local
+    container_name: hacknation-bootstrap
+    restart: "no"
+    working_dir: /repo/apps/backend
+    command: ["sh", "/bootstrap/bootstrap.sh"]
+    environment:
+      <<: *tools-env
+      BACKEND_URL: http://backend:3001/v1
+      LAB_SCAN: ${LAB_SCAN:-true}
+      LAB_TARGET: ${LAB_NET:-10.50.0}.0/24
+    volumes:
+      - ./full:/bootstrap:ro
+    depends_on:
+      # Started after the backend, which creates the admin on its first start.
+      backend:
+        condition: service_healthy
+
+  worker-manager:
+    build:
+      context: ../apps/workers
+      dockerfile: worker-manager/Dockerfile
+      args:
+        UBUNTU_IMAGE: ${UBUNTU_IMAGE:-ubuntu}
+        HTTPX_VERSION: ${HTTPX_VERSION:-v1.12.0}
+        NAABU_VERSION: ${NAABU_VERSION:-v2.7.0}
+    image: hacknation/worker-manager:local
+    container_name: hacknation-worker-manager
+    restart: unless-stopped
+    command: ["--poll", "--output-dir", "/results"]
+    environment:
+      WORKER_MANAGER_BACKEND_URL: http://backend:3001/v1
+      WORKER_MANAGER_TOKEN: ${WORKER_TOKEN:-dev-only-worker-token-change-me}
+      WORKER_MANAGER_ID: docker-lab
+      WORKER_MANAGER_LOG_LEVEL: ${WORKER_MANAGER_LOG_LEVEL:-info}
+      NMAP_SCAN_TYPE: syn
+      # Nmap checks this even when its binary already has the required file capabilities.
+      NMAP_PRIVILEGED: "1"
+    networks:
+      lab:
+        ipv4_address: ${LAB_NET:-10.50.0}.250
+        # masscan sends every packet via the default route's interface and gateway: it must be the lab's.
+        gw_priority: 100
+      default: {}
+    volumes:
+      # /results exists in the image, owned by its `worker` user, so the new volume inherits that.
+      - worker-results:/results
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  worker-results:

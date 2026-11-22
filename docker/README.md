@@ -6,6 +6,7 @@ Docker Compose files. In development you run the backend and frontend with `pnpm
 |---|---|---|
 | `docker-compose.yml` | `hacknation` | Infrastructure: `postgres`, `defectdojo-*`; profile `app`: `backend-migrate`, `backend`, `frontend`; profile `vulns`: `vuln-sync` |
 | `docker-compose.workers.yml` | `hacknation-workers` | Scan workers: `nmap-worker`, `masscan-worker`, `naabu-worker`, `httpx-worker`, `tlsx-worker`, `worker-manager` |
+| `docker-compose.full.yml` | `hacknation` | Everything with one command: `docker-compose.yml` with the app on, seeding, a polling `worker-manager` and the whole `lab/` to scan. See [Full stack with the lab](#full-stack-with-the-lab) |
 
 | Service | File | Description |
 |---|---|---|
@@ -78,6 +79,46 @@ docker compose -f docker/docker-compose.yml --profile app up -d --build   # pnpm
 - Vulnerability databases (optional, ~650 MB of downloads): `docker compose -f docker/docker-compose.yml --profile app --profile vulns up -d`.
 - Stop: `docker compose -f docker/docker-compose.yml --profile app --profile vulns down` (`pnpm app:down`); add `-v` to wipe every volume. Logs: `pnpm app:logs`.
 - `DATA_ENCRYPTION_KEY` encrypts stored scan data: changing it makes that data unreadable.
+
+## Full stack with the lab
+
+One command starts the app, DefectDojo, demo data, a polling worker-manager and every `lab/` stack, then scans the lab. You don't need Node, pnpm or `docker/.env`. From the repo root:
+
+```bash
+docker compose -f docker/docker-compose.full.yml up -d --build   # pnpm full:up
+docker compose -f docker/docker-compose.full.yml logs -f bootstrap   # seeding + the queued lab scan
+```
+
+| What | Where |
+|---|---|
+| App (accounts as in the [root README](../README.md#install-and-run): `admin@hacknation.local` / `admin-change-me-now`, demo accounts / `demo-password-2026`) | `http://localhost:3000` |
+| Backend + Swagger (development mode) | `http://localhost:3001/docs` |
+| DefectDojo (`admin` / `hacknation`) | `http://localhost:8080` |
+| Lab: one address per service, no host ports | `10.50.0.0/24` ([`lab/docker-compose-all.yml`](lab/docker-compose-all.yml) lists them) |
+
+How it fits together (`docker-compose.full.yml`):
+
+- **App:** includes `docker-compose.yml` merged with [`full/app.override.yml`](full/app.override.yml). The override turns the `app` profile on and runs the backend in development mode with the `.env.example` secrets, as `pnpm dev` does. A secret set in `docker/.env` still wins. `SCAN_DEFAULT_PORTS` adds the lab's ports (81, 3000, 5672, 8474, 8666, 15672) and `SCAN_DEFAULT_MAX_RATE` is 500.
+- **`bootstrap`** (one-shot, the backend image's `builder` stage because seeding needs tsx and the sources) runs [`full/bootstrap.sh`](full/bootstrap.sh) once the backend is healthy:
+  - `pnpm db:seed`: roles, admin and demo accounts;
+  - `pnpm db:seed:hosts`: the demo scans of 10.40.0.0/18;
+  - [`full/lab-scan.mjs`](full/lab-scan.mjs): waits until worker-manager has registered masscan, then imports `10.50.0.0/24` as a target tagged `lab` and starts a scan of it (masscan → nmap).
+  
+  Every step is idempotent. Each `up` runs it again and queues a new lab scan, so the second `up` gives you two runs to compare. `LAB_SCAN=false` turns the scan off.
+- **`worker-manager`** is `pnpm workers:manager:poll` as a service. It sits on the `lab` network at `.250` and on the app network, where it reaches `http://backend:3001/v1`. masscan sends through the default route's interface and gateway, so `gw_priority` makes that route the lab's. This needs Docker Engine 28+ and Compose 2.33+. Results go to the `worker-results` volume as well as to the backend.
+- **Lab:** [`lab/docker-compose-all.yml`](lab/docker-compose-all.yml) holds all four lab stacks with renamed services (`lab-modern-*`, `lab-proxy-*`, `lab-vuln-*`, `lab-net-*`). It publishes no host ports, so nothing clashes with the app (8080, 3001) or between stacks, and the vulnerable services stay off the LAN. `LAB_NET=10.77.0` moves the subnet if 10.50.0.0/24 is taken. Toxiproxy reads `lab/.env` as the `modern-proxy` stack does.
+
+Scenarios:
+
+- **A service disappears and comes back** (the lab quickstart): `docker compose -f docker/docker-compose.full.yml stop lab-net-web`, then `docker compose -f docker/docker-compose.full.yml up -d bootstrap` queues the next scan, which should show 10.50.0.44 as gone. `start lab-net-web` plus another scan brings it back.
+- More scans: import `10.50.0.0/24` again in the UI, or create a pipeline over the `lab` tag.
+
+Stop: `docker compose -f docker/docker-compose.full.yml down` (`pnpm full:down`). Add `-v` to also wipe the database, DefectDojo and the lab volumes. Logs: `pnpm full:logs`.
+
+- Linux hosts only: masscan and nmap send raw packets (`NET_RAW`/`NET_ADMIN`).
+- The first `up` builds three images (backend, frontend, worker-manager, with its C++ tests) and pulls about 5 GB, DefectDojo and the lab included. Plan for 8 GB of RAM or more.
+- The project name is `hacknation`, the same as `docker-compose.yml`, so the full stack shares its containers and volumes. It reuses the database of `pnpm db:up` and can't run next to `pnpm app:up` or `pnpm dev` (ports 3000/3001). If that database was filled by `pnpm app:up` with other secrets, set the same `DATA_ENCRYPTION_KEY` in `docker/.env`.
+- Local testing only: public development secrets and deliberately vulnerable services.
 
 ## PostgreSQL
 
