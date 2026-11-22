@@ -97,6 +97,7 @@ const stepRows = (steps: readonly PipelineStep[]) =>
     position: index + 1,
     workerId: step.workerId,
     input: step.input,
+    targetSelector: step.input === "targets" && step.targets ? step.targets : Prisma.DbNull,
     ports: step.ports,
     rate: step.rate,
     batchSize: step.batchSize,
@@ -169,7 +170,6 @@ export const pipelinesService = {
           name: body.name,
           description: body.description,
           enabled: body.enabled,
-          targetSelector: body.targets,
           schedule: body.schedule ?? undefined,
           nextRunAt: nextRunAt(body.enabled, body.schedule),
           createdById: auth.user.id,
@@ -199,7 +199,6 @@ export const pipelinesService = {
       name: body.name,
       description: body.description,
       enabled: body.enabled,
-      targetSelector: body.targets,
       ...(body.schedule === undefined ? {} : { schedule: body.schedule ?? Prisma.DbNull }),
       nextRunAt: changesSchedule ? nextRunAt(enabled, schedule) : undefined,
     };

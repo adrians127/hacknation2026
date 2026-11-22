@@ -1,5 +1,5 @@
 import type { QueuedScan, ScanJobHost, ScanTrigger } from "@subsurf/contracts/scans/scans.schema";
-import { intersectRanges, ipv4ToInt, mergeRanges, type Ipv4Range } from "@subsurf/contracts/targets/ipv4";
+import { intersectRanges, ipv4ToInt, mergeRanges, rangeSize, type Ipv4Range } from "@subsurf/contracts/targets/ipv4";
 import { parseTargetValue, type TargetKind } from "@subsurf/contracts/targets/target-input";
 import type { ImportWarning } from "@subsurf/contracts/targets/targets.schema";
 
@@ -18,16 +18,22 @@ export interface ScanTargetRow {
   value: string;
 }
 
+/** What one step that scans targets covers. */
+export interface StepTargets {
+  targets: readonly ScanTargetRow[];
+  /** Scan only these parts of the targets (the step's ranges); `undefined` = all of them. */
+  within?: readonly Ipv4Range[];
+}
+
 export interface QueueRunInput {
   requestedById: string;
   pipelineId: string | null;
   trigger: ScanTrigger;
   steps: readonly ScanStepSnapshot[];
-  targets: readonly ScanTargetRow[];
-  /** Resolved beforehand (`resolveDomains`), outside the transaction. */
+  /** By step index, for every step with input `targets`; a step missing here scans nothing. */
+  stepTargets: ReadonlyMap<number, StepTargets>;
+  /** Resolved beforehand (`resolveDomains`), outside the transaction, for every step's domains. */
   dns: DnsResolution;
-  /** Scan only these parts of the targets (a pipeline's ranges); `undefined` = all of them. */
-  within?: readonly Ipv4Range[];
   windowEndsAt: Date | null;
 }
 
@@ -55,18 +61,16 @@ interface Scope {
 }
 
 /**
- * What of the targets is scanned. The selector's ranges narrow both addresses and resolved
+ * What of a step's targets is scanned. The step's ranges narrow both addresses and resolved
  * domains, and drop targets left with nothing; without them every target counts, an
  * unresolvable domain included (as an import always did).
  */
-function scanScope(input: QueueRunInput): Scope {
-  const { within } = input;
-  const resolved = new Map(input.dns.resolved.map(({ domain, addresses }) => [domain, addresses]));
+function scanScope({ targets: stepTargets, within }: StepTargets, resolved: ReadonlyMap<string, string[]>): Scope {
   const hosts: ScanJobHost[] = [];
   const targets: ScanTargetRow[] = [];
   const ranges: Ipv4Range[] = [];
 
-  for (const target of input.targets) {
+  for (const target of stepTargets) {
     if (target.kind === "domain") {
       const addresses = (resolved.get(target.value) ?? []).filter(
         (ip) => !within || isInside(ip, within),
@@ -105,24 +109,32 @@ function jobRows(
 }
 
 /**
- * Queues one run: a Scan with the steps snapshotted, the targets it covers and the jobs of every
- * step that scans the targets. Steps that take the previous step's hosts get jobs later, as
+ * Queues one run: a Scan with the steps snapshotted, the targets its steps cover and the jobs of
+ * every step that scans its own targets. Steps that take the previous step's hosts get jobs later, as
  * that step's jobs complete (`pipelineRuns.onResultStored`).
  */
 export async function queueRun(
   tx: Prisma.TransactionClient,
   input: QueueRunInput,
 ): Promise<QueueRunResult> {
-  const { targets, ranges, hosts } = scanScope(input);
+  const resolved = new Map(input.dns.resolved.map(({ domain, addresses }) => [domain, addresses]));
   const targetSteps = input.steps.filter((step) => step.input === "targets");
-  const plans = targetSteps.map((step) => planScanJobs(ranges, hosts, step.batchSize));
-  const [firstPlan = []] = plans;
-  if (firstPlan.length === 0) {
+  const scopes = targetSteps.map((step) =>
+    scanScope(input.stepTargets.get(step.index) ?? { targets: [] }, resolved),
+  );
+  const plans = targetSteps.map((step, index) => planScanJobs(scopes[index].ranges, scopes[index].hosts, step.batchSize));
+  const jobCount = plans.reduce((sum, plan) => sum + plan.length, 0);
+  // A step whose selection is empty right now just gets no jobs; only a run with none fails.
+  if (jobCount === 0) {
     return { scan: null, warnings: [...input.dns.warnings, { code: "no_scannable_targets", value: "" }] };
   }
 
+  const targets = [...new Map(scopes.flatMap((scope) => scope.targets).map((target) => [target.id, target])).values()];
+  const addressCount = mergeRanges(scopes.flatMap((scope) => scope.ranges)).reduce(
+    (sum, range) => sum + rangeSize(range),
+    0,
+  );
   const { ports, maxRate } = scanLimits(input.steps);
-  const jobCount = plans.reduce((sum, plan) => sum + plan.length, 0);
   const scan = await tx.scan.create({
     data: {
       pipelineId: input.pipelineId,
@@ -133,7 +145,7 @@ export async function queueRun(
       maxRate,
       batchSize: targetSteps[0].batchSize,
       targetCount: targets.length,
-      addressCount: firstPlan.reduce((sum, job) => sum + job.addressCount, 0),
+      addressCount,
       jobCount,
       warnings: input.dns.warnings,
       requestedById: input.requestedById,

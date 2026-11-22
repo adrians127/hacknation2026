@@ -4,23 +4,41 @@ import type {
   PipelineBody,
   PipelineStep,
   Schedule,
+  TargetSelector,
 } from "@subsurf/contracts/pipelines/pipelines.schema";
 import { defaultStepParams } from "@subsurf/contracts/workers/worker-catalog";
 import type { Worker } from "@subsurf/contracts/workers/worker-registry.schema";
 
-/** A step in the editor: the API's step plus a stable key for React and drag and drop. */
-export type StepDraft = PipelineStep & { key: string };
+/** A step's target selection in the editor. Ranges stay text until saved. */
+export interface TargetDraft {
+  tags: string[];
+  targetIds: string[];
+  rangesText: string;
+}
 
-/** The editor's form state. Ranges stay text until saved; numbers may be NaN while typed. */
+/**
+ * A step in the editor: the API's step plus a stable key for React and drag and drop. Every step
+ * keeps a target draft, so switching its input away from targets and back loses nothing.
+ */
+export type StepDraft = Omit<PipelineStep, "targets"> & { key: string; target: TargetDraft };
+
+/** The editor's form state. Numbers may be NaN while typed. */
 export interface PipelineDraft {
   name: string;
   description: string;
   enabled: boolean;
-  tags: string[];
-  targetIds: string[];
-  rangesText: string;
   steps: StepDraft[];
   schedule: Schedule | null;
+}
+
+const emptyTarget = (): TargetDraft => ({ tags: [], targetIds: [], rangesText: "" });
+
+export function targetSelector(target: TargetDraft): TargetSelector {
+  return {
+    tags: target.tags,
+    targetIds: target.targetIds,
+    ranges: parseHostSelectors(target.rangesText).selectors,
+  };
 }
 
 export const PORT_PRESETS = {
@@ -38,13 +56,17 @@ const DEFAULT_MAX_DURATION_SECONDS = 3600;
 
 const newKey = () => crypto.randomUUID();
 
-/** A new step of `worker`, appended after `previous`: it takes the previous step's hits when it can. */
-export function newStep(worker: Worker, previous: PipelineStep | undefined): StepDraft {
+/**
+ * A new step of `worker`, appended after `previous`: it takes the previous step's hits when it
+ * can, and starts from the previous step's target selection.
+ */
+export function newStep(worker: Worker, previous: StepDraft | undefined): StepDraft {
   const takesHosts = previous !== undefined && worker.inputs.includes("hosts");
   return {
     key: newKey(),
     workerId: worker.id,
     input: takesHosts || !worker.inputs.includes("targets") ? "previous" : "targets",
+    target: previous ? { ...previous.target } : emptyTarget(),
     ports: previous?.ports ?? PORT_PRESETS.common,
     rate: Math.min(DEFAULT_RATE, worker.maxRate),
     batchSize: 256,
@@ -82,7 +104,7 @@ export function emptyDraft(workers: readonly Worker[]): PipelineDraft {
     const worker = workers.find((candidate) => candidate.name === name && candidate.enabled);
     if (worker) steps.push(newStep(worker, steps.at(-1)));
   }
-  return { name: "", description: "", enabled: false, tags: [], targetIds: [], rangesText: "", steps, schedule: null };
+  return { name: "", description: "", enabled: false, steps, schedule: null };
 }
 
 export function draftFromPipeline(pipeline: Pipeline): PipelineDraft {
@@ -90,10 +112,13 @@ export function draftFromPipeline(pipeline: Pipeline): PipelineDraft {
     name: pipeline.name,
     description: pipeline.description,
     enabled: pipeline.enabled,
-    tags: pipeline.targets.tags,
-    targetIds: pipeline.targets.targetIds,
-    rangesText: pipeline.targets.ranges.join("\n"),
-    steps: pipeline.steps.map(({ position: _position, worker: _worker, ...step }) => ({ ...step, key: newKey() })),
+    steps: pipeline.steps.map(({ position: _position, worker: _worker, targets, ...step }) => ({
+      ...step,
+      key: newKey(),
+      target: targets
+        ? { tags: targets.tags, targetIds: targets.targetIds, rangesText: targets.ranges.join("\n") }
+        : emptyTarget(),
+    })),
     schedule: pipeline.schedule,
   };
 }
@@ -103,12 +128,10 @@ export function draftToBody(draft: PipelineDraft): PipelineBody {
     name: draft.name.trim(),
     description: draft.description.trim(),
     enabled: draft.schedule !== null && draft.enabled,
-    targets: {
-      tags: draft.tags,
-      targetIds: draft.targetIds,
-      ranges: parseHostSelectors(draft.rangesText).selectors,
-    },
-    steps: draft.steps.map(({ key: _key, ...step }) => step),
+    steps: draft.steps.map(({ key: _key, target, ...step }) => ({
+      ...step,
+      targets: step.input === "targets" ? targetSelector(target) : null,
+    })),
     schedule: draft.schedule,
   };
 }

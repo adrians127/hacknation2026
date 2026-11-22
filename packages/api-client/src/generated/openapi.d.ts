@@ -240,7 +240,7 @@ export interface paths {
         put?: never;
         /**
          * Create a pipeline from worker steps
-         * @description Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). `targets` picks inventory targets with any of its `tags` or listed in `targetIds` (every target when both are empty), narrowed to its `ranges`. The first step scans the pipeline's targets; a later one may take the previous step's up hosts and open ports instead (`input: previous`).
+         * @description Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). Each step with `input: targets` has its own `targets`, which picks inventory targets with any of its `tags` or listed in `targetIds` (every target when both are empty), narrowed to its `ranges`. The first step scans targets; a later one may instead take the previous step's up hosts and open ports (`input: previous`, `targets: null`).
          */
         post: operations["createPipeline"];
         delete?: never;
@@ -308,7 +308,7 @@ export interface paths {
         put?: never;
         /**
          * Run a pipeline now
-         * @description Requires `scans:run`. Queues a scan of the pipeline's targets with its current steps; a schedule's time window does not apply to a manual run.
+         * @description Requires `scans:run`. Queues a scan with the pipeline's current steps, each over its own targets; a schedule's time window does not apply to a manual run.
          */
         post: operations["runPipeline"];
         delete?: never;
@@ -1023,16 +1023,16 @@ export interface components {
             name: string;
             description: string;
             enabled: boolean;
-            targets: {
-                tags: string[];
-                targetIds: string[];
-                ranges: (string)[];
-            };
             steps: {
                 /** Format: uuid */
                 workerId: string;
                 /** @enum {string} */
                 input: "targets" | "previous";
+                targets: {
+                    tags: string[];
+                    targetIds: string[];
+                    ranges: (string)[];
+                } | null;
                 ports: string;
                 rate: number;
                 batchSize: number;
@@ -1111,16 +1111,16 @@ export interface components {
             name: string;
             description: string;
             enabled: boolean;
-            targets: {
-                tags: string[];
-                targetIds: string[];
-                ranges: (string)[];
-            };
             steps: {
                 /** Format: uuid */
                 workerId: string;
                 /** @enum {string} */
                 input: "targets" | "previous";
+                targets: {
+                    tags: string[];
+                    targetIds: string[];
+                    ranges: (string)[];
+                } | null;
                 ports: string;
                 rate: number;
                 batchSize: number;
@@ -2650,16 +2650,16 @@ export interface operations {
                             name: string;
                             description: string;
                             enabled: boolean;
-                            targets: {
-                                tags: string[];
-                                targetIds: string[];
-                                ranges: (string)[];
-                            };
                             steps: {
                                 /** Format: uuid */
                                 workerId: string;
                                 /** @enum {string} */
                                 input: "targets" | "previous";
+                                targets: {
+                                    tags: string[];
+                                    targetIds: string[];
+                                    ranges: (string)[];
+                                } | null;
                                 ports: string;
                                 rate: number;
                                 batchSize: number;
@@ -2768,16 +2768,16 @@ export interface operations {
                     name: string;
                     description: string;
                     enabled: boolean;
-                    targets: {
-                        tags: string[];
-                        targetIds: string[];
-                        ranges: (string)[];
-                    };
                     steps: {
                         /** Format: uuid */
                         workerId: string;
                         /** @enum {string} */
                         input: "targets" | "previous";
+                        targets: {
+                            tags: string[];
+                            targetIds: string[];
+                            ranges: (string)[];
+                        } | null;
                         ports: string;
                         rate: number;
                         batchSize: number;
@@ -3027,16 +3027,16 @@ export interface operations {
                     name?: string;
                     description?: string;
                     enabled?: boolean;
-                    targets?: {
-                        tags: string[];
-                        targetIds: string[];
-                        ranges: (string)[];
-                    };
                     steps?: {
                         /** Format: uuid */
                         workerId: string;
                         /** @enum {string} */
                         input: "targets" | "previous";
+                        targets: {
+                            tags: string[];
+                            targetIds: string[];
+                            ranges: (string)[];
+                        } | null;
                         ports: string;
                         rate: number;
                         batchSize: number;

@@ -22,7 +22,7 @@ export const STEP_MAX_DURATION_SECONDS = 604_800;
 export const PIPELINE_TARGET_IDS_MAX = 1000;
 
 /**
- * Which inventory targets a run scans: those with any of `tags` or listed in `targetIds` (all
+ * Which inventory targets a step scans: those with any of `tags` or listed in `targetIds` (all
  * targets when both are empty), narrowed to `ranges` (no narrowing when empty). Nothing outside
  * the inventory is ever scanned.
  */
@@ -32,7 +32,7 @@ export const TargetSelectorSchema = z.object({
   ranges: z.array(HostSelectorSchema).max(HOST_SELECTORS_MAX),
 });
 
-/** `targets`: the pipeline's addresses. `previous`: up hosts and open ports of the step before. */
+/** `targets`: the step's own target selection. `previous`: up hosts and open ports of the step before. */
 export const PipelineStepInputSchema = z.enum(["targets", "previous"]);
 
 export const PipelineSplitSchema = z.object({
@@ -44,6 +44,8 @@ export const PipelineSplitSchema = z.object({
 export const PipelineStepSchema = z.object({
   workerId: z.uuid(),
   input: PipelineStepInputSchema,
+  /** What the step scans with input `targets`; `null` with input `previous`. */
+  targets: TargetSelectorSchema.nullable(),
   ports: PortSpecSchema,
   /** Packets per second for one job (all its tasks together). */
   rate: z.number().int().min(1).max(WORKER_MAX_RATE_LIMIT),
@@ -97,20 +99,31 @@ const pipelineFields = {
   description: z.string().max(1000),
   /** Whether the schedule fires. Needs a `schedule`. */
   enabled: z.boolean(),
-  targets: TargetSelectorSchema,
   steps: z.array(PipelineStepSchema).min(1).max(PIPELINE_MAX_STEPS),
   schedule: ScheduleSchema.nullable(),
 };
 
-const firstStepScansTargets = (steps: readonly { input: string }[] | undefined) =>
-  steps === undefined || steps[0]?.input === "targets";
+type StepInputs = readonly { input: string; targets: unknown }[] | undefined;
+
+/** The first step scans targets, and exactly the steps that scan targets carry a selection. */
+function checkStepInputs(steps: StepInputs, ctx: z.RefinementCtx): void {
+  if (steps === undefined) return;
+  if (steps[0]?.input !== "targets") {
+    ctx.addIssue({ code: "custom", message: "The first step must scan targets", path: ["steps", 0, "input"] });
+  }
+  for (const [index, step] of steps.entries()) {
+    if (step.input === "targets" && step.targets === null) {
+      ctx.addIssue({ code: "custom", message: "A step that scans targets needs a target selection", path: ["steps", index, "targets"] });
+    }
+    if (step.input === "previous" && step.targets !== null) {
+      ctx.addIssue({ code: "custom", message: "A step that takes the previous step's hosts has no target selection", path: ["steps", index, "targets"] });
+    }
+  }
+}
 
 export const PipelineBodySchema = z
   .object(pipelineFields)
-  .refine(({ steps }) => firstStepScansTargets(steps), {
-    message: "The first step must scan the pipeline's targets",
-    path: ["steps", 0, "input"],
-  })
+  .superRefine(({ steps }, ctx) => checkStepInputs(steps, ctx))
   .refine(({ enabled, schedule }) => !enabled || schedule !== null, {
     message: "Only a pipeline with a schedule can be enabled",
     path: ["enabled"],
@@ -121,10 +134,7 @@ export const UpdatePipelineBodySchema = z
   .object(pipelineFields)
   .partial()
   .refine((body) => Object.keys(body).length > 0, { message: "Nothing to update" })
-  .refine(({ steps }) => firstStepScansTargets(steps), {
-    message: "The first step must scan the pipeline's targets",
-    path: ["steps", 0, "input"],
-  });
+  .superRefine(({ steps }, ctx) => checkStepInputs(steps, ctx));
 
 export const PipelineStepDetailSchema = PipelineStepSchema.extend({
   position: z.number().int().positive(),
@@ -152,7 +162,6 @@ export const PipelineSchema = z.object({
   name: z.string(),
   description: z.string(),
   enabled: z.boolean(),
-  targets: TargetSelectorSchema,
   steps: z.array(PipelineStepDetailSchema),
   schedule: ScheduleSchema.nullable(),
   /** `null` without a schedule, or while disabled. */

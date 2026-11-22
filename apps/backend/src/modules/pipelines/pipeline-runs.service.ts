@@ -3,9 +3,7 @@ import type { Logger } from "pino";
 import {
   PipelineSplitSchema,
   ScheduleSchema,
-  TargetSelectorSchema,
   type RunPipelineResponse,
-  type TargetSelector,
 } from "@subsurf/contracts/pipelines/pipelines.schema";
 import { isPortInSpec, portSpecRanges } from "@subsurf/contracts/scans/port-spec";
 import type { ScanJobHost } from "@subsurf/contracts/scans/scans.schema";
@@ -21,7 +19,7 @@ import { prisma } from "~backend/lib/prisma";
 import { queueRun } from "~backend/modules/pipelines/queue-run";
 import { lastFireAtOrBefore, nextFireAfter } from "~backend/modules/pipelines/schedule";
 import { hostTargets, jobParams, readSteps, type ScanStepSnapshot } from "~backend/modules/pipelines/steps";
-import { selectTargets, selectorWithin } from "~backend/modules/pipelines/target-selection";
+import { readSelector, selectStepTargets, stepDomains } from "~backend/modules/pipelines/target-selection";
 import { resolveDomains } from "~backend/modules/scans/dns";
 import { workerDefaults, workerFields, workerInputs } from "~backend/modules/workers/workers.mapper";
 
@@ -44,13 +42,6 @@ const pipelineInclude = {
 } as const satisfies Prisma.PipelineInclude;
 
 type PipelineWithSteps = Prisma.PipelineGetPayload<{ include: typeof pipelineInclude }>;
-
-export function readSelector(stored: unknown): TargetSelector {
-  // Pipelines saved before `targetIds` existed lack it.
-  const withIds = typeof stored === "object" && stored !== null ? { targetIds: [], ...stored } : stored;
-  const parsed = TargetSelectorSchema.safeParse(withIds);
-  return parsed.success ? parsed.data : { tags: [], targetIds: [], ranges: [] };
-}
 
 /** The steps a run starts with: worker defaults merged under the step's own params, rate capped. */
 export function snapshotSteps(pipeline: PipelineWithSteps): ScanStepSnapshot[] {
@@ -169,11 +160,13 @@ export const pipelineRuns = {
       const names = disabled.map((step) => step.worker.name).join(", ");
       throw HttpError.conflict(`Disabled worker: ${names}`, "WORKER_DISABLED");
     }
-    const selector = readSelector(pipeline.targetSelector);
-    const targets = await selectTargets(selector);
-    const dns = await resolveDomains(
-      targets.filter((target) => target.kind === "domain").map((target) => target.value),
+    const stepTargets = await selectStepTargets(
+      pipeline.steps.map((step) => ({
+        index: step.position,
+        targets: step.input === "targets" ? readSelector(step.targetSelector) : null,
+      })),
     );
+    const dns = await resolveDomains(stepDomains(stepTargets));
 
     const result = await prisma.$transaction(
       async (tx) => {
@@ -190,9 +183,8 @@ export const pipelineRuns = {
           pipelineId,
           trigger: options.trigger,
           steps: snapshotSteps(pipeline),
-          targets,
+          stepTargets,
           dns,
-          within: selectorWithin(selector),
           windowEndsAt: options.windowEndsAt,
         });
         if (queued.scan) {
@@ -203,7 +195,7 @@ export const pipelineRuns = {
       { timeout: RUN_TRANSACTION_TIMEOUT_MS },
     );
     if (!result.scan) {
-      throw HttpError.conflict("None of the pipeline's targets can be scanned", "NO_SCANNABLE_TARGETS");
+      throw HttpError.conflict("None of the steps' targets can be scanned", "NO_SCANNABLE_TARGETS");
     }
     return { scan: result.scan, warnings: result.warnings };
   },

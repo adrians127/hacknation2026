@@ -20,14 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCreatePipeline } from "@/features/pipelines/api/create-pipeline";
 import { useRunPipeline } from "@/features/pipelines/api/run-pipeline";
 import { useUpdatePipeline } from "@/features/pipelines/api/update-pipeline";
 import { ScheduleFields } from "@/features/pipelines/components/schedule-fields";
 import { StepCard } from "@/features/pipelines/components/step-card";
-import { TargetPicker } from "@/features/pipelines/components/target-picker";
 import {
   draftFromPipeline,
   draftToBody,
@@ -52,7 +50,8 @@ function stepIsRunnable(step: StepDraft, index: number, worker: Worker | undefin
     (index > 0 || step.input === "targets") &&
     step.rate <= worker.maxRate &&
     worker.splitStrategies.includes(step.split.strategy) &&
-    validateStepParams(worker.paramFields, step.params).length === 0
+    validateStepParams(worker.paramFields, step.params).length === 0 &&
+    (step.input !== "targets" || parseHostSelectors(step.target.rangesText).invalid.length === 0)
   );
 }
 
@@ -62,7 +61,8 @@ function pathsUnder(paths: readonly string[], prefix: string): Set<string> {
 }
 
 /**
- * Creates or edits a pipeline: targets, an ordered chain of worker blocks and a schedule.
+ * Creates or edits a pipeline: an ordered chain of worker blocks, each with its own targets or
+ * the previous block's hits, and a schedule.
  * Without `pipelines:update` (or `create` for a new one) it is read-only; without `scans:run`
  * the schedule stays as it is.
  */
@@ -102,9 +102,8 @@ export function PipelineEditor({ pipeline, workers }: { pipeline?: PipelineDetai
   const enabledWorkers = workers.filter((worker) => worker.enabled);
   const parsed = PipelineBodySchema.safeParse(body);
   const issuePaths = parsed.success ? [] : parsed.error.issues.map((issue) => issue.path.join("."));
-  const invalidRanges = parseHostSelectors(draft.rangesText).invalid;
   const stepsRunnable = draft.steps.every((step, index) => stepIsRunnable(step, index, workerById.get(step.workerId)));
-  const isValid = parsed.success && invalidRanges.length === 0 && stepsRunnable;
+  const isValid = parsed.success && stepsRunnable;
   const invalid = (path: string) => (showErrors && issuePaths.includes(path)) || undefined;
 
   const setDraftField = <K extends keyof PipelineDraft>(key: K, value: PipelineDraft[K]) =>
@@ -180,46 +179,6 @@ export function PipelineEditor({ pipeline, workers }: { pipeline?: PipelineDetai
                 disabled={!canEdit}
                 onChange={(event) => setDraftField("description", event.target.value)}
               />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("editor.targets.title")}</CardTitle>
-            <CardDescription>{t("editor.targets.hint")}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-6">
-            <div className="grid gap-1.5">
-              <h3 className="text-sm font-medium">{t("editor.targets.select")}</h3>
-              <p className="text-xs text-muted-foreground">{t("editor.targets.selectHint")}</p>
-              <TargetPicker
-                selector={body.targets}
-                disabled={!canEdit}
-                onChange={(selection) => setDraft((previous) => ({ ...previous, ...selection }))}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="pipeline-ranges">{t("editor.targets.ranges")}</Label>
-              <Textarea
-                id="pipeline-ranges"
-                rows={2}
-                className="font-mono text-xs"
-                value={draft.rangesText}
-                placeholder={t("editor.targets.rangesPlaceholder")}
-                disabled={!canEdit}
-                onChange={(event) => setDraftField("rangesText", event.target.value)}
-                aria-invalid={invalidRanges.length > 0 || undefined}
-                aria-describedby="pipeline-ranges-hint"
-              />
-              <p
-                id="pipeline-ranges-hint"
-                className={invalidRanges.length > 0 ? "text-sm text-destructive" : "text-xs text-muted-foreground"}
-              >
-                {invalidRanges.length > 0
-                  ? t("editor.targets.rangesInvalid", { values: invalidRanges.slice(0, 5).join(", ") })
-                  : t("editor.targets.rangesHint")}
-              </p>
             </div>
           </CardContent>
         </Card>

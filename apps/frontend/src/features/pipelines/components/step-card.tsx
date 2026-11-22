@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, GripVertical, Trash2 } from "lucide-react";
 import type { DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 
+import { parseHostSelectors } from "@subsurf/contracts/hosts/host-selectors";
 import { PIPELINE_BATCH_SIZES } from "@subsurf/contracts/pipelines/pipelines.schema";
 import { validateStepParams, type SplitStrategy } from "@subsurf/contracts/workers/worker-catalog";
 import type { Worker } from "@subsurf/contracts/workers/worker-registry.schema";
@@ -12,8 +13,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { PORT_PRESET_KEYS, PORT_PRESETS, type StepDraft } from "@/features/pipelines/lib/draft";
+import { TargetPicker } from "@/features/pipelines/components/target-picker";
+import { PORT_PRESET_KEYS, PORT_PRESETS, targetSelector, type StepDraft } from "@/features/pipelines/lib/draft";
 import { WorkerParamInput } from "@/features/workers/components/worker-param-input";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +42,10 @@ export interface StepCardProps {
   onDragEnd: () => void;
 }
 
-/** One block of the pipeline: its worker, what it scans, and the job parameters the worker gets. */
+/**
+ * One block of the pipeline: its worker, what it scans (its own targets or the previous step's
+ * hits), and the job parameters the worker gets.
+ */
 export function StepCard({
   step,
   index,
@@ -71,6 +77,7 @@ export function StepCard({
   const rateTooHigh = worker !== undefined && step.rate > worker.maxRate;
   const inputUnsupported = !takes(step.input) || (index === 0 && step.input === "previous");
   const splitUnsupported = worker !== undefined && !worker.splitStrategies.includes(step.split.strategy);
+  const invalidRanges = parseHostSelectors(step.target.rangesText).invalid;
   const errorText = (on: boolean, fieldId: string) =>
     on ? (
       <p id={`${fieldId}-error`} className="text-sm text-destructive">
@@ -329,6 +336,45 @@ export function StepCard({
             </div>
           </div>
         </div>
+
+        {step.input === "targets" && (
+          <fieldset className="grid gap-4 rounded-lg border p-3">
+            <legend className="px-1 text-sm font-medium">{t("editor.targets.title")}</legend>
+            <p className="text-xs text-muted-foreground">{t("editor.targets.hint")}</p>
+            <div className="grid gap-1.5">
+              <h4 className="text-sm font-medium">{t("editor.targets.select")}</h4>
+              <p className="text-xs text-muted-foreground">{t("editor.targets.selectHint")}</p>
+              <TargetPicker
+                selector={targetSelector(step.target)}
+                disabled={disabled}
+                onChange={(selection) => set({ target: { ...step.target, ...selection } })}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${id}-ranges`}>{t("editor.targets.ranges")}</Label>
+              <Textarea
+                id={`${id}-ranges`}
+                rows={2}
+                className="font-mono text-xs"
+                value={step.target.rangesText}
+                placeholder={t("editor.targets.rangesPlaceholder")}
+                disabled={disabled}
+                onChange={(event) => set({ target: { ...step.target, rangesText: event.target.value } })}
+                aria-invalid={invalidRanges.length > 0 || undefined}
+                aria-describedby={`${id}-ranges-hint`}
+              />
+              <p
+                id={`${id}-ranges-hint`}
+                className={invalidRanges.length > 0 ? "text-sm text-destructive" : "text-xs text-muted-foreground"}
+              >
+                {invalidRanges.length > 0
+                  ? t("editor.targets.rangesInvalid", { values: invalidRanges.slice(0, 5).join(", ") })
+                  : t("editor.targets.rangesHint")}
+              </p>
+            </div>
+            {errorText(invalid("targets"), `${id}-targets`)}
+          </fieldset>
+        )}
 
         {fields.length > 0 && (
           <fieldset className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">

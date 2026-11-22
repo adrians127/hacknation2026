@@ -96,7 +96,7 @@
     },
     "targets": {
       "title": "Targets",
-      "hint": "What every run scans, taken from the target inventory. Addresses outside the inventory are never scanned.",
+      "hint": "What this step scans on every run, taken from the target inventory. Addresses outside the inventory are never scanned.",
       "select": "Tags and targets",
       "selectHint": "Tick a tag to take every target that carries it, or tick single targets. Nothing ticked: every target in the inventory.",
       "picker": {
@@ -111,7 +111,7 @@
         "removeTarget": "Remove {{value}}",
         "removedTarget": "Removed target",
         "noPermission": "Listing the inventory needs the targets:read permission. The selection above stays as it is.",
-        "emptyInventory": "The target inventory is empty, so a run would have nothing to scan.",
+        "emptyInventory": "The target inventory is empty, so this step would have nothing to scan.",
         "import": "Import targets",
         "truncated": "Showing {{shown}} of {{total}} targets. Search to find the others.",
         "noMatches": "Nothing matches “{{query}}”.",
@@ -126,8 +126,8 @@
         "missingTags": "No target has these tags: {{tags}}. Tags are case-sensitive.",
         "missingTargets_one": "{{count}} picked target is no longer in the inventory.",
         "missingTargets_other": "{{count}} picked targets are no longer in the inventory.",
-        "nothingMatches": "No target matches this selection, so a run would have nothing to scan.",
-        "outsideRanges": "None of the selected targets lies within the addresses below, so a run would have nothing to scan."
+        "nothingMatches": "No target matches this selection, so this step would have nothing to scan.",
+        "outsideRanges": "None of the selected targets lies within the addresses below, so this step would have nothing to scan."
       },
       "ranges": "Only within these addresses",
       "rangesPlaceholder": "10.40.0.0/18, 192.0.2.10",
@@ -147,7 +147,7 @@
       "dragHandle": "Drag to reorder",
       "input": "Scans",
       "inputs": {
-        "targets": "The pipeline's targets",
+        "targets": "Its own targets",
         "previous": "Hosts and open ports from step {{index}}"
       },
       "inputUnsupported": "{{worker}} cannot take this input",
@@ -174,7 +174,7 @@
       "workerParams": "{{worker}} settings",
       "flow": {
         "previous": "passes on the hosts and open ports it found",
-        "targets": "the next block scans the targets itself"
+        "targets": "the next block scans its own targets"
       }
     },
     "schedule": {

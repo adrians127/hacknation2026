@@ -18,12 +18,15 @@ export const scansService = {
     targets: readonly ScanTargetRow[],
     dns: DnsResolution,
   ): Promise<QueueScanResult> {
+    const steps = defaultSteps();
     return queueRun(tx, {
       requestedById: auth.user.id,
       pipelineId: null,
       trigger: "import",
-      steps: defaultSteps(),
-      targets,
+      steps,
+      stepTargets: new Map(
+        steps.filter((step) => step.input === "targets").map((step) => [step.index, { targets }]),
+      ),
       dns,
       windowEndsAt: null,
     });

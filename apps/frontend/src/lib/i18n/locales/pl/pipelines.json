@@ -108,7 +108,7 @@
     },
     "targets": {
       "title": "Cele",
-      "hint": "Co skanuje każde uruchomienie, wybrane z inwentarza celów. Adresy spoza inwentarza nigdy nie są skanowane.",
+      "hint": "Co ten krok skanuje przy każdym uruchomieniu, wybrane z inwentarza celów. Adresy spoza inwentarza nigdy nie są skanowane.",
       "select": "Tagi i cele",
       "selectHint": "Zaznacz tag, aby objąć każdy cel, który go ma, albo zaznacz pojedyncze cele. Nic nie zaznaczono: wszystkie cele z inwentarza.",
       "picker": {
@@ -125,7 +125,7 @@
         "removeTarget": "Usuń {{value}}",
         "removedTarget": "Usunięty cel",
         "noPermission": "Wyświetlenie inwentarza wymaga uprawnienia targets:read. Powyższy wybór pozostaje bez zmian.",
-        "emptyInventory": "Inwentarz celów jest pusty, więc uruchomienie nie miałoby czego skanować.",
+        "emptyInventory": "Inwentarz celów jest pusty, więc ten krok nie miałby czego skanować.",
         "import": "Importuj cele",
         "truncated": "Pokazano {{shown}} z {{total}} celów. Wyszukaj, aby znaleźć pozostałe.",
         "noMatches": "Nic nie pasuje do „{{query}}”.",
@@ -148,8 +148,8 @@
         "missingTargets_few": "{{count}} wybrane cele nie są już w inwentarzu.",
         "missingTargets_many": "{{count}} wybranych celów nie ma już w inwentarzu.",
         "missingTargets_other": "{{count}} wybranego celu nie ma już w inwentarzu.",
-        "nothingMatches": "Żaden cel nie pasuje do tego wyboru, więc uruchomienie nie miałoby czego skanować.",
-        "outsideRanges": "Żaden z wybranych celów nie leży w obrębie poniższych adresów, więc uruchomienie nie miałoby czego skanować."
+        "nothingMatches": "Żaden cel nie pasuje do tego wyboru, więc ten krok nie miałby czego skanować.",
+        "outsideRanges": "Żaden z wybranych celów nie leży w obrębie poniższych adresów, więc ten krok nie miałby czego skanować."
       },
       "ranges": "Tylko w obrębie tych adresów",
       "rangesPlaceholder": "10.40.0.0/18, 192.0.2.10",
@@ -169,7 +169,7 @@
       "dragHandle": "Przeciągnij, aby zmienić kolejność",
       "input": "Skanuje",
       "inputs": {
-        "targets": "Cele potoku",
+        "targets": "Własne cele",
         "previous": "Hosty i otwarte porty z kroku {{index}}"
       },
       "inputUnsupported": "{{worker}} nie przyjmuje takiego wejścia",
@@ -196,7 +196,7 @@
       "workerParams": "Ustawienia: {{worker}}",
       "flow": {
         "previous": "przekazuje znalezione hosty i otwarte porty",
-        "targets": "następny blok sam skanuje cele"
+        "targets": "następny blok skanuje własne cele"
       }
     },
     "schedule": {

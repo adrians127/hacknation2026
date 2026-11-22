@@ -63,7 +63,7 @@ export function PipelinesTable({ pipelines, onRun, onToggleSchedule, onDelete }:
           id: "targets",
           header: t("list.columns.targets"),
           cell: ({ row: { original: pipeline } }) => (
-            <span className="text-sm">{targetsSummary(pipeline.targets)}</span>
+            <span className="text-sm">{targetsSummary(pipeline.steps)}</span>
           ),
         }),
         column.display({

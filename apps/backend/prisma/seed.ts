@@ -2,6 +2,7 @@
 import { z } from "zod";
 
 import { env } from "~backend/config/env";
+import { Prisma } from "~backend/generated/prisma/client";
 import { prisma } from "~backend/lib/prisma";
 import { defaultSteps } from "~backend/modules/pipelines/steps";
 import { syncSystemRoles } from "~backend/modules/roles/system-roles";
@@ -35,6 +36,7 @@ async function ensureDefaultPipeline(ownerEmail: string): Promise<"created" | "e
       position: index + 1,
       workerId: worker.id,
       input: step.input,
+      targetSelector: step.input === "targets" ? { tags: [], targetIds: [], ranges: [] } : Prisma.DbNull,
       ports: step.ports,
       rate: Math.min(step.rate, worker.maxRate),
       batchSize: step.batchSize,
@@ -47,7 +49,6 @@ async function ensureDefaultPipeline(ownerEmail: string): Promise<"created" | "e
     data: {
       name: DEFAULT_PIPELINE_NAME,
       description: "Masscan over every target, then Nmap on the open ports it found.",
-      targetSelector: { tags: [], ranges: [] },
       createdById: owner.id,
       steps: { create: steps },
     },

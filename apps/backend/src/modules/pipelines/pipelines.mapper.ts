@@ -8,7 +8,7 @@ import {
 import { WorkerParamsSchema } from "@subsurf/contracts/workers/worker-catalog";
 
 import type { Prisma, Scan } from "~backend/generated/prisma/client";
-import { readSelector } from "~backend/modules/pipelines/pipeline-runs.service";
+import { readSelector } from "~backend/modules/pipelines/target-selection";
 
 export const PIPELINE_INCLUDE = {
   steps: { include: { worker: true }, orderBy: { position: "asc" } },
@@ -43,6 +43,7 @@ function toStep(step: StepRow): PipelineStepDetail {
       enabled: step.worker.enabled,
     },
     input: step.input,
+    targets: step.input === "targets" ? readSelector(step.targetSelector) : null,
     ports: step.ports,
     rate: step.rate,
     batchSize: step.batchSize,
@@ -62,7 +63,6 @@ export function toPipeline(
     name: row.name,
     description: row.description,
     enabled: row.enabled,
-    targets: readSelector(row.targetSelector),
     steps: row.steps.map(toStep),
     schedule: schedule.success ? schedule.data : null,
     nextRunAt: row.nextRunAt?.toISOString() ?? null,

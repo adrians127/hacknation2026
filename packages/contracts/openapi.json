@@ -264,50 +264,6 @@
           "enabled": {
             "type": "boolean"
           },
-          "targets": {
-            "type": "object",
-            "properties": {
-              "tags": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 50,
-                  "pattern": "\\S"
-                },
-                "maxItems": 20
-              },
-              "targetIds": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "maxItems": 1000
-              },
-              "ranges": {
-                "type": "array",
-                "items": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "format": "ip"
-                    },
-                    {
-                      "type": "string",
-                      "format": "ipv4-cidr"
-                    }
-                  ]
-                },
-                "maxItems": 1000
-              }
-            },
-            "required": [
-              "tags",
-              "targetIds",
-              "ranges"
-            ]
-          },
           "steps": {
             "type": "array",
             "items": {
@@ -322,6 +278,53 @@
                   "enum": [
                     "targets",
                     "previous"
+                  ]
+                },
+                "targets": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 50,
+                        "pattern": "\\S"
+                      },
+                      "maxItems": 20
+                    },
+                    "targetIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "maxItems": 1000
+                    },
+                    "ranges": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          {
+                            "type": "string",
+                            "format": "ipv4-cidr"
+                          }
+                        ]
+                      },
+                      "maxItems": 1000
+                    }
+                  },
+                  "required": [
+                    "tags",
+                    "targetIds",
+                    "ranges"
                   ]
                 },
                 "ports": {
@@ -425,6 +428,7 @@
               "required": [
                 "workerId",
                 "input",
+                "targets",
                 "ports",
                 "rate",
                 "batchSize",
@@ -652,7 +656,6 @@
           "name",
           "description",
           "enabled",
-          "targets",
           "steps",
           "schedule",
           "nextRunAt",
@@ -678,50 +681,6 @@
           "enabled": {
             "type": "boolean"
           },
-          "targets": {
-            "type": "object",
-            "properties": {
-              "tags": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 50,
-                  "pattern": "\\S"
-                },
-                "maxItems": 20
-              },
-              "targetIds": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "maxItems": 1000
-              },
-              "ranges": {
-                "type": "array",
-                "items": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "format": "ip"
-                    },
-                    {
-                      "type": "string",
-                      "format": "ipv4-cidr"
-                    }
-                  ]
-                },
-                "maxItems": 1000
-              }
-            },
-            "required": [
-              "tags",
-              "targetIds",
-              "ranges"
-            ]
-          },
           "steps": {
             "type": "array",
             "items": {
@@ -736,6 +695,53 @@
                   "enum": [
                     "targets",
                     "previous"
+                  ]
+                },
+                "targets": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 50,
+                        "pattern": "\\S"
+                      },
+                      "maxItems": 20
+                    },
+                    "targetIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "maxItems": 1000
+                    },
+                    "ranges": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          {
+                            "type": "string",
+                            "format": "ipv4-cidr"
+                          }
+                        ]
+                      },
+                      "maxItems": 1000
+                    }
+                  },
+                  "required": [
+                    "tags",
+                    "targetIds",
+                    "ranges"
                   ]
                 },
                 "ports": {
@@ -839,6 +845,7 @@
               "required": [
                 "workerId",
                 "input",
+                "targets",
                 "ports",
                 "rate",
                 "batchSize",
@@ -1136,7 +1143,6 @@
           "name",
           "description",
           "enabled",
-          "targets",
           "steps",
           "schedule",
           "nextRunAt",
@@ -6082,50 +6088,6 @@
                           "enabled": {
                             "type": "boolean"
                           },
-                          "targets": {
-                            "type": "object",
-                            "properties": {
-                              "tags": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 50,
-                                  "pattern": "\\S"
-                                },
-                                "maxItems": 20
-                              },
-                              "targetIds": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string",
-                                  "format": "uuid"
-                                },
-                                "maxItems": 1000
-                              },
-                              "ranges": {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "format": "ip"
-                                    },
-                                    {
-                                      "type": "string",
-                                      "format": "ipv4-cidr"
-                                    }
-                                  ]
-                                },
-                                "maxItems": 1000
-                              }
-                            },
-                            "required": [
-                              "tags",
-                              "targetIds",
-                              "ranges"
-                            ]
-                          },
                           "steps": {
                             "type": "array",
                             "items": {
@@ -6140,6 +6102,53 @@
                                   "enum": [
                                     "targets",
                                     "previous"
+                                  ]
+                                },
+                                "targets": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "tags": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50,
+                                        "pattern": "\\S"
+                                      },
+                                      "maxItems": 20
+                                    },
+                                    "targetIds": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "maxItems": 1000
+                                    },
+                                    "ranges": {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "format": "ip"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "format": "ipv4-cidr"
+                                          }
+                                        ]
+                                      },
+                                      "maxItems": 1000
+                                    }
+                                  },
+                                  "required": [
+                                    "tags",
+                                    "targetIds",
+                                    "ranges"
                                   ]
                                 },
                                 "ports": {
@@ -6243,6 +6252,7 @@
                               "required": [
                                 "workerId",
                                 "input",
+                                "targets",
                                 "ports",
                                 "rate",
                                 "batchSize",
@@ -6470,7 +6480,6 @@
                           "name",
                           "description",
                           "enabled",
-                          "targets",
                           "steps",
                           "schedule",
                           "nextRunAt",
@@ -6514,7 +6523,7 @@
       "post": {
         "operationId": "createPipeline",
         "summary": "Create a pipeline from worker steps",
-        "description": "Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). `targets` picks inventory targets with any of its `tags` or listed in `targetIds` (every target when both are empty), narrowed to its `ranges`. The first step scans the pipeline's targets; a later one may take the previous step's up hosts and open ports instead (`input: previous`).",
+        "description": "Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). Each step with `input: targets` has its own `targets`, which picks inventory targets with any of its `tags` or listed in `targetIds` (every target when both are empty), narrowed to its `ranges`. The first step scans targets; a later one may instead take the previous step's up hosts and open ports (`input: previous`, `targets: null`).",
         "tags": [
           "Pipelines"
         ],
@@ -6542,50 +6551,6 @@
                   "enabled": {
                     "type": "boolean"
                   },
-                  "targets": {
-                    "type": "object",
-                    "properties": {
-                      "tags": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 50,
-                          "pattern": "\\S"
-                        },
-                        "maxItems": 20
-                      },
-                      "targetIds": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "maxItems": 1000
-                      },
-                      "ranges": {
-                        "type": "array",
-                        "items": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "format": "ip"
-                            },
-                            {
-                              "type": "string",
-                              "format": "ipv4-cidr"
-                            }
-                          ]
-                        },
-                        "maxItems": 1000
-                      }
-                    },
-                    "required": [
-                      "tags",
-                      "targetIds",
-                      "ranges"
-                    ]
-                  },
                   "steps": {
                     "type": "array",
                     "items": {
@@ -6600,6 +6565,53 @@
                           "enum": [
                             "targets",
                             "previous"
+                          ]
+                        },
+                        "targets": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 50,
+                                "pattern": "\\S"
+                              },
+                              "maxItems": 20
+                            },
+                            "targetIds": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "maxItems": 1000
+                            },
+                            "ranges": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "ip"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "format": "ipv4-cidr"
+                                  }
+                                ]
+                              },
+                              "maxItems": 1000
+                            }
+                          },
+                          "required": [
+                            "tags",
+                            "targetIds",
+                            "ranges"
                           ]
                         },
                         "ports": {
@@ -6675,6 +6687,7 @@
                       "required": [
                         "workerId",
                         "input",
+                        "targets",
                         "ports",
                         "rate",
                         "batchSize",
@@ -6746,7 +6759,6 @@
                   "name",
                   "description",
                   "enabled",
-                  "targets",
                   "steps",
                   "schedule"
                 ]
@@ -7057,50 +7069,6 @@
                   "enabled": {
                     "type": "boolean"
                   },
-                  "targets": {
-                    "type": "object",
-                    "properties": {
-                      "tags": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 50,
-                          "pattern": "\\S"
-                        },
-                        "maxItems": 20
-                      },
-                      "targetIds": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "maxItems": 1000
-                      },
-                      "ranges": {
-                        "type": "array",
-                        "items": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "format": "ip"
-                            },
-                            {
-                              "type": "string",
-                              "format": "ipv4-cidr"
-                            }
-                          ]
-                        },
-                        "maxItems": 1000
-                      }
-                    },
-                    "required": [
-                      "tags",
-                      "targetIds",
-                      "ranges"
-                    ]
-                  },
                   "steps": {
                     "type": "array",
                     "items": {
@@ -7115,6 +7083,53 @@
                           "enum": [
                             "targets",
                             "previous"
+                          ]
+                        },
+                        "targets": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 50,
+                                "pattern": "\\S"
+                              },
+                              "maxItems": 20
+                            },
+                            "targetIds": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "maxItems": 1000
+                            },
+                            "ranges": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "ip"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "format": "ipv4-cidr"
+                                  }
+                                ]
+                              },
+                              "maxItems": 1000
+                            }
+                          },
+                          "required": [
+                            "tags",
+                            "targetIds",
+                            "ranges"
                           ]
                         },
                         "ports": {
@@ -7190,6 +7205,7 @@
                       "required": [
                         "workerId",
                         "input",
+                        "targets",
                         "ports",
                         "rate",
                         "batchSize",
@@ -7388,7 +7404,7 @@
       "post": {
         "operationId": "runPipeline",
         "summary": "Run a pipeline now",
-        "description": "Requires `scans:run`. Queues a scan of the pipeline's targets with its current steps; a schedule's time window does not apply to a manual run.",
+        "description": "Requires `scans:run`. Queues a scan with the pipeline's current steps, each over its own targets; a schedule's time window does not apply to a manual run.",
         "tags": [
           "Pipelines"
         ],
