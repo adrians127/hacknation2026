@@ -2,8 +2,12 @@
 #
 #   pnpm workers:build    build the masscan-worker image
 #   pnpm workers:masscan  one-shot masscan sweep: pnpm workers:masscan < job.json
+#   pnpm workers:manager  build and run worker-manager on its example job list; results
+#                         land in worker-results/<run-id>/ at the repo root
 #   pnpm workers:nmap:build  build and test the nmap-worker image
 #   pnpm workers:nmap        one-shot Nmap job: pnpm workers:nmap < job.json
+#   pnpm workers:httpx:build build and test the httpx-worker image
+#   pnpm workers:httpx       one-shot HTTP job: pnpm workers:httpx < job.json
 #
 # nmap-worker is not needed for now and sits behind the `nmap` profile:
 #   docker compose -f docker/docker-compose.workers.yml --profile nmap up -d --build
@@ -35,6 +39,31 @@ services:
       - NET_RAW
       - NET_ADMIN
 
+  httpx-worker:
+    profiles: ["httpx"]
+    build:
+      context: ../apps/workers/httpx-worker
+      args:
+        UBUNTU_IMAGE: ${UBUNTU_IMAGE:-ubuntu}
+        HTTPX_VERSION: ${HTTPX_VERSION:-v1.12.0}
+    image: hacknation/httpx-worker:local
+    restart: "no"
+    environment:
+      HTTPX_WORKER_MAX_RATE: ${HTTPX_WORKER_MAX_RATE:-25}
+      HTTPX_WORKER_MAX_THREADS: ${HTTPX_WORKER_MAX_THREADS:-10}
+
+  tlsx-worker:
+    profiles: ["tlsx"]
+    build:
+      context: ../apps/workers/tlsx-worker
+      args:
+        UBUNTU_IMAGE: ${UBUNTU_IMAGE:-ubuntu}
+        TLSX_VERSION: ${TLSX_VERSION:-v1.5.0}
+    image: hacknation/tlsx-worker:local
+    restart: "no"
+    environment:
+      TLSX_WORKER_MAX_RATE: ${TLSX_WORKER_MAX_RATE:-25}
+
   # One-shot CLI: one JSON job on stdin, the result on stdout (see its README).
   #   docker compose -f docker/docker-compose.workers.yml run --rm -T masscan-worker < job.json
   masscan-worker:
@@ -57,6 +86,88 @@ services:
       MASSCAN_WORKER_DEFAULT_RATE: ${MASSCAN_WORKER_DEFAULT_RATE:-10000}
       MASSCAN_WORKER_MAX_RATE: ${MASSCAN_WORKER_MAX_RATE:-100000}
       MASSCAN_WORKER_MAX_TARGETS: ${MASSCAN_WORKER_MAX_TARGETS:-16777216}
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
+  naabu-worker:
+    build:
+      context: ../apps/workers/naabu-worker
+      args:
+        UBUNTU_IMAGE: ${UBUNTU_IMAGE:-ubuntu}
+        NAABU_VERSION: ${NAABU_VERSION:-v2.7.0}
+        TLSX_VERSION: ${TLSX_VERSION:-v1.5.0}
+    image: hacknation/naabu-worker:local
+    restart: "no"
+    network_mode: host
+    environment:
+      NAABU_WORKER_DEFAULT_RATE: ${NAABU_WORKER_DEFAULT_RATE:-1000}
+      NAABU_WORKER_MAX_RATE: ${NAABU_WORKER_MAX_RATE:-100000}
+      NAABU_WORKER_MAX_TARGETS: ${NAABU_WORKER_MAX_TARGETS:-16777216}
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
+  # CLI (profile `cli`): reads a job list or polls the backend, runs the requested
+  # workers and writes everything to worker-results/<run-id>/. See its README.
+  #   docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager
+  #   ... run --rm worker-manager --input /jobs/other.json --output-dir /results
+  #   ... run --rm worker-manager --poll --output-dir /results   (long-polls the backend)
+  worker-manager:
+    profiles: ["cli"]
+    build:
+      # apps/workers, not the manager's own directory: the image builds all four projects.
+      context: ../apps/workers
+      dockerfile: worker-manager/Dockerfile
+      args:
+        UBUNTU_IMAGE: ${UBUNTU_IMAGE:-ubuntu}
+        HTTPX_VERSION: ${HTTPX_VERSION:-v1.12.0}
+        NAABU_VERSION: ${NAABU_VERSION:-v2.7.0}
+    image: hacknation/worker-manager:local
+    restart: "no"
+    # Same reasons as masscan-worker: masscan needs the host's real NIC (Linux hosts only).
+    network_mode: host
+    # Result files on the host belong to you, not to the image's `worker` user.
+    user: "${WORKER_UID:-1000}:${WORKER_GID:-1000}"
+    environment:
+      WORKER_MANAGER_LOG_LEVEL: ${WORKER_MANAGER_LOG_LEVEL:-info}
+      WORKER_MANAGER_LOG_FORMAT: ${WORKER_MANAGER_LOG_FORMAT:-text}
+      WORKER_MANAGER_STAGES: ${WORKER_MANAGER_STAGES:-masscan,naabu,nmap,httpx,tlsx}
+      WORKER_MANAGER_MAX_RATE: ${WORKER_MANAGER_MAX_RATE:-100000}
+      WORKER_MANAGER_MIN_TASK_RATE: ${WORKER_MANAGER_MIN_TASK_RATE:-1000}
+      # NMAP_MAX_PARALLEL x NMAP_MAX_RATE_PER_PROCESS below; keep them in step.
+      WORKER_MANAGER_WORKER_MAX_RATE: ${WORKER_MANAGER_WORKER_MAX_RATE:-nmap=100,httpx=25,tlsx=25}
+      WORKER_MANAGER_MAX_PARALLEL: ${WORKER_MANAGER_MAX_PARALLEL:-2}
+      WORKER_MANAGER_MAX_TASKS_PER_JOB: ${WORKER_MANAGER_MAX_TASKS_PER_JOB:-16}
+      WORKER_MANAGER_DEADLINE_MARGIN: ${WORKER_MANAGER_DEADLINE_MARGIN:-10}
+      WORKER_MANAGER_KILL_GRACE: ${WORKER_MANAGER_KILL_GRACE:-30}
+      # --poll only. Host networking, so localhost is the backend from `pnpm dev`.
+      WORKER_MANAGER_BACKEND_URL: ${BACKEND_URL:-http://localhost:3001/v1}
+      WORKER_MANAGER_TOKEN: ${WORKER_TOKEN:-}
+      WORKER_MANAGER_ID: ${WORKER_MANAGER_ID:-}
+      WORKER_MANAGER_POLL_WAIT: ${WORKER_MANAGER_POLL_WAIT:-30}
+      WORKER_MANAGER_RETRY_DELAY: ${WORKER_MANAGER_RETRY_DELAY:-5}
+      WORKER_MANAGER_UPLOAD_ATTEMPTS: ${WORKER_MANAGER_UPLOAD_ATTEMPTS:-5}
+      # Inherited by every masscan-worker the manager starts.
+      MASSCAN_WORKER_LOG_LEVEL: ${MASSCAN_WORKER_LOG_LEVEL:-info}
+      MASSCAN_WORKER_DEFAULT_RATE: ${MASSCAN_WORKER_DEFAULT_RATE:-10000}
+      MASSCAN_WORKER_MAX_RATE: ${MASSCAN_WORKER_MAX_RATE:-100000}
+      MASSCAN_WORKER_MAX_TARGETS: ${MASSCAN_WORKER_MAX_TARGETS:-16777216}
+      NAABU_WORKER_DEFAULT_RATE: ${NAABU_WORKER_DEFAULT_RATE:-1000}
+      NAABU_WORKER_MAX_RATE: ${NAABU_WORKER_MAX_RATE:-100000}
+      NAABU_WORKER_MAX_TARGETS: ${NAABU_WORKER_MAX_TARGETS:-16777216}
+      NMAP_SCAN_TYPE: ${NMAP_SCAN_TYPE:-syn}
+      NMAP_MAX_PARALLEL: ${NMAP_MAX_PARALLEL:-2}
+      NMAP_MAX_RATE_PER_PROCESS: ${NMAP_MAX_RATE_PER_PROCESS:-50}
+      # Nmap checks this even when its binary already has the required file capabilities.
+      NMAP_PRIVILEGED: "1"
+      HTTPX_WORKER_MAX_RATE: ${HTTPX_WORKER_MAX_RATE:-25}
+      HTTPX_WORKER_MAX_THREADS: ${HTTPX_WORKER_MAX_THREADS:-10}
+      TLSX_WORKER_MAX_RATE: ${TLSX_WORKER_MAX_RATE:-25}
+    volumes:
+      # Mounted, not baked in: edit example.json (or add job lists) without a rebuild.
+      - ../apps/workers/worker-manager/examples:/jobs:ro
+      - ../worker-results:/results
     cap_add:
       - NET_RAW
       - NET_ADMIN

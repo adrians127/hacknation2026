@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-export const ScanStatusSchema = z.enum(["queued", "running", "completed", "stopped", "failed"]);
+/** `paused`: the pipeline's time window closed with jobs left; the next run time resumes it. */
+export const ScanStatusSchema = z.enum(["queued", "running", "paused", "completed", "stopped", "failed"]);
+
+/** What queued the scan: a target import, "Run now" on a pipeline, or the pipeline's schedule. */
+export const ScanTriggerSchema = z.enum(["import", "manual", "schedule"]);
 
 const CountSchema = z.number().int().nonnegative();
 
@@ -27,6 +31,11 @@ export const ScanSchema = z.object({
   /** Addresses with a result so far; the rest are still queued. */
   hosts: ScanHostCountsSchema,
   openPorts: CountSchema,
+  /** `null` for a scan queued by an import, or once its pipeline was deleted. */
+  pipeline: z.object({ id: z.uuid(), name: z.string() }).nullable(),
+  trigger: ScanTriggerSchema,
+  /** When the current time window closes; `null` without one. */
+  windowEndsAt: z.iso.datetime().nullable(),
 });
 
 export const ScanListResponseSchema = z.object({ items: z.array(ScanSchema) });
@@ -65,6 +74,7 @@ export const QueuedScanSchema = z.object({
 });
 
 export type ScanStatus = z.infer<typeof ScanStatusSchema>;
+export type ScanTrigger = z.infer<typeof ScanTriggerSchema>;
 export type ScanHostCounts = z.infer<typeof ScanHostCountsSchema>;
 export type Scan = z.infer<typeof ScanSchema>;
 export type ScanListResponse = z.infer<typeof ScanListResponseSchema>;

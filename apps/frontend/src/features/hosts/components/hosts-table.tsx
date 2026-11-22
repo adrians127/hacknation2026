@@ -15,6 +15,7 @@ import { ServicesTable, type RowSelection } from "@/features/hosts/components/se
 import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageControl } from "@/features/hosts/components/triage-control";
 import { CHANGE_CLASS } from "@/features/hosts/lib/badges";
+import { VulnerabilitySummaryBadge } from "@/features/vulnerabilities/components/vulnerability-summary";
 import { createDataTableColumns } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +71,7 @@ export function HostsTable({
   selection,
 }: HostsTableProps) {
   const { t } = useTranslation("hosts");
+  const { t: tv } = useTranslation("vulnerabilities");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
 
   const toggle = useCallback((id: string) => {
@@ -169,6 +171,11 @@ export function HostsTable({
           enableSorting: false,
           cell: ({ getValue }) => <PortChips services={getValue()} />,
         }),
+        column.accessor("vulnerabilities", {
+          header: tv("columns.vulnerabilities"),
+          enableSorting: false,
+          cell: ({ getValue }) => <VulnerabilitySummaryBadge summary={getValue()} />,
+        }),
         column.accessor("triage", {
           header: t("columns.triage"),
           enableSorting: false,
@@ -205,7 +212,7 @@ export function HostsTable({
           ),
         }),
       ]),
-    [t, compared, expanded, toggle, onOpen, onEditHost, selection],
+    [t, tv, compared, expanded, toggle, onOpen, onEditHost, selection],
   );
 
   return (

@@ -1,0 +1,12 @@
+/// A worker-manager instance, as its last lease request described it. Written by the lease
+/// endpoint only.
+model WorkerManager {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  managerId   String   @unique
+  version     String
+  /// Worker names it has a binary for.
+  workers     String[]
+  maxParallel Int
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+}

@@ -7,9 +7,12 @@ import { z } from "zod";
  */
 export const NonBlankStringSchema = z.string().min(1).regex(/\S/, "Must not be blank");
 
-/** User-assigned labels on inventory items (targets, hosts, services). */
-export const MAX_TAGS = 20;
+/** One user-assigned label on an inventory item (target, host, service). */
 export const TagSchema = NonBlankStringSchema.max(50);
+
+/** Most tags one item may carry; bulk tagging skips items already at the limit. */
+export const MAX_TAGS = 20;
+
 export const TagsSchema = z.array(TagSchema).max(MAX_TAGS);
 
 /** Machine-readable reason, so the frontend can tell 401/403/409 cases apart and translate them. */
@@ -26,6 +29,17 @@ export const ErrorCodeSchema = z.enum([
   "ROLE_IN_USE",
   "EMAIL_TAKEN",
   "ROLE_NAME_TAKEN",
+  "PACKAGE_MAPPING_EXISTS",
+  "SOURCE_DISABLED",
+  "BASE_SCAN_NOT_OLDER",
+  "PIPELINE_NAME_TAKEN",
+  "PIPELINE_RUN_ACTIVE",
+  "NO_SCANNABLE_TARGETS",
+  "WORKER_DISABLED",
+  "WORKER_IN_USE",
+  "WORKER_BUILTIN",
+  "PORTS_NOT_ALLOWED",
+  "SCAN_NOT_STOPPABLE",
   "DEFECTDOJO_NOT_CONFIGURED",
   "DEFECTDOJO_UNAVAILABLE",
   "DEFECTDOJO_SYNC_RUNNING",

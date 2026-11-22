@@ -1,0 +1,75 @@
+{
+  "scan": {
+    "jobId": "0193a000-0000-7000-8000-000000000001",
+    "leaseId": "lease-0001",
+    "scanId": "0193a000-0000-7000-8000-000000000000",
+    "worker": {
+      "id": "naabu-worker",
+      "version": "0.1.0",
+      "nmapVersion": null
+    },
+    "status": "completed",
+    "stopReason": null,
+    "startedAt": "2026-11-22T02:46:29.471Z",
+    "finishedAt": "2026-11-22T02:46:29.534Z",
+    "durationMs": 62,
+    "phasesMs": {
+      "hostDiscovery": 0,
+      "portScan": 53,
+      "serviceDetection": 0,
+      "http": 0
+    },
+    "params": {
+      "subnet": "127.0.0.1/32",
+      "ports": "80",
+      "maxParallel": 1,
+      "maxRatePerProcess": 100,
+      "hostTimeoutMs": null,
+      "httpTimeoutMs": null,
+      "maxBodyBytes": null,
+      "maxRedirects": null,
+      "nmapArgs": []
+    },
+    "counts": {
+      "addresses": 1,
+      "up": 1,
+      "down": 0,
+      "timeout": 0,
+      "cancelled": 0,
+      "failed": 0,
+      "openPorts": 1,
+      "httpEndpoints": 0,
+      "httpRequests": 0
+    },
+    "error": null
+  },
+  "hosts": [
+    {
+      "ip": "127.0.0.1",
+      "status": "up",
+      "reason": null,
+      "observedAt": "2026-11-22T02:46:29.532Z",
+      "latencyMs": null,
+      "hostnames": [],
+      "error": null,
+      "ports": [
+        {
+          "port": 80,
+          "protocol": "tcp",
+          "state": "open",
+          "reason": null,
+          "service": null,
+          "identity": {
+            "ttl": null,
+            "sshHostKeySha256": null,
+            "tlsCertSha256": null
+          },
+          "banner": null,
+          "scripts": [],
+          "tls": [],
+          "http": []
+        }
+      ]
+    }
+  ]
+}

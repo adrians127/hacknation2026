@@ -6,17 +6,15 @@
 #include <string>
 #include <vector>
 
-namespace nmap_worker {
+#include "address.hpp"
+#include "error.hpp"
 
-struct Error {
-    std::string code{};
-    std::string message{};
-};
+namespace nmap_worker {
 
 struct Target {
     std::string ip{};
     std::vector<std::string> domains{};
-    std::vector<std::uint16_t> tcp_ports{};
+    std::vector<PortRange> ports{};  // merged
 };
 
 struct ScanLimits {
@@ -32,9 +30,14 @@ struct ScanJob {
     std::string job_id{};
     std::string lease_id{};
     std::string scan_id{};
+    // The targets' single aligned CIDR, or empty (scan.params.subnet is then null).
     std::string subnet{};
+    // now + `max_duration_seconds`, set when the job is read.
     std::chrono::system_clock::time_point deadline{};
     ScanLimits limits{};
+    // Total packets per second for the job (worker-manager's shared `rate`), split across the
+    // parallel Nmap processes; it only ever lowers `limits`.
+    std::optional<std::uint32_t> rate{};
     std::vector<std::string> probe_paths{};
     std::vector<Target> targets{};
 };

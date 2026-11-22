@@ -1,9 +1,12 @@
 // Demo scan data, run by `pnpm db:seed:hosts` after `pnpm db:seed` (or `pnpm db:reset`).
-// Two runs over a /18 through the real ingest path; see "Demo data" in the backend README.
+// Four runs over a /18 through the real ingest path; see "Demo data" in the backend README.
 import { parseArgs } from "node:util";
 
 import { seedDemoHosts } from "~backend/demo/seed";
+import { loadDemoVulnerabilities } from "~backend/demo/vulnerabilities/load";
+import { logger } from "~backend/lib/logger";
 import { prisma } from "~backend/lib/prisma";
+import { rematch } from "~backend/modules/vulnerabilities/matching/matching.service";
 
 const { values } = parseArgs({ options: { json: { type: "string" } } });
 
@@ -20,10 +23,18 @@ async function main(): Promise<void> {
   }
 
   const started = performance.now();
+  await loadDemoVulnerabilities((message) => console.log(message));
   const summary = await seedDemoHosts(prisma, {
     requestedById: admin.id,
     jsonDir: values.json,
     log: (message) => console.log(message),
+    // Matched after each run, so the second run's upgrades retract what they fixed.
+    afterRun: async (run) => {
+      const stats = await rematch("all", logger.child({ proc: "seed" }));
+      console.log(
+        `Run ${run.number} vulnerabilities: ${stats.added} matched, ${stats.retracted} retracted`,
+      );
+    },
   });
   const seconds = ((performance.now() - started) / 1000).toFixed(1);
   console.log(

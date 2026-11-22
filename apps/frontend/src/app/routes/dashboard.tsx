@@ -8,7 +8,7 @@ export function DashboardRoute() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader title={t("dashboard.title")} description={t("dashboard.subtitle")} mocked />
+      <PageHeader title={t("dashboard.title")} description={t("dashboard.subtitle")} />
       <DashboardView />
     </div>
   );

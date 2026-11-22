@@ -39,7 +39,10 @@ Importing in apps: `import { HealthResponseSchema } from "@subsurf/contracts/hea
 
 The package is otherwise schemas only. `src/targets/target-input.ts` (with `ipv4.ts`) is the deliberate exception: the frontend runs it for the import form's live preview, and the backend runs the same code to validate (`ImportTargetsBodySchema`) and normalize the request. Keeping one copy guarantees that what the preview accepts is what the API accepts.
 
-- Accepts IPv4 addresses, IPv4 CIDRs up to /16 and domains; rejects IPv6 and the reserved ranges in `RESERVED_IPV4_CIDRS`. Limits are in `TARGET_IMPORT_LIMITS`.
+- Accepts IPv4 addresses, IPv4 CIDRs up to /16, IPv4 ranges (`10.0.0.1-10.0.0.200`, nmap's `10.0.0.1-200`) of at most a /16's worth of addresses, and domains. Rejects IPv6 and the reserved ranges in `RESERVED_IPV4_CIDRS`. Limits are in `TARGET_IMPORT_LIMITS`.
+- A range is never stored as such: `collectTargets` splits it into the fewest CIDR blocks (`rangeToCidrs`), each one a separate `ip`/`cidr` target with the range's note. So the database and the workers only ever see the three `TargetKind`s.
+- An entry inside another one (an IP in a CIDR, a CIDR in a range) gets a `covered_by` warning and is kept, since it may carry its own note. Addresses are counted once either way.
+- `splitTargetText` is the line/CSV splitting step alone; the import form's entry field uses it so a pasted `value, note` line behaves as in the text tab.
 - Issue and list-error codes are zod enums, so the frontend translates them.
 - Tests: `pnpm --filter @subsurf/contracts test` (Vitest, next to the code). Code here must stay free of Node- and DOM-only APIs, since both apps compile it.
 

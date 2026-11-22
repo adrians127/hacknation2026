@@ -1,0 +1,172 @@
+{
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "none": "None",
+    "unknown": "Unknown"
+  },
+  "confidence": {
+    "confirmed": "Confirmed",
+    "potential": "Potential"
+  },
+  "reasons": {
+    "version_unknown": "The scan did not report a version",
+    "distro_backport_possible": "Distribution package: the fix may be backported without a version change",
+    "fixed_by_backport": "Fixed in this package revision by the distribution (backport)",
+    "platform_condition": "Affected only on a platform the scan could not confirm"
+  },
+  "retractReasons": {
+    "source_withdrawn": "the source withdrew the record",
+    "criteria_changed": "the record's affected versions changed",
+    "service_changed": "a later scan saw other software",
+    "source_disabled": "the source is disabled"
+  },
+  "triage": {
+    "unreviewed": "Unreviewed",
+    "important": "Important",
+    "accepted_risk": "Accepted risk",
+    "false_positive": "False positive"
+  },
+  "verdict": {
+    "affected": "affected",
+    "not_affected": "not affected",
+    "unknown": "unknown"
+  },
+  "summary": {
+    "none": "None known",
+    "confirmed_one": "{{count}} vulnerability",
+    "confirmed_other": "{{count}} vulnerabilities",
+    "potential_one": "+{{count}} potential",
+    "potential_other": "+{{count}} potential",
+    "kev": "KEV",
+    "kevHint": "In the CISA Known Exploited Vulnerabilities catalog",
+    "label": "{{confirmed}} confirmed, {{potential}} potential, highest severity: {{severity}}"
+  },
+  "service": {
+    "heading": "Vulnerabilities",
+    "empty": "No known vulnerabilities for what the scan identified.",
+    "showPotential_one": "Show {{count}} potential vulnerability",
+    "showPotential_other": "Show {{count}} potential vulnerabilities",
+    "hidePotential": "Hide potential vulnerabilities",
+    "showRetracted_one": "Show {{count}} retracted",
+    "showRetracted_other": "Show {{count}} retracted",
+    "hideRetracted": "Hide retracted",
+    "basisOtherScan": "Evaluated on the newest scan of this service ({{date}}), not this one",
+    "notSeenInLatest": "Not seen in the latest scan: the matches stay until the service changes",
+    "kevSince": "Known exploited (CISA KEV) since {{date}}",
+    "published": "Published {{date}}",
+    "firstMatched": "Matched since {{date}}",
+    "retracted": "Retracted {{date}}: {{reason}}",
+    "sources": "Sources",
+    "references": "References",
+    "note": "Note",
+    "notePlaceholder": "Why this verdict, what was checked…",
+    "saveNote": "Save note",
+    "triageOf": "Triage of {{id}}",
+    "more": "More",
+    "less": "Less"
+  },
+  "filter": {
+    "label": "Vulnerabilities",
+    "all": "Any vulnerabilities",
+    "options": {
+      "any": "With confirmed vulnerabilities",
+      "critical": "With critical ones",
+      "high": "With high or critical ones",
+      "kev": "Known exploited (KEV)"
+    }
+  },
+  "columns": {
+    "vulnerabilities": "Vulnerabilities"
+  },
+  "sources": {
+    "title": "Vulnerability databases",
+    "description": "Public databases mirrored into SubSurf and matched against the services the scans find.",
+    "processInactive": "The sync process is not running: syncs and “Sync now” wait until someone starts `pnpm vulns:sync`.",
+    "processActive": "The sync process is running.",
+    "records": "Records",
+    "lastFull": "Last full sync",
+    "lastIncremental": "Last incremental sync",
+    "nextSync": "Next sync",
+    "never": "Never",
+    "scopes": "Ecosystems",
+    "baseUrl": "Downloaded from",
+    "lastError": "Last error",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "toggle": "Enable {{name}}",
+    "syncNow": "Sync now",
+    "fullSync": "Full sync",
+    "running": "Syncing ({{mode}}) since {{date}}",
+    "pending": "Waiting for the sync process ({{kind}})",
+    "runs": "History",
+    "runsTitle": "Sync history of {{name}}",
+    "runsEmpty": "No syncs yet.",
+    "modes": {
+      "incremental": "incremental",
+      "full": "full"
+    },
+    "triggers": {
+      "schedule": "schedule",
+      "manual": "manual",
+      "cli": "command line"
+    },
+    "statuses": {
+      "running": "Running",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "interrupted": "Interrupted"
+    },
+    "requests": {
+      "sync": "incremental sync",
+      "full_sync": "full sync",
+      "rematch": "re-match"
+    },
+    "stats": {
+      "started": "Started",
+      "mode": "Mode",
+      "status": "Status",
+      "records": "Records changed / unchanged",
+      "withdrawn": "Withdrawn",
+      "matches": "Matches added / retracted / back"
+    },
+    "attribution": "This product uses data from the NVD but is not endorsed or certified by the NVD. OSV data comes from many databases under their own licenses (e.g. GitHub Advisory Database, CC-BY 4.0)."
+  },
+  "mappings": {
+    "title": "CPE → package mappings",
+    "description": "Package databases (OSV) describe packages, not the CPE products the scanner reports. A mapping says which package a product is in an ecosystem.",
+    "add": "Add mapping",
+    "empty": "No mappings.",
+    "cpe": "CPE vendor:product",
+    "ecosystem": "Ecosystem",
+    "package": "Package",
+    "addedBy": "Added by",
+    "migration": "Built in",
+    "delete": "Remove mapping {{name}}",
+    "deleteTitle": "Remove the mapping?",
+    "deleteDescription": "{{cpe}} will no longer be matched against {{ecosystem}} {{package}}. Services are re-matched by the sync process.",
+    "form": {
+      "title": "Add a mapping",
+      "description": "Services are re-matched by the sync process after the change.",
+      "vendor": "CPE vendor",
+      "vendorHint": "As in the CPE, e.g. eclipse",
+      "product": "CPE product",
+      "productHint": "e.g. jetty",
+      "packageHint": "As the ecosystem names it, e.g. org.eclipse.jetty:jetty-server",
+      "invalidName": "Lowercase letters, digits and . _ - + only.",
+      "invalidPackage": "Required, without spaces."
+    }
+  },
+  "toast": {
+    "triageSaved": "Triage saved.",
+    "noteSaved": "Note saved.",
+    "syncRequested": "Sync requested. The sync process will start it shortly.",
+    "sourceEnabled": "Source enabled.",
+    "sourceDisabled": "Source disabled. Its matches are retracted at the next re-match.",
+    "mappingAdded": "Mapping added.",
+    "mappingRemoved": "Mapping removed."
+  }
+}

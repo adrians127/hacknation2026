@@ -58,7 +58,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - `apps/workers/<name>`: C++23 + CMake + nmap workers, built and run in Docker. **Not pnpm workspaces** (no `package.json`), so `pnpm build` does not need a local C++ compiler.
 - `packages/contracts`: `@subsurf/contracts`, zod schemas and types. Generates the committed `openapi.json`. A source-only package with no build step.
 - `packages/api-client`: `@subsurf/api-client`, types generated from `openapi.json` + `openapi-fetch`. **The only workspace on TypeScript 6** (`openapi-typescript` needs the JS API that TS 7 no longer ships).
-- `docker/`: Docker Compose. `docker-compose.yml` is infrastructure (PostgreSQL 19, local DefectDojo), `docker-compose.workers.yml` is the scan workers. Not a workspace.
+- `docker/`: Docker Compose. `docker-compose.yml` is infrastructure (PostgreSQL 19, local DefectDojo) plus the whole app in profile `app` (migrations, backend, frontend from `apps/*/Dockerfile`, secrets in `docker/.env`), `docker-compose.workers.yml` is the scan workers. Not a workspace.
 - `docs/`: technical documentation and the presentation.
 
 ## Architecture (settled)
@@ -70,10 +70,11 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
   - Workers work towards producing exactly that structure.
   - The backend builds every scan-data feature on it: storing observations, diffs, dashboard, signatures/detections, export/import, DefectDojo.
   - **Read it before designing any such feature.** Change the document first (with the user's agreement), then the code. The contract (`WorkerResultSchema`) matches it; the `nmap-worker` output does not yet (the document lists the gap).
-- **Worker results → database:** `resultsService.ingest()` writes observations per scan (`ScanJobResult`, `HostObservation`, `HostnameObservation`, `PortObservation` with protocol details as JSONB in `details`) and the `Host`/`Service` assets that live across scans and hold user edits. Details: [`apps/backend/README.md`](apps/backend/README.md#scan-results).
-- **Scan results → users:** hosts are browsed per scan (`GET /scans/{id}/hosts`), with new/gone/changed/unknown computed against the base scan (the previous scan with results) by `modules/scans/scan-diff.ts`. Edits (`PATCH /hosts/...`: note, tags, triage, service corrections) go to the `Host`/`Service` assets, so they show in every scan and survive later ones. Details: [`apps/backend/README.md`](apps/backend/README.md#browsing-scan-results).
+- **Worker results → database:** `POST /workers/manager/results` (worker-manager, `WORKER_TOKEN` bearer) hands each worker run's result to `resultsService.ingest()`; a job split into tasks gives several results under one lease, kept apart by task index. Ingest writes observations per scan (`ScanJobResult`, `HostObservation`, `HostnameObservation`, `PortObservation` with protocol details as JSONB in `details`) and the `Host`/`Service` assets that live across scans and hold user edits. Details: [`apps/backend/README.md`](apps/backend/README.md#scan-results).
+- **Scan results → users:** hosts are browsed per scan (`GET /scans/{id}/hosts`), with new/gone/changed/unknown computed against the base scan (the previous scan with results, or any older scan passed as `?base=`) by `modules/scans/scan-diff.ts`, only where both scans got an answer. The host detail adds field-level changes, and every host carries its lifecycle (active, unstable, missing, inactive). The frontend compares two scans side by side at `/app/scans/compare`. `GET /scans/{id}/changes` exports every change with a priority (JSON/CSV), and `GET /dashboard` shows the newest scan's most important changes. Edits (`PATCH /hosts/...`: note, tags, triage, service corrections) go to the `Host`/`Service` assets, so they show in every scan and survive later ones. `POST /scans/{id}/hosts/tags` adds or removes one tag on the scan's hosts by IP/CIDR. Details: [`apps/backend/README.md`](apps/backend/README.md#browsing-scan-results).
 - **Demo data:** `pnpm db:seed:hosts` seeds realistic results in the locked format (`apps/backend/src/demo/`). Build and try scan-data features on it. Details: [`apps/backend/README.md`](apps/backend/README.md#demo-data).
-- **Targets → scan jobs:** the import (`POST /targets/import`; manual, CSV and JSON all go through the shared parser in `contracts/src/targets/target-input.ts`) fills the `Target` inventory and can queue a `Scan` split into `ScanJob` batches. Workers lease those rows; the lease endpoints are not implemented yet. Details: [`apps/backend/README.md`](apps/backend/README.md#targets-and-scan-jobs).
+- **Targets → scan jobs:** the import (`POST /targets/import`; manual, CSV and JSON all go through the shared parser in `contracts/src/targets/target-input.ts`) fills the `Target` inventory and can queue a `Scan` of the default steps (masscan → nmap) split into `ScanJob` batches. Details: [`apps/backend/README.md`](apps/backend/README.md#targets-and-scan-jobs).
+- **Pipelines → scans → leases:** a pipeline (`modules/pipelines`) is a target selection (tags ∩ ranges), an ordered chain of worker steps and an optional schedule (Temporal, time window). Each run is a `Scan` with its steps snapshotted; later steps get jobs from the previous step's hits as its jobs complete. The worker registry (`Worker`, built-ins from `contracts/src/workers/worker-catalog.ts`) lists the blocks; worker-manager registers itself and its workers on every `POST /workers/manager/lease`, which hands out jobs of enabled workers with the deadline cut at the run's time window. The scheduler runs inside the API (`PIPELINE_SCHEDULER_*`): it fires due pipelines, pauses runs whose window closed and resumes them at the next fire, and re-queues expired leases. Details: [`apps/backend/README.md`](apps/backend/README.md#pipelines-scheduling-and-leasing).
 - **Reports (implemented):** `modules/reports` + `features/reports`, read-only and computed on request from the observations: post-scan summary, findings with a priority score, technologies/CMSs with confidence, port exposure, triage progress, tags, a diff of any two scans, one IP across all scans, unstable hosts and time of day. Each prints to PDF and downloads as JSON/CSV. Details: [`apps/backend/README.md`](apps/backend/README.md#reports).
 - **Auth/RBAC (implemented):**
   - local accounts (argon2id) and a 15-minute access JWT plus a rotating refresh token, both in httpOnly cookies;
@@ -81,6 +82,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
   - the PDF's four roles (item 13) are locked system roles, and admins create custom roles (item 12);
   - details and the rules for mapping new permissions onto system roles: [`apps/backend/README.md`](apps/backend/README.md#auth-and-rbac).
 - **Sensitive data:** encrypted at rest at the application level (AES-256-GCM, `DATA_ENCRYPTION_KEY`, `apps/backend/src/lib/crypto.ts`). Scan results store sensitive JSON fields as `{ "$enc": "v1.…" }`, and host/service notes are encrypted too; the other tables are still to be covered (see the backend README).
+- **Vulnerabilities:** `modules/vulnerabilities` mirrors NVD and OSV.dev into PostgreSQL and matches services (nmap CPE + distribution package revision of the newest observation) against them. Sources and matchers are plug-ins (`sources/registry.ts`, `matchers/registry.ts`); syncs (incremental every 8 h, full weekly) and all matching run in the separate `vuln-sync` process (`pnpm vulns:sync`), never in the API, which only queues requests. Matches are retracted with a reason, never deleted; triage is kept per service and CVE. Details: [`apps/backend/README.md`](apps/backend/README.md#vulnerabilities).
 - **DefectDojo:** a local instance runs in `docker/` (`http://localhost:8080`, fixed dev API token). **Pull is implemented** (`modules/defectdojo`, `POST /defectdojo/sync`: tags, owners, triage, remediation dates into `Host`/`Service`; rules in [`docs/defectdojo-integration.md`](docs/defectdojo-integration.md#sync-into-subsurf-implemented)). **Push is implemented** too (`POST /defectdojo/push`: a scan or a selection as Info findings, import then reimport into one test; [`docs/defectdojo-integration.md`](docs/defectdojo-integration.md#push-from-subsurf-implemented)).
 
 ## Monorepo commands
@@ -99,10 +101,15 @@ pnpm generate       # contracts -> openapi.json -> api-client/src/generated (com
 pnpm clean
 pnpm db:up          # PostgreSQL in Docker (pnpm db:logs)
 pnpm db:reset       # drop + migrations + seed (system roles, admin, demo accounts)
-pnpm db:seed:hosts  # demo scan data: two scans of a /18 through the real ingest (--json <dir> also writes the results)
+pnpm db:seed:hosts  # demo scan data: four scans of a /18 through the real ingest (--json <dir> also writes the results)
+pnpm vulns:sync     # vulnerability sync process (NVD, OSV); --once [--source id] [--full] [--rematch] for one pass
+pnpm vulns:mirror <dir>   # download the vulnerability sources for an offline lab (vulns:import imports a file)
 pnpm infra:up       # all infrastructure compose services, DefectDojo included (infra:down, infra:logs)
+pnpm app:up         # the whole app in Docker (profile app; needs docker/.env, see docker/README.md); app:down, app:logs
 pnpm dojo:up        # DefectDojo only, :8080 (dojo:logs, dojo:smoke)
 pnpm workers:build  # build the masscan-worker image (run a sweep: pnpm workers:masscan < job.json)
+pnpm workers:manager  # build + run worker-manager on its example job list; results in worker-results/
+pnpm workers:manager:poll  # worker-manager long-polls the backend for job lists (needs WORKER_TOKEN), until Ctrl+C
 ```
 
 ## Conventions
@@ -180,7 +187,8 @@ apps/workers/<name>-worker/
 
 Then, in the same change:
 
-1. Add the worker to the table in [`apps/workers/README.md`](apps/workers/README.md).
-2. Add a service to `docker/docker-compose.workers.yml` (grant only the capabilities it needs; a one-shot CLI worker goes in the `cli` profile).
-3. Add the worker's README to the "Where to look" table here (ask the user first, per the rule above).
-4. Dependencies: system packages in the Dockerfile or CMake `FetchContent` pinned to a release tag or commit hash, never a branch. Check the latest release before pinning; do not write a version from memory.
+1. Read and write the shared JSON: [job and result format](apps/workers/README.md#job-and-result-format) (same input fields, `{scan, hosts}` result with `null` for what the worker cannot discover, same error codes and exit codes).
+2. Add the worker to the table in [`apps/workers/README.md`](apps/workers/README.md).
+3. Add a service to `docker/docker-compose.workers.yml` (grant only the capabilities it needs; a one-shot CLI worker goes in the `cli` profile).
+4. Add the worker's README to the "Where to look" table here (ask the user first, per the rule above).
+5. Dependencies: system packages in the Dockerfile or CMake `FetchContent` pinned to a release tag or commit hash, never a branch. Check the latest release before pinning; do not write a version from memory.

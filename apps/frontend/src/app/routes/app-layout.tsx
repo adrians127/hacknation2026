@@ -1,4 +1,15 @@
-import { Crosshair, FileText, LayoutDashboard, Radar, ShieldCheck, Users, type LucideIcon } from "lucide-react";
+import {
+  Bug,
+  Cpu,
+  Crosshair,
+  FileText,
+  LayoutDashboard,
+  Radar,
+  ShieldCheck,
+  Users,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, Outlet } from "react-router";
 
@@ -11,7 +22,16 @@ import { cn } from "@/lib/utils";
 
 interface NavItem {
   to: string;
-  label: "nav.dashboard" | "nav.targets" | "nav.scans" | "nav.reports" | "nav.users" | "nav.roles";
+  label:
+    | "nav.dashboard"
+    | "nav.targets"
+    | "nav.scans"
+    | "nav.reports"
+    | "nav.pipelines"
+    | "nav.workers"
+    | "nav.vulnerabilities"
+    | "nav.users"
+    | "nav.roles";
   Icon: LucideIcon;
   permission?: Permission;
 }
@@ -21,6 +41,14 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/app/targets", label: "nav.targets", Icon: Crosshair, permission: "targets:read" },
   { to: "/app/scans", label: "nav.scans", Icon: Radar, permission: "scans:read" },
   { to: "/app/reports", label: "nav.reports", Icon: FileText, permission: "scans:read" },
+  { to: "/app/pipelines", label: "nav.pipelines", Icon: Workflow, permission: "pipelines:read" },
+  { to: "/app/admin/workers", label: "nav.workers", Icon: Cpu, permission: "workers:read" },
+  {
+    to: "/app/admin/vulnerabilities",
+    label: "nav.vulnerabilities",
+    Icon: Bug,
+    permission: "vulnerabilities:read",
+  },
   { to: "/app/admin/users", label: "nav.users", Icon: Users, permission: "users:read" },
   { to: "/app/admin/roles", label: "nav.roles", Icon: ShieldCheck, permission: "roles:read" },
 ];
@@ -33,7 +61,7 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-svh flex-col md:flex-row">
-      <aside className="flex shrink-0 print:hidden flex-col gap-6 border-b p-4 md:sticky md:top-0 md:h-svh md:w-60 md:border-r md:border-b-0">
+      <aside className="print:hidden flex shrink-0 flex-col gap-6 border-b p-4 md:sticky md:top-0 md:h-svh md:w-60 md:border-r md:border-b-0">
         <Link to="/" className="w-fit">
           <Logo variant="icon" label={t("appName")} className="w-14" />
         </Link>

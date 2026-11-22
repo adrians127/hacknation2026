@@ -1,0 +1,180 @@
+{
+  "severity": {
+    "critical": "Krytyczna",
+    "high": "Wysoka",
+    "medium": "Średnia",
+    "low": "Niska",
+    "none": "Brak",
+    "unknown": "Nieznana"
+  },
+  "confidence": {
+    "confirmed": "Potwierdzona",
+    "potential": "Potencjalna"
+  },
+  "reasons": {
+    "version_unknown": "Skan nie podał wersji",
+    "distro_backport_possible": "Pakiet dystrybucji: poprawka mogła zostać wprowadzona bez zmiany wersji (backport)",
+    "fixed_by_backport": "Dystrybucja naprawiła to w tej rewizji pakietu (backport)",
+    "platform_condition": "Dotyczy tylko platformy, której skan nie potwierdził"
+  },
+  "retractReasons": {
+    "source_withdrawn": "źródło wycofało rekord",
+    "criteria_changed": "zmieniły się podatne wersje w rekordzie",
+    "service_changed": "kolejny skan wykrył inne oprogramowanie",
+    "source_disabled": "źródło jest wyłączone"
+  },
+  "triage": {
+    "unreviewed": "Nieprzejrzana",
+    "important": "Ważna",
+    "accepted_risk": "Ryzyko zaakceptowane",
+    "false_positive": "Fałszywy alarm"
+  },
+  "verdict": {
+    "affected": "podatny",
+    "not_affected": "niepodatny",
+    "unknown": "nie wiadomo"
+  },
+  "summary": {
+    "none": "Brak znanych",
+    "confirmed_one": "{{count}} podatność",
+    "confirmed_few": "{{count}} podatności",
+    "confirmed_many": "{{count}} podatności",
+    "confirmed_other": "{{count}} podatności",
+    "potential_one": "+{{count}} potencjalna",
+    "potential_few": "+{{count}} potencjalne",
+    "potential_many": "+{{count}} potencjalnych",
+    "potential_other": "+{{count}} potencjalnej",
+    "kev": "KEV",
+    "kevHint": "W katalogu CISA Known Exploited Vulnerabilities (aktywnie wykorzystywane)",
+    "label": "Potwierdzone: {{confirmed}}, potencjalne: {{potential}}, najwyższa waga: {{severity}}"
+  },
+  "service": {
+    "heading": "Podatności",
+    "empty": "Brak znanych podatności dla tego, co rozpoznał skan.",
+    "showPotential_one": "Pokaż {{count}} potencjalną podatność",
+    "showPotential_few": "Pokaż {{count}} potencjalne podatności",
+    "showPotential_many": "Pokaż {{count}} potencjalnych podatności",
+    "showPotential_other": "Pokaż {{count}} potencjalnej podatności",
+    "hidePotential": "Ukryj potencjalne podatności",
+    "showRetracted_one": "Pokaż {{count}} wycofaną",
+    "showRetracted_few": "Pokaż {{count}} wycofane",
+    "showRetracted_many": "Pokaż {{count}} wycofanych",
+    "showRetracted_other": "Pokaż {{count}} wycofanej",
+    "hideRetracted": "Ukryj wycofane",
+    "basisOtherScan": "Ocenione na najnowszym skanie tego serwisu ({{date}}), nie na tym",
+    "notSeenInLatest": "Nie widziany w ostatnim skanie: dopasowania zostają, dopóki serwis się nie zmieni",
+    "kevSince": "Aktywnie wykorzystywana (CISA KEV) od {{date}}",
+    "published": "Opublikowana {{date}}",
+    "firstMatched": "Dopasowana od {{date}}",
+    "retracted": "Wycofana {{date}}: {{reason}}",
+    "sources": "Źródła",
+    "references": "Odnośniki",
+    "note": "Notatka",
+    "notePlaceholder": "Dlaczego taka ocena, co sprawdzono…",
+    "saveNote": "Zapisz notatkę",
+    "triageOf": "Ocena {{id}}",
+    "more": "Więcej",
+    "less": "Mniej"
+  },
+  "filter": {
+    "label": "Podatności",
+    "all": "Dowolne podatności",
+    "options": {
+      "any": "Z potwierdzonymi podatnościami",
+      "critical": "Z krytycznymi",
+      "high": "Z wysokimi lub krytycznymi",
+      "kev": "Aktywnie wykorzystywane (KEV)"
+    }
+  },
+  "columns": {
+    "vulnerabilities": "Podatności"
+  },
+  "sources": {
+    "title": "Bazy podatności",
+    "description": "Publiczne bazy kopiowane do SubSurf i dopasowywane do serwisów znalezionych przez skany.",
+    "processInactive": "Proces synchronizacji nie działa: synchronizacje i „Synchronizuj teraz” czekają, aż ktoś uruchomi `pnpm vulns:sync`.",
+    "processActive": "Proces synchronizacji działa.",
+    "records": "Rekordy",
+    "lastFull": "Ostatnia pełna synchronizacja",
+    "lastIncremental": "Ostatnia synchronizacja przyrostowa",
+    "nextSync": "Następna synchronizacja",
+    "never": "Nigdy",
+    "scopes": "Ekosystemy",
+    "baseUrl": "Pobierane z",
+    "lastError": "Ostatni błąd",
+    "enabled": "Włączone",
+    "disabled": "Wyłączone",
+    "toggle": "Włącz {{name}}",
+    "syncNow": "Synchronizuj teraz",
+    "fullSync": "Pełna synchronizacja",
+    "running": "Synchronizacja ({{mode}}) od {{date}}",
+    "pending": "Czeka na proces synchronizacji ({{kind}})",
+    "runs": "Historia",
+    "runsTitle": "Historia synchronizacji {{name}}",
+    "runsEmpty": "Jeszcze nie było synchronizacji.",
+    "modes": {
+      "incremental": "przyrostowa",
+      "full": "pełna"
+    },
+    "triggers": {
+      "schedule": "harmonogram",
+      "manual": "ręcznie",
+      "cli": "wiersz poleceń"
+    },
+    "statuses": {
+      "running": "W toku",
+      "succeeded": "Zakończona",
+      "failed": "Nieudana",
+      "cancelled": "Anulowana",
+      "interrupted": "Przerwana"
+    },
+    "requests": {
+      "sync": "synchronizacja przyrostowa",
+      "full_sync": "pełna synchronizacja",
+      "rematch": "ponowne dopasowanie"
+    },
+    "stats": {
+      "started": "Start",
+      "mode": "Tryb",
+      "status": "Status",
+      "records": "Rekordy zmienione / bez zmian",
+      "withdrawn": "Wycofane",
+      "matches": "Dopasowania nowe / wycofane / przywrócone"
+    },
+    "attribution": "Ten produkt korzysta z danych NVD, ale nie jest przez NVD zatwierdzony ani certyfikowany. Dane OSV pochodzą z wielu baz na ich własnych licencjach (np. GitHub Advisory Database, CC-BY 4.0)."
+  },
+  "mappings": {
+    "title": "Mapowania CPE → pakiet",
+    "description": "Bazy pakietów (OSV) opisują pakiety, a nie produkty CPE, które zgłasza skaner. Mapowanie mówi, jakim pakietem jest produkt w danym ekosystemie.",
+    "add": "Dodaj mapowanie",
+    "empty": "Brak mapowań.",
+    "cpe": "CPE vendor:product",
+    "ecosystem": "Ekosystem",
+    "package": "Pakiet",
+    "addedBy": "Dodane przez",
+    "migration": "Wbudowane",
+    "delete": "Usuń mapowanie {{name}}",
+    "deleteTitle": "Usunąć mapowanie?",
+    "deleteDescription": "{{cpe}} nie będzie już dopasowywane do {{ecosystem}} {{package}}. Proces synchronizacji ponownie dopasuje serwisy.",
+    "form": {
+      "title": "Dodaj mapowanie",
+      "description": "Po zmianie proces synchronizacji ponownie dopasuje serwisy.",
+      "vendor": "Vendor CPE",
+      "vendorHint": "Jak w CPE, np. eclipse",
+      "product": "Produkt CPE",
+      "productHint": "np. jetty",
+      "packageHint": "Jak nazywa go ekosystem, np. org.eclipse.jetty:jetty-server",
+      "invalidName": "Tylko małe litery, cyfry i . _ - +.",
+      "invalidPackage": "Wymagane, bez spacji."
+    }
+  },
+  "toast": {
+    "triageSaved": "Ocena zapisana.",
+    "noteSaved": "Notatka zapisana.",
+    "syncRequested": "Zlecono synchronizację. Proces synchronizacji wkrótce ją rozpocznie.",
+    "sourceEnabled": "Źródło włączone.",
+    "sourceDisabled": "Źródło wyłączone. Jego dopasowania zostaną wycofane przy następnym dopasowaniu.",
+    "mappingAdded": "Mapowanie dodane.",
+    "mappingRemoved": "Mapowanie usunięte."
+  }
+}

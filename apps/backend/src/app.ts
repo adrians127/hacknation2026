@@ -13,7 +13,7 @@ import { trustedOrigin } from "~backend/middleware/trusted-origin";
 import { apiRouter } from "~backend/routes";
 
 // Routes that parse their (larger) JSON body themselves, after authentication.
-const OWN_BODY_PARSER_PATHS = new Set(["/v1/targets/import"]);
+const OWN_BODY_PARSER_PATHS = new Set(["/v1/targets/import", "/v1/workers/manager/results"]);
 
 const jsonBody = express.json({ limit: "1mb" });
 const defaultJsonBody: RequestHandler = (req, res, next) => {

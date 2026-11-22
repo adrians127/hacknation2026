@@ -1,3 +1,5 @@
+import { MAX_TAGS } from "@subsurf/contracts/common/common.schema";
+import { selectorRanges } from "@subsurf/contracts/hosts/host-selectors";
 import type {
   HostEdits,
   ServiceEdits,
@@ -5,6 +7,10 @@ import type {
   UpdateHostBody,
   UpdateServiceBody,
 } from "@subsurf/contracts/hosts/hosts.schema";
+import type {
+  TagScanHostsBody,
+  TagScanHostsResponse,
+} from "@subsurf/contracts/scans/scan-results.schema";
 import { ipv4ToInt } from "@subsurf/contracts/targets/ipv4";
 
 import { Prisma, type TransportProtocol } from "~backend/generated/prisma/client";
@@ -12,6 +18,7 @@ import { encryptText } from "~backend/lib/crypto";
 import { HttpError } from "~backend/lib/http-error";
 import { prisma } from "~backend/lib/prisma";
 import { toHostEdits, toServiceEdits } from "~backend/modules/hosts/hosts.mapper";
+import { scanResultsService } from "~backend/modules/scans/scan-results.service";
 
 interface SeenWindow {
   id: string;
@@ -65,7 +72,7 @@ const override = (value: string | null | undefined) =>
 /**
  * Host and Service rows live across scans. Ingest only creates them and moves their seen
  * window; `note`, `tags`, `triage` and the service corrections belong to users (PDF item 14)
- * and only `update`/`updateService` write them.
+ * and only `update`/`updateService`/`tagScanHosts` write them.
  */
 export const hostsService = {
   async update(id: string, body: UpdateHostBody): Promise<HostEdits> {
@@ -90,6 +97,35 @@ export const hostsService = {
     });
     if (count === 0) throw HttpError.notFound("Service not found");
     return toServiceEdits(await prisma.service.findUniqueOrThrow({ where: { id: serviceId } }));
+  },
+
+  async tagScanHosts(scanId: string, body: TagScanHostsBody): Promise<TagScanHostsResponse> {
+    const ids = await scanResultsService.hostIdsIn(scanId, selectorRanges(body.selectors));
+    const tag = body.tag.trim();
+    const matched = ids.length;
+    if (matched === 0) return { matched, changed: 0, unchanged: 0, limitReached: 0 };
+
+    // Raw SQL: one statement for any number of hosts, and Prisma has no array append/remove.
+    if (body.action === "remove") {
+      const changed = await prisma.$executeRaw`
+        UPDATE "Host" SET tags = array_remove(tags, ${tag}), "updatedAt" = now()
+        WHERE id = ANY(${ids}::uuid[]) AND ${tag} = ANY(tags)
+      `;
+      return { matched, changed, unchanged: matched - changed, limitReached: 0 };
+    }
+    const [changed, rows] = await prisma.$transaction([
+      prisma.$executeRaw`
+        UPDATE "Host" SET tags = array_append(tags, ${tag}), "updatedAt" = now()
+        WHERE id = ANY(${ids}::uuid[]) AND NOT (${tag} = ANY(tags))
+          AND cardinality(tags) < ${MAX_TAGS}
+      `,
+      prisma.$queryRaw<{ tagged: number }[]>`
+        SELECT count(*)::int AS tagged FROM "Host"
+        WHERE id = ANY(${ids}::uuid[]) AND ${tag} = ANY(tags)
+      `,
+    ]);
+    const tagged = rows[0]?.tagged ?? 0;
+    return { matched, changed, unchanged: tagged - changed, limitReached: matched - tagged };
   },
 
   /** Records an address seen `up`; returns the Host id. */

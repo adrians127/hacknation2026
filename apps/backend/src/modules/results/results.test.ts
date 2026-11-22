@@ -51,9 +51,14 @@ describe("resultsService.ingest", () => {
 
     expect(outcome).toMatchObject({ status: "ingested", hostsWritten: 4 });
     const stored = await prisma.scanJobResult.findUniqueOrThrow({
-      where: { leaseId: result.scan.leaseId },
+      where: { leaseId_taskIndex: { leaseId: result.scan.leaseId, taskIndex: 1 } },
     });
-    expect(stored).toMatchObject({ status: "partial", stopReason: "deadline", durationMs: 912000 });
+    expect(stored).toMatchObject({
+      status: "partial",
+      stopReason: "deadline",
+      durationMs: 912000,
+      taskCount: 1,
+    });
 
     const observations = await prisma.hostObservation.findMany({
       orderBy: { ipNumber: "asc" },
@@ -101,6 +106,7 @@ describe("resultsService.ingest", () => {
         identity: port.identity,
         banner: port.banner,
         scripts: port.scripts,
+        tls: port.tls,
         http: port.http,
       });
     }
@@ -112,6 +118,26 @@ describe("resultsService.ingest", () => {
     expect(byTitle).toEqual([{ port: 443 }]);
   });
 
+  it("encrypts and restores a TLS-only certificate without an HTTP endpoint", async () => {
+    const result = await exampleResult();
+    const port = result.hosts[0].ports[1];
+    port.http = [];
+    port.tls = [{
+      vhost: "wiki.example.org", version: "tls13", cipher: "TLS_AES_128_GCM_SHA256",
+      alpn: null, cert: {
+        subjectCn: "wiki.example.org", san: ["wiki.example.org"], issuer: "Secret Issuer",
+        notBefore: "2026-01-01T00:00:00Z", notAfter: "2027-01-01T00:00:00Z",
+        serial: "123", sha256: "a".repeat(64), selfSigned: null,
+        keyAlgorithm: null, keyBits: null,
+      },
+    }];
+    await resultsService.ingest(result);
+    const stored = await prisma.portObservation.findFirstOrThrow({ where: { port: 443 } });
+    expect(JSON.stringify(stored.details)).not.toContain("Secret Issuer");
+    expect(openPortDetails(stored.details).tls).toEqual(port.tls);
+    expect(openPortDetails(stored.details).http).toEqual([]);
+  });
+
   it("ignores a result resent under the same lease", async () => {
     const result = await exampleResult();
     const first = await resultsService.ingest(result);
@@ -121,6 +147,25 @@ describe("resultsService.ingest", () => {
     expect(second).toEqual({ status: "duplicate", resultId: first.resultId });
     expect(await prisma.scanJobResult.count()).toBe(1);
     expect(await prisma.hostObservation.count()).toBe(4);
+  });
+
+  it("keeps every task of a split lease as its own result", async () => {
+    // Two masscan shards of one job: same lease, same addresses, one worker run each.
+    const result = await exampleResult();
+    const first = await resultsService.ingest(result, { taskIndex: 1, taskCount: 2 });
+    const second = await resultsService.ingest(result, { taskIndex: 2, taskCount: 2 });
+    const resent = await resultsService.ingest(result, { taskIndex: 2, taskCount: 2 });
+
+    expect(first.status).toBe("ingested");
+    expect(second.status).toBe("ingested");
+    expect(resent).toEqual({ status: "duplicate", resultId: second.resultId });
+    const stored = await prisma.scanJobResult.findMany({ orderBy: { taskIndex: "asc" } });
+    expect(stored.map((row) => [row.leaseId, row.taskIndex, row.taskCount])).toEqual([
+      [result.scan.leaseId, 1, 2],
+      [result.scan.leaseId, 2, 2],
+    ]);
+    expect(await prisma.hostObservation.count()).toBe(8);
+    expect(await prisma.host.count()).toBe(1);
   });
 
   it("preserves each worker run's observations, including inconclusive results", async () => {

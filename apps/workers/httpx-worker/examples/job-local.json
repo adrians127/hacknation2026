@@ -1,0 +1,10 @@
+{
+  "job_id": "0193a1ad-3333-7000-8000-000000000003",
+  "scan_id": "0193a0f2-1b2c-7d3e-8f40-516273849506",
+  "lease_id": "lease-httpx-local",
+  "targets": ["127.0.0.1"],
+  "ports": [8080],
+  "probe_paths": ["/admin"],
+  "rate": 10,
+  "max_duration_seconds": 120
+}

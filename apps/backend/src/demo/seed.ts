@@ -19,6 +19,8 @@ export interface SeedDemoOptions {
   /** Also write every worker result as a JSON file under this directory. */
   jsonDir?: string;
   log?: (message: string) => void;
+  /** Runs after each scan run is ingested (e.g. re-matching vulnerabilities). */
+  afterRun?: (run: DemoRun) => Promise<void>;
 }
 
 export interface SeedDemoSummary {
@@ -139,7 +141,7 @@ async function writeJson(dir: string, run: DemoRun, results: DemoJobResult[]) {
 }
 
 /**
- * Seeds two demo scans of a /18 through the real ingest path. Idempotent: existing scans are
+ * Seeds four demo scans of a /18 through the real ingest path. Idempotent: existing scans are
  * kept, and results already ingested (same lease) are skipped.
  */
 export async function seedDemoHosts(
@@ -162,6 +164,7 @@ export async function seedDemoHosts(
     if (options.jsonDir) await writeJson(options.jsonDir, run, results);
     const up = results.reduce((sum, { result }) => sum + result.scan.counts.up, 0);
     log(`Run ${run.number} (${run.startedAt}): ${results.length} jobs, ${up} hosts up`);
+    await options.afterRun?.(run);
   }
 
   summary.hosts = await prisma.host.count();

@@ -1,0 +1,16 @@
+/// Which package a CPE product (as nmap reports it) is in a package ecosystem, for the `package`
+/// matcher. Starter rows come from a migration, so deleting one sticks.
+model PackageMapping {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  cpeVendor   String
+  cpeProduct  String
+  ecosystem   String
+  packageName String
+  createdById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([cpeVendor, cpeProduct, ecosystem, packageName])
+  @@index([createdById])
+}

@@ -21,6 +21,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 add_executable(nmap-worker
+  src/address.cpp
   src/http_client.cpp
   src/json_codec.cpp
   src/main.cpp

@@ -15,6 +15,7 @@ let scansCreated = 0;
  */
 export async function ingestScan(
   edit: (hosts: ObservedHost[]) => ObservedHost[] = (hosts) => hosts,
+  workerId = "nmap-worker",
 ): Promise<string> {
   scansCreated += 1;
   const user = await createUser({ role: "admin" });
@@ -40,7 +41,18 @@ export async function ingestScan(
     },
   });
   const result = buildWorkerResult({ scanId: scan.id, jobId: job.id, leaseId: randomUUID() });
-  await resultsService.ingest({ ...result, hosts: edit(result.hosts) });
+  await resultsService.ingest({
+    ...result,
+    scan: {
+      ...result.scan,
+      worker: {
+        ...result.scan.worker,
+        id: workerId,
+        nmapVersion: workerId === "nmap-worker" ? result.scan.worker.nmapVersion : null,
+      },
+    },
+    hosts: edit(result.hosts),
+  });
   return scan.id;
 }
 

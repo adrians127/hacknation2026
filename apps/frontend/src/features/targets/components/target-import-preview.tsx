@@ -18,6 +18,16 @@ const MAX_ROWS = 100;
 // A repeat is harmless (a warning) but still not imported.
 const isDropped = (code: TargetIssueCode) => !isTargetWarning(code) || code === "duplicate";
 
+function IssueBadge({ code }: { code: TargetIssueCode }) {
+  const { t } = useTranslation();
+  if (code === "covered_by") return <Badge variant="outline">{t("targets.import.preview.overlap")}</Badge>;
+  return (
+    <Badge variant={isTargetWarning(code) ? "secondary" : "destructive"}>
+      {t(isDropped(code) ? "targets.import.preview.rejected" : "targets.import.preview.changed")}
+    </Badge>
+  );
+}
+
 const column = createDataTableColumns<TargetIssue>();
 
 interface TargetImportPreviewProps {
@@ -47,14 +57,12 @@ export function TargetImportPreview({ result, position }: TargetImportPreviewPro
         column.accessor("code", {
           header: t("targets.import.preview.problem"),
           enableSorting: false,
-          cell: ({ getValue }) => {
-            const code = getValue();
+          cell: ({ row }) => {
+            const { code, detail } = row.original;
             return (
               <span className="flex flex-wrap items-center gap-2">
-                <Badge variant={isTargetWarning(code) ? "secondary" : "destructive"}>
-                  {t(isDropped(code) ? "targets.import.preview.rejected" : "targets.import.preview.changed")}
-                </Badge>
-                {t(`targets.import.issues.${code}`)}
+                <IssueBadge code={code} />
+                {t(`targets.import.issues.${code}`, { detail })}
               </span>
             );
           },

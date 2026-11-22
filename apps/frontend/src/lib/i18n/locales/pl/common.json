@@ -12,25 +12,62 @@
   },
   "dashboard": {
     "title": "Pulpit",
-    "subtitle": "Najważniejsze znaleziska z ostatnich skanów",
+    "subtitle": "Co zmieniło się w najnowszym skanie i czemu warto przyjrzeć się najpierw.",
+    "noScans": "Żaden skan nie ma jeszcze wyników. Zaimportuj cele i uruchom skan.",
+    "newest": "Najnowszy skan z {{date}}, porównany ze skanem z {{base}}.",
+    "newestFirst": "Najnowszy skan z {{date}}. To pierwszy skan, więc nie ma go jeszcze z czym porównać.",
+    "compare": "Porównaj obok siebie",
     "stats": {
-      "activeHosts": "Aktywne hosty",
-      "newServices": "Nowe usługi",
-      "disappeared": "Zniknięte usługi",
-      "changed": "Zmienione usługi"
+      "hostsUp": "Aktywne hosty",
+      "openPorts": "Otwarte porty",
+      "newHosts": "Nowe hosty",
+      "goneHosts": "Zniknięte hosty",
+      "serviceChanges": "Zmiany usług",
+      "serviceChangesHint": "otwarte {{new}} · zamknięte {{gone}} · zmienione {{changed}}",
+      "unstable": "Niestabilne hosty",
+      "inactive": "Nieobecne hosty",
+      "lifecycleHint": "Wśród wszystkich znanych hostów",
+      "sinceBase": "{{delta}} od poprzedniego skanu",
+      "trend": "{{label}} w kolejnych skanach",
+      "trendPoint": "{{date}}: {{value}}"
     },
-    "recent": {
-      "title": "Ostatnie zmiany",
-      "kind": "Zmiana",
+    "top": {
+      "title": "Najważniejsze zmiany",
+      "empty": "Od poprzedniego skanu nic się nie zmieniło.",
+      "count": "wysoki {{high}} · średni {{medium}} · niski {{low}}",
+      "shown": "{{shown}} najważniejszych z {{total}}.",
+      "priority": "Priorytet",
       "host": "Host",
-      "service": "Usługa",
-      "detail": "Szczegóły",
-      "detected": "Wykryto",
-      "kinds": {
-        "new": "Nowa",
-        "disappeared": "Zniknęła",
-        "changed": "Zmieniona"
-      }
+      "port": "Port",
+      "wholeHost": "host",
+      "change": "Zmiana",
+      "what": "Co"
+    },
+    "priority": {
+      "high": "Wysoki",
+      "medium": "Średni",
+      "low": "Niski"
+    },
+    "reasons": {
+      "new-host": "nowy host",
+      "returning-host": "wrócił",
+      "risky-port": "otwarty ryzykowny port",
+      "new-service": "otwarty port",
+      "admin-panel": "odpowiada ścieżka panelu",
+      "ssh-key-changed": "zmieniony klucz hosta SSH",
+      "self-signed": "certyfikat self-signed",
+      "version-change": "zmienione oprogramowanie",
+      "new-endpoint": "nowy endpoint HTTP",
+      "page-change": "zmieniona strona",
+      "cert-change": "zmieniony certyfikat",
+      "security-header-removed": "usunięty nagłówek bezpieczeństwa",
+      "cookie-flags-weakened": "osłabione flagi ciasteczka",
+      "technology-header": "zmieniony nagłówek technologii",
+      "host-inactive": "nieobecny",
+      "host-gone": "przestał odpowiadać",
+      "service-gone": "zamknięty port",
+      "no-answer": "brak odpowiedzi",
+      "other": "inna zmiana"
     }
   },
   "targets": {
@@ -50,7 +87,8 @@
     "kinds": {
       "ip": "IP",
       "cidr": "CIDR",
-      "domain": "Domena"
+      "domain": "Domena",
+      "range": "Zakres"
     },
     "actions": {
       "edit": "Edytuj {{value}}",
@@ -78,17 +116,91 @@
     },
     "import": {
       "title": "Dodaj cele",
-      "subtitle": "Wpisz adresy IP, zakresy CIDR (do /16) i domeny ręcznie albo wczytaj je z pliku CSV lub JSON.",
+      "subtitle": "Wpisz adresy IP, zakresy CIDR (do /16), zakresy IP i domeny ręcznie albo wczytaj je z pliku CSV lub JSON.",
       "back": "Wróć do celów",
       "tabs": {
-        "manual": "Ręcznie",
+        "form": "Formularz",
+        "text": "Tekst",
         "csv": "Plik CSV",
         "json": "Plik JSON"
       },
-      "manual": {
+      "entry": {
+        "valueLabel": "Cel",
+        "valuePlaceholder": "IP, CIDR, zakres lub domena",
+        "valueHint": "Enter dodaje do listy, Shift+Enter zaczyna nową linię. Wklej listę, żeby dodać wiele celów naraz; tekst po przecinku staje się notatką.",
+        "noteLabel": "Notatka",
+        "notePlaceholder": "Opcjonalnie, np. Sieć kampusu",
+        "add": "Dodaj",
+        "empty": "Wpisz adres IP (192.0.2.15), zakres CIDR (10.0.0.0/24), zakres IP (10.0.0.1-200) albo domenę (example.com).",
+        "detected": {
+          "addresses_one": "{{count, number}} adres",
+          "addresses_few": "{{count, number}} adresy",
+          "addresses_many": "{{count, number}} adresów",
+          "addresses_other": "{{count, number}} adresu",
+          "blocks_one": "zapisany jako {{count, number}} blok CIDR",
+          "blocks_few": "zapisany jako {{count, number}} bloki CIDR",
+          "blocks_many": "zapisany jako {{count, number}} bloków CIDR",
+          "blocks_other": "zapisany jako {{count, number}} bloku CIDR",
+          "domain": "zamieniana na adresy IPv4 przy kolejkowaniu skanu",
+          "lineNote": "Notatka: {{note}}",
+          "alreadyListed": "Już jest na liście"
+        },
+        "linesReady_one": "{{count, number}} linia gotowa do dodania",
+        "linesReady_few": "{{count, number}} linie gotowe do dodania",
+        "linesReady_many": "{{count, number}} linii gotowych do dodania",
+        "linesReady_other": "{{count, number}} linii gotowej do dodania",
+        "added_one": "Dodano {{added, number}} z {{count, number}}.",
+        "added_few": "Dodano {{added, number}} z {{count, number}}.",
+        "added_many": "Dodano {{added, number}} z {{count, number}}.",
+        "added_other": "Dodano {{added, number}} z {{count, number}}.",
+        "alreadyListed_one": "{{count, number}} był już na liście.",
+        "alreadyListed_few": "{{count, number}} były już na liście.",
+        "alreadyListed_many": "{{count, number}} było już na liście.",
+        "alreadyListed_other": "{{count, number}} było już na liście.",
+        "toFix": "Zostało w polu do poprawienia:",
+        "moreProblems_one": "…i {{count, number}} więcej",
+        "moreProblems_few": "…i {{count, number}} więcej",
+        "moreProblems_many": "…i {{count, number}} więcej",
+        "moreProblems_other": "…i {{count, number}} więcej",
+        "list": {
+          "title": "Cele do importu",
+          "empty": "Lista jest jeszcze pusta.",
+          "addresses": "Adresy",
+          "note": "Notatka dla {{value}}",
+          "remove": "Usuń {{value}}",
+          "expand": "Pokaż bloki {{value}}",
+          "collapse": "Ukryj bloki {{value}}",
+          "blocks_one": "Zostanie zapisany jako {{count, number}} cel:",
+          "blocks_few": "Zostanie zapisany jako {{count, number}} cele:",
+          "blocks_many": "Zostanie zapisany jako {{count, number}} celów:",
+          "blocks_other": "Zostanie zapisany jako {{count, number}} celu:",
+          "clear": "Wyczyść listę",
+          "summary_one": "{{count, number}} wpis na liście",
+          "summary_few": "{{count, number}} wpisy na liście",
+          "summary_many": "{{count, number}} wpisów na liście",
+          "summary_other": "{{count, number}} wpisu na liście"
+        },
+        "clearDialog": {
+          "title": "Wyczyścić listę?",
+          "description_one": "{{count, number}} wpis zostanie usunięty.",
+          "description_few": "{{count, number}} wpisy zostaną usunięte.",
+          "description_many": "{{count, number}} wpisów zostanie usuniętych.",
+          "description_other": "{{count, number}} wpisu zostanie usuniętego.",
+          "confirm": "Wyczyść"
+        },
+        "leave": {
+          "title": "Wyjść bez importu?",
+          "description_one": "{{count, number}} wpis z listy nie został zaimportowany i przepadnie.",
+          "description_few": "{{count, number}} wpisy z listy nie zostały zaimportowane i przepadną.",
+          "description_many": "{{count, number}} wpisów z listy nie zostało zaimportowanych i przepadnie.",
+          "description_other": "{{count, number}} wpisu z listy nie zaimportowano i przepadnie.",
+          "confirm": "Wyjdź"
+        }
+      },
+      "text": {
         "label": "Cele",
-        "placeholder": "10.0.0.0/24, Sieć kampusu\n192.0.2.15\nexample.com",
-        "hint": "Jeden cel w wierszu, opcjonalnie z notatką po przecinku. Wiersze zaczynające się od # są pomijane."
+        "placeholder": "10.0.0.0/24, Sieć kampusu\n192.0.2.15\n198.51.100.20-198.51.100.40, Laboratorium\nexample.com",
+        "hint": "Jeden cel w wierszu (IP, CIDR, zakres jak 10.0.0.1-10.0.0.50 albo domena), opcjonalnie z notatką po przecinku. Wiersze zaczynające się od # są pomijane."
       },
       "csv": {
         "hint": "Jeden cel w wierszu i opcjonalna notatka w następnej kolumnie. Wiersz nagłówka (target, note) nie jest wymagany; kolumny można rozdzielać przecinkiem, średnikiem lub tabulatorem.",
@@ -127,22 +239,27 @@
         "problem": "Problem",
         "changed": "Zmieniono",
         "rejected": "Pominięto",
+        "overlap": "Nakłada się",
         "more_one": "…i jeszcze {{count, number}}",
         "more_few": "…i jeszcze {{count, number}}",
         "more_many": "…i jeszcze {{count, number}}",
         "more_other": "…i jeszcze {{count, number}}"
       },
       "issues": {
-        "invalid_format": "To nie jest adres IPv4, zakres CIDR ani domena",
+        "invalid_format": "To nie jest adres IPv4, CIDR, zakres IP ani domena",
         "ipv6_unsupported": "IPv6 nie jest obsługiwane",
         "reserved_range": "Zakres zarezerwowany (loopback, link-local, multicast lub broadcast)",
         "cidr_too_large": "Zakres większy niż /16",
+        "invalid_range": "Zakres kończy się przed swoim początkiem",
+        "range_too_large": "Zakres obejmuje więcej niż 65 536 adresów (/16)",
         "value_too_long": "Za długa wartość",
         "note_too_long": "Notatka dłuższa niż 500 znaków",
         "duplicate": "Powtarza wcześniejszy wpis",
         "cidr_normalized": "Bity hosta wyzerowane do adresu sieci",
         "single_host_cidr": "Zakres /32 jest importowany jako pojedynczy adres",
-        "url_stripped": "Z adresu URL pozostawiono samą nazwę hosta"
+        "url_stripped": "Z adresu URL pozostawiono samą nazwę hosta",
+        "range_split": "Zakres IP zapisany jako bloki CIDR",
+        "covered_by": "Pokrywa się z {{detail}} z tego importu"
       },
       "listErrors": {
         "empty": "Nie ma nic do zaimportowania.",
@@ -151,6 +268,12 @@
         "too_many_entries": "Ponad 100 000 celów w jednym imporcie.",
         "too_many_addresses": "Ponad 1 048 576 adresów IP w jednym imporcie.",
         "too_many_domains": "Ponad 1000 domen w jednym imporcie."
+      },
+      "tags": {
+        "label": "Tagi",
+        "placeholder": "oddzielone, przecinkami",
+        "hint": "Opcjonalnie. Trafiają do celów dodanych tym importem; cele, które już są na liście, zachowują swoje tagi.",
+        "invalid": "Najwyżej 20 tagów, każdy do 50 znaków."
       },
       "startScan": {
         "label": "Od razu uruchom skan",
@@ -204,14 +327,17 @@
       "up": "Aktywne hosty",
       "noAnswer": "Bez odpowiedzi",
       "openPorts": "Otwarte porty",
-      "duration": "Czas trwania"
+      "duration": "Czas trwania",
+      "pipeline": "Potok",
+      "trigger": "Uruchomiony przez"
     },
     "statuses": {
       "queued": "W kolejce",
       "running": "W toku",
       "completed": "Zakończony",
       "stopped": "Zatrzymany",
-      "failed": "Błąd"
+      "failed": "Błąd",
+      "paused": "Wstrzymany"
     },
     "detail": {
       "back": "Wszystkie skany",
@@ -223,8 +349,8 @@
       "down": "nieaktywne: {{formatted}}",
       "noAnswer": "Bez odpowiedzi",
       "openPorts": "Otwarte porty",
-      "jobs": "Zakończone joby",
-      "stoppedJobs": "zatrzymane na końcu okna czasowego: {{formatted}}",
+      "jobs": "Zakończone zadania",
+      "stoppedJobs": "zatrzymane: {{formatted}}",
       "duration": "Czas trwania",
       "rate": "Limit tempa",
       "ports": "Skanowane porty",
@@ -234,9 +360,100 @@
         "new": "nowe hosty",
         "gone": "zniknięte hosty",
         "changed": "zmienione hosty",
-        "unknown": "hosty bez odpowiedzi"
+        "unknown": "hosty bez danych do porównania"
       },
-      "serviceChanges": "Usługi: nowe {{new}}, zniknięte {{gone}}, zmienione {{changed}}."
+      "serviceChanges": "Usługi: nowe {{new}}, zniknięte {{gone}}, zmienione {{changed}}.",
+      "pipeline": "Potok",
+      "noPipeline": "Uruchomiony przez import celów",
+      "windowEnds": "Okno czasowe kończy się {{date}}",
+      "pausedHint": "Okno czasowe zamknęło się przed końcem pracy. Pozostałe zadania ruszą w kolejnym terminie potoku.",
+      "stop": "Zatrzymaj skan",
+      "stopTitle": "Zatrzymać ten skan?",
+      "stopDescription": "Zadania w kolejce zostaną anulowane. Zadania, które worker już wykonuje, najpierw się zakończą, a potem skan się zakończy.",
+      "stopped": "Skan jest zatrzymywany",
+      "tabs": {
+        "hosts": "Hosty",
+        "jobs": "Zadania"
+      }
+    },
+    "compare": {
+      "title": "Porównanie skanów",
+      "subtitle": "Dwa skany obok siebie: które hosty się pojawiły, zniknęły lub zmieniły, port po porcie. Za nowe lub zniknięte uznajemy tylko adresy, które odpowiedziały w obu skanach.",
+      "open": "Porównaj",
+      "openSideBySide": "Porównaj obok siebie",
+      "selected_one": "Wybrano {{count}} z 2 skanów",
+      "selected_few": "Wybrano {{count}} z 2 skanów",
+      "selected_many": "Wybrano {{count}} z 2 skanów",
+      "selected_other": "Wybrano {{count}} z 2 skanów",
+      "selectScan": "Wybierz skan z {{date}} do porównania",
+      "base": "Przed (A)",
+      "target": "Po (B)",
+      "pickScan": "Wybierz skan",
+      "noBase": "Nie ma starszego skanu z wynikami, z którym można porównać ten skan. Wybierz inny skan jako B.",
+      "noScans": "Do porównania potrzebne są co najmniej dwa skany z wynikami.",
+      "metric": "Miara",
+      "delta": "Zmiana",
+      "stats": {
+        "addresses": "Adresy",
+        "up": "Aktywne hosty",
+        "down": "Nieaktywne hosty",
+        "noAnswer": "Bez odpowiedzi",
+        "openPorts": "Otwarte porty",
+        "duration": "Czas trwania"
+      },
+      "coverage": "Oba skany dostały odpowiedź z {{both}} adresów. Tylko A: {{onlyBase}}, tylko B: {{onlyCurrent}}. Host spoza części wspólnej jest nieustalony, nigdy nowy ani zniknięty.",
+      "columns": {
+        "host": "Host",
+        "change": "Zmiana",
+        "base": "A · {{date}}",
+        "target": "B · {{date}}"
+      },
+      "export": "Eksportuj zmiany jako {{format}}",
+      "exportFailed": "Eksport się nie powiódł: {{message}}"
+    },
+    "triggers": {
+      "import": "Import celów",
+      "manual": "Uruchom teraz",
+      "schedule": "Harmonogram"
+    },
+    "jobs": {
+      "steps": "Kroki",
+      "step": "Krok {{index}}: {{worker}}",
+      "stepInput": {
+        "targets": "skanuje cele",
+        "previous": "skanuje to, co znalazł krok {{index}}"
+      },
+      "progress": "Zakończone zadania: {{done}} z {{total}}",
+      "waiting": "Czeka na poprzedni krok",
+      "filters": {
+        "step": "Krok",
+        "allSteps": "Wszystkie kroki",
+        "status": "Stan",
+        "allStatuses": "Wszystkie stany"
+      },
+      "columns": {
+        "sequence": "#",
+        "step": "Krok",
+        "subnet": "Adresy",
+        "status": "Stan",
+        "attempts": "Próby",
+        "leasedBy": "Menedżer workerów",
+        "duration": "Czas trwania",
+        "results": "Wyniki",
+        "error": "Ostatni błąd"
+      },
+      "statuses": {
+        "queued": "W kolejce",
+        "leased": "W toku",
+        "completed": "Zakończone",
+        "failed": "Błąd",
+        "stopped": "Zatrzymane"
+      },
+      "addresses_one": "{{count}} adres",
+      "addresses_few": "{{count}} adresy",
+      "addresses_many": "{{count}} adresów",
+      "addresses_other": "{{count}} adresu",
+      "empty": "Brak pasujących zadań."
     }
   },
   "language": {
@@ -269,7 +486,10 @@
     "scans": "Skany",
     "reports": "Raporty",
     "users": "Użytkownicy",
-    "roles": "Role"
+    "roles": "Role",
+    "vulnerabilities": "Podatności",
+    "pipelines": "Potoki",
+    "workers": "Workery"
   },
   "notFound": {
     "title": "Nie znaleziono strony",
@@ -353,6 +573,17 @@
     "ROLE_IN_USE": "Ta rola jest nadal przypisana użytkownikom. Najpierw przenieś ich do innej roli.",
     "EMAIL_TAKEN": "Użytkownik z tym adresem email już istnieje.",
     "ROLE_NAME_TAKEN": "Rola o tej nazwie już istnieje.",
+    "PACKAGE_MAPPING_EXISTS": "Takie mapowanie już istnieje.",
+    "SOURCE_DISABLED": "Źródło jest wyłączone. Najpierw je włącz.",
+    "BASE_SCAN_NOT_OLDER": "Skan, z którym porównujesz, musi być starszy od porównywanego skanu.",
+    "PIPELINE_NAME_TAKEN": "Potok o tej nazwie już istnieje.",
+    "PIPELINE_RUN_ACTIVE": "Uruchomienie tego potoku jeszcze trwa. Poczekaj na nie albo najpierw je zatrzymaj.",
+    "NO_SCANNABLE_TARGETS": "Żadnego z celów potoku nie da się przeskanować. Sprawdź jego tagi i zakresy.",
+    "WORKER_DISABLED": "Krok używa wyłączonego workera. Najpierw musi go włączyć administrator.",
+    "WORKER_IN_USE": "Ten worker jest nadal używany przez potok. Najpierw usuń go z potoku.",
+    "WORKER_BUILTIN": "Wbudowane workery pochodzą z kodu: zmienić można tylko to, czy działają, ich limit tempa i wartości domyślne.",
+    "PORTS_NOT_ALLOWED": "Te porty są poza portami, które skaner może sprawdzać.",
+    "SCAN_NOT_STOPPABLE": "Skan już się zakończył.",
     "DEFECTDOJO_NOT_CONFIGURED": "Integracja z DefectDojo nie jest skonfigurowana na serwerze.",
     "DEFECTDOJO_UNAVAILABLE": "DefectDojo nie odpowiada albo odrzucił token API.",
     "DEFECTDOJO_SYNC_RUNNING": "Synchronizacja z DefectDojo już trwa.",

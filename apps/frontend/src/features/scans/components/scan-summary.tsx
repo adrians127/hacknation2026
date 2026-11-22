@@ -1,10 +1,14 @@
+import { Columns2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 import type { ScanChangeFilter, ScanDetail } from "@subsurf/contracts/scans/scan-results.schema";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ChangeFilterCards } from "@/features/scans/components/change-filter-cards";
+import { compareUrl } from "@/features/scans/lib/pair";
 import { formatDateTime, formatDuration, formatNumber } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -15,13 +19,6 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
     </div>
   );
 }
-
-const CHANGE_TONE: Record<Exclude<ScanChangeFilter, "any">, string> = {
-  new: "text-emerald-500",
-  gone: "text-red-500",
-  changed: "text-amber-500",
-  unknown: "text-muted-foreground",
-};
 
 /** What the scan found, and buttons that filter the host list by kind of change. */
 export function ScanSummary({
@@ -66,6 +63,27 @@ export function ScanSummary({
               <dt className="text-xs text-muted-foreground">{t("scans.detail.ports")}</dt>
               <dd className="font-mono text-xs break-all">{scan.ports}</dd>
             </div>
+            <div className="col-span-full grid gap-0.5">
+              <dt className="text-xs text-muted-foreground">{t("scans.detail.pipeline")}</dt>
+              <dd className="text-sm">
+                {scan.pipeline ? (
+                  <Link to={`/app/pipelines/${scan.pipeline.id}`} className="font-medium hover:underline">
+                    {scan.pipeline.name}
+                  </Link>
+                ) : (
+                  t("scans.detail.noPipeline")
+                )}
+                <span className="text-muted-foreground"> · {t(`scans.triggers.${scan.trigger}`)}</span>
+                {scan.windowEndsAt && (
+                  <span className="block text-xs text-muted-foreground">
+                    {t("scans.detail.windowEnds", { date: formatDateTime(scan.windowEndsAt, locale) })}
+                  </span>
+                )}
+                {scan.status === "paused" && (
+                  <span className="block text-xs text-amber-400">{t("scans.detail.pausedHint")}</span>
+                )}
+              </dd>
+            </div>
           </dl>
         </CardContent>
       </Card>
@@ -74,40 +92,24 @@ export function ScanSummary({
         <CardContent className="grid gap-3">
           {scan.changes && scan.baseScan ? (
             <>
-              <p className="text-sm text-muted-foreground">
-                {t("scans.detail.comparedWith", {
-                  date: scan.baseScan.startedAt ? formatDateTime(scan.baseScan.startedAt, locale) : "—",
-                })}
-              </p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {(["new", "gone", "changed", "unknown"] as const).map((change) => {
-                  const active = activeChange === change;
-                  return (
-                    <button
-                      key={change}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => onChangeFilter(active ? undefined : change)}
-                      className={cn(
-                        "grid gap-0.5 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50",
-                        active && "border-brand bg-brand/10",
-                      )}
-                    >
-                      <span className={cn("text-xl font-semibold tabular-nums", CHANGE_TONE[change])}>
-                        {number(scan.changes?.hosts[change] ?? 0)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">{t(`scans.detail.hosts.${change}`)}</span>
-                    </button>
-                  );
-                })}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {t("scans.detail.comparedWith", {
+                    date: scan.baseScan.startedAt ? formatDateTime(scan.baseScan.startedAt, locale) : "—",
+                  })}
+                </p>
+                <Button asChild size="sm" variant="outline">
+                  <Link to={compareUrl({ base: scan.baseScan.id, target: scan.id })}>
+                    <Columns2 />
+                    {t("scans.compare.openSideBySide")}
+                  </Link>
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {t("scans.detail.serviceChanges", {
-                  new: number(scan.changes.services.new),
-                  gone: number(scan.changes.services.gone),
-                  changed: number(scan.changes.services.changed),
-                })}
-              </p>
+              <ChangeFilterCards
+                changes={scan.changes}
+                activeChange={activeChange}
+                onChangeFilter={onChangeFilter}
+              />
             </>
           ) : (
             <p className="text-sm text-muted-foreground">{t("scans.detail.firstScan")}</p>
