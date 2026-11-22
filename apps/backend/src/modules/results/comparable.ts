@@ -1,3 +1,4 @@
+import { SECURITY_HEADERS, TECHNOLOGY_HEADERS } from "@subsurf/contracts/scans/compared-fields";
 import type { HttpEndpoint, OpenPort } from "@subsurf/contracts/workers/worker-result.schema";
 
 /**
@@ -6,28 +7,12 @@ import type { HttpEndpoint, OpenPort } from "@subsurf/contracts/workers/worker-r
  *
  * Left out on purpose: everything that differs between two requests to the same page (Date,
  * ETag, request ids, cookie values and expiry, body hashes, query strings), and the banner and
- * script output, which often carry timestamps.
+ * script output, which often carry timestamps. The compared headers are in the contracts, so
+ * the UI shows the same ones.
  */
 
-/** Headers that name software and its version: compared by value. */
-export const TECHNOLOGY_HEADERS: ReadonlySet<string> = new Set([
-  "server",
-  "x-powered-by",
-  "x-generator",
-  "x-aspnet-version",
-  "x-aspnetmvc-version",
-  "x-jenkins",
-]);
-
-/** Compared by presence only: CSP nonces and similar values change per request. */
-export const SECURITY_HEADERS: ReadonlySet<string> = new Set([
-  "strict-transport-security",
-  "content-security-policy",
-  "x-frame-options",
-  "x-content-type-options",
-  "access-control-allow-origin",
-  "www-authenticate",
-]);
+const TECHNOLOGY: ReadonlySet<string> = new Set(TECHNOLOGY_HEADERS);
+const SECURITY: ReadonlySet<string> = new Set(SECURITY_HEADERS);
 
 export interface ComparableCert {
   sha256: string;
@@ -107,8 +92,8 @@ function comparableEndpoint(endpoint: HttpEndpoint): ComparableEndpoint {
     title: endpoint.title,
     // Path only: query strings and `;jsessionid=` differ per request.
     finalPath: new URL(endpoint.finalUrl).pathname.split(";")[0] ?? "/",
-    headers: headerGroup(endpoint, TECHNOLOGY_HEADERS),
-    securityHeaders: headerGroup(endpoint, SECURITY_HEADERS),
+    headers: headerGroup(endpoint, TECHNOLOGY),
+    securityHeaders: headerGroup(endpoint, SECURITY),
     cookies: sortedRecord(endpoint.cookies.map((cookie) => [cookie.name, cookieFlags(cookie)])),
     cert: cert && {
       sha256: cert.sha256,

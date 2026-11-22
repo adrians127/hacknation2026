@@ -202,7 +202,8 @@ const POPULATIONS: Population[] = [
       27: { changes: ["upgrade"] },
       35: { changes: ["upgrade", "open-port"] },
       43: { changes: ["upgrade"] },
-      7: { run2: "down" },
+      // Gone at night, back in the afternoon, gone again: unstable.
+      7: { run2: "down", run3: "up", run4: "down" },
       23: { run2: "down" },
       51: { run2: "down" },
       14: { run2: "timeout" },
@@ -271,10 +272,9 @@ const POPULATIONS: Population[] = [
       16: { run2: "down" },
       26: { run1: "down" },
       33: { run1: "down" },
-      // Left on some nights, switched off on others, always on in the afternoon: unstable.
-      10: { run2: "down", run3: "up", run4: "down" },
-      12: { run2: "down", run3: "up", run4: "down" },
-      30: { run1: "down", run2: "down", run3: "up", run4: "down" },
+      // Rebooted for updates during the afternoon run: back at night, unstable.
+      10: { run3: "down", run4: "up" },
+      12: { run3: "down", run4: "up" },
       // Remote desktop enabled before the last run.
       35: { changes: ["open-port"], changesFrom: 4 },
     },
