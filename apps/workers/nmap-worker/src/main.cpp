@@ -217,14 +217,13 @@ private:
 int run_file_mode(const CliOptions& options, const WorkerConfig& config) {
     const auto input = read_job_file(options.input);
     if (!input) {
-        const auto output = serialize_failed_job("", input.error(), config.maximum_limits);
+        const auto output = serialize_failed_job("", input.error(), options.pretty);
         if (!write_output(options.output, output)) return EXIT_FAILURE;
         return 2;
     }
     const auto job = parse_scan_job(*input, config.maximum_limits);
     if (!job) {
-        std::string output = serialize_failed_job(*input, job.error(), config.maximum_limits);
-        if (options.pretty) output = nlohmann::json::parse(output).dump(2);
+        const std::string output = serialize_failed_job(*input, job.error(), options.pretty);
         if (!write_output(options.output, output)) return EXIT_FAILURE;
         return 2;
     }
@@ -246,8 +245,7 @@ int run_file_mode(const CliOptions& options, const WorkerConfig& config) {
     }
     std::println(stderr, "nmap-worker: job {} {}: hosts_up={} open_ports={} duration_ms={}",
                  result.job_id, result.status, up, open_ports, result.duration.count());
-    std::string output = serialize_job_result(result);
-    if (options.pretty) output = nlohmann::json::parse(output).dump(2);
+    const std::string output = serialize_job_result(result, options.pretty);
     if (!write_output(options.output, output)) return EXIT_FAILURE;
     return result.status == "failed" ? EXIT_FAILURE : EXIT_SUCCESS;
 }

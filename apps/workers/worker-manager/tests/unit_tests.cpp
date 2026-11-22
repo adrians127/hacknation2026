@@ -278,9 +278,9 @@ void test_footprint() {
     check(fp(R"({"targets": "10.0.0.1"})").areas.front().ports == PortSet{{1, 65535}},
           "no ports: all ports");
 
-    const Footprint nmap = fp(R"({"targets": [{"ip": "10.0.0.5", "tcp_ports": [22, 80]},
-                                             {"ip": "10.0.0.6", "tcp_ports": [443]},
-                                             {"ip": "10.0.0.5", "tcp_ports": [8080]}]})");
+    const Footprint nmap = fp(R"({"targets": [{"ip": "10.0.0.5", "ports": [22, 80]},
+                                             {"ip": "10.0.0.6", "ports": [443]},
+                                             {"ip": "10.0.0.5", "ports": [8080]}]})");
     check(nmap.is_exact && nmap.areas.size() == 2, "nmap footprint, duplicate host merged");
     check(nmap.areas.front().ports == PortSet{{22, 22}, {80, 80}, {8080, 8080}},
           "ports of a repeated host united");
@@ -335,7 +335,7 @@ void test_scheduler() {
     // Queue order, overlap and stages (every job capped well below the budget).
     Scheduler scheduler{
         make_tasks({
-            {"svc", R"({"targets": [{"ip": "10.0.0.5", "tcp_ports": [80]}]})", 1, 10},
+            {"svc", R"({"targets": [{"ip": "10.0.0.5", "ports": [80]}]})", 1, 10},
             {"a", R"({"targets": ["10.0.0.0/24"], "ports": "80"})", 0, 10},
             {"b", R"({"targets": ["10.0.0.0/25"], "ports": "80"})", 0, 10},
             {"c", R"({"targets": ["10.9.0.0/24"], "ports": "80"})", 0, 10},

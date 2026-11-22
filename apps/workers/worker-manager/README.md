@@ -25,7 +25,7 @@ WORKER_MANAGER_MAX_PARALLEL=4 MASSCAN_WORKER_LOG_LEVEL=debug pnpm workers:manage
 
 **Edit the targets in `example.json` first** (it scans `192.168.1.0/24`); scan only networks you are allowed to scan. The container runs as `${WORKER_UID:-1000}:${WORKER_GID:-1000}`; `pnpm workers:manager` creates `worker-results/` and sets both to your own uid/gid, so the result files belong to you. With plain `docker compose`, set them yourself. `Permission denied` on `/results` means the folder belongs to someone else (often root, when Docker created it): `sudo chown -R "$(id -u):$(id -g)" worker-results`. Like masscan-worker it uses `network_mode: host` and `NET_RAW`/`NET_ADMIN` (Linux hosts only).
 
-The image is built from `apps/workers/` and contains `worker-manager`, `masscan-worker`, `nmap-worker`, `masscan` and `nmap`. All three projects' tests run during the image build. The example has two masscan jobs and one nmap job; nmap job ids (`job_id`, `scan_id`) must be UUIDs, as the result contract requires.
+The image is built from `apps/workers/` and contains `worker-manager`, `masscan-worker`, `nmap-worker`, `masscan` and `nmap`. All three projects' tests run during the image build. The example has two masscan jobs and one nmap job.
 
 ## CLI
 
@@ -74,7 +74,7 @@ worker-manager --input FILE [--output-dir DIR]
 | `jobs[].worker` | yes | Which worker runs it; a name from `WORKER_MANAGER_WORKERS` |
 | `jobs[].deadline` | no | UTC timestamp. Each task gets `max_duration_seconds = deadline − now − WORKER_MANAGER_DEADLINE_MARGIN` (or the job's own, if smaller); a task that would start after it fails with `deadline-exceeded` |
 | `jobs[].split` | no | How to split the job, below. Default `{"strategy": "none"}` |
-| `jobs[].params` | yes | The worker's own input. `params.rate` (packets per second) caps the whole job; see [Rate budget](#rate-budget) (for masscan: [its input table](../masscan-worker/README.md#input)). The manager reads it only where `split` needs it |
+| `jobs[].params` | yes | The worker's job, in the [shared job format](../README.md#job-and-result-format) plus the worker's own fields. `params.rate` (packets per second) caps the whole job; see [Rate budget](#rate-budget) (for masscan: [its input table](../masscan-worker/README.md#input)). The manager reads it only where `split` needs it |
 
 Jobs run in the order of `jobs[]`; there is no priority (a `priority` field is ignored). Other fields (`lease_expires_at`, `heartbeat_interval_s`, `server_time`, `next_poll_ms`) are accepted and ignored until the backend connection exists. An invalid job does not stop the others: it is reported as `failed` with `invalid-job`.
 
@@ -85,7 +85,7 @@ Jobs run in the order of `jobs[]`; there is no priority (a `priority` field is i
 | `none` | nothing | the job as is |
 | `shard` | the scan space, via masscan `--shards` | the same `seed` (the job's, or a generated one) and `shard: {index, total}` |
 | `ranges` | `params.targets` minus `params.exclude`, into contiguous address blocks of near-equal size | its block as `targets`, `exclude: []` (already subtracted) |
-| `chunk` | the `params.targets` array (e.g. nmap's host list) | a slice of `targets` |
+| `chunk` | the `params.targets` array (e.g. nmap-worker's host objects) | a slice of `targets` |
 
 - **Task count:** `ceil(items / max_items_per_task)` when `max_items_per_task` is set, otherwise `max_tasks` (default `WORKER_MANAGER_MAX_PARALLEL`). It is never above `max_tasks`, `WORKER_MANAGER_MAX_TASKS_PER_JOB` or the number of items.
 - **Rate:** the planner does not touch it. The tasks of one job share the job's `rate` (see [Rate budget](#rate-budget)), so splitting never multiplies the packet rate. On one machine a single masscan already reaches the full rate, so `shard` mainly pays off once tasks go to several hosts; `ranges` gives smaller tasks that finish (and free their `IP:port`s) sooner.
@@ -95,7 +95,7 @@ Jobs run in the order of `jobs[]`; there is no priority (a `priority` field is i
 
 Running everything in parallel is not always right. Two workers probing the same `IP:port` at the same time double the load on that host, can trip its IDS or rate limits and can disturb each other's results, and some workers must run in order (discovery before service detection). So the manager decides per task, from **which IPs and ports it touches**:
 
-1. **Footprint.** Each task's input is read as a set of `(IPv4, TCP port)` pairs: `targets` minus `exclude`, times `ports` (default `1-65535`, as masscan). nmap-style targets `[{ip, tcp_ports}]` give per-host ports. A task whose input cannot be read gets the footprint "everything", so it runs alone (with a warning).
+1. **Footprint.** Each task's input is read as a set of `(IPv4, TCP port)` pairs: `targets` minus `exclude`, times `ports` (default `1-65535`, as masscan). Host objects in `targets` (`{ip, ports}`, nmap-worker) give per-host ports. A task whose input cannot be read gets the footprint "everything", so it runs alone (with a warning).
 2. **Conflict.** Two tasks that share at least one `IP:port` never run at the same time. The same IP on other ports, or other IPs, run in parallel. Shards of one job are exempt: masscan already splits the probe space between them. Tasks from a `ranges` or `chunk` split are disjoint by construction.
 3. **Order.** `WORKER_MANAGER_STAGES` (default `masscan,nmap`) is the pipeline. A task of a later stage starts only after **every overlapping task of an earlier stage has finished**, even when it is ahead in the queue. Tasks with no overlap are not ordered, and a worker not listed in the stages is never ordered (only conflicts apply to it).
 4. **Queue order.** Tasks are taken in the order of `jobs[]` (then task order). A task blocked by 2. or 3. is skipped, so work on other `IP:port`s does not wait behind it.
@@ -109,7 +109,7 @@ Every worker is an independent binary with the same interface, so the manager ne
 - `<binary> --input FILE --output FILE`; logs on stderr; a result JSON written **in every case**.
 - `SIGTERM` stops the scan and still writes a `partial` result (the manager signals the worker's whole process group).
 - Input: the job's `params` plus a common envelope, `job_id`, `scan_id`, `lease_id`, `task_id` (`<job_id>/<index>`), `task_index`, `task_count`, `rate` (the packets per second the scheduler granted; the worker must not exceed it) and `max_duration_seconds` (from the job's `deadline`, at most 7 days). Workers ignore fields they do not know.
-- Output: the shared result format of [`docs/worker-result-format.md`](../../../docs/worker-result-format.md). The manager reads `scan.status` (`completed` / `partial` / `failed`), `scan.error` and `scan.counts`.
+- Output: the shared result schema ([job and result format](../README.md#job-and-result-format), [`docs/worker-result-format.md`](../../../docs/worker-result-format.md)). The manager reads `scan.status` (`completed` / `partial` / `failed`), `scan.error` and `scan.counts`.
 - The worker enforces `max_duration_seconds` itself. As a backstop the manager sends `SIGTERM` once a task overruns it by `WORKER_MANAGER_KILL_GRACE`, and `SIGKILL` 10 s later.
 
 ## Output

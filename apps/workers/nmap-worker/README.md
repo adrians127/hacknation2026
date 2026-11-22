@@ -1,6 +1,6 @@
 # nmap-worker
 
-A C++23 worker for TCP service and version detection on IP/port hits supplied by Masscan. It accepts a JSON job, runs Nmap on only those IPs and ports, parses Nmap XML internally, and produces JSON results. It never writes to the database.
+A C++23 worker for TCP service and version detection on address ranges or on IP/port hits supplied by Masscan. It accepts a JSON job in the [shared job format](../README.md#job-and-result-format), runs Nmap on only those IPs and ports, parses Nmap XML internally, and produces a result with the same schema as masscan-worker's. It never writes to the database.
 
 ## Build
 
@@ -52,36 +52,41 @@ Example `job.json`:
   "job_id": "0193a1aa-6c1e-7b3f-9d2a-4e5f60718293",
   "lease_id": "lease-456",
   "scan_id": "0193a0f2-1b2c-7d3e-8f40-516273849506",
-  "subnet": "192.0.2.0/24",
-  "deadline": "2099-01-01T00:00:00Z",
-  "limits": {
-    "max_parallel": 2,
-    "max_rate_per_process": 50,
-    "host_timeout_ms": 120000,
-    "http_timeout_ms": 10000,
-    "max_body_bytes": 524288,
-    "max_redirects": 5
-  },
-  "probe_paths": ["/admin"],
   "targets": [
-    { "ip": "192.0.2.10", "domains": ["example.org"], "tcp_ports": [22, 443] }
-  ]
+    "192.0.2.64/30",
+    { "ip": "192.0.2.10", "ports": [22, 443], "domains": ["example.org"] }
+  ],
+  "exclude": ["192.0.2.66"],
+  "ports": [80, 443],
+  "rate": 100,
+  "max_duration_seconds": 900,
+  "max_parallel": 2,
+  "max_rate_per_process": 50,
+  "host_timeout_ms": 120000,
+  "http_timeout_ms": 10000,
+  "max_body_bytes": 524288,
+  "max_redirects": 5,
+  "probe_paths": ["/admin"]
 }
 ```
 
-**Time window:** `deadline` (UTC, fractional seconds allowed), `max_duration_seconds` (1 to 604800, counted from when the job is read), or both, in which case the earlier one applies. One of them is required.
+**Shared fields** (`job_id`, `scan_id`, `lease_id`, `targets`, `exclude`, `ports`, `rate`, `max_duration_seconds`) work as in [masscan-worker](../masscan-worker/README.md#input): the ids are optional, `targets` and `exclude` take IPv4 addresses, CIDRs and ranges, `ports` defaults to `1-65535`. Unlike masscan-worker, **`max_duration_seconds` is required** (1 to 604800, counted from when the job is read).
 
-**Rate:** an optional top-level `rate` is the packets per second for the whole job, as with masscan-worker. It is split evenly across the parallel Nmap processes (fewer processes if `rate` is smaller than `max_parallel`), and it can only lower `limits.max_rate_per_process` and `NMAP_MAX_RATE_PER_PROCESS`, never raise them. The values used are in `scan.params.maxParallel` and `maxRatePerProcess`.
+**Host objects** in `targets` give one address its own ports and domains: `{ "ip": "192.0.2.10", "ports": [22, 443], "domains": ["example.org"] }`. This is how Masscan hits are handed over. Without `ports` the object gets the job's `ports`. An address listed twice (or as an object inside a range) is scanned once, with the union of its ports and domains. `exclude` applies to host objects too.
+
+A job covers at most 1024 addresses, because every address appears in `hosts[]`.
+
+**Rate:** `rate` is the packets per second for the whole job, as with masscan-worker. It is split evenly across the parallel Nmap processes (fewer processes if `rate` is smaller than `max_parallel`), and it can only lower `max_rate_per_process` and `NMAP_MAX_RATE_PER_PROCESS`, never raise them. The values used are in `scan.params.maxParallel` and `maxRatePerProcess`.
+
+**Limits:** `max_parallel`, `max_rate_per_process`, `host_timeout_ms`, `http_timeout_ms`, `max_body_bytes` and `max_redirects` may lower the worker's configured maxima but cannot raise them. `probe_paths` (at most 128, each starting with `/`) are accepted for the shared job format.
 
 **Stopping:** `SIGINT`/`SIGTERM` (Ctrl+C, `docker stop`, worker-manager) stop the scan instead of killing the worker: running Nmap processes are terminated, unfinished hosts are `cancelled`, and a `partial` result with `stopReason: "stop-requested"` is still written (exit code `0`). In HTTP mode a failed heartbeat stops the scan the same way, with `stopReason: "lease-lost"`.
 
-Fields worker-manager adds (`task_id`, `task_index`, `task_count`) are ignored. See [`worker-manager`](../worker-manager/README.md#worker-contract) for running this worker from a job list.
+Fields worker-manager adds (`task_id`, `task_index`, `task_count`) are ignored. See [`worker-manager`](../worker-manager/README.md#worker-contract) for running this worker from a job list. Nmap receives only numeric IPs and validated port ranges.
 
-The worker validates that every target is an IPv4 address within `subnet` and that each port is in `1..65535`. Duplicate IPs are rejected; duplicate ports and domains are removed. Job limits may lower the worker's configured maxima but cannot raise them. The legacy single `domain` field is accepted; `domains` takes precedence. Nmap receives only numeric IPs and assigned TCP ports.
+The result has the [shared schema](../README.md#job-and-result-format): `scan` and `hosts` only, in the key order of [`docs/worker-result-format.md`](../../../docs/worker-result-format.md), every field present, unknowns as `null` and empty lists as `[]`. Invalid input gives the same document as masscan-worker's (`invalid-input`, `hosts: []`, `null` params and counts), and Nmap failing to start on every host is `scanner-unavailable`. `scan.params.subnet` is the targets' CIDR when they form exactly one aligned block, otherwise `null`. `scan.params.ports` is the union of assigned ports across the job; each Nmap invocation scans only its target's ports. `scan.params.nmapArgs` lists arguments shared by all invocations.
 
-The result follows [`docs/worker-result-format.md`](../../../docs/worker-result-format.md): `scan` and `hosts`, camelCase keys, every field present, unknowns as `null` and empty lists as `[]`. `scan.params.ports` is the union of assigned ports across the job; each Nmap invocation scans only its target's ports. `scan.params.nmapArgs` lists arguments shared by all invocations.
-
-Every target appears once with `up`, `down`, `timeout`, `cancelled`, or `failed`. Only open ports appear. Service name, product, version, extra info, CPE, method, confidence, port reason, TTL and NSE script output come from Nmap XML when available. An incomplete job is `partial`. A scanner startup failure is `failed`.
+Every target appears once with `up`, `down`, `timeout`, `cancelled`, or `failed`. Only open ports appear. Service name, product, version, extra info, CPE, method, confidence, port reason, TTL and NSE script output come from Nmap XML when available. An incomplete job is `partial`.
 
 HTTP requests and TLS fingerprinting are not implemented yet. The worker accepts `probe_paths` and the HTTP limits for the shared job format, but does not request those paths; `http[]` and HTTP counters remain empty or zero.
 
@@ -95,7 +100,7 @@ With `--http`, the process polls the backend. `WORKER_TOKEN` is required and sen
 | `POST` | `/workers/nmap/heartbeat` | extend the current lease |
 | `POST` | `/workers/nmap/results` | accept a JSON result |
 
-The backend handlers are not implemented yet. The worker retries failed result delivery three times. If a heartbeat fails, it stops the active scan and sends a partial result. The backend must make result submission idempotent and requeue unfinished hosts after a lease expires.
+The leased job uses the format above. `NmapJobSchema` in `packages/contracts` still describes the earlier format (`subnet`, `deadline`, `limits`, `tcp_ports`) and has to be updated before the backend handlers are written. The backend handlers are not implemented yet. The worker retries failed result delivery three times. If a heartbeat fails, it stops the active scan and sends a partial result. The backend must make result submission idempotent and requeue unfinished hosts after a lease expires.
 
 ## Configuration
 

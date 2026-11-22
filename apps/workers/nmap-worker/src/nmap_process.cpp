@@ -155,14 +155,8 @@ std::expected<std::string, Error> read_bounded(std::string_view path, std::size_
     return std::string{std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{}};
 }
 
-std::string port_list(const Target& target) {
-    std::string ports;
-    for (const auto port : target.tcp_ports) {
-        if (!ports.empty()) ports += ',';
-        ports += std::to_string(port);
-    }
-    return ports;
-}
+// Ranges, not one entry per port: a single argv string is limited to 128 KiB.
+std::string port_list(const Target& target) { return format_port_ranges(target.ports); }
 
 }  // namespace
 

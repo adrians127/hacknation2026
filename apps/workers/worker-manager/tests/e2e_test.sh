@@ -69,7 +69,7 @@ cat > "$work/schedule.json" <<'EOF'
 {
   "jobs": [
     { "job_id": "svc", "worker": "svc",
-      "params": { "targets": [{"ip": "10.0.0.5", "tcp_ports": [80]}] } },
+      "params": { "targets": [{"ip": "10.0.0.5", "ports": [80]}] } },
     { "job_id": "a", "worker": "disc",
       "params": { "targets": ["10.0.0.0/24"], "ports": "80", "rate": 1000, "fake_sleep": 1 } },
     { "job_id": "b", "worker": "disc",

@@ -80,7 +80,9 @@ std::expected<HostResult, Error> parse_nmap_xml(std::string_view xml, const Targ
         const unsigned number = port.attribute("portid").as_uint();
         if (number == 0 || number > 65535) continue;
         const auto port_number = static_cast<std::uint16_t>(number);
-        if (!std::ranges::binary_search(target.tcp_ports, port_number)) {
+        if (!std::ranges::any_of(target.ports, [port_number](const PortRange& range) {
+                return range.first <= port_number && port_number <= range.last;
+            })) {
             return std::unexpected(
                 Error{"unexpected-port", "Nmap XML reported an unrequested port"});
         }

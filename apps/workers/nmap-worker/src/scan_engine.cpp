@@ -6,7 +6,6 @@
 #include <atomic>
 #include <chrono>
 #include <exception>
-#include <set>
 #include <stop_token>
 #include <string>
 #include <thread>
@@ -15,15 +14,10 @@
 namespace nmap_worker {
 namespace {
 std::string all_ports(const ScanJob& job) {
-    std::set<std::uint16_t> ports;
+    std::vector<PortRange> ports;
     for (const auto& target : job.targets)
-        ports.insert(target.tcp_ports.begin(), target.tcp_ports.end());
-    std::string result;
-    for (const auto port : ports) {
-        if (!result.empty()) result += ',';
-        result += std::to_string(port);
-    }
-    return result;
+        ports.insert(ports.end(), target.ports.begin(), target.ports.end());
+    return format_port_ranges(merge_ranges(std::move(ports)));
 }
 }  // namespace
 
@@ -132,7 +126,8 @@ JobResult scan_job(const ScanJob& job, const NmapProcessConfig& process_config,
     if (all_spawn_failed) {
         result.status = "failed";
         result.stop_reason = "error";
-        result.error = result.hosts.front().error;
+        // Job-level code shared with masscan-worker; the hosts keep `spawn-failed`.
+        result.error = Error{"scanner-unavailable", result.hosts.front().error->message};
     }
     result.finished_at = std::chrono::system_clock::now();
     result.duration = std::chrono::duration_cast<std::chrono::milliseconds>(

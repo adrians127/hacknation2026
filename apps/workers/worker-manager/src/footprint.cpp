@@ -165,20 +165,17 @@ std::expected<Footprint, std::string> read_footprint(const Json& input) {
                 }
                 continue;
             }
-            // nmap style: {"ip": "10.0.0.5", "tcp_ports": [22, 443]}
+            // Host object (nmap-worker): {"ip": "10.0.0.5", "ports": [22, 443]}; without
+            // `ports` it gets the job's.
             if (!target.is_object() || !target.contains("ip")) {
                 return std::unexpected(
                     std::string{"'targets' entries must be strings or {ip, ...}"});
             }
             PortSet ports = default_ports;
-            for (const char* key : {"tcp_ports", "ports"}) {
-                if (const auto it = target.find(key); it != target.end() && !it->is_null()) {
-                    auto parsed = parse_port_specs(*it);
-                    if (!parsed)
-                        return std::unexpected(std::format("'{}' {}", key, parsed.error()));
-                    ports = std::move(*parsed);
-                    break;
-                }
+            if (const auto it = target.find("ports"); it != target.end() && !it->is_null()) {
+                auto parsed = parse_port_specs(*it);
+                if (!parsed) return std::unexpected(std::format("'ports' {}", parsed.error()));
+                ports = std::move(*parsed);
             }
             if (auto ok = add_spec(target["ip"], ports); !ok) return std::unexpected(ok.error());
         }
