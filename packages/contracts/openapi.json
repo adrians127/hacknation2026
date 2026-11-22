@@ -277,6 +277,14 @@
                 },
                 "maxItems": 20
               },
+              "targetIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "maxItems": 1000
+              },
               "ranges": {
                 "type": "array",
                 "items": {
@@ -296,6 +304,7 @@
             },
             "required": [
               "tags",
+              "targetIds",
               "ranges"
             ]
           },
@@ -682,6 +691,14 @@
                 },
                 "maxItems": 20
               },
+              "targetIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "maxItems": 1000
+              },
               "ranges": {
                 "type": "array",
                 "items": {
@@ -701,6 +718,7 @@
             },
             "required": [
               "tags",
+              "targetIds",
               "ranges"
             ]
           },
@@ -1219,6 +1237,60 @@
           "userCount",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "Target": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ip",
+              "cidr",
+              "domain"
+            ]
+          },
+          "value": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "activeHosts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lastScanAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "value",
+          "note",
+          "tags",
+          "activeHosts",
+          "lastScanAt",
+          "createdAt"
         ]
       },
       "ImportTargetsResponse": {
@@ -6023,6 +6095,14 @@
                                 },
                                 "maxItems": 20
                               },
+                              "targetIds": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "maxItems": 1000
+                              },
                               "ranges": {
                                 "type": "array",
                                 "items": {
@@ -6042,6 +6122,7 @@
                             },
                             "required": [
                               "tags",
+                              "targetIds",
                               "ranges"
                             ]
                           },
@@ -6433,7 +6514,7 @@
       "post": {
         "operationId": "createPipeline",
         "summary": "Create a pipeline from worker steps",
-        "description": "Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). The first step scans the pipeline's targets; a later one may take the previous step's up hosts and open ports instead (`input: previous`).",
+        "description": "Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). `targets` picks inventory targets with any of its `tags` or listed in `targetIds` (every target when both are empty), narrowed to its `ranges`. The first step scans the pipeline's targets; a later one may take the previous step's up hosts and open ports instead (`input: previous`).",
         "tags": [
           "Pipelines"
         ],
@@ -6474,6 +6555,14 @@
                         },
                         "maxItems": 20
                       },
+                      "targetIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "maxItems": 1000
+                      },
                       "ranges": {
                         "type": "array",
                         "items": {
@@ -6493,6 +6582,7 @@
                     },
                     "required": [
                       "tags",
+                      "targetIds",
                       "ranges"
                     ]
                   },
@@ -6980,6 +7070,14 @@
                         },
                         "maxItems": 20
                       },
+                      "targetIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "maxItems": 1000
+                      },
                       "ranges": {
                         "type": "array",
                         "items": {
@@ -6999,6 +7097,7 @@
                     },
                     "required": [
                       "tags",
+                      "targetIds",
                       "ranges"
                     ]
                   },
@@ -12291,6 +12390,277 @@
           },
           "409": {
             "description": "The scan has already ended (`SCAN_NOT_STOPPABLE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/targets": {
+      "get": {
+        "operationId": "listTargets",
+        "summary": "List the target inventory",
+        "description": "Requires `targets:read`. Every target by value. `lastScanAt` is when the newest scan that covered the target started; `activeHosts` counts the addresses up in that scan (for a domain: the addresses it resolved to).",
+        "tags": [
+          "Targets"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All targets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "ip",
+                              "cidr",
+                              "domain"
+                            ]
+                          },
+                          "value": {
+                            "type": "string"
+                          },
+                          "note": {
+                            "type": "string"
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "activeHosts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "lastScanAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "value",
+                          "note",
+                          "tags",
+                          "activeHosts",
+                          "lastScanAt",
+                          "createdAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/targets/{id}": {
+      "patch": {
+        "operationId": "updateTarget",
+        "summary": "Change a target's note or tags",
+        "description": "Requires `targets:update`. `tags` replaces all of the target's tags.",
+        "tags": [
+          "Targets"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 50,
+                      "pattern": "\\S"
+                    },
+                    "maxItems": 20
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The changed target",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Target"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteTarget",
+        "summary": "Remove a target from the inventory",
+        "description": "Requires `targets:delete`. Scans that covered it keep their jobs and results; pipelines stop scanning it.",
+        "tags": [
+          "Targets"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Target removed"
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {

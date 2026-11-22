@@ -27,6 +27,7 @@ import { useRunPipeline } from "@/features/pipelines/api/run-pipeline";
 import { useUpdatePipeline } from "@/features/pipelines/api/update-pipeline";
 import { ScheduleFields } from "@/features/pipelines/components/schedule-fields";
 import { StepCard } from "@/features/pipelines/components/step-card";
+import { TargetPicker } from "@/features/pipelines/components/target-picker";
 import {
   draftFromPipeline,
   draftToBody,
@@ -188,21 +189,15 @@ export function PipelineEditor({ pipeline, workers }: { pipeline?: PipelineDetai
             <CardTitle>{t("editor.targets.title")}</CardTitle>
             <CardDescription>{t("editor.targets.hint")}</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="grid gap-6">
             <div className="grid gap-1.5">
-              <Label htmlFor="pipeline-tags">{t("editor.targets.tags")}</Label>
-              <Input
-                id="pipeline-tags"
-                value={draft.tagsText}
-                placeholder={t("editor.targets.tagsPlaceholder")}
+              <h3 className="text-sm font-medium">{t("editor.targets.select")}</h3>
+              <p className="text-xs text-muted-foreground">{t("editor.targets.selectHint")}</p>
+              <TargetPicker
+                selector={body.targets}
                 disabled={!canEdit}
-                onChange={(event) => setDraftField("tagsText", event.target.value)}
-                aria-invalid={invalid("targets.tags")}
-                aria-describedby="pipeline-tags-hint"
+                onChange={(selection) => setDraft((previous) => ({ ...previous, ...selection }))}
               />
-              <p id="pipeline-tags-hint" className="text-xs text-muted-foreground">
-                {t("editor.targets.tagsHint")}
-              </p>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="pipeline-ranges">{t("editor.targets.ranges")}</Label>

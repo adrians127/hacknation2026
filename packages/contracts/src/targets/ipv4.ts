@@ -73,6 +73,26 @@ export function mergeRanges(ranges: readonly Ipv4Range[]): Ipv4Range[] {
   return merged;
 }
 
+/** The parts of `ranges` inside `within`; both are merged first. */
+export function intersectRanges(
+  ranges: readonly Ipv4Range[],
+  within: readonly Ipv4Range[],
+): Ipv4Range[] {
+  const left = mergeRanges(ranges);
+  const right = mergeRanges(within);
+  const result: Ipv4Range[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < left.length && j < right.length) {
+    const start = Math.max(left[i].start, right[j].start);
+    const end = Math.min(left[i].end, right[j].end);
+    if (start <= end) result.push({ start, end });
+    if (left[i].end < right[j].end) i += 1;
+    else j += 1;
+  }
+  return result;
+}
+
 /** The fewest aligned CIDR blocks that cover exactly `range`. */
 export function rangeToCidrs(range: Ipv4Range): Ipv4Cidr[] {
   const cidrs: Ipv4Cidr[] = [];

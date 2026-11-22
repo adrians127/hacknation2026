@@ -54,6 +54,8 @@ registry.registerPath({
   summary: "Create a pipeline from worker steps",
   description: [
     "Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires).",
+    "`targets` picks inventory targets with any of its `tags` or listed in `targetIds` (every",
+    "target when both are empty), narrowed to its `ranges`.",
     "The first step scans the pipeline's targets; a later one may take the previous step's up",
     "hosts and open ports instead (`input: previous`).",
   ].join(" "),

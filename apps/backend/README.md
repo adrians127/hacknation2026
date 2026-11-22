@@ -49,7 +49,8 @@ middleware/            validate, authenticate (requireAuth/requireSession), auth
 routes/index.ts        apiRouter: one apiRouter.use("/x", ...) line per module
 modules/<feature>/     <feature>.routes.ts | .controller.ts | .service.ts | .test.ts
 modules/auth|users|roles   sign-in and sessions, user accounts, roles (+ system-roles sync, first-admin bootstrap)
-modules/targets        target inventory: POST /targets/import (manual, CSV and JSON all arrive as one JSON body)
+modules/targets        target inventory: GET /targets, PATCH|DELETE /targets/{id} and POST /targets/import
+                       (manual, CSV and JSON all arrive as one JSON body)
 modules/scans          GET /scans… (scan results, hosts per scan, changes: scan-results.*, scan-diff.ts), the scan's
                        jobs and POST /scans/{id}/stop; an import's scan (scans.service.ts, dns.ts, batching.ts)
 modules/pipelines      /pipelines…: pipelines of worker steps, their runs (queue-run.ts, pipeline-runs.service.ts),
@@ -153,6 +154,8 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `s
 
 Jobs start as `queued`; worker-manager leases them (see [Pipelines](#pipelines-scheduling-and-leasing)).
 
+`GET /targets` lists the inventory by value with, per target, `lastScanAt` (when the newest scan that covered it started) and `activeHosts` (addresses up in that scan: inside the CIDR/IP, or scanned under the domain; one raw query in `targets.service.ts`). `PATCH /targets/{id}` replaces the note and/or tags (trimmed, deduplicated), the only way to change the tags of a target already imported. `DELETE /targets/{id}` removes the target and its `ScanTarget` links; scans keep their jobs and results, and pipelines that picked it by id simply stop matching it.
+
 ## Pipelines, scheduling and leasing
 
 A **pipeline** (`modules/pipelines/`) is a selection of the target inventory, an ordered chain of **steps** (each a worker from the registry with its job parameters) and an optional **schedule**. Every run is a `Scan`; the steps are snapshotted onto it (`Scan.steps`), so editing a pipeline never changes a run already queued.
@@ -164,7 +167,7 @@ A **pipeline** (`modules/pipelines/`) is a selection of the target inventory, an
 **Steps and jobs:**
 - A step has `ports`, `rate` (pps for one job, ≤ the worker's `maxRate`), `batchSize`, `maxDurationSeconds`, a worker-manager `split` and the worker's own `params` (checked with `validateStepParams`). Ports must stay inside `SCAN_ALLOWED_PORTS` (400 `PORTS_NOT_ALLOWED`); `Scan.ports` is the union of the steps' ports, so ingest's port check keeps working.
 - Input `targets`: jobs are planned when the run starts. Input `previous` (the worker must take `hosts`): when a job of the step before **completes**, its up hosts and open ports (within this step's ports) become one job per `batchSize` hosts, as nmap host objects `{ip, ports, domains}`. The first step always scans the targets.
-- The selector picks targets with any of its `tags` (all without tags) and intersects them with its `ranges`, so nothing outside the inventory is scanned.
+- The selector (`target-selection.ts`) picks targets with any of its `tags` or listed in its `targetIds` (every target when both are empty) and intersects them with its `ranges`, so nothing outside the inventory is scanned. Selectors stored before `targetIds` existed read as `targetIds: []` (`readSelector`). A run whose selection leaves no address fails with 409 `NO_SCANNABLE_TARGETS`; the pipeline editor shows the same coverage before saving.
 
 **Schedule** (`schedule.ts`, `Temporal.ZonedDateTime`): runs at `startsAt` (wall-clock time in `timezone`) and every `every` `hour|day|week` after it, only on `daysOfWeek`; days and weeks keep the wall-clock time across DST. `windowMinutes` is the time window of each run (PDF: time windows, stop and resume in the next one):
 - The scheduler (`scheduler.ts`, every `PIPELINE_SCHEDULER_TICK_SECONDS` inside the API process) claims a due pipeline by moving `nextRunAt` with a conditional update, so several instances fire it once; missed fires collapse into the latest one, and one whose window already closed is skipped.

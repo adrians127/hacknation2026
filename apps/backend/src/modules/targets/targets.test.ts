@@ -1,12 +1,17 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ErrorResponseSchema } from "@subsurf/contracts/common/common.schema";
-import { ImportTargetsResponseSchema } from "@subsurf/contracts/targets/targets.schema";
+import {
+  ImportTargetsResponseSchema,
+  TargetListResponseSchema,
+  TargetSchema,
+} from "@subsurf/contracts/targets/targets.schema";
 
 import { prisma } from "~backend/lib/prisma";
 import { resolveDomains } from "~backend/modules/scans/dns";
 import { signInAs } from "~backend/test/auth";
 import { startTestServer, type TestServer } from "~backend/test/http";
+import { ingestScan } from "~backend/test/scans";
 
 // No real DNS in tests: a fixed zone.
 vi.mock("~backend/modules/scans/dns", () => ({ resolveDomains: vi.fn<typeof resolveDomains>() }));
@@ -217,5 +222,79 @@ describe("POST /v1/targets/import", () => {
       body: { entries: [{ value: "192.0.2.1" }], startScan: false },
     });
     expect(withoutScan.status).toBe(201);
+  });
+});
+
+describe("GET /v1/targets", () => {
+  it("lists the inventory with the up hosts of each target's newest started scan", async () => {
+    await importAs("admin", {
+      entries: [{ value: "10.0.5.0/24" }, { value: "10.0.6.0/24" }],
+      startScan: false,
+      tags: ["lab"],
+    });
+    // The example result: 10.0.5.7 up, three other addresses of 10.0.5.0/24 not.
+    const scanId = await ingestScan();
+    const startedAt = new Date("2026-11-20T10:00:00.000Z");
+    await prisma.scan.update({ where: { id: scanId }, data: { startedAt } });
+    const covered = await prisma.target.findUniqueOrThrow({ where: { value: "10.0.5.0/24" } });
+    await prisma.scanTarget.create({ data: { scanId, targetId: covered.id } });
+    const { client } = await signInAs(server, { role: "viewer" });
+
+    const res = await client.get("/v1/targets");
+
+    expect(res.status).toBe(200);
+    const { items } = TargetListResponseSchema.parse(await res.json());
+    expect(items).toMatchObject([
+      { value: "10.0.5.0/24", kind: "cidr", tags: ["lab"], activeHosts: 1, lastScanAt: startedAt.toISOString() },
+      { value: "10.0.6.0/24", kind: "cidr", tags: ["lab"], activeHosts: 0, lastScanAt: null },
+    ]);
+  });
+});
+
+describe("PATCH /v1/targets/:id", () => {
+  it("replaces the tags and keeps the note", async () => {
+    await importAs("admin", { entries: [{ value: "10.0.5.0/24", note: "Lab" }], startScan: false, tags: ["old"] });
+    const target = await prisma.target.findUniqueOrThrow({ where: { value: "10.0.5.0/24" } });
+    const { client } = await signInAs(server, { role: "analyst" });
+
+    const res = await client.patch(`/v1/targets/${target.id}`, { body: { tags: [" lab ", "dmz", "lab"] } });
+
+    expect(res.status).toBe(200);
+    expect(TargetSchema.parse(await res.json())).toMatchObject({ id: target.id, note: "Lab", tags: ["lab", "dmz"] });
+  });
+
+  it("answers 404 for a target that does not exist", async () => {
+    const { client } = await signInAs(server, { role: "analyst" });
+
+    const res = await client.patch("/v1/targets/00000000-0000-4000-8000-000000000000", { body: { note: "x" } });
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("DELETE /v1/targets/:id", () => {
+  it("removes the target and keeps the scans that covered it", async () => {
+    await importAs("admin", { entries: [{ value: "192.0.2.10" }], startScan: true });
+    const target = await prisma.target.findUniqueOrThrow({ where: { value: "192.0.2.10" } });
+    const { client } = await signInAs(server, { role: "editor" });
+
+    const res = await client.delete(`/v1/targets/${target.id}`);
+    const again = await client.delete(`/v1/targets/${target.id}`);
+
+    expect([res.status, again.status]).toEqual([204, 404]);
+    expect(await prisma.target.count()).toBe(0);
+    expect(await prisma.scanTarget.count()).toBe(0);
+    expect(await prisma.scan.count()).toBe(1);
+  });
+
+  it("requires targets:delete", async () => {
+    await importAs("admin", { entries: [{ value: "192.0.2.10" }], startScan: false });
+    const target = await prisma.target.findUniqueOrThrow({ where: { value: "192.0.2.10" } });
+    const { client } = await signInAs(server, { role: "analyst" });
+
+    const res = await client.delete(`/v1/targets/${target.id}`);
+
+    expect(res.status).toBe(403);
+    expect(await prisma.target.count()).toBe(1);
   });
 });

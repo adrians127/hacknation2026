@@ -46,8 +46,10 @@ const pipelineInclude = {
 type PipelineWithSteps = Prisma.PipelineGetPayload<{ include: typeof pipelineInclude }>;
 
 export function readSelector(stored: unknown): TargetSelector {
-  const parsed = TargetSelectorSchema.safeParse(stored);
-  return parsed.success ? parsed.data : { tags: [], ranges: [] };
+  // Pipelines saved before `targetIds` existed lack it.
+  const withIds = typeof stored === "object" && stored !== null ? { targetIds: [], ...stored } : stored;
+  const parsed = TargetSelectorSchema.safeParse(withIds);
+  return parsed.success ? parsed.data : { tags: [], targetIds: [], ranges: [] };
 }
 
 /** The steps a run starts with: worker defaults merged under the step's own params, rate capped. */

@@ -48,8 +48,12 @@ export function useScheduleSummary() {
 
 export function useTargetsSummary() {
   const { t } = useTranslation("pipelines");
-  return ({ tags, ranges }: TargetSelector): string => {
-    const base = tags.length > 0 ? t("targets.tags", { tags: tags.join(", ") }) : t("targets.all");
+  return ({ tags, targetIds, ranges }: TargetSelector): string => {
+    const picks = [
+      ...(tags.length > 0 ? [t("targets.tags", { tags: tags.join(", ") })] : []),
+      ...(targetIds.length > 0 ? [t("targets.picked", { count: targetIds.length })] : []),
+    ];
+    const base = picks.length > 0 ? picks.join(", ") : t("targets.all");
     return ranges.length > 0 ? `${base} ${t("targets.ranges", { count: ranges.length })}` : base;
   };
 }

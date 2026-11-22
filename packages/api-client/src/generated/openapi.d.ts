@@ -240,7 +240,7 @@ export interface paths {
         put?: never;
         /**
          * Create a pipeline from worker steps
-         * @description Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). The first step scans the pipeline's targets; a later one may take the previous step's up hosts and open ports instead (`input: previous`).
+         * @description Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). `targets` picks inventory targets with any of its `tags` or listed in `targetIds` (every target when both are empty), narrowed to its `ranges`. The first step scans the pipeline's targets; a later one may take the previous step's up hosts and open ports instead (`input: previous`).
          */
         post: operations["createPipeline"];
         delete?: never;
@@ -527,6 +527,50 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the target inventory
+         * @description Requires `targets:read`. Every target by value. `lastScanAt` is when the newest scan that covered the target started; `activeHosts` counts the addresses up in that scan (for a domain: the addresses it resolved to).
+         */
+        get: operations["listTargets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/targets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a target from the inventory
+         * @description Requires `targets:delete`. Scans that covered it keep their jobs and results; pipelines stop scanning it.
+         */
+        delete: operations["deleteTarget"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a target's note or tags
+         * @description Requires `targets:update`. `tags` replaces all of the target's tags.
+         */
+        patch: operations["updateTarget"];
         trace?: never;
     };
     "/targets/import": {
@@ -981,6 +1025,7 @@ export interface components {
             enabled: boolean;
             targets: {
                 tags: string[];
+                targetIds: string[];
                 ranges: (string)[];
             };
             steps: {
@@ -1068,6 +1113,7 @@ export interface components {
             enabled: boolean;
             targets: {
                 tags: string[];
+                targetIds: string[];
                 ranges: (string)[];
             };
             steps: {
@@ -1178,6 +1224,20 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        Target: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "ip" | "cidr" | "domain";
+            value: string;
+            note: string;
+            tags: string[];
+            activeHosts: number;
+            /** Format: date-time */
+            lastScanAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
         };
         ImportTargetsResponse: {
             received: number;
@@ -2592,6 +2652,7 @@ export interface operations {
                             enabled: boolean;
                             targets: {
                                 tags: string[];
+                                targetIds: string[];
                                 ranges: (string)[];
                             };
                             steps: {
@@ -2709,6 +2770,7 @@ export interface operations {
                     enabled: boolean;
                     targets: {
                         tags: string[];
+                        targetIds: string[];
                         ranges: (string)[];
                     };
                     steps: {
@@ -2967,6 +3029,7 @@ export interface operations {
                     enabled?: boolean;
                     targets?: {
                         tags: string[];
+                        targetIds: string[];
                         ranges: (string)[];
                     };
                     steps?: {
@@ -4575,6 +4638,171 @@ export interface operations {
             };
             /** @description The scan has already ended (`SCAN_NOT_STOPPABLE`) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All targets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            kind: "ip" | "cidr" | "domain";
+                            value: string;
+                            note: string;
+                            tags: string[];
+                            activeHosts: number;
+                            /** Format: date-time */
+                            lastScanAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Target removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                    tags?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description The changed target */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Target"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

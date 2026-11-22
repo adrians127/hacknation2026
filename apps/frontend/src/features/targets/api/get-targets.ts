@@ -1,15 +1,8 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
-import type { TargetListResponse } from "@subsurf/contracts/targets/targets.schema";
+import { api } from "@/api/client";
 
-import { mockResponse } from "@/api/mock";
-import { mockTargets } from "@/features/targets/api/mocks";
+export const targetsQueryOptions = () => api.queryOptions("get", "/targets");
 
-// MOCK: api.queryOptions("get", "/targets")
-export const targetsQueryOptions = () =>
-  queryOptions({
-    queryKey: ["get", "/targets"] as const,
-    queryFn: (): Promise<TargetListResponse> => mockResponse(mockTargets.list()),
-  });
-
-export const useTargets = () => useQuery(targetsQueryOptions());
+export const useTargets = (options: { enabled?: boolean } = {}) =>
+  useQuery({ ...targetsQueryOptions(), ...options });

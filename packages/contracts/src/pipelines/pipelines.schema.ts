@@ -18,12 +18,17 @@ export const PIPELINE_BATCH_SIZES = [16, 32, 64, 128, 256, 512, 1024] as const;
 /** One week, the longest `max_duration_seconds` the workers accept. */
 export const STEP_MAX_DURATION_SECONDS = 604_800;
 
+/** Targets picked one by one; a larger set is better selected by a tag. */
+export const PIPELINE_TARGET_IDS_MAX = 1000;
+
 /**
- * Which inventory targets a run scans: those with any of `tags` (all targets when empty),
- * narrowed to `ranges` (no narrowing when empty). Nothing outside the inventory is ever scanned.
+ * Which inventory targets a run scans: those with any of `tags` or listed in `targetIds` (all
+ * targets when both are empty), narrowed to `ranges` (no narrowing when empty). Nothing outside
+ * the inventory is ever scanned.
  */
 export const TargetSelectorSchema = z.object({
   tags: TagsSchema,
+  targetIds: z.array(z.uuid()).max(PIPELINE_TARGET_IDS_MAX),
   ranges: z.array(HostSelectorSchema).max(HOST_SELECTORS_MAX),
 });
 

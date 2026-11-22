@@ -1,19 +1,10 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
-import type { IdParams } from "@subsurf/contracts/common/common.schema";
-import type { Target, UpdateTargetBody } from "@subsurf/contracts/targets/targets.schema";
+import { api } from "@/api/client";
 
-import { mockError, mockResponse } from "@/api/mock";
-import { mockTargets } from "@/features/targets/api/mocks";
-
-// MOCK: api.useMutation("patch", "/targets/{id}", { onSuccess })
 export function useUpdateTarget() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ params, body }: { params: { path: IdParams }; body: UpdateTargetBody }): Promise<Target> => {
-      const target = mockTargets.find(params.path.id);
-      return target ? mockResponse(mockTargets.update(target, body)) : mockError(404, "Target not found");
-    },
+  return api.useMutation("patch", "/targets/{id}", {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["get", "/targets"] }),
   });
 }

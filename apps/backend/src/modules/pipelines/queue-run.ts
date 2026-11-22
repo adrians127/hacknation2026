@@ -1,12 +1,11 @@
 import type { QueuedScan, ScanJobHost, ScanTrigger } from "@subsurf/contracts/scans/scans.schema";
-import { ipv4ToInt, mergeRanges, type Ipv4Range } from "@subsurf/contracts/targets/ipv4";
+import { intersectRanges, ipv4ToInt, mergeRanges, type Ipv4Range } from "@subsurf/contracts/targets/ipv4";
 import { parseTargetValue, type TargetKind } from "@subsurf/contracts/targets/target-input";
 import type { ImportWarning } from "@subsurf/contracts/targets/targets.schema";
 
 import type { Prisma } from "~backend/generated/prisma/client";
 import { chunks } from "~backend/lib/chunks";
 import { hostTargets, jobParams, scanLimits, type ScanStepSnapshot } from "~backend/modules/pipelines/steps";
-import { intersectRanges } from "~backend/modules/pipelines/target-selection";
 import { planScanJobs, type ScanJobPlan } from "~backend/modules/scans/batching";
 import type { DnsResolution } from "~backend/modules/scans/dns";
 import { toQueuedScan } from "~backend/modules/scans/scans.mapper";

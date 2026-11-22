@@ -11,12 +11,13 @@ import type { Worker } from "@subsurf/contracts/workers/worker-registry.schema";
 /** A step in the editor: the API's step plus a stable key for React and drag and drop. */
 export type StepDraft = PipelineStep & { key: string };
 
-/** The editor's form state. Tags and ranges stay text until saved; numbers may be NaN while typed. */
+/** The editor's form state. Ranges stay text until saved; numbers may be NaN while typed. */
 export interface PipelineDraft {
   name: string;
   description: string;
   enabled: boolean;
-  tagsText: string;
+  tags: string[];
+  targetIds: string[];
   rangesText: string;
   steps: StepDraft[];
   schedule: Schedule | null;
@@ -81,7 +82,7 @@ export function emptyDraft(workers: readonly Worker[]): PipelineDraft {
     const worker = workers.find((candidate) => candidate.name === name && candidate.enabled);
     if (worker) steps.push(newStep(worker, steps.at(-1)));
   }
-  return { name: "", description: "", enabled: false, tagsText: "", rangesText: "", steps, schedule: null };
+  return { name: "", description: "", enabled: false, tags: [], targetIds: [], rangesText: "", steps, schedule: null };
 }
 
 export function draftFromPipeline(pipeline: Pipeline): PipelineDraft {
@@ -89,15 +90,12 @@ export function draftFromPipeline(pipeline: Pipeline): PipelineDraft {
     name: pipeline.name,
     description: pipeline.description,
     enabled: pipeline.enabled,
-    tagsText: pipeline.targets.tags.join(", "),
+    tags: pipeline.targets.tags,
+    targetIds: pipeline.targets.targetIds,
     rangesText: pipeline.targets.ranges.join("\n"),
     steps: pipeline.steps.map(({ position: _position, worker: _worker, ...step }) => ({ ...step, key: newKey() })),
     schedule: pipeline.schedule,
   };
-}
-
-export function parseTags(text: string): string[] {
-  return [...new Set(text.split(",").map((tag) => tag.trim()).filter(Boolean))];
 }
 
 export function draftToBody(draft: PipelineDraft): PipelineBody {
@@ -105,7 +103,11 @@ export function draftToBody(draft: PipelineDraft): PipelineBody {
     name: draft.name.trim(),
     description: draft.description.trim(),
     enabled: draft.schedule !== null && draft.enabled,
-    targets: { tags: parseTags(draft.tagsText), ranges: parseHostSelectors(draft.rangesText).selectors },
+    targets: {
+      tags: draft.tags,
+      targetIds: draft.targetIds,
+      ranges: parseHostSelectors(draft.rangesText).selectors,
+    },
     steps: draft.steps.map(({ key: _key, ...step }) => step),
     schedule: draft.schedule,
   };
