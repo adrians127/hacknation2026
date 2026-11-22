@@ -56,7 +56,7 @@ interface EffectiveRow {
  * Conclusive answers win; for two "up" answers Nmap's service data wins over
  * discovery data, then the latest observation wins.
  */
-function effectiveSql(scanIds: readonly string[], ips?: readonly string[]): Prisma.Sql {
+export function effectiveSql(scanIds: readonly string[], ips?: readonly string[]): Prisma.Sql {
   return Prisma.sql`
     SELECT DISTINCT ON (h."scanId", h.ip) h.id, h."scanId", h.ip, h.status
     FROM "HostObservation" h
@@ -76,25 +76,25 @@ function effectiveSql(scanIds: readonly string[], ips?: readonly string[]): Pris
   `;
 }
 
-async function effectiveIds(scanIds: readonly string[], ips?: readonly string[]): Promise<string[]> {
+export async function effectiveIds(scanIds: readonly string[], ips?: readonly string[]): Promise<string[]> {
   if (scanIds.length === 0 || ips?.length === 0) return [];
   const rows = await prisma.$queryRaw<EffectiveRow[]>(effectiveSql(scanIds, ips));
   return rows.map((row) => row.id);
 }
 
-interface BaseScan {
+export interface BaseScan {
   id: string;
   startedAt: Date | null;
 }
 
-async function findScan(id: string): Promise<ScanRow> {
+export async function findScan(id: string): Promise<ScanRow> {
   const scan = await prisma.scan.findUnique({ where: { id } });
   if (!scan) throw HttpError.notFound("Scan not found");
   return scan;
 }
 
 /** The previous scan that has results: what "new", "gone" and "changed" are relative to. */
-function findBaseScan(scan: ScanRow): Promise<BaseScan | null> {
+export function findBaseScan(scan: ScanRow): Promise<BaseScan | null> {
   return prisma.scan.findFirst({
     where: { createdAt: { lt: scan.createdAt }, results: { some: {} } },
     orderBy: { createdAt: "desc" },
@@ -336,10 +336,27 @@ export const scanResultsService = {
 
   /** Every host of the scan (unpaged) with both scans' observations, for an export. */
   async hostsForExport(scanId: string): Promise<{ scan: ScanRow; hosts: HostInScan[] }> {
+    const { scan, hosts } = await scanResultsService.hostsForReport(scanId);
+    return { scan, hosts };
+  },
+
+  /**
+   * Like `hostsForExport`, compared with `baseScanId` instead of the base scan when given
+   * (`null` = compare with nothing). Reports use it for any pair of scans.
+   */
+  async hostsForReport(
+    scanId: string,
+    baseScanId?: string | null,
+  ): Promise<{ scan: ScanRow; base: BaseScan | null; hosts: HostInScan[] }> {
     const scan = await findScan(scanId);
-    const base = await findBaseScan(scan);
+    const base =
+      baseScanId === undefined
+        ? await findBaseScan(scan)
+        : baseScanId === null
+          ? null
+          : await findScan(baseScanId);
     const entries = await diffWithBase(scan, base);
-    return { scan, hosts: await hostsInScan(scan.id, base, entries) };
+    return { scan, base, hosts: await hostsInScan(scan.id, base, entries) };
   },
 
   async getHost(scanId: string, hostId: string): Promise<ScanHostDetail> {

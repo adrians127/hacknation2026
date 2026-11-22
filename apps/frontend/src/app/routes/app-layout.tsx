@@ -1,4 +1,4 @@
-import { Crosshair, LayoutDashboard, Radar, ShieldCheck, Users, type LucideIcon } from "lucide-react";
+import { Crosshair, FileText, LayoutDashboard, Radar, ShieldCheck, Users, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, Outlet } from "react-router";
 
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 interface NavItem {
   to: string;
-  label: "nav.dashboard" | "nav.targets" | "nav.scans" | "nav.users" | "nav.roles";
+  label: "nav.dashboard" | "nav.targets" | "nav.scans" | "nav.reports" | "nav.users" | "nav.roles";
   Icon: LucideIcon;
   permission?: Permission;
 }
@@ -20,6 +20,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/app", label: "nav.dashboard", Icon: LayoutDashboard },
   { to: "/app/targets", label: "nav.targets", Icon: Crosshair, permission: "targets:read" },
   { to: "/app/scans", label: "nav.scans", Icon: Radar, permission: "scans:read" },
+  { to: "/app/reports", label: "nav.reports", Icon: FileText, permission: "scans:read" },
   { to: "/app/admin/users", label: "nav.users", Icon: Users, permission: "users:read" },
   { to: "/app/admin/roles", label: "nav.roles", Icon: ShieldCheck, permission: "roles:read" },
 ];
@@ -32,7 +33,7 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-svh flex-col md:flex-row">
-      <aside className="flex shrink-0 flex-col gap-6 border-b p-4 md:sticky md:top-0 md:h-svh md:w-60 md:border-r md:border-b-0">
+      <aside className="flex shrink-0 print:hidden flex-col gap-6 border-b p-4 md:sticky md:top-0 md:h-svh md:w-60 md:border-r md:border-b-0">
         <Link to="/" className="w-fit">
           <Logo variant="icon" label={t("appName")} className="w-14" />
         </Link>
@@ -59,8 +60,8 @@ export function AppLayout() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 p-4 sm:p-8">
-        <div className="mx-auto max-w-6xl">
+      <main className="min-w-0 flex-1 p-4 sm:p-8 print:p-0">
+        <div className="mx-auto max-w-6xl print:max-w-none">
           <Outlet />
         </div>
       </main>

@@ -47,6 +47,8 @@ modules/targets        target inventory: POST /targets/import (manual, CSV and J
 modules/scans          GET /scans… (scan results, hosts per scan, changes: scan-results.*, scan-diff.ts);
                        queues a Scan and its ScanJob batches (scans.service.ts, dns.ts, batching.ts)
 modules/results        no routes yet: ingests worker results into observations (details.ts, fingerprint.ts, job-scope.ts)
+modules/reports        GET /reports…: read-only reports (summary, findings, technologies, exposure, triage, tags,
+                       diff of any two scans, one IP, stability, time of day)
 modules/hosts          PATCH /hosts…: edits of the Host and Service assets; ingest's helpers for those assets
 modules/defectdojo     GET|POST /defectdojo/sync: pulls DefectDojo tags, owners, triage and remediation dates
                        into hosts and services; POST /defectdojo/push: a scan (or a selection) as Info
@@ -195,6 +197,30 @@ use that same selection, so a retry does not duplicate a host in the scan view.
 **DefectDojo sync** (`modules/defectdojo/`): `POST /defectdojo/sync` merges DefectDojo tags into host and service tags, sets triage on services still `unreviewed` and replaces `Service.remediationPlannedOn`/`slaDueOn`/`riskAcceptedUntil` (returned as `remediation` on every scan service). `POST /defectdojo/push` sends a scan's services (all, or the selected hosts and services) as `Generic Findings Import` findings, importing once and reimporting into the same test later (`DefectDojoPush` rows keep the test id). Rules: [`docs/defectdojo-integration.md`](../../docs/defectdojo-integration.md#sync-into-subsurf-implemented) and [push](../../docs/defectdojo-integration.md#push-from-subsurf-implemented).
 
 **Edits** (`modules/hosts/`, `hosts:update`): `PATCH /hosts/{id}` (note, tags, triage) and `PATCH /hosts/{id}/services/{serviceId}` (the same plus `nameOverride`/`productOverride`/`versionOverride`, `null` clears one). They write the `Host`/`Service` assets, which ingest never touches, so an edit made from any scan shows in every scan and survives later ones (PDF item 14). Triage is `unreviewed | reviewed | important | false_positive`.
+
+## Reports
+
+`modules/reports` builds read-only reports from the stored observations, on request (nothing is precomputed or stored). Every route needs `scans:read`, like browsing the results. The frontend renders them as printable pages with JSON and CSV downloads.
+
+| Endpoint | Report |
+|---|---|
+| `GET /reports/scans/{id}/summary` | Post-scan summary: execution (job results, stop reasons, workers, time per phase), results, changes against the base scan, top hosts, ports and technologies, triage counts |
+| `GET /reports/scans/{id}/findings` | Interesting findings and an analytical priority per host |
+| `GET /reports/scans/{id}/technologies` | Technologies and CMSs with versions and confidence, plus groups of similar services |
+| `GET /reports/scans/{id}/exposure` | Open ports by port and by /24 network |
+| `GET /reports/scans/{id}/triage` | Verdicts, new unreviewed services, DefectDojo remediation dates (overdue, due within 14 days, risk acceptance ending within 30 days) |
+| `GET /reports/scans/{id}/tags?tag=` | Every tag of the scan; with `tag`, the hosts carrying it on the host or a service |
+| `GET /reports/diff?from=&to=` | Any two scans, in either order, by the rules of `scan-diff.ts`, with each changed service before and after and which fields differ. 400 `SAME_SCAN` for one scan twice |
+| `GET /reports/ips/{ip}` | One address in every scan: status timeline, ports opened, closed and changed, each service's distinct states, findings and technologies from the latest `up` answer |
+| `GET /reports/stability?scanId=&window=&inactiveAfter=` | Hosts across the latest `window` scans (default 10): `flapping`, `unresponsive`, `inactive` (`down` in the last `inactiveAfter` scans, default 3), `going-quiet`, `unstable-ports`, `returned` |
+| `GET /reports/time-of-day?scans=&utcOffsetMinutes=` | Availability and ports by part of the day (night, morning, afternoon, evening in the viewer's time zone); needs scans from two parts of the day |
+
+**How the reports decide** (all of it passive: the rules read what the worker already collected and send nothing to any host):
+- **Findings** (`findings.ts`): fixed rules with a fixed severity, e.g. a database port reachable (high), staging/debug pages and `/server-status` (high), expired certificates (high), admin panels by title, probe or `www-authenticate` (medium), cleartext protocols and logins over plain HTTP (medium), software older than a supported version (medium), self-signed certificates, cookies without `Secure`/`HttpOnly`, CORS `*`, default pages (low), missing security headers and versions in headers (info). One finding per rule and service.
+- **Priority:** severity weights (10, 5, 2, 0.5) summed per host, +3 per new service, ×1.5 when the host or a service is triaged `important`. `false_positive` hosts and services are left out.
+- **Technologies** (`technologies.ts`): service detection, software headers, `<meta name="generator">`, page content markers, cookie names, titles and probe paths, merged per service under one name (aliases such as `Apache/…` and `Apache httpd`). Confidence is `high` for two or more sources, `medium` for one explicit source (service detection, a header or a generator tag), `low` for a cookie, title or path alone.
+- **Stability** (`history-reports.ts`): only addresses `up` at least once in the window are loaded. A timeout is never counted as `down`, so a host that stops answering is `unresponsive`, not `inactive`.
+- `scanResultsService.hostsForReport(scanId, baseScanId?)` gives the reports the same effective observations and diff as the scan views, against any base scan.
 
 ## Demo data
 

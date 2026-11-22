@@ -1,4 +1,4 @@
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, FileText, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router";
@@ -13,6 +13,7 @@ import {
 import { DataTablePagination } from "@/components/data-table-pagination";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -158,11 +159,19 @@ export function ScanDetailRoute() {
         }
         description={t("scans.detail.subtitle")}
         actions={
-          <DefectDojoPushActions
-            scanId={scanId}
-            selection={selection}
-            onClearSelection={clearSelection}
-          />
+          <>
+            <Button asChild variant="outline">
+              <Link to={`/app/reports/scans/${scanId}/summary`}>
+                <FileText />
+                {t("scans.detail.report")}
+              </Link>
+            </Button>
+            <DefectDojoPushActions
+              scanId={scanId}
+              selection={selection}
+              onClearSelection={clearSelection}
+            />
+          </>
         }
       />
 

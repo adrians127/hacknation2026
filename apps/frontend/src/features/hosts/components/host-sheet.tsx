@@ -1,10 +1,12 @@
-import { Pencil } from "lucide-react";
+import { FileText, Pencil } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 import type { ScanHostDetail, ScanServiceDetail } from "@subsurf/contracts/scans/scan-results.schema";
 
 import { GuardedButton } from "@/components/guarded-button";
+import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/icon-action";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -138,10 +140,15 @@ function HostDetails({
           <ChangeBadge change={host.change} />
           <TriageBadge status={host.triage} />
           <TagList tags={host.tags} />
+          <Button asChild size="sm" variant="outline" className="ml-auto">
+            <Link to={`/app/reports/ips/${host.ip}`}>
+              <FileText />
+              {t("actions.ipReport")}
+            </Link>
+          </Button>
           <GuardedButton
             size="sm"
             variant="outline"
-            className="ml-auto"
             permissions={["hosts:update"]}
             onClick={() => onEditHost(host)}
           >

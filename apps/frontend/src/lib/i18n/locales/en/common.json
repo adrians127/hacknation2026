@@ -201,6 +201,7 @@
     },
     "detail": {
       "back": "All scans",
+      "report": "Scan report",
       "title": "Scan of {{date}}",
       "subtitle": "What this scan found. Changes are measured against the previous scan, only for addresses that answered both times.",
       "addresses": "Addresses",
@@ -252,6 +253,7 @@
     "dashboard": "Dashboard",
     "targets": "Targets",
     "scans": "Scans",
+    "reports": "Reports",
     "users": "Users",
     "roles": "Roles"
   },
@@ -337,6 +339,7 @@
     "DEFECTDOJO_UNAVAILABLE": "DefectDojo did not answer or refused the API token.",
     "DEFECTDOJO_SYNC_RUNNING": "A DefectDojo sync is already running.",
     "DEFECTDOJO_PUSH_RUNNING": "A push to DefectDojo is already running.",
-    "NOTHING_TO_PUSH": "There is nothing to push: no open services in this scan or selection."
+    "NOTHING_TO_PUSH": "There is nothing to push: no open services in this scan or selection.",
+    "SAME_SCAN": "Pick two different scans to compare."
   }
 }
