@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildVisualizationTree, visibleVisualizationTree, type VisualizationBranch } from "./visualization-tree";
+import { buildVisualizationTree, visibleVisualizationTree, visualizationHostIps, type VisualizationBranch } from "./visualization-tree";
 
 const host = (ip: string, id: string) => ({ id, ip, status: "up" as const });
 
@@ -18,6 +18,8 @@ describe("scan visualization tree", () => {
     if (tree?.kind !== "prefix") return;
     expect(tree.cidr).toBe("0.0.0.0/0");
     expect(tree.children[0].kind).toBe("prefix");
+    expect(visualizationHostIps(tree).toSorted()).toEqual(ips);
+    expect(visualizationHostIps(tree.children[0]).toSorted()).toEqual(ips.slice(0, 2));
     expect(visibleVisualizationTree(tree, new Set())).toHaveLength(1);
     expect(visibleVisualizationTree(tree, new Set([tree.id]))).toHaveLength(3);
   });

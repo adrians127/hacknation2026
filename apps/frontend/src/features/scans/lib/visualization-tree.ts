@@ -43,6 +43,19 @@ export function buildVisualizationTree(hosts: readonly Host[]): VisualizationBra
   return branch(sorted);
 }
 
+/** The concrete scanned hosts below a node, independent of its displayed CIDR. */
+export function visualizationHostIps(branch: VisualizationBranch): string[] {
+  const ips: string[] = [];
+  const pending = [branch];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (!current) continue;
+    if (current.kind === "host") ips.push(current.ip);
+    else pending.push(...current.children);
+  }
+  return ips;
+}
+
 export interface VisibleBranch {
   branch: VisualizationBranch;
   x: number;
