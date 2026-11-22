@@ -468,6 +468,18 @@ export const scanResultsService = {
     };
   },
 
+  /** Every host of the scan (unpaged) with both scans' observations, for an export. */
+  async hostsForExport(scanId: string): Promise<{ scan: ScanRow; hosts: HostInScan[] }> {
+    const scan = await findScan(scanId);
+    const base = await resolveBase(scan, undefined);
+    const { entries } = await diffWithBase(scan, base);
+    const hosts: HostInScan[] = [];
+    for (let start = 0; start < entries.length; start += CHANGES_BATCH) {
+      hosts.push(...(await hostsInScan(scan, base, entries.slice(start, start + CHANGES_BATCH))));
+    }
+    return { scan, hosts };
+  },
+
   /** Every change since the base scan, one row each, rated (export and dashboard). */
   async changes(scanId: string, baseId?: string): Promise<ScanChangesResponse> {
     const scan = await findScan(scanId);

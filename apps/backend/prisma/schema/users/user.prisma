@@ -22,6 +22,8 @@ model User {
   vulnerabilityJobRequests VulnerabilityJobRequest[]
   vulnerabilityTriage      ServiceVulnerabilityTriage[]
   packageMappings          PackageMapping[]
+  defectDojoSyncs          DefectDojoSync[]
+  defectDojoPushes         DefectDojoPush[]
 
   @@index([roleId])
 }

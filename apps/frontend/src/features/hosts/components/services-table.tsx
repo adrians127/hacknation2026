@@ -6,8 +6,10 @@ import type { ScanHost, ScanService } from "@subsurf/contracts/scans/scan-result
 
 import { DataTable } from "@/components/data-table";
 import { IconAction } from "@/components/icon-action";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ChangeBadge } from "@/features/hosts/components/change-badge";
 import { HttpSummary } from "@/features/hosts/components/http-summary";
+import { RemediationDates } from "@/features/hosts/components/remediation-dates";
 import { ServiceIdentity } from "@/features/hosts/components/service-identity";
 import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageControl } from "@/features/hosts/components/triage-control";
@@ -16,15 +18,25 @@ import { createDataTableColumns } from "@/lib/data-table";
 
 const column = createDataTableColumns<ScanService>();
 
+/** Selected hosts and services; a selected host stands for all of its services. */
+export interface RowSelection {
+  hostIds: ReadonlySet<string>;
+  serviceIds: ReadonlySet<string>;
+  toggleHost: (id: string) => void;
+  toggleService: (id: string) => void;
+}
+
 /** The services of one host in one scan: shown under its row in the hosts table. */
 export function ServicesTable({
   host,
   compared,
   onEdit,
+  selection,
 }: {
   host: ScanHost;
   compared: boolean;
   onEdit: (host: ScanHost, service: ScanService) => void;
+  selection?: RowSelection;
 }) {
   const { t } = useTranslation("hosts");
   const { t: tv } = useTranslation("vulnerabilities");
@@ -32,6 +44,25 @@ export function ServicesTable({
   const columns = useMemo(
     () =>
       column.columns([
+        ...(selection
+          ? [
+              column.display({
+                id: "select",
+                header: () => <span className="sr-only">{t("columns.select")}</span>,
+                meta: { className: "w-8" },
+                cell: ({ row: { original: service } }) =>
+                  // A gone service is not part of this scan's results.
+                  service.change === "gone" ? null : (
+                    <Checkbox
+                      checked={selection.hostIds.has(host.id) || selection.serviceIds.has(service.id)}
+                      disabled={selection.hostIds.has(host.id)}
+                      onCheckedChange={() => selection.toggleService(service.id)}
+                      aria-label={t("actions.select", { name: `${host.ip}:${service.port}` })}
+                    />
+                  ),
+              }),
+            ]
+          : []),
         column.accessor("port", {
           header: t("columns.port"),
           enableSorting: false,
@@ -83,6 +114,11 @@ export function ServicesTable({
           enableSorting: false,
           cell: ({ getValue }) => <TagList tags={getValue()} />,
         }),
+        column.accessor("remediation", {
+          header: t("columns.remediation"),
+          enableSorting: false,
+          cell: ({ getValue }) => <RemediationDates remediation={getValue()} />,
+        }),
         column.accessor("note", {
           header: t("columns.note"),
           enableSorting: false,
@@ -108,7 +144,7 @@ export function ServicesTable({
           ),
         }),
       ]),
-    [t, tv, host, compared, onEdit],
+    [t, tv, host, compared, onEdit, selection],
   );
 
   return (

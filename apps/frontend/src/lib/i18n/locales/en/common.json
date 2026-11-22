@@ -424,6 +424,35 @@
     "badge": "Mock data",
     "tooltip": "This page shows sample data generated in the browser. The backend does not serve it yet, so changes made here are not saved."
   },
+  "defectdojo": {
+    "title": "DefectDojo",
+    "never": "Never synced. A sync imports finding tags, asset tags and owners, triage of unreviewed services and remediation dates.",
+    "notConfigured": "Not configured: set DEFECTDOJO_URL and DEFECTDOJO_API_TOKEN on the backend.",
+    "running": "Sync started {{when}} by {{by}} is still running.",
+    "failed": "Last sync ({{when}}, {{by}}) failed: {{error}}",
+    "succeeded": "Last sync {{when}} by {{by}}: {{matched}} of {{findings}} findings matched, {{services}} services and {{hosts}} hosts updated, {{tags}} tags added.",
+    "unknownUser": "a deleted user",
+    "sync": "Sync from DefectDojo",
+    "syncing": "Syncing…",
+    "hint": "Pull the current DefectDojo data. Tags are added to yours; your triage and edits are never overwritten.",
+    "toast": "DefectDojo synced: {{services}} services and {{hosts}} hosts updated",
+    "push": {
+      "scan": "Push scan to DefectDojo",
+      "selected_one": "Push {{count}} selected",
+      "selected_other": "Push {{count}} selected",
+      "clear": "Clear selection",
+      "hint": "Every service of this scan as an informational finding in the DefectDojo product “SubSurf discovery”.",
+      "confirmScanTitle": "Push this scan to DefectDojo?",
+      "confirmScan": "Each service becomes an Info finding with its triage and tags. Findings of services this scan no longer sees are closed in DefectDojo; hosts that did not answer keep theirs.",
+      "confirmSelectionTitle_one": "Push {{count}} selected item to DefectDojo?",
+      "confirmSelectionTitle_other": "Push {{count}} selected items to DefectDojo?",
+      "confirmSelection": "Only the selected hosts (all their services) and services are sent. Nothing is closed in DefectDojo.",
+      "confirm": "Push",
+      "toast": "Pushed {{findings}} findings: {{created}} new, {{closed}} closed, {{untouched}} unchanged",
+      "last": "Last push {{when}} by {{by}}: {{findings}} findings, {{created}} new, {{closed}} closed.",
+      "lastFailed": "Last push ({{when}}, {{by}}) failed: {{error}}"
+    }
+  },
   "errors": {
     "generic": "Something went wrong. Try again.",
     "network": "Cannot reach the server.",
@@ -443,6 +472,11 @@
     "ROLE_NAME_TAKEN": "A role with this name already exists.",
     "PACKAGE_MAPPING_EXISTS": "This mapping already exists.",
     "SOURCE_DISABLED": "The source is disabled. Enable it first.",
-    "BASE_SCAN_NOT_OLDER": "The scan to compare with must be older than the compared scan."
+    "BASE_SCAN_NOT_OLDER": "The scan to compare with must be older than the compared scan.",
+    "DEFECTDOJO_NOT_CONFIGURED": "DefectDojo is not configured on the server.",
+    "DEFECTDOJO_UNAVAILABLE": "DefectDojo did not answer or refused the API token.",
+    "DEFECTDOJO_SYNC_RUNNING": "A DefectDojo sync is already running.",
+    "DEFECTDOJO_PUSH_RUNNING": "A push to DefectDojo is already running.",
+    "NOTHING_TO_PUSH": "There is nothing to push: no open services in this scan or selection."
   }
 }

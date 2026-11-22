@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DefectDojoSyncCard } from "@/features/defectdojo/components/defectdojo-sync-card";
 import { useScans } from "@/features/scans/api/get-scans";
 import { ScansTable } from "@/features/scans/components/scans-table";
 import { compareUrl, orderPair } from "@/features/scans/lib/pair";
@@ -68,6 +69,8 @@ export function ScansRoute() {
           </>
         }
       />
+
+      <DefectDojoSyncCard />
 
       {scans.isPending ? (
         <Skeleton className="h-48 w-full" />

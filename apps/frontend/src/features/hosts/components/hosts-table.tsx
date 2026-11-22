@@ -8,9 +8,10 @@ import { DataTable } from "@/components/data-table";
 import { IconAction } from "@/components/icon-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ChangeBadge } from "@/features/hosts/components/change-badge";
 import { HostStatusBadge } from "@/features/hosts/components/host-status-badge";
-import { ServicesTable } from "@/features/hosts/components/services-table";
+import { ServicesTable, type RowSelection } from "@/features/hosts/components/services-table";
 import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageControl } from "@/features/hosts/components/triage-control";
 import { CHANGE_CLASS } from "@/features/hosts/lib/badges";
@@ -57,6 +58,8 @@ interface HostsTableProps {
   onOpen: (host: ScanHost) => void;
   onEditHost: (host: ScanHost) => void;
   onEditService: (host: ScanHost, service: ScanService) => void;
+  /** Checkboxes for hosts and services, e.g. to push them to DefectDojo. */
+  selection?: RowSelection;
 }
 
 export function HostsTable({
@@ -65,6 +68,7 @@ export function HostsTable({
   onOpen,
   onEditHost,
   onEditService,
+  selection,
 }: HostsTableProps) {
   const { t } = useTranslation("hosts");
   const { t: tv } = useTranslation("vulnerabilities");
@@ -81,6 +85,22 @@ export function HostsTable({
   const columns = useMemo(
     () =>
       column.columns([
+        ...(selection
+          ? [
+              column.display({
+                id: "select",
+                header: () => <span className="sr-only">{t("columns.select")}</span>,
+                meta: { className: "w-8" },
+                cell: ({ row: { original: host } }) => (
+                  <Checkbox
+                    checked={selection.hostIds.has(host.id)}
+                    onCheckedChange={() => selection.toggleHost(host.id)}
+                    aria-label={t("actions.select", { name: host.ip })}
+                  />
+                ),
+              }),
+            ]
+          : []),
         column.display({
           id: "expand",
           header: () => <span className="sr-only">{t("columns.expand")}</span>,
@@ -192,7 +212,7 @@ export function HostsTable({
           ),
         }),
       ]),
-    [t, tv, compared, expanded, toggle, onOpen, onEditHost],
+    [t, tv, compared, expanded, toggle, onOpen, onEditHost, selection],
   );
 
   return (
@@ -202,7 +222,7 @@ export function HostsTable({
       emptyLabel={t("noMatches")}
       renderExpanded={(host) =>
         expanded.has(host.id) ? (
-          <ServicesTable host={host} compared={compared} onEdit={onEditService} />
+          <ServicesTable host={host} compared={compared} onEdit={onEditService} selection={selection} />
         ) : null
       }
     />

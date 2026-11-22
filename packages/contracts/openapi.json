@@ -88,7 +88,12 @@
                   "ROLE_NAME_TAKEN",
                   "PACKAGE_MAPPING_EXISTS",
                   "SOURCE_DISABLED",
-                  "BASE_SCAN_NOT_OLDER"
+                  "BASE_SCAN_NOT_OLDER",
+                  "DEFECTDOJO_NOT_CONFIGURED",
+                  "DEFECTDOJO_UNAVAILABLE",
+                  "DEFECTDOJO_SYNC_RUNNING",
+                  "DEFECTDOJO_PUSH_RUNNING",
+                  "NOTHING_TO_PUSH"
                 ]
               },
               "details": {}
@@ -171,7 +176,10 @@
                 "vulnerabilities:update",
                 "vulnerabilities:create",
                 "vulnerabilities:delete",
-                "vulnerabilities:run"
+                "vulnerabilities:run",
+                "defectdojo:read",
+                "defectdojo:import",
+                "defectdojo:export"
               ]
             }
           },
@@ -278,7 +286,10 @@
                 "vulnerabilities:update",
                 "vulnerabilities:create",
                 "vulnerabilities:delete",
-                "vulnerabilities:run"
+                "vulnerabilities:run",
+                "defectdojo:read",
+                "defectdojo:import",
+                "defectdojo:export"
               ]
             }
           },
@@ -3458,6 +3469,755 @@
         }
       }
     },
+    "/defectdojo/sync": {
+      "get": {
+        "operationId": "getDefectDojoStatus",
+        "summary": "DefectDojo connection and the last sync",
+        "description": "Requires `defectdojo:read`.",
+        "tags": [
+          "DefectDojo"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Whether DefectDojo is configured, and the last sync",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "configured": {
+                      "type": "boolean"
+                    },
+                    "url": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uri"
+                    },
+                    "lastSync": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "running",
+                            "succeeded",
+                            "failed"
+                          ]
+                        },
+                        "startedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "startedBy": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "displayName"
+                          ]
+                        },
+                        "stats": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "products": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "findings": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "matchedFindings": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "unmatchedFindings": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "hostsUpdated": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "servicesUpdated": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "tagsAdded": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "tagsSkipped": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "triageSet": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "remediationUpdated": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "products",
+                            "findings",
+                            "matchedFindings",
+                            "unmatchedFindings",
+                            "hostsUpdated",
+                            "servicesUpdated",
+                            "tagsAdded",
+                            "tagsSkipped",
+                            "triageSet",
+                            "remediationUpdated"
+                          ]
+                        },
+                        "error": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "startedAt",
+                        "finishedAt",
+                        "startedBy",
+                        "stats",
+                        "error"
+                      ]
+                    },
+                    "lastPush": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "scanId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "enum": [
+                            "scan",
+                            "selection"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "running",
+                            "succeeded",
+                            "failed"
+                          ]
+                        },
+                        "startedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "startedBy": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "displayName"
+                          ]
+                        },
+                        "findings": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "testId": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "stats": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "created": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "closed": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "reactivated": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "untouched": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "created",
+                            "closed",
+                            "reactivated",
+                            "untouched"
+                          ]
+                        },
+                        "error": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "scanId",
+                        "scope",
+                        "status",
+                        "startedAt",
+                        "finishedAt",
+                        "startedBy",
+                        "findings",
+                        "testId",
+                        "stats",
+                        "error"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "configured",
+                    "url",
+                    "lastSync",
+                    "lastPush"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "syncDefectDojo",
+        "summary": "Pull the current DefectDojo data into hosts and services",
+        "description": "Requires `defectdojo:import`. Reads every product and finding, matches findings to services by host:port and imports: finding tags (service tags), product tags and owners (host tags, `owner:`/`contact:`), triage of services that are still `unreviewed`, and remediation dates. Tags are merged into the user tags; nothing users set is overwritten.",
+        "tags": [
+          "DefectDojo"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The finished sync with what it changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "succeeded",
+                        "failed"
+                      ]
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "finishedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "startedBy": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName"
+                      ]
+                    },
+                    "stats": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "products": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "findings": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "matchedFindings": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "unmatchedFindings": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "hostsUpdated": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "servicesUpdated": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "tagsAdded": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "tagsSkipped": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "triageSet": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "remediationUpdated": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "products",
+                        "findings",
+                        "matchedFindings",
+                        "unmatchedFindings",
+                        "hostsUpdated",
+                        "servicesUpdated",
+                        "tagsAdded",
+                        "tagsSkipped",
+                        "triageSet",
+                        "remediationUpdated"
+                      ]
+                    },
+                    "error": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "startedAt",
+                    "finishedAt",
+                    "startedBy",
+                    "stats",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another sync is running (`DEFECTDOJO_SYNC_RUNNING`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "DefectDojo did not answer or refused the token (`DEFECTDOJO_UNAVAILABLE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DefectDojo is not configured (`DEFECTDOJO_NOT_CONFIGURED`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/defectdojo/push": {
+      "post": {
+        "operationId": "pushToDefectDojo",
+        "summary": "Push a scan's services to DefectDojo as informational findings",
+        "description": "Requires `defectdojo:export`. One `Info` finding per service (Generic Findings Import) in the product `SubSurf discovery`: the first push is an import, later ones reimport into the same test. A whole-scan push closes findings of services the scan no longer sees (unknown hosts keep theirs); a push of `hostIds`/`serviceIds` closes nothing. Triage maps to `false_p` and `verified`; service tags become finding tags.",
+        "tags": [
+          "DefectDojo"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scanId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "hostIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 10000
+                  },
+                  "serviceIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 10000
+                  }
+                },
+                "required": [
+                  "scanId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The finished push with DefectDojo's counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "scanId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "scan",
+                        "selection"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "succeeded",
+                        "failed"
+                      ]
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "finishedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "startedBy": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName"
+                      ]
+                    },
+                    "findings": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "testId": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "stats": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "created": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "closed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "reactivated": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "untouched": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "created",
+                        "closed",
+                        "reactivated",
+                        "untouched"
+                      ]
+                    },
+                    "error": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "scanId",
+                    "scope",
+                    "status",
+                    "startedAt",
+                    "finishedAt",
+                    "startedBy",
+                    "findings",
+                    "testId",
+                    "stats",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed, or nothing to push (`NOTHING_TO_PUSH`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another push is running (`DEFECTDOJO_PUSH_RUNNING`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "DefectDojo did not answer or rejected the report (`DEFECTDOJO_UNAVAILABLE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DefectDojo is not configured (`DEFECTDOJO_NOT_CONFIGURED`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "operationId": "getHealth",
@@ -3904,7 +4664,10 @@
                                 "vulnerabilities:update",
                                 "vulnerabilities:create",
                                 "vulnerabilities:delete",
-                                "vulnerabilities:run"
+                                "vulnerabilities:run",
+                                "defectdojo:read",
+                                "defectdojo:import",
+                                "defectdojo:export"
                               ]
                             }
                           },
@@ -4016,10 +4779,13 @@
                         "vulnerabilities:update",
                         "vulnerabilities:create",
                         "vulnerabilities:delete",
-                        "vulnerabilities:run"
+                        "vulnerabilities:run",
+                        "defectdojo:read",
+                        "defectdojo:import",
+                        "defectdojo:export"
                       ]
                     },
-                    "maxItems": 20
+                    "maxItems": 23
                   }
                 },
                 "required": [
@@ -4167,7 +4933,10 @@
                           "vulnerabilities:update",
                           "vulnerabilities:create",
                           "vulnerabilities:delete",
-                          "vulnerabilities:run"
+                          "vulnerabilities:run",
+                          "defectdojo:read",
+                          "defectdojo:import",
+                          "defectdojo:export"
                         ]
                       }
                     },
@@ -4323,10 +5092,13 @@
                         "vulnerabilities:update",
                         "vulnerabilities:create",
                         "vulnerabilities:delete",
-                        "vulnerabilities:run"
+                        "vulnerabilities:run",
+                        "defectdojo:read",
+                        "defectdojo:import",
+                        "defectdojo:export"
                       ]
                     },
-                    "maxItems": 20
+                    "maxItems": 23
                   }
                 }
               }
@@ -5537,6 +6309,40 @@
                                     "kev",
                                     "maxSeverity"
                                   ]
+                                },
+                                "remediation": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "plannedOn": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "format": "date"
+                                    },
+                                    "slaDueOn": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "format": "date"
+                                    },
+                                    "riskAcceptedUntil": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "format": "date"
+                                    }
+                                  },
+                                  "required": [
+                                    "plannedOn",
+                                    "slaDueOn",
+                                    "riskAcceptedUntil"
+                                  ]
                                 }
                               },
                               "required": [
@@ -5551,7 +6357,8 @@
                                 "triage",
                                 "tags",
                                 "note",
-                                "vulnerabilities"
+                                "vulnerabilities",
+                                "remediation"
                               ]
                             }
                           }
@@ -6949,6 +7756,40 @@
                               "maxSeverity"
                             ]
                           },
+                          "remediation": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "plannedOn": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              },
+                              "slaDueOn": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              },
+                              "riskAcceptedUntil": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              }
+                            },
+                            "required": [
+                              "plannedOn",
+                              "slaDueOn",
+                              "riskAcceptedUntil"
+                            ]
+                          },
                           "reason": {
                             "type": [
                               "string",
@@ -7361,6 +8202,7 @@
                           "tags",
                           "note",
                           "vulnerabilities",
+                          "remediation",
                           "reason",
                           "extraInfo",
                           "cpe",

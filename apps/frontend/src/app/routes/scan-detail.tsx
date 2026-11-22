@@ -1,5 +1,5 @@
 import { ArrowLeft, Search, Tags } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router";
 
@@ -22,6 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DefectDojoPushActions } from "@/features/defectdojo/components/defectdojo-push-actions";
 import { useScanHosts } from "@/features/hosts/api/get-scan-hosts";
 import { BulkTagDialog } from "@/features/hosts/components/bulk-tag-dialog";
 import { HostEditDialog } from "@/features/hosts/components/host-edit-dialog";
@@ -33,6 +34,7 @@ import { ScanSummary } from "@/features/scans/components/scan-summary";
 import { SCAN_STATUS_VARIANT } from "@/features/scans/lib/status";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useErrorMessage } from "@/hooks/use-error-message";
+import { useCan } from "@/lib/auth/use-can";
 import { formatDateTime } from "@/lib/format";
 
 const PAGE_SIZE = 50;
@@ -44,6 +46,14 @@ type Dialog =
   | { kind: "host"; host: HostRef }
   | { kind: "service"; host: HostRef; service: ServiceRef }
   | { kind: "bulkTag" };
+
+type IdSet = ReadonlySet<string>;
+
+function toggled(set: IdSet, id: string): IdSet {
+  const next = new Set(set);
+  if (!next.delete(id)) next.add(id);
+  return next;
+}
 
 function parsePage(raw: string | null): number {
   const page = Number(raw);
@@ -80,6 +90,23 @@ export function ScanDetailRoute() {
   const [search, setSearch] = useState(q);
   const debouncedSearch = useDebouncedValue(search.trim());
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  // Kept across pages and filters, so a selection can be built from several searches.
+  const [selectedHosts, setSelectedHosts] = useState<IdSet>(() => new Set());
+  const [selectedServices, setSelectedServices] = useState<IdSet>(() => new Set());
+  const canExport = useCan("defectdojo:export");
+  const clearSelection = useCallback(() => {
+    setSelectedHosts(new Set());
+    setSelectedServices(new Set());
+  }, []);
+  const selection = useMemo(
+    () => ({
+      hostIds: selectedHosts,
+      serviceIds: selectedServices,
+      toggleHost: (id: string) => setSelectedHosts((previous) => toggled(previous, id)),
+      toggleService: (id: string) => setSelectedServices((previous) => toggled(previous, id)),
+    }),
+    [selectedHosts, selectedServices],
+  );
 
   const update = useCallback(
     (changes: Record<string, string | null | undefined>) =>
@@ -150,14 +177,21 @@ export function ScanDetailRoute() {
         }
         description={t("scans.detail.subtitle")}
         actions={
-          <GuardedButton
-            variant="outline"
-            permissions={["hosts:update"]}
-            onClick={() => setDialog({ kind: "bulkTag" })}
-          >
-            <Tags />
-            {th("bulkTag.open")}
-          </GuardedButton>
+          <>
+            <GuardedButton
+              variant="outline"
+              permissions={["hosts:update"]}
+              onClick={() => setDialog({ kind: "bulkTag" })}
+            >
+              <Tags />
+              {th("bulkTag.open")}
+            </GuardedButton>
+            <DefectDojoPushActions
+              scanId={scanId}
+              selection={selection}
+              onClearSelection={clearSelection}
+            />
+          </>
         }
       />
 
@@ -248,6 +282,7 @@ export function ScanDetailRoute() {
               onOpen={openHost}
               onEditHost={editHost}
               onEditService={editService}
+              selection={canExport ? selection : undefined}
             />
             <DataTablePagination
               page={hosts.data.page}

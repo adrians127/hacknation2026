@@ -8,9 +8,19 @@ export const PERMISSION_RESOURCES = [
   "scans",
   "hosts",
   "vulnerabilities",
+  "defectdojo",
 ] as const;
-// `run` starts, stops and schedules scans, and starts vulnerability database syncs.
-export const PERMISSION_ACTIONS = ["read", "create", "update", "delete", "run"] as const;
+// `run` starts, stops and schedules scans, and starts vulnerability database syncs;
+// `import`/`export` exchange data with an external system.
+export const PERMISSION_ACTIONS = [
+  "read",
+  "create",
+  "update",
+  "delete",
+  "run",
+  "import",
+  "export",
+] as const;
 
 export type PermissionResource = (typeof PERMISSION_RESOURCES)[number];
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
@@ -41,6 +51,9 @@ export const PERMISSIONS = [
   "vulnerabilities:create",
   "vulnerabilities:delete",
   "vulnerabilities:run",
+  "defectdojo:read",
+  "defectdojo:import",
+  "defectdojo:export",
 ] as const satisfies readonly `${PermissionResource}:${PermissionAction}`[];
 
 export const PermissionSchema = z.enum(PERMISSIONS);
@@ -60,6 +73,7 @@ const READ = [
   "targets:read",
   "scans:read",
   "vulnerabilities:read",
+  "defectdojo:read",
 ] as const satisfies readonly Permission[];
 
 // Mapping rules: apps/backend/README.md ("Adding a permission"). Users and roles stay admin-only.
@@ -76,6 +90,8 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRoleKey, readonly Permission[
     "vulnerabilities:create",
     "vulnerabilities:delete",
     "vulnerabilities:run",
+    "defectdojo:import",
+    "defectdojo:export",
   ],
   analyst: [...READ, "targets:update", "hosts:update", "vulnerabilities:update"],
   viewer: READ,
