@@ -14,14 +14,14 @@ export function HttpSummary({ endpoints }: { endpoints: readonly HttpSummaryEntr
   return (
     <ul className="grid gap-1">
       {endpoints.slice(0, MAX_SHOWN).map((endpoint) => (
-        <li key={endpoint.url} className="flex min-w-0 items-center gap-1.5">
+        <li key={endpoint.url} className="flex min-w-0 flex-wrap items-center gap-1.5">
           <Badge variant="outline" className={statusCodeClass(endpoint.statusCode)}>
             {endpoint.statusCode ?? "—"}
           </Badge>
-          <span className="truncate" title={endpoint.finalUrl}>
+          <span className="min-w-0 wrap-anywhere" title={endpoint.finalUrl}>
             {endpoint.title ?? <span className="text-muted-foreground italic">{t("http.noTitle")}</span>}
           </span>
-          <span className="shrink-0 text-xs text-muted-foreground">
+          <span className="wrap-anywhere text-xs text-muted-foreground">
             {endpoint.vhost ?? t("http.bareIp")}
           </span>
         </li>

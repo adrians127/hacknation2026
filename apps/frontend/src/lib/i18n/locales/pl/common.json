@@ -383,6 +383,21 @@
         "jobs": "Zadania"
       }
     },
+    "visualization": {
+      "open": "Visualize",
+      "back": "Wróć do skanu",
+      "title": "Wizualizacja skanu",
+      "description": "Adresy pogrupowane według wspólnych prefiksów IP. Linie pokazują logiczne grupy, a nie zbadane połączenia sieciowe. Rozwiń grupę, aby zobaczyć hosty.",
+      "root": "Ten skan",
+      "hostCount_one": "{{count}} host",
+      "hostCount_few": "{{count}} hosty",
+      "hostCount_many": "{{count}} hostów",
+      "hostCount_other": "{{count}} hosta",
+      "prefixAction": "Przełącz {{cidr}}, {{count}} hostów",
+      "hostAction": "Otwórz szczegóły {{ip}}",
+      "refresh": "Odśwież",
+      "empty": "W tym skanie nie ma jeszcze hostów do pokazania."
+    },
     "edit": {
       "open": "Nazwa i notatka",
       "title": "Nazwa i notatka skanu",

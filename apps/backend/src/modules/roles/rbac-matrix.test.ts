@@ -222,6 +222,7 @@ const ENDPOINTS: Endpoint[] = [
   },
   { route: "DELETE /scans/{id}", requires: ["scans:read", "scans:delete"], path: () => scanPath() },
   { route: "GET /scans/{id}/hosts", requires: ["scans:read"], path: () => scanPath("/hosts") },
+  { route: "GET /scans/{id}/visualization-hosts", requires: ["scans:read"], path: () => scanPath("/visualization-hosts") },
   { route: "GET /scans/{id}/hosts/{hostId}", requires: ["scans:read"], path: scanHostPath },
   { route: "GET /scans/{id}/changes", requires: ["scans:read"], path: () => scanPath("/changes") },
   { route: "GET /scans/{id}/export", requires: ["scans:read"], path: () => scanPath("/export") },

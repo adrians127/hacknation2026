@@ -349,6 +349,19 @@
         "jobs": "Jobs"
       }
     },
+    "visualization": {
+      "open": "Visualize",
+      "back": "Back to scan",
+      "title": "Scan visualization",
+      "description": "Addresses grouped by shared IP prefixes. Links show logical grouping, not measured network connections. Expand a group to see its hosts.",
+      "root": "This scan",
+      "hostCount_one": "{{count}} host",
+      "hostCount_other": "{{count}} hosts",
+      "prefixAction": "Toggle {{cidr}}, {{count}} hosts",
+      "hostAction": "Open details for {{ip}}",
+      "refresh": "Refresh",
+      "empty": "This scan has no hosts to visualize yet."
+    },
     "edit": {
       "open": "Name and note",
       "title": "Name and note of the scan",
