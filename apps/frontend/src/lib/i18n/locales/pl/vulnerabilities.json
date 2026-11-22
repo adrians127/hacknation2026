@@ -91,7 +91,7 @@
   },
   "sources": {
     "title": "Bazy podatności",
-    "description": "Publiczne bazy kopiowane do SubSurf i dopasowywane do serwisów znalezionych przez skany.",
+    "description": "Publiczne bazy podatności dopasowywane do usług ze skanów.",
     "processInactive": "Proces synchronizacji nie działa: synchronizacje i „Synchronizuj teraz” czekają, aż ktoś uruchomi `pnpm vulns:sync`.",
     "processActive": "Proces synchronizacji działa.",
     "records": "Rekordy",
@@ -145,7 +145,7 @@
   },
   "mappings": {
     "title": "Mapowania CPE → pakiet",
-    "description": "Bazy pakietów (OSV) opisują pakiety, a nie produkty CPE, które zgłasza skaner. Mapowanie mówi, jakim pakietem jest produkt w danym ekosystemie.",
+    "description": "Mapowania łączą produkty CPE ze skanera z pakietami w bazach OSV.",
     "add": "Dodaj mapowanie",
     "empty": "Brak mapowań.",
     "cpe": "CPE vendor:product",

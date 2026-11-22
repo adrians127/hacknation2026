@@ -12,7 +12,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "What changed in the newest scan, and what deserves a look first.",
+    "subtitle": "What's new in the latest scan and where to start.",
     "noScans": "No scan has results yet. Import targets and start a scan.",
     "newest": "Newest scan of {{date}}, compared with the scan of {{base}}.",
     "newestFirst": "Newest scan of {{date}}. It is the first one, so there is nothing to compare it with yet.",
@@ -72,7 +72,7 @@
   },
   "targets": {
     "title": "Targets",
-    "subtitle": "IP addresses, CIDR ranges and domains included in scans",
+    "subtitle": "IP addresses, ranges and domains to scan.",
     "add": "Add targets",
     "never": "Never",
     "emptyFiltered": "No targets match these filters.",
@@ -128,7 +128,7 @@
     },
     "import": {
       "title": "Add targets",
-      "subtitle": "Enter IP addresses, CIDR ranges (up to /16), IP ranges and domains by hand, or load them from a CSV or JSON file.",
+      "subtitle": "Type in addresses, ranges (up to /16) and domains, or upload a CSV or JSON file.",
       "back": "Back to targets",
       "tabs": {
         "form": "Form",
@@ -291,7 +291,7 @@
   },
   "scans": {
     "title": "Scans",
-    "subtitle": "Every scan run: open one to see its hosts and what changed since the previous scan.",
+    "subtitle": "All scans. Open one to see its hosts and what changed.",
     "start": "Start scan",
     "columns": {
       "started": "Started",
@@ -316,7 +316,7 @@
       "back": "All scans",
       "report": "Scan report",
       "title": "Scan of {{date}}",
-      "subtitle": "What this scan found. Changes are measured against the previous scan, only for addresses that answered both times.",
+      "subtitle": "What this scan found and what changed since the last one.",
       "addresses": "Addresses",
       "up": "Hosts up",
       "down": "{{formatted}} down",
@@ -375,7 +375,7 @@
     "import": {
       "open": "Import results",
       "title": "Import scan results",
-      "subtitle": "Turn a results file into a scan. It joins the other scans in comparisons, in the host history and on the dashboard.",
+      "subtitle": "Load a results file as a new scan.",
       "hint": "JSON: a file from Export JSON on a scan, or one or more worker results. CSV: the columns of Export CSV; only an address column is required.",
       "samples": {
         "json": "Download a sample JSON",
@@ -452,7 +452,7 @@
     },
     "compare": {
       "title": "Compare scans",
-      "subtitle": "Two scans side by side: which hosts appeared, went or changed, port by port. Only addresses both scans answered for count as new or gone.",
+      "subtitle": "Two scans side by side: what appeared, disappeared or changed.",
       "open": "Compare",
       "openSideBySide": "Compare side by side",
       "selected_one": "{{count}} of 2 scans selected",
