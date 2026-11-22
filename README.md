@@ -38,6 +38,8 @@ Sign in at `http://localhost:3000` with the accounts from `apps/backend/.env.exa
 | `admin@hacknation.local` | Administrator | `ADMIN_PASSWORD` (`admin-change-me-now`) |
 | `editor@hacknation.local`, `analyst@hacknation.local`, `viewer@hacknation.local` | Editor, Analyst, Viewer | `DEMO_USER_PASSWORD` (`demo-password-2026`) |
 
+**Everything in Docker** (no Node or pnpm on the machine): copy `docker/.env.example` to `docker/.env`, fill in its secrets and run `docker compose -f docker/docker-compose.yml --profile app up -d --build`; the app is on `http://localhost:3000`. Step by step: [`docker/README.md`](docker/README.md#everything-in-docker).
+
 Workers have their own compose file (`docker/docker-compose.workers.yml`): `pnpm workers:build` builds the masscan worker, `pnpm workers:masscan < job.json` runs one sweep. The nmap worker is opt-in (see [`docker/README.md`](docker/README.md)).
 
 ### Other commands

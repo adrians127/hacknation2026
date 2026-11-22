@@ -107,7 +107,8 @@ describe("POST /scans/import", () => {
     );
     expect(detail).toMatchObject({
       name: "lab-run.json",
-      origin: "imported",
+      trigger: "results_import",
+      pipeline: null,
       status: "completed",
       jobs: { queued: 0, leased: 0, completed: 1, failed: 0, stopped: 0 },
       baseScan: { id: original },
@@ -174,7 +175,7 @@ describe("POST /scans/import", () => {
     expect(results.map((row) => row.leaseId)).not.toContain(nmap.scan.leaseId);
     // The example's job hit its deadline.
     const scan = await prisma.scan.findUniqueOrThrow({ where: { id: imported.scanId } });
-    expect(scan).toMatchObject({ status: "stopped", origin: "imported" });
+    expect(scan).toMatchObject({ status: "stopped", trigger: "results_import" });
     const page = ScanHostListResponseSchema.parse(
       await (await client.get(`/v1/scans/${imported.scanId}/hosts`)).json(),
     );

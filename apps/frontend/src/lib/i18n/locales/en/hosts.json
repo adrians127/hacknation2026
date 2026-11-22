@@ -65,6 +65,7 @@
     "collapse": "Hide the services of {{ip}}",
     "details": "Details of {{ip}}",
     "edit": "Edit",
+    "ipReport": "IP report",
     "editHost": "Edit {{ip}}",
     "editService": "Edit service {{name}}",
     "select": "Select {{name}}",

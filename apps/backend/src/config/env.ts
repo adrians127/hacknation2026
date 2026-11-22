@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 
 import { z } from "zod";
 
+import { isPortSpecWithin } from "@subsurf/contracts/scans/port-spec";
 import { PortSpecSchema } from "@subsurf/contracts/scans/scans.schema";
 
 import {
@@ -64,6 +65,8 @@ const envSchema = z
     WORKER_TOKEN: blankAsAbsent(
       z.string().min(16, "WORKER_TOKEN must be at least 16 characters").optional(),
     ),
+    // Unset: Secure cookies in production only (src/lib/auth-cookies.ts).
+    COOKIE_SECURE: blankAsAbsent(z.stringbool().optional()),
 
     // First admin, created at startup while there are no users (and by the seed).
     ADMIN_EMAIL: blankAsAbsent(z.email().optional()),
@@ -82,6 +85,17 @@ const envSchema = z
         .refine(isPowerOfTwo, "SCAN_BATCH_SIZE must be a power of two")
         .default(256),
     ),
+    SCAN_ALLOWED_PORTS: blankAsAbsent(PortSpecSchema.default("1-65535")),
+    SCAN_JOB_MAX_ATTEMPTS: blankAsAbsent(z.coerce.number().int().min(1).max(20).default(3)),
+
+    PIPELINE_SCHEDULER_ENABLED: blankAsAbsent(z.stringbool().default(true)),
+    PIPELINE_SCHEDULER_TICK_SECONDS: blankAsAbsent(
+      z.coerce.number().int().min(1).max(3600).default(15),
+    ),
+    WORKER_LEASE_GRACE_SECONDS: blankAsAbsent(
+      z.coerce.number().int().min(10).max(86_400).default(300),
+    ),
+    WORKER_LEASE_JOBS_PER_SLOT: blankAsAbsent(z.coerce.number().int().min(1).max(64).default(2)),
 
     // Vulnerability databases (src/modules/vulnerabilities): used by the vuln-sync process and,
     // for the sources' state and links, by the API. Source-specific settings live next to each
@@ -102,6 +116,10 @@ const envSchema = z
     // DefectDojo API (src/modules/defectdojo); both unset = the integration is off.
     DEFECTDOJO_URL: blankAsAbsent(z.url().optional()),
     DEFECTDOJO_API_TOKEN: blankAsAbsent(z.string().min(1).optional()),
+  })
+  .refine((value) => isPortSpecWithin(value.SCAN_DEFAULT_PORTS, value.SCAN_ALLOWED_PORTS), {
+    path: ["SCAN_DEFAULT_PORTS"],
+    message: "SCAN_DEFAULT_PORTS must stay within SCAN_ALLOWED_PORTS",
   })
   .refine((value) => value.NODE_ENV !== "production" || value.JWT_SECRET !== EXAMPLE_JWT_SECRET, {
     path: ["JWT_SECRET"],

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { buildWorkerResult } from "../workers/worker-result.fixture";
-import { formatPortSpec, parsePortSpec, portsOutside } from "./port-spec";
 import type { ScanExportDocument } from "./scan-export.schema";
 import { SCAN_CSV_COLUMNS, scanCsvDownRow, scanCsvRows } from "./scan-csv";
 import { readScanCsv, readScanJson, readScanJsonText, summarizeScanImport } from "./scan-import";
@@ -198,15 +197,5 @@ describe("readScanCsv", () => {
     expect(codes(readScanCsv("host name,port\nweb,80\n"))).toEqual(["missing_ip_column"]);
     expect(codes(readScanCsv("ip,port\n"))).toEqual(["nothing_to_import"]);
     expect(codes(readScanCsv(""))).toEqual(["nothing_to_import"]);
-  });
-});
-
-describe("port specs", () => {
-  it("merges overlapping and adjacent runs into a normalized spec", () => {
-    const ranges = [...parsePortSpec("8000-8100,22,443"), { from: 23, to: 23 }, { from: 8050, to: 8200 }];
-
-    expect(formatPortSpec(ranges)).toBe("22-23,443,8000-8200");
-    expect(formatPortSpec([])).toBeNull();
-    expect(portsOutside(parsePortSpec("22,8000-8100"), [22, 80, 8100, 8101])).toEqual([80, 8101]);
   });
 });

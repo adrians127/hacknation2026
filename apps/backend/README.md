@@ -50,11 +50,16 @@ routes/index.ts        apiRouter: one apiRouter.use("/x", ...) line per module
 modules/<feature>/     <feature>.routes.ts | .controller.ts | .service.ts | .test.ts
 modules/auth|users|roles   sign-in and sessions, user accounts, roles (+ system-roles sync, first-admin bootstrap)
 modules/targets        target inventory: POST /targets/import (manual, CSV and JSON all arrive as one JSON body)
-modules/scans          GET /scans… (scan results, hosts per scan, changes: scan-results.*, scan-diff.ts);
-                       queues a Scan and its ScanJob batches (scans.service.ts, dns.ts, batching.ts);
+modules/scans          GET /scans… (scan results, hosts per scan, changes: scan-results.*, scan-diff.ts), the scan's
+                       jobs and POST /scans/{id}/stop; an import's scan (scans.service.ts, dns.ts, batching.ts);
                        exports a scan and imports a results file (scan-export.ts, scan-import.*)
+modules/pipelines      /pipelines…: pipelines of worker steps, their runs (queue-run.ts, pipeline-runs.service.ts),
+                       schedule.ts (Temporal) and the in-process scheduler (scheduler.ts); see "Pipelines"
 modules/results        ingests worker results into observations (details.ts, fingerprint.ts, job-scope.ts)
-modules/workers        /workers…: machine endpoints for the scan workers (WORKER_TOKEN): POST /workers/manager/results
+modules/workers        /workers: the worker registry (users); /workers/manager…: worker-manager's lease and result
+                       upload (manager.*, WORKER_TOKEN)
+modules/reports        GET /reports…: read-only reports (summary, findings, technologies, exposure, triage, tags,
+                       diff of any two scans, one IP, stability, time of day)
 modules/hosts          PATCH /hosts…: edits of the Host and Service assets (bulk tags too, routed under /scans);
                        ingest's helpers for those assets
 modules/vulnerabilities  /vulnerabilities…: sources (NVD, OSV) mirrored into the database, matching services
@@ -94,7 +99,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Permissions and roles
 
-- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|create|update|delete|run`, `hosts:update`, `vulnerabilities:*` and `defectdojo:read|import|export`. `scans:read` guards the scan results (hosts and their vulnerabilities included, and their export to a file), `scans:create` importing a results file as a scan, `scans:update` a scan's name and note, `scans:delete` deleting a scan, `hosts:update` the edits of hosts and services; `vulnerabilities:read` the databases' state and the mappings, `:update` the triage of a service's vulnerabilities, `:run` syncing and enabling sources, `:create`/`:delete` the mappings; `defectdojo:read` the sync and push history, `:import` pulling from DefectDojo, `:export` pushing to it; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
+- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|create|update|delete|run`, `hosts:update`, `vulnerabilities:*`, `pipelines:*`, `workers:read|update|delete` and `defectdojo:read|import|export`. `scans:run` also covers running a pipeline, stopping a scan and changing a pipeline's schedule; `workers:update|delete` are global scanner limits (admin only). `scans:read` guards the scan results (hosts and their vulnerabilities included, and their export to a file), `scans:create` importing a results file as a scan, `scans:update` a scan's name and note, `scans:delete` deleting a scan, `hosts:update` the edits of hosts and services; `vulnerabilities:read` the databases' state and the mappings, `:update` the triage of a service's vulnerabilities, `:run` syncing and enabling sources, `:create`/`:delete` the mappings; `defectdojo:read` the sync and push history, `:import` pulling from DefectDojo, `:export` pushing to it; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
 - A route checks permissions with `requirePermission("users:read")` after `requireAuth`. Services that act on other accounts or roles also call `assertHoldsAll` (below).
 - **System roles** (`admin`, `editor`, `analyst`, `viewer`) are read-only. `syncSystemRoles()` (`modules/roles/system-roles.ts`) runs at startup and in the seed: it gives them exactly `SYSTEM_ROLE_PERMISSIONS` and drops permissions that no longer exist from custom roles.
 - **Custom roles** are rows with a `permissions` array. Deleting a role that users still have needs `reassignToRoleId` (and `users:update`); the users move and the role is deleted in one transaction.
@@ -139,7 +144,7 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `s
 - `prisma.config.ts`: schema path, migrations, seed and the URL built from `DB_*`. A placeholder URL lets `prisma generate` run on a fresh clone without a database.
 - `prisma/schema/schema.prisma`: only the generator and the datasource. Models live in `prisma/schema/<module>/<model>.prisma` (one file per model, in a folder named after the module in `src/modules/` that owns the table).
 - Every relation field needs an `@@index`, because Prisma does not create indexes on foreign keys in Postgres.
-- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF). `src/lib/crypto.ts` does it at the field level: AES-256-GCM with `DATA_ENCRYPTION_KEY`, a value becomes `{ "$enc": "v1.<base64(iv | tag | ciphertext)>" }`, and `decryptJson` returns `unknown`, so readers validate with zod. Scan results use it (see [Scan results](#scan-results)). The auth tables hold only hashes (passwords, refresh secrets), emails and display names. `Host.note`, `Service.note` and `ServiceVulnerabilityTriage.note` (free text from analysts) are encrypted with `encryptText`. The vulnerability databases are public and stay plaintext; `VulnerabilityMatch` rows only restate what the plaintext service columns (`serviceCpe`, `serviceVersion`) already show, and must stay queryable for the vulnerability filter. Still to cover: `Target.value` and `note`, `ScanJob.targets` and `hosts` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
+- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF). `src/lib/crypto.ts` does it at the field level: AES-256-GCM with `DATA_ENCRYPTION_KEY`, a value becomes `{ "$enc": "v1.<base64(iv | tag | ciphertext)>" }`, and `decryptJson` returns `unknown`, so readers validate with zod. Scan results use it (see [Scan results](#scan-results)). The auth tables hold only hashes (passwords, refresh secrets), emails and display names. `Host.note`, `Service.note` and `ServiceVulnerabilityTriage.note` (free text from analysts) are encrypted with `encryptText`. The vulnerability databases are public and stay plaintext; `VulnerabilityMatch` rows only restate what the plaintext service columns (`serviceCpe`, `serviceVersion`) already show, and must stay queryable for the vulnerability filter. Still to cover: `Target.value` and `note`, `ScanJob.targets`, `hosts` and `params`, `Pipeline.targetSelector` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
 
 ## Targets and scan jobs
 
@@ -147,9 +152,31 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `s
 
 1. New values go into `Target` (`createMany` with `skipDuplicates`) with the import's optional `tags`; values already in the inventory are counted as `skipped` and left unchanged (note and tags included).
 2. With `startScan` (also requires `scans:run`): domains are resolved to A records **before** the transaction (`modules/scans/dns.ts`: 50 lookups at a time, 2 s timeout, 2 tries). Failures and reserved addresses become `warnings`; the import still succeeds.
-3. In one transaction: a `Scan` with `SCAN_DEFAULT_PORTS`, `SCAN_DEFAULT_MAX_RATE` and `SCAN_BATCH_SIZE` snapshotted, a `ScanTarget` row per entry and the `ScanJob` batches from `planScanJobs` (`modules/scans/batching.ts`): addresses merged, split in address order into batches of at most `SCAN_BATCH_SIZE`, never across two /16 blocks. Each job has a `subnet` (the smallest aligned CIDR around it), its `targets` (CIDRs/IPs) and `hosts` (resolved domain → IP pairs).
+3. In one transaction, `queueRun()` (`modules/pipelines/queue-run.ts`, shared with pipeline runs): a `Scan` with the **default steps** snapshotted (masscan over the targets with `SCAN_DEFAULT_PORTS`, `SCAN_DEFAULT_MAX_RATE` and `SCAN_BATCH_SIZE`, then nmap on its hits), a `ScanTarget` row per entry and the first step's `ScanJob` batches from `planScanJobs` (`modules/scans/batching.ts`): addresses merged, split in address order into batches of at most the step's batch size, never across two /16 blocks. Each job has a `subnet` (the smallest aligned CIDR around it), its `targets` (CIDRs/IPs), `hosts` (resolved domain → IP pairs), `stepIndex`, `worker` and `params` (the worker's job, see below).
 
-Jobs start as `queued` with `kind = discovery`. Leasing them (`/workers/*`, machine token) is not implemented yet; see [`apps/workers/README.md`](../workers/README.md#scan-jobs-in-the-database).
+Jobs start as `queued`; worker-manager leases them (see [Pipelines](#pipelines-scheduling-and-leasing)).
+
+## Pipelines, scheduling and leasing
+
+A **pipeline** (`modules/pipelines/`) is a selection of the target inventory, an ordered chain of **steps** (each a worker from the registry with its job parameters) and an optional **schedule**. Every run is a `Scan`; the steps are snapshotted onto it (`Scan.steps`), so editing a pipeline never changes a run already queued.
+
+**Worker registry** (`modules/workers/`, `Worker` and `WorkerManager` tables):
+- A worker's `name` is the one worker-manager runs it under (`WORKER_MANAGER_WORKERS`, `jobs[].worker`). Built-in workers (`masscan`, `nmap`) are defined in `contracts/src/workers/worker-catalog.ts` with their inputs (`targets` = address ranges, `hosts` = an earlier step's hits), split strategies and parameter fields; `syncWorkerCatalog()` writes them at startup and in the seed, like the system roles. Admins own `enabled`, `maxRate` and `defaults` only.
+- Every lease request registers its manager (`WorkerManager`: id, version, workers, last seen; online for 2 minutes) and adds the worker names the registry lacks as **disabled** custom workers, for an admin to describe (fields as JSON) and enable. A pipeline step, a run and a lease all refuse disabled workers.
+
+**Steps and jobs:**
+- A step has `ports`, `rate` (pps for one job, ≤ the worker's `maxRate`), `batchSize`, `maxDurationSeconds`, a worker-manager `split` and the worker's own `params` (checked with `validateStepParams`). Ports must stay inside `SCAN_ALLOWED_PORTS` (400 `PORTS_NOT_ALLOWED`); `Scan.ports` is the union of the steps' ports, so ingest's port check keeps working.
+- Input `targets`: jobs are planned when the run starts. Input `previous` (the worker must take `hosts`): when a job of the step before **completes**, its up hosts and open ports (within this step's ports) become one job per `batchSize` hosts, as nmap host objects `{ip, ports, domains}`. The first step always scans the targets.
+- The selector picks targets with any of its `tags` (all without tags) and intersects them with its `ranges`, so nothing outside the inventory is scanned.
+
+**Schedule** (`schedule.ts`, `Temporal.ZonedDateTime`): runs at `startsAt` (wall-clock time in `timezone`) and every `every` `hour|day|week` after it, only on `daysOfWeek`; days and weeks keep the wall-clock time across DST. `windowMinutes` is the time window of each run (PDF: time windows, stop and resume in the next one):
+- The scheduler (`scheduler.ts`, every `PIPELINE_SCHEDULER_TICK_SECONDS` inside the API process) claims a due pipeline by moving `nextRunAt` with a conditional update, so several instances fire it once; missed fires collapse into the latest one, and one whose window already closed is skipped.
+- A fire resumes the pipeline's `paused` run (new window), skips while a run is still `queued`/`running`, or starts a new run (409 `PIPELINE_RUN_ACTIVE` for "Run now" in that case). "Run now" has no window.
+- Each tick also pauses runs whose window closed (`paused`; their queued jobs wait), and re-queues leases that expired without a result (`attempts + 1`, `failed` after `SCAN_JOB_MAX_ATTEMPTS`).
+
+**Leasing** (`POST /workers/manager/lease`, `manager-lease.service.ts`): records the manager, then leases with `SELECT … FOR UPDATE SKIP LOCKED` up to `max_parallel × WORKER_LEASE_JOBS_PER_SLOT` queued jobs of `queued`/`running` scans with at least a minute of window left, for enabled workers the manager offers, oldest scan and earliest step first. Without work it holds the request up to `wait_seconds` (at most 60) and answers 204. `leaseJob()` (`manager-job.ts`) builds the job list entry: `deadline` = the step's max duration from now, cut at the window's end; `params.max_duration_seconds` follows it; the lease lasts until the deadline plus `WORKER_LEASE_GRACE_SECONDS` (the manager sends no heartbeats).
+
+**Job lifecycle:** after each stored result, `pipelineRuns.onResultStored()` checks the job's current lease. Once every task index has reported, the job is `completed` (and the next step gets its jobs), re-queued when the time window cut it (a `partial` result stopped at the deadline; not counted as an attempt) or when every task failed with attempts left, or `failed`. A scan with nothing queued or leased ends `completed`, `failed` (every job) or `stopped`. `POST /scans/{id}/stop` stops queued jobs at once; leased ones finish their run first.
 
 ## Scan results
 
@@ -157,7 +184,7 @@ The result a worker sends for a job is fixed in [`docs/worker-result-format.md`]
 
 `resultsService.ingest(result, { taskIndex, taskCount })` (`modules/results/`) takes a result already validated with `WorkerResultSchema` and writes it in one transaction.
 
-`POST /workers/manager/results` (`modules/workers/`) calls it. worker-manager uploads one worker run's result per request, `{ task_index, task_count, result }`, with `Authorization: Bearer <WORKER_TOKEN>` (`middleware/worker-token.ts`: no user session, compared in constant time; without `WORKER_TOKEN` the endpoint answers 503). A leased job that the manager split into tasks comes back as several results under one `leaseId`, told apart by `task_index`; the results of a scan are tied together by `scanId`. The reply is `{ status: "ingested" | "duplicate", resultId }`. The lease and heartbeat endpoints do not exist yet, so the job must already exist as a `ScanJob` (created by the import).
+`POST /workers/manager/results` (`modules/workers/`) calls it. worker-manager uploads one worker run's result per request, `{ task_index, task_count, result }`, with `Authorization: Bearer <WORKER_TOKEN>` (`middleware/worker-token.ts`: no user session, compared in constant time; without `WORKER_TOKEN` the endpoint answers 503). A leased job that the manager split into tasks comes back as several results under one `leaseId`, told apart by `task_index`; the results of a scan are tied together by `scanId`. The reply is `{ status: "ingested" | "duplicate", resultId }`. The job must exist as a `ScanJob` (leased through `POST /workers/manager/lease`); a stored result then moves the job on (see [Pipelines](#pipelines-scheduling-and-leasing)). There is no heartbeat endpoint.
 
 **Two layers of tables:**
 
@@ -180,7 +207,7 @@ The result a worker sends for a job is fixed in [`docs/worker-result-format.md`]
 - **Separate runs:** `(resultId, ip)` is unique. A new lease writes its own host and port observations, even when another result in the same scan reported the same address. Same-lease resends remain idempotent.
 - **Seen window:** results may arrive out of order, so ingest only ever widens `firstSeenAt`/`lastSeenAt`.
 - **Fingerprint** (`fingerprint.ts`): SHA-256 over the port's comparable view (`comparable.ts`): service detection, SSH host key and, per HTTP endpoint, status, title, final path, technology headers by value and security headers by presence (lists in `contracts/src/scans/compared-fields.ts`), cookie names and flags, certificate, TLS version, favicon and probe statuses. Request-dependent values (dates, cookie values, body hashes, query strings) are left out so unchanged pages do not show up as changed. After changing the view, run `db:refingerprint`: it rebuilds each stored port from its columns and decrypted `details` and rewrites fingerprints that differ.
-- `ScanJob` itself (status, timings) is not touched: its lifecycle belongs to the lease handlers.
+- Ingest does not touch `ScanJob` (status, timings): the results endpoint calls `pipelineRuns.onResultStored()` after it.
 
 ## Browsing scan results
 
@@ -226,7 +253,7 @@ CSV is RFC 4180 with a leading `'` on cells that start with `=`, `+`, `-` or `@`
 
 **Import of scan results** (`POST /scans/import?edits=skip|fill&name=`, `scans:read` + `scans:create`; `edits=fill` also `hosts:update`): the request body is the file itself, JSON or `text/csv`. `readScanJson` / `readScanCsv` (`contracts/src/scans/scan-import.ts`, the same code the import page previews with) recognize a scan export, one or more worker results, or a CSV of hosts and services.
 - `scan-import.plan.ts` (pure) turns the file into a scan row, its jobs and one worker result per job. A scan export or CSV is batched with `planScanJobs`, and the covered addresses the file leaves out become `down` hosts; worker results are replayed as they are, one job each, with their worker id.
-- `scan-import.service.ts` writes it in **one transaction**: the scan (`origin = imported`), the jobs (created `completed`, so a worker lease never picks one up) and every result through `resultsService.ingestWithin()`, the unchanged ingest. A failed import leaves no scan, host or service. An advisory lock allows one import at a time (`409 SCAN_IMPORT_RUNNING`).
+- `scan-import.service.ts` writes it in **one transaction**: the scan (`trigger = results_import`), the jobs (created `completed`, so a worker lease never picks one up) and every result through `resultsService.ingestWithin()`, the unchanged ingest. A failed import leaves no scan, host or service. An advisory lock allows one import at a time (`409 SCAN_IMPORT_RUNNING`).
 - **Placement:** `Scan.createdAt` is when the file says the scan ran, never in the future, and a millisecond later than a scan that already has that time. Base scans, lifecycles and the dashboard order scans by it, so an older file can become the base scan of a newer scan.
 - **Once:** `Scan.importKey` is the SHA-256 of the content (ids, export time and edits aside). The same file again answers `409 SCAN_ALREADY_IMPORTED` with `details.scanId`. Importing it twice would otherwise count every `down` answer twice in the lifecycle.
 - **Ports:** `Scan.ports` is the file's port list widened by every port it reports open, so ingest's scope check holds.
@@ -298,6 +325,30 @@ The tables take about 1 GB (`Vulnerability` 592 MB, `VulnerabilityCriterion` 418
 - Ubuntu is not in the default `OSV_ECOSYSTEMS` (820 MB): NVD hits on Ubuntu hosts are `potential`. The distribution parser already reads Ubuntu revisions, so adding `Ubuntu` to the list is enough.
 - Attribution: "This product uses data from the NVD API but is not endorsed or certified by the NVD." OSV data comes from many databases under their own licenses (GitHub Advisory Database CC-BY 4.0, Alpine SecDB CC-BY-SA 4.0, …); the admin page shows the notice.
 
+## Reports
+
+`modules/reports` builds read-only reports from the stored observations, on request (nothing is precomputed or stored). Every route needs `scans:read`, like browsing the results. The frontend renders them as printable pages with JSON and CSV downloads.
+
+| Endpoint | Report |
+|---|---|
+| `GET /reports/scans/{id}/summary` | Post-scan summary: execution (job results, stop reasons, workers, time per phase), results, changes against the base scan, top hosts, ports and technologies, triage counts |
+| `GET /reports/scans/{id}/findings` | Interesting findings and an analytical priority per host |
+| `GET /reports/scans/{id}/technologies` | Technologies and CMSs with versions and confidence, plus groups of similar services |
+| `GET /reports/scans/{id}/exposure` | Open ports by port and by /24 network |
+| `GET /reports/scans/{id}/triage` | Verdicts, new unreviewed services, DefectDojo remediation dates (overdue, due within 14 days, risk acceptance ending within 30 days) |
+| `GET /reports/scans/{id}/tags?tag=` | Every tag of the scan; with `tag`, the hosts carrying it on the host or a service |
+| `GET /reports/diff?from=&to=` | Any two scans, in either order, by the rules of `scan-diff.ts`, with each changed service before and after and which fields differ. 400 `SAME_SCAN` for one scan twice |
+| `GET /reports/ips/{ip}` | One address in every scan: status timeline, ports opened, closed and changed, each service's distinct states, findings and technologies from the latest `up` answer |
+| `GET /reports/stability?scanId=&window=&inactiveAfter=` | Hosts across the latest `window` scans (default 10): `flapping`, `unresponsive`, `inactive` (`down` in the last `inactiveAfter` scans, default 3), `going-quiet`, `unstable-ports`, `returned` |
+| `GET /reports/time-of-day?scans=&utcOffsetMinutes=` | Availability and ports by part of the day (night, morning, afternoon, evening in the viewer's time zone); needs scans from two parts of the day |
+
+**How the reports decide** (all of it passive: the rules read what the worker already collected and send nothing to any host):
+- **Findings** (`findings.ts`): fixed rules with a fixed severity, e.g. a database port reachable (high), staging/debug pages and `/server-status` (high), expired certificates (high), admin panels by title, probe or `www-authenticate` (medium), cleartext protocols and logins over plain HTTP (medium), software older than a supported version (medium), self-signed certificates, cookies without `Secure`/`HttpOnly`, CORS `*`, default pages (low), missing security headers and versions in headers (info). One finding per rule and service.
+- **Priority:** severity weights (10, 5, 2, 0.5) summed per host, +3 per new service, ×1.5 when the host or a service is triaged `important`. `false_positive` hosts and services are left out.
+- **Technologies** (`technologies.ts`): service detection, software headers, `<meta name="generator">`, page content markers, cookie names, titles and probe paths, merged per service under one name (aliases such as `Apache/…` and `Apache httpd`). Confidence is `high` for two or more sources, `medium` for one explicit source (service detection, a header or a generator tag), `low` for a cookie, title or path alone.
+- **Stability** (`history-reports.ts`): only addresses `up` at least once in the window are loaded. A timeout is never counted as `down`, so a host that stops answering is `unresponsive`, not `inactive`.
+- `scanResultsService.hostsForReport(scanId, baseScanId?)` gives the reports the same effective observations and diff as the scan views, against any base scan.
+
 ## Demo data
 
 `pnpm db:seed:hosts` (after `pnpm db:reset` or `pnpm db:seed`, which create the admin who owns the scans) fills the database with realistic scan results to build features on (`src/demo/`, entry `prisma/seed-hosts.ts`):
@@ -323,12 +374,19 @@ The tables take about 1 GB (`Vulnerability` 592 MB, `VulnerabilityCriterion` 418
 | `DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASSWORD` `DB_SSLMODE` | — | Postgres connection in parts, no `DATABASE_URL` |
 | `JWT_SECRET` | — | HS256 key for access tokens, ≥ 32 characters. Production refuses the `.env.example` value |
 | `DATA_ENCRYPTION_KEY` | — | AES-256-GCM key for fields encrypted at rest: 32 bytes, base64 (`openssl rand -base64 32`). Production refuses the `.env.example` value. Changing it makes stored encrypted fields unreadable |
+| `COOKIE_SECURE` | production only | Secure flag on the session cookies. `false` for plain http opened by IP or hostname (browsers drop Secure cookies over http except on `localhost`); keep it on behind HTTPS |
 | `WORKER_TOKEN` | — | Bearer token of the scan workers on `/workers/*`, ≥ 16 characters; unset turns those endpoints off (503). worker-manager sends it as `WORKER_MANAGER_TOKEN`. Production refuses the `.env.example` value |
 | `ADMIN_EMAIL` `ADMIN_PASSWORD` | — | First admin (startup while there are no users, and the seed). Production refuses the example password |
 | `SEED_DEMO_USERS` `DEMO_USER_PASSWORD` | `false` | Seed only: demo accounts for the editor, analyst and viewer roles |
 | `SCAN_DEFAULT_PORTS` | 28 common TCP ports | Ports snapshotted onto every queued scan (`22,80,8000-8100` syntax) |
 | `SCAN_DEFAULT_MAX_RATE` | `100` | Packets per second a worker may send for one job |
 | `SCAN_BATCH_SIZE` | `256` | Addresses per scan job, a power of two from 16 to 1024 |
+| `SCAN_ALLOWED_PORTS` | `1-65535` | The only TCP ports a pipeline step may scan (`PORTS_NOT_ALLOWED` otherwise); `SCAN_DEFAULT_PORTS` must stay inside it |
+| `SCAN_JOB_MAX_ATTEMPTS` | `3` | A job whose lease expired, or whose every task failed, this many times is `failed` |
+| `PIPELINE_SCHEDULER_ENABLED` | `true` | Run the pipeline scheduler in this API process (tests turn it off) |
+| `PIPELINE_SCHEDULER_TICK_SECONDS` | `15` | How often the scheduler fires due pipelines, pauses closed windows and reclaims leases |
+| `WORKER_LEASE_GRACE_SECONDS` | `300` | A lease outlives the job's deadline by this long, for result uploads |
+| `WORKER_LEASE_JOBS_PER_SLOT` | `2` | Jobs per lease request: `max_parallel` × this |
 | `VULN_SOURCES` | `nvd,osv` | Vulnerability sources to run, from the registry; the order is the preference when two describe the same CVE |
 | `VULN_SYNC_INTERVAL_HOURS` | `8` | Incremental sync of each source every N hours |
 | `VULN_FULL_SYNC_INTERVAL_DAYS` | `7` | Full sync (which also withdraws records the source dropped) every N days |
@@ -349,4 +407,4 @@ The tables take about 1 GB (`Vulnerability` 592 MB, `VulnerabilityCriterion` 418
 docker build -f apps/backend/Dockerfile .      # from the repo root
 ```
 
-A multi-stage build on `node:26.13.1-slim` using `pnpm deploy`; the process runs as `USER node`. The same image runs migrations: `node_modules/.bin/prisma migrate deploy`, and the vulnerability sync process: `node dist/vuln-sync.mjs` (one container of it per deployment; give `VULN_CACHE_DIR` a volume).
+A multi-stage build on `node:26.13.1-slim` using `pnpm deploy`; the process runs as `USER node`. `docker/docker-compose.yml` runs it in the `app` profile: `backend-migrate` (migrations), `backend` and, with the `vulns` profile, `vuln-sync` ([`docker/README.md`](../../docker/README.md#everything-in-docker)). The same image runs migrations: `node_modules/.bin/prisma migrate deploy`, and the vulnerability sync process: `node dist/vuln-sync.mjs` (one container of it per deployment; give `VULN_CACHE_DIR` a volume).

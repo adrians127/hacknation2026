@@ -8,6 +8,8 @@ export const PERMISSION_RESOURCES = [
   "scans",
   "hosts",
   "vulnerabilities",
+  "pipelines",
+  "workers",
   "defectdojo",
 ] as const;
 // `run` starts, stops and schedules scans, and starts vulnerability database syncs;
@@ -54,6 +56,13 @@ export const PERMISSIONS = [
   "vulnerabilities:create",
   "vulnerabilities:delete",
   "vulnerabilities:run",
+  "pipelines:read",
+  "pipelines:create",
+  "pipelines:update",
+  "pipelines:delete",
+  "workers:read",
+  "workers:update",
+  "workers:delete",
   "defectdojo:read",
   "defectdojo:import",
   "defectdojo:export",
@@ -76,10 +85,13 @@ const READ = [
   "targets:read",
   "scans:read",
   "vulnerabilities:read",
+  "pipelines:read",
+  "workers:read",
   "defectdojo:read",
 ] as const satisfies readonly Permission[];
 
-// Mapping rules: apps/backend/README.md ("Adding a permission"). Users and roles stay admin-only.
+// Mapping rules: apps/backend/README.md ("Adding a permission"). Users and roles stay admin-only,
+// and so do workers:update/delete (global scanner limits).
 export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRoleKey, readonly Permission[]> = {
   admin: PERMISSIONS,
   editor: [
@@ -96,9 +108,19 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRoleKey, readonly Permission[
     "vulnerabilities:create",
     "vulnerabilities:delete",
     "vulnerabilities:run",
+    "pipelines:create",
+    "pipelines:update",
+    "pipelines:delete",
     "defectdojo:import",
     "defectdojo:export",
   ],
-  analyst: [...READ, "targets:update", "scans:update", "hosts:update", "vulnerabilities:update"],
+  analyst: [
+    ...READ,
+    "targets:update",
+    "scans:update",
+    "hosts:update",
+    "vulnerabilities:update",
+    "pipelines:update",
+  ],
   viewer: READ,
 };

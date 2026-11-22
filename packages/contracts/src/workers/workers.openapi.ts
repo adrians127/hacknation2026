@@ -2,6 +2,8 @@ import { registry } from "../../scripts/registry";
 import { errorResponse, notFound, validationFailed } from "../common/common.openapi";
 import { WorkerResultSchema } from "./worker-result.schema";
 import {
+  ManagerJobListSchema,
+  ManagerLeaseRequestSchema,
   ManagerResultUploadResponseSchema,
   ManagerResultUploadSchema,
   NmapHeartbeatSchema,
@@ -11,11 +13,41 @@ import {
 
 registry.register("NmapJob", NmapJobSchema);
 registry.register("WorkerResult", WorkerResultSchema);
+const ManagerLeaseRequest = registry.register("ManagerLeaseRequest", ManagerLeaseRequestSchema);
+const ManagerJobList = registry.register("ManagerJobList", ManagerJobListSchema);
 const ManagerResultUpload = registry.register("ManagerResultUpload", ManagerResultUploadSchema);
 const ManagerResultUploadResponse = registry.register(
   "ManagerResultUploadResponse",
   ManagerResultUploadResponseSchema,
 );
+
+registry.registerPath({
+  method: "post",
+  path: "/workers/manager/lease",
+  operationId: "leaseManagerJobs",
+  summary: "Lease queued scan jobs to a worker-manager (long poll)",
+  description: [
+    "Called by worker-manager in `--poll` mode with `Authorization: Bearer <WORKER_TOKEN>`.",
+    "Records the manager and the workers it offers (unknown names become disabled custom",
+    "workers), then leases up to `max_parallel` × `WORKER_LEASE_JOBS_PER_SLOT` queued jobs of",
+    "running scans whose worker is enabled and offered. Without work it holds the request for up",
+    "to `wait_seconds` (at most 60) and answers 204. Each job's `deadline` is capped by the scan's",
+    "time window; its lease lasts until the deadline plus `WORKER_LEASE_GRACE_SECONDS`.",
+  ].join(" "),
+  tags: ["Workers"],
+  security: [{ workerToken: [] }],
+  request: { body: { content: { "application/json": { schema: ManagerLeaseRequest } } } },
+  responses: {
+    200: {
+      description: "Leased jobs, in worker-manager's job list format",
+      content: { "application/json": { schema: ManagerJobList } },
+    },
+    204: { description: "No work within `wait_seconds`" },
+    400: validationFailed,
+    401: errorResponse("Missing or wrong worker token"),
+    503: errorResponse("Worker endpoints are disabled: the backend has no WORKER_TOKEN"),
+  },
+});
 
 registry.registerPath({
   method: "post",

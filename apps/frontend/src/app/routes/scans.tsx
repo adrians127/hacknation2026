@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DefectDojoSyncCard } from "@/features/defectdojo/components/defectdojo-sync-card";
+import { StartScanDialog } from "@/features/pipelines/components/start-scan-dialog";
 import { useScans } from "@/features/scans/api/get-scans";
 import { ScansTable } from "@/features/scans/components/scans-table";
 import { compareUrl, orderPair } from "@/features/scans/lib/pair";
@@ -33,6 +34,7 @@ export function ScansRoute() {
     [],
   );
   const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const [isStarting, setIsStarting] = useState(false);
 
   const compare = () => {
     const [first, second] = selected;
@@ -66,11 +68,8 @@ export function ScansRoute() {
               <Upload />
               {t("scans.import.open")}
             </GuardedButton>
-            {/* Scans are queued by importing targets with "Start a scan right away". */}
-            <GuardedButton
-              permissions={["targets:create", "scans:run"]}
-              onClick={() => void navigate("/app/targets/new")}
-            >
+            {/* A scan runs a pipeline; the dialog also links to the target import. */}
+            <GuardedButton permissions={["scans:run"]} onClick={() => setIsStarting(true)}>
               <Play />
               {t("scans.start")}
             </GuardedButton>
@@ -93,6 +92,8 @@ export function ScansRoute() {
           </CardContent>
         </Card>
       )}
+
+      {isStarting && <StartScanDialog onClose={() => setIsStarting(false)} />}
     </div>
   );
 }

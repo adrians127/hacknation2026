@@ -1,0 +1,271 @@
+{
+  "list": {
+    "title": "Pipelines",
+    "subtitle": "Scan queues built from worker blocks. Every run is a scan; a schedule repeats it within its time window.",
+    "new": "New pipeline",
+    "empty": "No pipelines yet. Build one from worker blocks.",
+    "columns": {
+      "name": "Pipeline",
+      "steps": "Steps",
+      "targets": "Targets",
+      "schedule": "Schedule",
+      "nextRun": "Next run",
+      "lastRun": "Last run",
+      "actions": "Actions"
+    },
+    "actions": {
+      "edit": "Open",
+      "runNow": "Run now",
+      "delete": "Delete",
+      "enable": "Turn the schedule on",
+      "disable": "Turn the schedule off"
+    },
+    "runActive": "A run of this pipeline is still going",
+    "noSchedule": "This pipeline has no schedule",
+    "scheduleOff": "Schedule off",
+    "neverRun": "Not run yet",
+    "delete": {
+      "title": "Delete {{name}}?",
+      "description": "The pipeline and its schedule are deleted. Scans it already ran, and their results, stay.",
+      "confirm": "Delete pipeline"
+    },
+    "toast": {
+      "started_one": "Scan queued with {{count}} job",
+      "started_other": "Scan queued with {{count}} jobs",
+      "deleted": "Pipeline deleted",
+      "enabled": "Schedule turned on",
+      "disabled": "Schedule turned off"
+    }
+  },
+  "targets": {
+    "all": "All targets",
+    "tags": "Tagged {{tags}}",
+    "ranges_one": "within {{count}} range",
+    "ranges_other": "within {{count}} ranges"
+  },
+  "schedule": {
+    "manual": "Manual runs only",
+    "every": {
+      "hour_one": "Every hour",
+      "hour_other": "Every {{count}} hours",
+      "day_one": "Every day",
+      "day_other": "Every {{count}} days",
+      "week_one": "Every week",
+      "week_other": "Every {{count}} weeks"
+    },
+    "from": "from {{time}}",
+    "onDays": "on {{days}}",
+    "window": "{{duration}} window",
+    "noWindow": "no time window",
+    "timezone": "({{timezone}})"
+  },
+  "weekdays": {
+    "1": "Mon",
+    "2": "Tue",
+    "3": "Wed",
+    "4": "Thu",
+    "5": "Fri",
+    "6": "Sat",
+    "7": "Sun"
+  },
+  "editor": {
+    "back": "All pipelines",
+    "newTitle": "New pipeline",
+    "subtitle": "Pick the targets, chain worker blocks and decide when the pipeline runs. Each block's parameters become the job the worker gets.",
+    "save": "Save",
+    "saving": "Saving…",
+    "runNow": "Run now",
+    "created": "Pipeline created",
+    "saved": "Pipeline saved",
+    "readOnly": "Your role can view this pipeline but not change it.",
+    "unsaved": "Save your changes before running the pipeline.",
+    "invalid": "Some fields are invalid. Fix the ones marked in red.",
+    "invalidField": "Invalid value",
+    "serverDetail": "Details: {{message}}",
+    "leave": {
+      "title": "Leave without saving?",
+      "description": "The changes to this pipeline are not saved yet and will be lost.",
+      "confirm": "Leave"
+    },
+    "general": {
+      "title": "General",
+      "name": "Name",
+      "description": "Description"
+    },
+    "targets": {
+      "title": "Targets",
+      "hint": "What every run scans, taken from the target inventory. Addresses outside the inventory are never scanned.",
+      "tags": "Tags",
+      "tagsPlaceholder": "e.g. campus, dmz",
+      "tagsHint": "Targets with any of these tags, comma-separated. Empty: every target.",
+      "ranges": "Only within these addresses",
+      "rangesPlaceholder": "10.40.0.0/18, 192.0.2.10",
+      "rangesHint": "IPv4 addresses and CIDRs. Empty: the whole of the selected targets.",
+      "rangesInvalid": "Not an address or CIDR: {{values}}"
+    },
+    "steps": {
+      "title": "Steps",
+      "hint": "Blocks run in order. A later block can take the hosts and open ports the block before it found, so Nmap only probes what Masscan saw open.",
+      "add": "Add block",
+      "noWorkers": "No worker is enabled. An administrator enables them on the Workers page.",
+      "empty": "Add the first block from the list above.",
+      "step": "Step {{index}}",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove step",
+      "dragHandle": "Drag to reorder",
+      "input": "Scans",
+      "inputs": {
+        "targets": "The pipeline's targets",
+        "previous": "Hosts and open ports from step {{index}}"
+      },
+      "inputUnsupported": "{{worker}} cannot take this input",
+      "ports": "TCP ports",
+      "portsHint": "Ports and ranges, e.g. 22,80,8000-8100.",
+      "portPresets": {
+        "common": "Common",
+        "web": "Web",
+        "all": "All"
+      },
+      "rate": "Rate (packets per second)",
+      "rateMax": "At most {{max}} for this worker.",
+      "batchSize": "Addresses per job",
+      "maxDuration": "Time limit per job (minutes)",
+      "split": "Split each job",
+      "splits": {
+        "none": "Don't split",
+        "shard": "Into shards",
+        "ranges": "Into address blocks",
+        "chunk": "Into host groups"
+      },
+      "maxTasks": "At most this many tasks",
+      "workerDisabled": "This worker is disabled; runs are refused until an administrator enables it.",
+      "workerParams": "{{worker}} settings",
+      "flow": {
+        "previous": "passes on the hosts and open ports it found",
+        "targets": "the next block scans the targets itself"
+      }
+    },
+    "schedule": {
+      "title": "Schedule",
+      "hint": "Run times and how long each run may scan. Jobs left when the time window closes wait for the next run time and continue then.",
+      "enabled": "Run on a schedule",
+      "active": "Schedule on",
+      "activeHint": "Off keeps the schedule but stops it from firing.",
+      "every": "Every",
+      "units": {
+        "hour": "hours",
+        "day": "days",
+        "week": "weeks"
+      },
+      "startsAt": "First run",
+      "days": "Only on",
+      "daysHint": "No day selected: any day.",
+      "window": "Limit each run to a time window",
+      "windowMinutes": "Window length (minutes)",
+      "windowHint": "Must not be longer than the interval.",
+      "timezone": "Time zone",
+      "nextRuns": "Next runs",
+      "noRuns": "This schedule never runs: no run time falls on the selected days."
+    },
+    "runs": {
+      "title": "Recent runs",
+      "empty": "No runs yet.",
+      "jobs_one": "{{count}} job",
+      "jobs_other": "{{count}} jobs"
+    }
+  },
+  "paramIssues": {
+    "unknown": "Not a setting of this worker",
+    "type": "Wrong type",
+    "range": "Out of range",
+    "option": "Not one of the options",
+    "too_long": "Too many entries",
+    "path": "Each path must start with a single /"
+  },
+  "params": {
+    "wait_seconds": "Wait for replies (seconds)",
+    "retries": "Retries per port",
+    "host_timeout_ms": "Host timeout (milliseconds)",
+    "probe_paths": "HTTP paths to probe, one per line"
+  },
+  "startDialog": {
+    "title": "Start a scan",
+    "description": "Run a pipeline now over its targets. To scan new addresses, import them first.",
+    "pipeline": "Pipeline",
+    "pickPipeline": "Choose a pipeline",
+    "none": "There is no pipeline yet.",
+    "create": "Create a pipeline",
+    "import": "Import targets",
+    "start": "Start scan",
+    "starting": "Starting…"
+  },
+  "workers": {
+    "title": "Workers",
+    "subtitle": "The blocks pipelines are built from. Each is a worker worker-manager can run; managers register the workers they have when they ask for work.",
+    "columns": {
+      "worker": "Worker",
+      "stage": "Stage",
+      "takes": "Takes",
+      "maxRate": "Rate cap",
+      "managers": "Online managers",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "builtin": "Built-in",
+    "custom": "Registered by a manager",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "inputs": {
+      "targets": "Address ranges",
+      "hosts": "Hosts from an earlier step"
+    },
+    "perSecond": "{{value}}/s",
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "toast": {
+      "saved": "Worker saved",
+      "deleted": "Worker deleted"
+    },
+    "delete": {
+      "title": "Delete {{name}}?",
+      "description": "Only the registry entry is deleted. If a manager still offers this worker, it is registered again, disabled.",
+      "confirm": "Delete worker"
+    },
+    "edit": {
+      "title": "Edit {{name}}",
+      "description": "Built-in workers come from code: only whether they run, their rate cap and their defaults can change.",
+      "enabled": "Enabled: pipelines may use it and managers get its jobs",
+      "maxRate": "Rate cap (packets per second)",
+      "maxRateHint": "No step of this worker may send more.",
+      "defaults": "Defaults for new steps",
+      "displayName": "Name",
+      "descriptionField": "Description",
+      "stage": "Stage",
+      "stageHint": "Order on overlapping addresses: lower runs first.",
+      "inputs": "Takes",
+      "splits": "Split strategies",
+      "fields": "Settings (JSON)",
+      "fieldsHint": "A list of fields: key, label, type (integer, boolean, enum or paths) and its limits.",
+      "fieldsInvalid": "Not a valid list of fields.",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "managers": {
+      "title": "Worker managers",
+      "subtitle": "worker-manager instances seen asking for work. A manager is online while it asked within the last two minutes.",
+      "empty": "No manager has asked for work yet. Start one with pnpm workers:manager:poll.",
+      "columns": {
+        "manager": "Manager",
+        "version": "Version",
+        "workers": "Workers",
+        "maxParallel": "Parallel tasks",
+        "lastSeen": "Last seen"
+      },
+      "online": "Online",
+      "offline": "Offline"
+    }
+  }
+}

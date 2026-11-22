@@ -5,6 +5,7 @@ import { ScanChangesQuerySchema } from "@subsurf/contracts/scans/scan-changes.sc
 import { ScanExportQuerySchema } from "@subsurf/contracts/scans/scan-export.schema";
 import { SCAN_IMPORT_LIMITS } from "@subsurf/contracts/scans/scan-import";
 import { ImportScanQuerySchema } from "@subsurf/contracts/scans/scan-import.schema";
+import { ScanJobListQuerySchema } from "@subsurf/contracts/scans/scan-jobs.schema";
 import {
   ScanCompareQuerySchema,
   ScanHostListQuerySchema,
@@ -54,6 +55,17 @@ scansRoutes.get(
   "/:id/export",
   validate({ params: IdParamsSchema, query: ScanExportQuerySchema }),
   c.exportScan,
+);
+scansRoutes.get(
+  "/:id/jobs",
+  validate({ params: IdParamsSchema, query: ScanJobListQuerySchema }),
+  c.listJobs,
+);
+scansRoutes.post(
+  "/:id/stop",
+  requirePermission("scans:run"),
+  validate({ params: IdParamsSchema }),
+  c.stop,
 );
 scansRoutes.get(
   "/:id/hosts",

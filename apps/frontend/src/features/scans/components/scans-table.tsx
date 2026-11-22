@@ -53,9 +53,6 @@ export function ScansTable({
               <Link to={`/app/scans/${scan.id}`} className="font-medium hover:underline">
                 {formatDateTime(scan.startedAt ?? scan.createdAt, locale)}
               </Link>
-              {scan.origin === "imported" && (
-                <Badge variant="outline">{t("scans.origins.imported")}</Badge>
-              )}
               {scan.name && <span className="text-muted-foreground">{scan.name}</span>}
             </span>
           ),
@@ -64,6 +61,22 @@ export function ScansTable({
           header: t("scans.columns.status"),
           cell: ({ getValue }) => (
             <Badge variant={SCAN_STATUS_VARIANT[getValue()]}>{t(`scans.statuses.${getValue()}`)}</Badge>
+          ),
+        }),
+        column.accessor((scan) => scan.pipeline?.name ?? "", {
+          id: "pipeline",
+          header: t("scans.columns.pipeline"),
+          cell: ({ row: { original: scan } }) => (
+            <div className="grid">
+              {scan.pipeline ? (
+                <Link to={`/app/pipelines/${scan.pipeline.id}`} className="hover:underline">
+                  {scan.pipeline.name}
+                </Link>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+              <span className="text-xs text-muted-foreground">{t(`scans.triggers.${scan.trigger}`)}</span>
+            </div>
           ),
         }),
         column.accessor("addressCount", {
