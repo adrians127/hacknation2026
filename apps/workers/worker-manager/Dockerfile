@@ -57,6 +57,11 @@ RUN chmod +x /usr/local/bin/naabu-worker \
 COPY --from=builder /out/bin/masscan-worker /out/bin/nmap-worker /out/bin/httpx-worker /out/bin/worker-manager \
      /usr/local/bin/
 COPY worker-manager/examples /jobs
+# One manifest per worker name in WORKER_MANAGER_WORKERS; --poll announces them to the backend.
+COPY masscan-worker/manifest.json /usr/local/share/worker-manager/workers/masscan.json
+COPY naabu-worker/manifest.json /usr/local/share/worker-manager/workers/naabu.json
+COPY nmap-worker/manifest.json /usr/local/share/worker-manager/workers/nmap.json
+COPY httpx-worker/manifest.json /usr/local/share/worker-manager/workers/httpx.json
 USER worker
 ENV WORKER_MANAGER_WORKERS=masscan=/usr/local/bin/masscan-worker,naabu=/usr/local/bin/naabu-worker,nmap=/usr/local/bin/nmap-worker,httpx=/usr/local/bin/httpx-worker
 ENTRYPOINT ["/usr/local/bin/worker-manager"]

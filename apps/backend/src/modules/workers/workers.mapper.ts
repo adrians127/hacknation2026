@@ -2,11 +2,9 @@ import {
   SplitStrategySchema,
   WorkerInputSchema,
   WorkerParamFieldsSchema,
-  WorkerParamsSchema,
   type SplitStrategy,
   type WorkerInput,
   type WorkerParamField,
-  type WorkerParams,
 } from "@subsurf/contracts/workers/worker-catalog";
 import type { Worker, WorkerManager } from "@subsurf/contracts/workers/worker-registry.schema";
 
@@ -21,15 +19,10 @@ export const MANAGER_ONLINE_MS = 2 * 60_000;
 export const isManagerOnline = (manager: WorkerManagerRow, now: Date) =>
   now.getTime() - manager.lastSeenAt.getTime() <= MANAGER_ONLINE_MS;
 
-// The JSON and array columns only ever hold what the service validated; anything else reads as empty.
+// The JSON and array columns only ever hold what the lease request validated; anything else reads as empty.
 export function workerFields(row: WorkerRow): WorkerParamField[] {
   const parsed = WorkerParamFieldsSchema.safeParse(row.paramFields);
   return parsed.success ? parsed.data : [];
-}
-
-export function workerDefaults(row: WorkerRow): WorkerParams {
-  const parsed = WorkerParamsSchema.safeParse(row.defaults);
-  return parsed.success ? parsed.data : {};
 }
 
 export const workerInputs = (row: WorkerRow): WorkerInput[] =>
@@ -46,13 +39,9 @@ export function toWorker(row: WorkerRow, onlineManagers: number): Worker {
     name: row.name,
     displayName: row.displayName,
     description: row.description,
-    isBuiltin: row.isBuiltin,
-    enabled: row.enabled,
-    stage: row.stage,
     inputs: workerInputs(row),
     splitStrategies: workerSplitStrategies(row),
     paramFields: workerFields(row),
-    defaults: workerDefaults(row),
     maxRate: row.maxRate,
     onlineManagers,
     createdAt: row.createdAt.toISOString(),

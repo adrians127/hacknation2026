@@ -72,7 +72,7 @@ export function newStep(worker: Worker, previous: StepDraft | undefined): StepDr
     batchSize: 256,
     maxDurationSeconds: DEFAULT_MAX_DURATION_SECONDS,
     split: { strategy: worker.splitStrategies.includes("none") ? "none" : (worker.splitStrategies[0] ?? "none") },
-    params: defaultStepParams(worker.paramFields, worker.defaults),
+    params: defaultStepParams(worker.paramFields),
   };
 }
 
@@ -97,11 +97,11 @@ export function defaultSchedule(): Schedule {
   };
 }
 
-/** A new pipeline: masscan, then nmap on its hits, when both are enabled. */
+/** A new pipeline: masscan, then nmap on its hits, when managers have registered them. */
 export function emptyDraft(workers: readonly Worker[]): PipelineDraft {
   const steps: StepDraft[] = [];
   for (const name of ["masscan", "nmap"]) {
-    const worker = workers.find((candidate) => candidate.name === name && candidate.enabled);
+    const worker = workers.find((candidate) => candidate.name === name);
     if (worker) steps.push(newStep(worker, steps.at(-1)));
   }
   return { name: "", description: "", enabled: false, steps, schedule: null };

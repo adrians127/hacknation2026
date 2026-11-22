@@ -183,6 +183,8 @@ Config read_config() {
                 .retry_delay =
                     std::chrono::seconds{env_number("WORKER_MANAGER_RETRY_DELAY", 5, 1, 3600)},
                 .upload_attempts = env_number("WORKER_MANAGER_UPLOAD_ATTEMPTS", 5, 1, 100),
+                .manifest_dir = env_or("WORKER_MANAGER_MANIFEST_DIR",
+                                       "/usr/local/share/worker-manager/workers"),
             },
     };
 }

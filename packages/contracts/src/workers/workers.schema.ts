@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-import { SplitStrategySchema, WorkerNameSchema } from "./worker-catalog";
+import {
+  SplitStrategySchema,
+  WORKER_MAX_RATE_LIMIT,
+  WorkerInputSchema,
+  WorkerNameSchema,
+  WorkerParamFieldsSchema,
+} from "./worker-catalog";
 import { WorkerResultSchema } from "./worker-result.schema";
 
 const TcpPortSchema = z.number().int().min(1).max(65535);
@@ -73,16 +79,38 @@ export const ManagerResultUploadResponseSchema = z.object({
 export type ManagerResultUpload = z.infer<typeof ManagerResultUploadSchema>;
 export type ManagerResultUploadResponse = z.infer<typeof ManagerResultUploadResponseSchema>;
 
-/** worker-manager's lease request (its README, "Poll mode"). Unknown fields are ignored. */
-export const ManagerLeaseRequestSchema = z.object({
-  manager_id: z.string().regex(/^[A-Za-z0-9._-]{1,128}$/),
-  version: z.string().max(64),
-  /** Workers whose binary the manager has: it is only handed jobs for these. */
-  workers: z.array(WorkerNameSchema).max(64),
-  max_parallel: z.number().int().min(1).max(1024),
-  /** How long the backend may hold the request when there is no work (long poll). */
-  wait_seconds: z.number().int().min(0).max(300).optional(),
+/**
+ * What a manager announces about one of its workers, from the worker's manifest. `inputs`,
+ * `split_strategies` and `param_fields` replace the registry's on every lease request;
+ * `display_name`, `description` and `max_rate` only seed a newly registered worker (admins own them).
+ */
+export const WorkerSpecSchema = z.object({
+  name: WorkerNameSchema,
+  display_name: z.string().min(1).max(100).regex(/\S/, "Must not be blank").optional(),
+  description: z.string().max(500).optional(),
+  inputs: z.array(WorkerInputSchema).min(1).max(2),
+  split_strategies: z.array(SplitStrategySchema).min(1).max(4),
+  param_fields: WorkerParamFieldsSchema.optional(),
+  max_rate: z.number().int().min(1).max(WORKER_MAX_RATE_LIMIT).optional(),
 });
+
+/** worker-manager's lease request (its README, "Poll mode"). Unknown fields are ignored. */
+export const ManagerLeaseRequestSchema = z
+  .object({
+    manager_id: z.string().regex(/^[A-Za-z0-9._-]{1,128}$/),
+    version: z.string().max(64),
+    /** Workers whose binary the manager has: it is only handed jobs for these. */
+    workers: z.array(WorkerNameSchema).max(64),
+    /** Manifests of those workers; a worker without one registers with input `targets` only. */
+    worker_specs: z.array(WorkerSpecSchema).max(64).optional(),
+    max_parallel: z.number().int().min(1).max(1024),
+    /** How long the backend may hold the request when there is no work (long poll). */
+    wait_seconds: z.number().int().min(0).max(300).optional(),
+  })
+  .refine(
+    ({ workers, worker_specs = [] }) => worker_specs.every((spec) => workers.includes(spec.name)),
+    { message: "Every worker spec must name one of `workers`", path: ["worker_specs"] },
+  );
 
 /** One leased `ScanJob`, as an entry of worker-manager's job list (its README, "Input"). */
 export const ManagerJobSchema = z.object({
@@ -110,6 +138,7 @@ export const ManagerJobListSchema = z.object({
   jobs: z.array(ManagerJobSchema),
 });
 
+export type WorkerSpec = z.infer<typeof WorkerSpecSchema>;
 export type ManagerLeaseRequest = z.infer<typeof ManagerLeaseRequestSchema>;
 export type ManagerJob = z.infer<typeof ManagerJobSchema>;
 export type ManagerJobList = z.infer<typeof ManagerJobListSchema>;

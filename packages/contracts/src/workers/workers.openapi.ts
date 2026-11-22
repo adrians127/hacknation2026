@@ -28,9 +28,9 @@ registry.registerPath({
   summary: "Lease queued scan jobs to a worker-manager (long poll)",
   description: [
     "Called by worker-manager in `--poll` mode with `Authorization: Bearer <WORKER_TOKEN>`.",
-    "Records the manager and the workers it offers (unknown names become disabled custom",
-    "workers), then leases up to `max_parallel` × `WORKER_LEASE_JOBS_PER_SLOT` queued jobs of",
-    "running scans whose worker is enabled and offered. Without work it holds the request for up",
+    "Records the manager and registers the workers it offers, with the capabilities in their",
+    "`worker_specs` (manifests), then leases up to `max_parallel` × `WORKER_LEASE_JOBS_PER_SLOT`",
+    "queued jobs of running scans whose worker it offers. Without work it holds the request for up",
     "to `wait_seconds` (at most 60) and answers 204. Each job's `deadline` is capped by the scan's",
     "time window; its lease lasts until the deadline plus `WORKER_LEASE_GRACE_SECONDS`.",
   ].join(" "),

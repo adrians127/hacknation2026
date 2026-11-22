@@ -160,7 +160,7 @@
       "title": "Kroki",
       "hint": "Bloki działają po kolei. Późniejszy blok może przejąć hosty i otwarte porty znalezione przez blok przed nim, dzięki czemu Nmap sprawdza tylko to, co Masscan zobaczył jako otwarte.",
       "add": "Dodaj blok",
-      "noWorkers": "Żaden worker nie jest włączony. Administrator włącza je na stronie Workery.",
+      "noWorkers": "Nie zarejestrowano jeszcze żadnego workera. Workery pojawią się, gdy menedżer workerów poprosi o pracę.",
       "empty": "Dodaj pierwszy blok z listy powyżej.",
       "step": "Krok {{index}}",
       "moveUp": "Przesuń wyżej",
@@ -192,7 +192,6 @@
         "chunk": "Na grupy hostów"
       },
       "maxTasks": "Najwyżej tyle części",
-      "workerDisabled": "Ten worker jest wyłączony; uruchomienia są odrzucane, dopóki administrator go nie włączy.",
       "workerParams": "Ustawienia: {{worker}}",
       "flow": {
         "previous": "przekazuje znalezione hosty i otwarte porty",
@@ -257,23 +256,12 @@
   },
   "workers": {
     "title": "Workery",
-    "subtitle": "Bloki, z których buduje się potoki. Każdy to worker, którego może uruchomić worker-manager; menedżery rejestrują posiadane workery, gdy proszą o pracę.",
+    "subtitle": "Bloki, z których buduje się potoki. Menedżery workerów rejestrują posiadane workery wraz z ich możliwościami, gdy proszą o pracę.",
     "columns": {
-      "worker": "Worker",
-      "stage": "Etap",
-      "takes": "Przyjmuje",
+      "name": "Nazwa",
+      "description": "Opis",
       "maxRate": "Limit tempa",
-      "managers": "Menedżery online",
-      "status": "Stan",
       "actions": "Akcje"
-    },
-    "builtin": "Wbudowany",
-    "custom": "Zarejestrowany przez menedżera",
-    "enabled": "Włączony",
-    "disabled": "Wyłączony",
-    "inputs": {
-      "targets": "Zakresy adresów",
-      "hosts": "Hosty z wcześniejszego kroku"
     },
     "perSecond": "{{value}}/s",
     "actions": {
@@ -286,25 +274,15 @@
     },
     "delete": {
       "title": "Usunąć {{name}}?",
-      "description": "Usuwany jest tylko wpis w rejestrze. Jeśli menedżer nadal oferuje tego workera, zostanie on zarejestrowany ponownie jako wyłączony.",
+      "description": "Usuwany jest tylko wpis w rejestrze. Jeśli menedżer nadal oferuje tego workera, zostanie on zarejestrowany ponownie.",
       "confirm": "Usuń workera"
     },
     "edit": {
       "title": "Edycja: {{name}}",
-      "description": "Wbudowane workery pochodzą z kodu: zmienić można tylko to, czy działają, ich limit tempa i wartości domyślne.",
-      "enabled": "Włączony: potoki mogą go używać, a menedżery dostają jego zadania",
       "maxRate": "Limit tempa (pakiety na sekundę)",
       "maxRateHint": "Żaden krok tego workera nie może wysyłać więcej.",
-      "defaults": "Wartości domyślne dla nowych kroków",
       "displayName": "Nazwa",
       "descriptionField": "Opis",
-      "stage": "Etap",
-      "stageHint": "Kolejność na wspólnych adresach: niższy działa wcześniej.",
-      "inputs": "Przyjmuje",
-      "splits": "Sposoby dzielenia",
-      "fields": "Ustawienia (JSON)",
-      "fieldsHint": "Lista pól: key, label, type (integer, boolean, enum lub paths) i ich ograniczenia.",
-      "fieldsInvalid": "To nie jest poprawna lista pól.",
       "save": "Zapisz",
       "saving": "Zapisywanie…"
     },

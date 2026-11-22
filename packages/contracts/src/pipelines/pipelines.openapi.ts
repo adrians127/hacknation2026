@@ -26,7 +26,7 @@ const Pipeline = registry.register("Pipeline", PipelineSchema);
 const PipelineDetail = registry.register("PipelineDetail", PipelineDetailSchema);
 
 const invalidPipeline = errorResponse(
-  "Validation failed: also a disabled worker (`WORKER_DISABLED`), a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`)",
+  "Validation failed: also a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`)",
 );
 
 registry.registerPath({
@@ -171,7 +171,7 @@ registry.registerPath({
     403: forbidden,
     404: notFound,
     409: errorResponse(
-      "A run is still active (`PIPELINE_RUN_ACTIVE`), nothing to scan (`NO_SCANNABLE_TARGETS`), or a disabled worker (`WORKER_DISABLED`)",
+      "A run is still active (`PIPELINE_RUN_ACTIVE`) or nothing to scan (`NO_SCANNABLE_TARGETS`)",
     ),
   },
 });

@@ -138,7 +138,7 @@
       "title": "Steps",
       "hint": "Blocks run in order. A later block can take the hosts and open ports the block before it found, so Nmap only probes what Masscan saw open.",
       "add": "Add block",
-      "noWorkers": "No worker is enabled. An administrator enables them on the Workers page.",
+      "noWorkers": "No worker is registered yet. Workers appear once a worker manager asks for work.",
       "empty": "Add the first block from the list above.",
       "step": "Step {{index}}",
       "moveUp": "Move up",
@@ -170,7 +170,6 @@
         "chunk": "Into host groups"
       },
       "maxTasks": "At most this many tasks",
-      "workerDisabled": "This worker is disabled; runs are refused until an administrator enables it.",
       "workerParams": "{{worker}} settings",
       "flow": {
         "previous": "passes on the hosts and open ports it found",
@@ -233,23 +232,12 @@
   },
   "workers": {
     "title": "Workers",
-    "subtitle": "The blocks pipelines are built from. Each is a worker worker-manager can run; managers register the workers they have when they ask for work.",
+    "subtitle": "The blocks pipelines are built from. Worker managers register the workers they have, with what each one can do, when they ask for work.",
     "columns": {
-      "worker": "Worker",
-      "stage": "Stage",
-      "takes": "Takes",
+      "name": "Name",
+      "description": "Description",
       "maxRate": "Rate cap",
-      "managers": "Online managers",
-      "status": "Status",
       "actions": "Actions"
-    },
-    "builtin": "Built-in",
-    "custom": "Registered by a manager",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "inputs": {
-      "targets": "Address ranges",
-      "hosts": "Hosts from an earlier step"
     },
     "perSecond": "{{value}}/s",
     "actions": {
@@ -262,25 +250,15 @@
     },
     "delete": {
       "title": "Delete {{name}}?",
-      "description": "Only the registry entry is deleted. If a manager still offers this worker, it is registered again, disabled.",
+      "description": "Only the registry entry is deleted. If a manager still offers this worker, it is registered again.",
       "confirm": "Delete worker"
     },
     "edit": {
       "title": "Edit {{name}}",
-      "description": "Built-in workers come from code: only whether they run, their rate cap and their defaults can change.",
-      "enabled": "Enabled: pipelines may use it and managers get its jobs",
       "maxRate": "Rate cap (packets per second)",
       "maxRateHint": "No step of this worker may send more.",
-      "defaults": "Defaults for new steps",
       "displayName": "Name",
       "descriptionField": "Description",
-      "stage": "Stage",
-      "stageHint": "Order on overlapping addresses: lower runs first.",
-      "inputs": "Takes",
-      "splits": "Split strategies",
-      "fields": "Settings (JSON)",
-      "fieldsHint": "A list of fields: key, label, type (integer, boolean, enum or paths) and its limits.",
-      "fieldsInvalid": "Not a valid list of fields.",
       "save": "Save",
       "saving": "Saving…"
     },

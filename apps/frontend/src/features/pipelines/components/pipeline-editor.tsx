@@ -99,7 +99,6 @@ export function PipelineEditor({ pipeline, workers }: { pipeline?: PipelineDetai
   }, [createdId, isDirty, navigate]);
 
   const workerById = useMemo(() => new Map(workers.map((worker) => [worker.id, worker])), [workers]);
-  const enabledWorkers = workers.filter((worker) => worker.enabled);
   const parsed = PipelineBodySchema.safeParse(body);
   const issuePaths = parsed.success ? [] : parsed.error.issues.map((issue) => issue.path.join("."));
   const stepsRunnable = draft.steps.every((step, index) => stepIsRunnable(step, index, workerById.get(step.workerId)));
@@ -192,11 +191,11 @@ export function PipelineEditor({ pipeline, workers }: { pipeline?: PipelineDetai
             {canEdit && (
               <div className="grid gap-2">
                 <p className="text-sm font-medium">{t("editor.steps.add")}</p>
-                {enabledWorkers.length === 0 ? (
+                {workers.length === 0 ? (
                   <p className="text-sm text-muted-foreground">{t("editor.steps.noWorkers")}</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {enabledWorkers.map((worker) => (
+                    {workers.map((worker) => (
                       <Tooltip key={worker.id}>
                         <TooltipTrigger asChild>
                           <Button

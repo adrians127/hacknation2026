@@ -40,7 +40,6 @@ function toStep(step: StepRow): PipelineStepDetail {
       id: step.worker.id,
       name: step.worker.name,
       displayName: step.worker.displayName,
-      enabled: step.worker.enabled,
     },
     input: step.input,
     targets: step.input === "targets" ? readSelector(step.targetSelector) : null,

@@ -6,16 +6,13 @@ import { leaseJob } from "~backend/modules/pipelines/manager-job";
 import { MIN_WINDOW_LEFT_MS } from "~backend/modules/pipelines/pipeline-runs.service";
 
 /**
- * Leases queued jobs to one manager: only for workers it offers and an admin enabled, only of
- * scans that may run now (queued or running, with time left in their window), oldest scan
- * first and earlier steps first. `SKIP LOCKED` keeps two managers from leasing one job.
+ * Leases queued jobs to one manager: only for workers it offers, only of scans that may run now
+ * (queued or running, with time left in their window), oldest scan first and earlier steps
+ * first. `SKIP LOCKED` keeps two managers from leasing one job.
  */
 export async function leaseJobs(request: ManagerLeaseRequest, now = new Date()): Promise<ManagerJob[]> {
-  const enabled = await prisma.worker.findMany({
-    where: { enabled: true, name: { in: request.workers } },
-    select: { name: true },
-  });
-  if (enabled.length === 0) return [];
+  const { workers } = request;
+  if (workers.length === 0) return [];
   // A handful of active scans: filtering them here keeps dates out of the raw query.
   const scans = await prisma.scan.findMany({
     where: {
@@ -27,7 +24,6 @@ export async function leaseJobs(request: ManagerLeaseRequest, now = new Date()):
   if (scans.length === 0) return [];
 
   const limit = request.max_parallel * env.WORKER_LEASE_JOBS_PER_SLOT;
-  const workers = enabled.map((worker) => worker.name);
   const scanIds = scans.map((scan) => scan.id);
   return prisma.$transaction(async (tx) => {
     const picked = await tx.$queryRaw<{ id: string }[]>`

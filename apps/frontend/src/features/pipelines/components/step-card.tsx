@@ -162,12 +162,6 @@ export function StepCard({
         )}
       </CardHeader>
       <CardContent className="grid gap-4">
-        {worker && !worker.enabled && (
-          <p className="text-sm text-amber-400">
-            {t("editor.steps.workerDisabled")}
-          </p>
-        )}
-
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-1.5">
             <Label htmlFor={`${id}-input`}>{t("editor.steps.input")}</Label>

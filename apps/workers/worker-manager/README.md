@@ -103,20 +103,35 @@ With `--poll` the manager asks the backend for work over HTTP instead of reading
 3. It asks again, after the response's `next_poll_ms` if the backend set one (at most 5 minutes).
 
 ```json
-{ "manager_id": "scan-host-1", "version": "0.1.0", "workers": ["masscan", "naabu", "nmap", "httpx"], "max_parallel": 2, "wait_seconds": 30 }
+{ "manager_id": "scan-host-1", "version": "0.1.0", "workers": ["masscan", "naabu", "nmap", "httpx"], "worker_specs": [{ "name": "masscan", "inputs": ["targets"], "split_strategies": ["none", "shard", "ranges"], "…": "…" }], "max_parallel": 2, "wait_seconds": 30 }
 ```
 
 | Field | Meaning |
 |---|---|
 | `manager_id` | `WORKER_MANAGER_ID` (default: the hostname), for the backend's `ScanJob.leasedBy` |
 | `workers` | Workers whose binary is installed; the backend should hand out jobs only for these |
+| `worker_specs` | The [manifests](#worker-manifests) of those workers, each with its `name`; left out when none has one |
 | `max_parallel` | Worker processes the manager runs at once, a hint for sizing the list |
 | `wait_seconds` | `WORKER_MANAGER_POLL_WAIT`: how long the backend may hold the request. The manager gives up 15 s after that |
 
 - **Only an idle manager asks.** The next request goes out once the whole job list has finished, so leased jobs never sit in a local queue while their lease runs out. The backend should hand out about as much as the manager can finish within one lease.
 - **Failures** (connection error, timeout, a status other than 200/204, a body that is not a job list) are logged as `lease.failed` / `lease.invalid` and retried after `WORKER_MANAGER_RETRY_DELAY` seconds, doubled per failure in a row up to 60 s. `401`/`403` are reported as a rejected token. A backend that answers `204` at once instead of holding the request is still asked at most once a second.
 - **Not done yet:** heartbeats. Until then the backend's leases simply expire, and it has to put jobs whose results never arrived back in the queue.
-- **Backend side** ([backend README](../../backend/README.md#pipelines-scheduling-and-leasing)): the request registers the manager and its `workers` in the backend's worker registry (unknown names as disabled workers). One `ScanJob` row of a pipeline run becomes one `jobs[]` entry: `job_id` = `ScanJob.id`, `scan_id`, a new `lease_id` per lease, `worker` = the step's worker, `split` = the step's split, `deadline` = the step's time limit cut at the scan's time window, and `params` = `ScanJob.params` (`targets`, `ports`, `rate`, the worker's own fields) plus `max_duration_seconds`. Only workers an admin enabled are handed out, at most `max_parallel` × `WORKER_LEASE_JOBS_PER_SLOT` jobs per request.
+- **Backend side** ([backend README](../../backend/README.md#pipelines-scheduling-and-leasing)): the request registers the manager and its `workers` in the backend's worker registry, with the capabilities from `worker_specs`; there are no workers the backend knows by itself. One `ScanJob` row of a pipeline run becomes one `jobs[]` entry: `job_id` = `ScanJob.id`, `scan_id`, a new `lease_id` per lease, `worker` = the step's worker, `split` = the step's split, `deadline` = the step's time limit cut at the scan's time window, and `params` = `ScanJob.params` (`targets`, `ports`, `rate`, the worker's own fields) plus `max_duration_seconds`. Only jobs of the offered workers are handed out, at most `max_parallel` × `WORKER_LEASE_JOBS_PER_SLOT` per request.
+
+### Worker manifests
+
+A manifest tells the backend what a worker can do, so pipelines can use it: `<WORKER_MANAGER_MANIFEST_DIR>/<name>.json`, where `<name>` is the worker's name in `WORKER_MANAGER_WORKERS`. Each worker keeps its own as `apps/workers/<worker>/manifest.json`; the Docker image installs them under the default directory as `masscan.json`, `naabu.json`, `nmap.json` and `httpx.json`.
+
+| Field | Required | Meaning |
+|---|---|---|
+| `inputs` | yes | `targets` (address ranges of a step's targets) and/or `hosts` (host objects `{ip, ports, domains}` with an earlier step's hits) |
+| `split_strategies` | yes | Which of `none`, `shard`, `ranges`, `chunk` the worker's jobs may use |
+| `param_fields` | no | The worker's own job fields, rendered as form controls in the pipeline editor: `key`, `label`, `description`, `type` (`integer` with `min`/`max`/`unit`, `boolean`, `enum` with `options`, `paths` with `maxItems`) and `default`. The backend validates them (`WorkerParamFieldSchema`) |
+| `display_name`, `description` | no | How the worker is shown when the backend first registers it; admins may rename it later |
+| `max_rate` | no | Initial rate cap (packets per second) of a step of this worker; admins may change it later |
+
+`--poll` reads every installed worker's manifest at startup and sends them with each lease request (`worker_specs`); the backend replaces the worker's inputs, split strategies and fields with them every time. An invalid manifest (unknown field, unknown input or strategy, malformed JSON) stops the manager with exit code 2. A worker without a manifest is logged as `manifest.missing` and registered for address ranges only, with no split and no fields.
 
 ### Result upload
 
@@ -205,6 +220,7 @@ Example with a budget of 1000: job `x` without a rate starts at 1000; `y` (`rate
 | `WORKER_MANAGER_POLL_WAIT` | `30` | `--poll`: seconds the backend may hold one lease request (1 to 300) |
 | `WORKER_MANAGER_RETRY_DELAY` | `5` | `--poll`: seconds before retrying a failed lease request or upload, doubled per failure in a row up to 60 (1 to 3600) |
 | `WORKER_MANAGER_UPLOAD_ATTEMPTS` | `5` | `--poll`: attempts per result before it is left on disk (1 to 100) |
+| `WORKER_MANAGER_MANIFEST_DIR` | `/usr/local/share/worker-manager/workers` | `--poll`: directory of the [worker manifests](#worker-manifests), `<name>.json` per worker |
 
 Workers inherit the manager's environment, so `MASSCAN_WORKER_*` and `NMAP_*` variables reach every worker. Compose sets `NMAP_SCAN_TYPE=syn` and `NMAP_PRIVILEGED=1`, as for the standalone nmap-worker.
 
@@ -222,6 +238,7 @@ Needs GCC 14+ (`<print>`), CMake 3.28+, Ninja, nlohmann/json 3.11+ and libcurl (
 |---|---|
 | `src/main.cpp` | CLI, the poll loop, planning every job, the thread pool, signal thread, `job.json` / `run.json` |
 | `src/backend_client.*` | Poll mode: the lease and upload requests, response statuses, `next_poll_ms`, retry backoff |
+| `src/manifest.*` | Poll mode: reads and checks the worker manifests sent as `worker_specs` |
 | `src/result_uploader.*` | The uploader thread: a queue of finished tasks' results, retries, the `upload` outcome per task |
 | `src/http_client.*` | libcurl JSON POST that a stop request cuts short |
 | `src/job.*` | Parses and validates the job list |

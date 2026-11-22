@@ -21,7 +21,7 @@ import { lastFireAtOrBefore, nextFireAfter } from "~backend/modules/pipelines/sc
 import { hostTargets, jobParams, readSteps, type ScanStepSnapshot } from "~backend/modules/pipelines/steps";
 import { readSelector, selectStepTargets, stepDomains } from "~backend/modules/pipelines/target-selection";
 import { resolveDomains } from "~backend/modules/scans/dns";
-import { workerDefaults, workerFields, workerInputs } from "~backend/modules/workers/workers.mapper";
+import { workerFields, workerInputs } from "~backend/modules/workers/workers.mapper";
 
 export const ACTIVE_SCAN_STATUSES: ScanStatus[] = ["queued", "running", "paused"];
 const ENDED_SCAN_STATUSES: ScanStatus[] = ["completed", "stopped", "failed"];
@@ -43,7 +43,7 @@ const pipelineInclude = {
 
 type PipelineWithSteps = Prisma.PipelineGetPayload<{ include: typeof pipelineInclude }>;
 
-/** The steps a run starts with: worker defaults merged under the step's own params, rate capped. */
+/** The steps a run starts with: the worker's field defaults merged under the step's own params, rate capped. */
 export function snapshotSteps(pipeline: PipelineWithSteps): ScanStepSnapshot[] {
   return pipeline.steps.map((step) => {
     const fields = workerFields(step.worker);
@@ -61,7 +61,7 @@ export function snapshotSteps(pipeline: PipelineWithSteps): ScanStepSnapshot[] {
       maxDurationSeconds: step.maxDurationSeconds,
       split: split.success ? split.data : { strategy: "none" },
       params: {
-        ...defaultStepParams(fields, workerDefaults(step.worker)),
+        ...defaultStepParams(fields),
         ...(params.success ? params.data : {}),
       },
     };
@@ -155,11 +155,6 @@ export const pipelineRuns = {
     options: { trigger: "manual" | "schedule"; requestedById: string; windowEndsAt: Date | null },
   ): Promise<RunPipelineResponse> {
     const pipeline = await loadPipeline(pipelineId);
-    const disabled = pipeline.steps.filter((step) => !step.worker.enabled);
-    if (disabled.length > 0) {
-      const names = disabled.map((step) => step.worker.name).join(", ");
-      throw HttpError.conflict(`Disabled worker: ${names}`, "WORKER_DISABLED");
-    }
     const stepTargets = await selectStepTargets(
       pipeline.steps.map((step) => ({
         index: step.position,

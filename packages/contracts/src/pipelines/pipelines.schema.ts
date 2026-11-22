@@ -142,7 +142,6 @@ export const PipelineStepDetailSchema = PipelineStepSchema.extend({
     id: z.uuid(),
     name: z.string(),
     displayName: z.string(),
-    enabled: z.boolean(),
   }),
 });
 

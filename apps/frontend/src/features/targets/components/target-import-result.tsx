@@ -16,7 +16,10 @@ export function TargetImportResult({ result, onImportMore }: TargetImportResultP
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage;
   const { scan, warnings } = result;
-  const nothingToScan = warnings.some((warning) => warning.code === "no_scannable_targets");
+  // These warnings already say why no scan was queued.
+  const nothingToScan = warnings.some(
+    (warning) => warning.code === "no_scannable_targets" || warning.code === "worker_not_registered",
+  );
 
   return (
     <Card>

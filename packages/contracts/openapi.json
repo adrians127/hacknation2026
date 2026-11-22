@@ -92,9 +92,7 @@
                   "PIPELINE_NAME_TAKEN",
                   "PIPELINE_RUN_ACTIVE",
                   "NO_SCANNABLE_TARGETS",
-                  "WORKER_DISABLED",
                   "WORKER_IN_USE",
-                  "WORKER_BUILTIN",
                   "PORTS_NOT_ALLOWED",
                   "SCAN_NOT_STOPPABLE",
                   "DEFECTDOJO_NOT_CONFIGURED",
@@ -412,16 +410,12 @@
                     },
                     "displayName": {
                       "type": "string"
-                    },
-                    "enabled": {
-                      "type": "boolean"
                     }
                   },
                   "required": [
                     "id",
                     "name",
-                    "displayName",
-                    "enabled"
+                    "displayName"
                   ]
                 }
               },
@@ -829,16 +823,12 @@
                     },
                     "displayName": {
                       "type": "string"
-                    },
-                    "enabled": {
-                      "type": "boolean"
                     }
                   },
                   "required": [
                     "id",
                     "name",
-                    "displayName",
-                    "enabled"
+                    "displayName"
                   ]
                 }
               },
@@ -1379,7 +1369,8 @@
                     "dns_timeout",
                     "dns_failed",
                     "resolves_to_reserved",
-                    "no_scannable_targets"
+                    "no_scannable_targets",
+                    "worker_not_registered"
                   ]
                 },
                 "value": {
@@ -1820,15 +1811,6 @@
           "description": {
             "type": "string"
           },
-          "isBuiltin": {
-            "type": "boolean"
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "stage": {
-            "type": "integer"
-          },
           "inputs": {
             "type": "array",
             "items": {
@@ -2022,31 +2004,6 @@
             },
             "maxItems": 32
           },
-          "defaults": {
-            "type": "object",
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "string",
-                  "maxLength": 2048
-                },
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "maxLength": 2048
-                  },
-                  "maxItems": 128
-                }
-              ]
-            }
-          },
           "maxRate": {
             "type": "integer",
             "minimum": 1,
@@ -2070,13 +2027,9 @@
           "name",
           "displayName",
           "description",
-          "isBuiltin",
-          "enabled",
-          "stage",
           "inputs",
           "splitStrategies",
           "paramFields",
-          "defaults",
           "maxRate",
           "onlineManagers",
           "createdAt",
@@ -3173,6 +3126,236 @@
             "items": {
               "type": "string",
               "pattern": "^[A-Za-z0-9._-]{1,64}$"
+            },
+            "maxItems": 64
+          },
+          "worker_specs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9._-]{1,64}$"
+                },
+                "display_name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "pattern": "\\S"
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "inputs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "targets",
+                      "hosts"
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 2
+                },
+                "split_strategies": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "shard",
+                      "ranges",
+                      "chunk"
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 4
+                },
+                "param_fields": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                          },
+                          "description": {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "integer"
+                            ]
+                          },
+                          "min": {
+                            "type": "integer"
+                          },
+                          "max": {
+                            "type": "integer"
+                          },
+                          "unit": {
+                            "type": "string",
+                            "enum": [
+                              "seconds",
+                              "milliseconds"
+                            ]
+                          },
+                          "default": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "type",
+                          "min",
+                          "max"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                          },
+                          "description": {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "boolean"
+                            ]
+                          },
+                          "default": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "type"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                          },
+                          "description": {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "enum"
+                            ]
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            },
+                            "minItems": 1,
+                            "maxItems": 32
+                          },
+                          "default": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "type",
+                          "options"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                          },
+                          "description": {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "paths"
+                            ]
+                          },
+                          "maxItems": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 128
+                          },
+                          "default": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "type",
+                          "maxItems"
+                        ]
+                      }
+                    ]
+                  },
+                  "maxItems": 32
+                },
+                "max_rate": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100000
+                }
+              },
+              "required": [
+                "name",
+                "inputs",
+                "split_strategies"
+              ]
             },
             "maxItems": 64
           },
@@ -6236,16 +6419,12 @@
                                     },
                                     "displayName": {
                                       "type": "string"
-                                    },
-                                    "enabled": {
-                                      "type": "boolean"
                                     }
                                   },
                                   "required": [
                                     "id",
                                     "name",
-                                    "displayName",
-                                    "enabled"
+                                    "displayName"
                                   ]
                                 }
                               },
@@ -6778,7 +6957,7 @@
             }
           },
           "400": {
-            "description": "Validation failed: also a disabled worker (`WORKER_DISABLED`), a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`)",
+            "description": "Validation failed: also a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -7289,7 +7468,7 @@
             }
           },
           "400": {
-            "description": "Validation failed: also a disabled worker (`WORKER_DISABLED`), a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`)",
+            "description": "Validation failed: also a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -7494,7 +7673,8 @@
                               "dns_timeout",
                               "dns_failed",
                               "resolves_to_reserved",
-                              "no_scannable_targets"
+                              "no_scannable_targets",
+                              "worker_not_registered"
                             ]
                           },
                           "value": {
@@ -7547,7 +7727,7 @@
             }
           },
           "409": {
-            "description": "A run is still active (`PIPELINE_RUN_ACTIVE`), nothing to scan (`NO_SCANNABLE_TARGETS`), or a disabled worker (`WORKER_DISABLED`)",
+            "description": "A run is still active (`PIPELINE_RUN_ACTIVE`) or nothing to scan (`NO_SCANNABLE_TARGETS`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -14722,7 +14902,7 @@
       "get": {
         "operationId": "listWorkers",
         "summary": "List the workers pipelines are built from, and the worker managers seen",
-        "description": "Requires `workers:read`. Built-in workers come from the code catalog; a name a manager offers that the catalog lacks is registered as a disabled custom worker.",
+        "description": "Requires `workers:read`. Every worker is registered by a worker-manager's lease request, with the inputs, split strategies and fields its manifest announces.",
         "tags": [
           "Worker registry"
         ],
@@ -14733,7 +14913,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Workers by stage, then managers by last seen",
+            "description": "Workers by display name, then managers by last seen",
             "content": {
               "application/json": {
                 "schema": {
@@ -14757,15 +14937,6 @@
                           },
                           "description": {
                             "type": "string"
-                          },
-                          "isBuiltin": {
-                            "type": "boolean"
-                          },
-                          "enabled": {
-                            "type": "boolean"
-                          },
-                          "stage": {
-                            "type": "integer"
                           },
                           "inputs": {
                             "type": "array",
@@ -14960,31 +15131,6 @@
                             },
                             "maxItems": 32
                           },
-                          "defaults": {
-                            "type": "object",
-                            "additionalProperties": {
-                              "anyOf": [
-                                {
-                                  "type": "number"
-                                },
-                                {
-                                  "type": "boolean"
-                                },
-                                {
-                                  "type": "string",
-                                  "maxLength": 2048
-                                },
-                                {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string",
-                                    "maxLength": 2048
-                                  },
-                                  "maxItems": 128
-                                }
-                              ]
-                            }
-                          },
                           "maxRate": {
                             "type": "integer",
                             "minimum": 1,
@@ -15008,13 +15154,9 @@
                           "name",
                           "displayName",
                           "description",
-                          "isBuiltin",
-                          "enabled",
-                          "stage",
                           "inputs",
                           "splitStrategies",
                           "paramFields",
-                          "defaults",
                           "maxRate",
                           "onlineManagers",
                           "createdAt",
@@ -15106,8 +15248,8 @@
     "/workers/{id}": {
       "patch": {
         "operationId": "updateWorker",
-        "summary": "Enable or disable a worker, or change its rate cap and defaults",
-        "description": "Requires `workers:update`. A built-in worker accepts only `enabled`, `maxRate` and `defaults`; a custom one also its description, stage, inputs, split strategies and fields. `defaults` must match the worker's fields.",
+        "summary": "Change a worker's display name, description or rate cap",
+        "description": "Requires `workers:update`. A worker's inputs, split strategies and fields come from the managers that register it and cannot be changed here.",
         "tags": [
           "Worker registry"
         ],
@@ -15133,39 +15275,6 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "enabled": {
-                    "type": "boolean"
-                  },
-                  "maxRate": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 100000
-                  },
-                  "defaults": {
-                    "type": "object",
-                    "additionalProperties": {
-                      "anyOf": [
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "boolean"
-                        },
-                        {
-                          "type": "string",
-                          "maxLength": 2048
-                        },
-                        {
-                          "type": "array",
-                          "items": {
-                            "type": "string",
-                            "maxLength": 2048
-                          },
-                          "maxItems": 128
-                        }
-                      ]
-                    }
-                  },
                   "displayName": {
                     "type": "string",
                     "minLength": 1,
@@ -15176,205 +15285,10 @@
                     "type": "string",
                     "maxLength": 500
                   },
-                  "stage": {
+                  "maxRate": {
                     "type": "integer",
-                    "minimum": 0,
-                    "maximum": 1000
-                  },
-                  "inputs": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "enum": [
-                        "targets",
-                        "hosts"
-                      ]
-                    },
-                    "minItems": 1
-                  },
-                  "splitStrategies": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "enum": [
-                        "none",
-                        "shard",
-                        "ranges",
-                        "chunk"
-                      ]
-                    },
-                    "minItems": 1
-                  },
-                  "paramFields": {
-                    "type": "array",
-                    "items": {
-                      "oneOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "key": {
-                              "type": "string",
-                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
-                            },
-                            "label": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 100
-                            },
-                            "description": {
-                              "type": "string",
-                              "maxLength": 500
-                            },
-                            "type": {
-                              "type": "string",
-                              "enum": [
-                                "integer"
-                              ]
-                            },
-                            "min": {
-                              "type": "integer"
-                            },
-                            "max": {
-                              "type": "integer"
-                            },
-                            "unit": {
-                              "type": "string",
-                              "enum": [
-                                "seconds",
-                                "milliseconds"
-                              ]
-                            },
-                            "default": {
-                              "type": "integer"
-                            }
-                          },
-                          "required": [
-                            "key",
-                            "label",
-                            "type",
-                            "min",
-                            "max"
-                          ]
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "key": {
-                              "type": "string",
-                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
-                            },
-                            "label": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 100
-                            },
-                            "description": {
-                              "type": "string",
-                              "maxLength": 500
-                            },
-                            "type": {
-                              "type": "string",
-                              "enum": [
-                                "boolean"
-                              ]
-                            },
-                            "default": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": [
-                            "key",
-                            "label",
-                            "type"
-                          ]
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "key": {
-                              "type": "string",
-                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
-                            },
-                            "label": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 100
-                            },
-                            "description": {
-                              "type": "string",
-                              "maxLength": 500
-                            },
-                            "type": {
-                              "type": "string",
-                              "enum": [
-                                "enum"
-                              ]
-                            },
-                            "options": {
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 64
-                              },
-                              "minItems": 1,
-                              "maxItems": 32
-                            },
-                            "default": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "key",
-                            "label",
-                            "type",
-                            "options"
-                          ]
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "key": {
-                              "type": "string",
-                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
-                            },
-                            "label": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 100
-                            },
-                            "description": {
-                              "type": "string",
-                              "maxLength": 500
-                            },
-                            "type": {
-                              "type": "string",
-                              "enum": [
-                                "paths"
-                              ]
-                            },
-                            "maxItems": {
-                              "type": "integer",
-                              "minimum": 1,
-                              "maximum": 128
-                            },
-                            "default": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          },
-                          "required": [
-                            "key",
-                            "label",
-                            "type",
-                            "maxItems"
-                          ]
-                        }
-                      ]
-                    },
-                    "maxItems": 32
+                    "minimum": 1,
+                    "maximum": 100000
                   }
                 }
               }
@@ -15431,23 +15345,13 @@
                 }
               }
             }
-          },
-          "409": {
-            "description": "A built-in worker's definition cannot change (`WORKER_BUILTIN`)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         }
       },
       "delete": {
         "operationId": "deleteWorker",
-        "summary": "Delete a custom worker no pipeline uses",
-        "description": "Requires `workers:delete`.",
+        "summary": "Delete a worker no pipeline uses",
+        "description": "Requires `workers:delete`. A manager that still offers it registers it again.",
         "tags": [
           "Worker registry"
         ],
@@ -15502,7 +15406,7 @@
             }
           },
           "409": {
-            "description": "Built-in (`WORKER_BUILTIN`) or used by a pipeline (`WORKER_IN_USE`)",
+            "description": "Used by a pipeline (`WORKER_IN_USE`)",
             "content": {
               "application/json": {
                 "schema": {
@@ -15518,7 +15422,7 @@
       "post": {
         "operationId": "leaseManagerJobs",
         "summary": "Lease queued scan jobs to a worker-manager (long poll)",
-        "description": "Called by worker-manager in `--poll` mode with `Authorization: Bearer <WORKER_TOKEN>`. Records the manager and the workers it offers (unknown names become disabled custom workers), then leases up to `max_parallel` × `WORKER_LEASE_JOBS_PER_SLOT` queued jobs of running scans whose worker is enabled and offered. Without work it holds the request for up to `wait_seconds` (at most 60) and answers 204. Each job's `deadline` is capped by the scan's time window; its lease lasts until the deadline plus `WORKER_LEASE_GRACE_SECONDS`.",
+        "description": "Called by worker-manager in `--poll` mode with `Authorization: Bearer <WORKER_TOKEN>`. Records the manager and registers the workers it offers, with the capabilities in their `worker_specs` (manifests), then leases up to `max_parallel` × `WORKER_LEASE_JOBS_PER_SLOT` queued jobs of running scans whose worker it offers. Without work it holds the request for up to `wait_seconds` (at most 60) and answers 204. Each job's `deadline` is capped by the scan's time window; its lease lasts until the deadline plus `WORKER_LEASE_GRACE_SECONDS`.",
         "tags": [
           "Workers"
         ],

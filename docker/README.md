@@ -68,7 +68,7 @@ grep ADMIN_ docker/.env                         # the admin's sign-in
 docker compose -f docker/docker-compose.yml --profile app up -d --build   # pnpm app:up
 ```
 
-- Open `http://localhost:3000` and sign in as the admin; the backend creates it on its first start. It also syncs the worker catalog; there are no demo accounts (create users under Users) and no demo scan data (`pnpm db:seed:hosts` needs the development setup).
+- Open `http://localhost:3000` and sign in as the admin; the backend creates it on its first start. Workers appear once a worker manager polls (`pnpm workers:manager:poll`); there are no demo accounts (create users under Users) and no demo scan data (`pnpm db:seed:hosts` needs the development setup).
 - The first `up` builds the images and DefectDojo takes a minute or two; `docker compose -f docker/docker-compose.yml --profile app ps` shows the state. Without DefectDojo: `… --profile app up -d --build frontend` starts only the frontend and what it depends on.
 - Other machines: set `APP_BIND=0.0.0.0` and `PUBLIC_URL=http://<host>:3000` in `docker/.env`, then `up` again. The backend gets `COOKIE_SECURE=false` here because the app is served over plain http; set it to `true` behind HTTPS.
 - Scanning: run worker-manager in poll mode on the same Linux host. It reads `WORKER_TOKEN` from `docker/.env` and reaches the backend at `localhost:3001`: `mkdir -p worker-results && WORKER_UID=$(id -u) WORKER_GID=$(id -g) docker compose -f docker/docker-compose.workers.yml run --rm -d --build worker-manager --poll --output-dir /results`.
