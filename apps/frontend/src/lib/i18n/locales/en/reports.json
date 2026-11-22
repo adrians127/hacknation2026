@@ -95,7 +95,8 @@
     "cors-wildcard": "CORS allows any origin",
     "default-page": "Default server page",
     "missing-security-headers": "Missing security headers",
-    "version-disclosure": "Software version in headers"
+    "version-disclosure": "Software version in headers",
+    "signature": "Detection signature"
   },
   "categories": {
     "cms": "CMS",
@@ -113,7 +114,9 @@
     "body": "page content",
     "cookie": "cookie",
     "title": "title",
-    "probe": "path"
+    "probe": "path",
+    "favicon": "favicon",
+    "banner": "banner"
   },
   "confidence": {
     "high": "High",
