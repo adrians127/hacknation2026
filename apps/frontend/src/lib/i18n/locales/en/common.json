@@ -75,6 +75,16 @@
     "subtitle": "IP addresses, CIDR ranges and domains included in scans",
     "add": "Add targets",
     "never": "Never",
+    "emptyFiltered": "No targets match these filters.",
+    "search": {
+      "label": "Search targets",
+      "placeholder": "Search by address, domain or tag"
+    },
+    "filters": {
+      "kind": "Target type",
+      "allKinds": "All types",
+      "clearTag": "Clear the tag filter {{tag}}"
+    },
     "columns": {
       "value": "Target",
       "kind": "Type",
@@ -92,7 +102,9 @@
     },
     "actions": {
       "edit": "Edit {{value}}",
-      "delete": "Delete {{value}}"
+      "delete": "Delete {{value}}",
+      "filterByTag": "Show targets tagged {{tag}}",
+      "openLastScan": "Open the last scan of {{value}}"
     },
     "form": {
       "editTitle": "Edit target",
@@ -107,7 +119,7 @@
     },
     "confirmDelete": {
       "title": "Delete {{value}}?",
-      "description": "It will no longer be scanned.",
+      "description": "It leaves the inventory and new scans. Results of past scans are kept.",
       "confirm": "Delete"
     },
     "toast": {

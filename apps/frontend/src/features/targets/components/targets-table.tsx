@@ -1,6 +1,7 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 import type { Target } from "@subsurf/contracts/targets/targets.schema";
 
@@ -8,17 +9,19 @@ import { DataTable } from "@/components/data-table";
 import { IconAction } from "@/components/icon-action";
 import { Badge } from "@/components/ui/badge";
 import { createDataTableColumns } from "@/lib/data-table";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatNumber } from "@/lib/format";
 
 interface TargetsTableProps {
   targets: Target[];
   onEdit: (target: Target) => void;
   onDelete: (target: Target) => void;
+  onFilterTag: (tag: string) => void;
 }
 
 const column = createDataTableColumns<Target>();
 
-export function TargetsTable({ targets, onEdit, onDelete }: TargetsTableProps) {
+/** One page of the inventory. The server pages and orders it, so the columns do not sort. */
+export function TargetsTable({ targets, onEdit, onDelete, onFilterTag }: TargetsTableProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage;
 
@@ -27,10 +30,12 @@ export function TargetsTable({ targets, onEdit, onDelete }: TargetsTableProps) {
       column.columns([
         column.accessor("value", {
           header: t("targets.columns.value"),
-          cell: ({ getValue }) => <span className="font-medium">{getValue()}</span>,
+          enableSorting: false,
+          cell: ({ getValue }) => <span className="font-medium break-all">{getValue()}</span>,
         }),
         column.accessor("kind", {
           header: t("targets.columns.kind"),
+          enableSorting: false,
           cell: ({ getValue }) => <Badge variant="outline">{t(`targets.kinds.${getValue()}`)}</Badge>,
         }),
         column.accessor("note", { header: t("targets.columns.note"), enableSorting: false }),
@@ -40,25 +45,43 @@ export function TargetsTable({ targets, onEdit, onDelete }: TargetsTableProps) {
           cell: ({ getValue }) => (
             <span className="flex flex-wrap gap-1">
               {getValue().map((tag) => (
-                <Badge key={tag} variant="secondary">
-                  {tag}
-                </Badge>
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => onFilterTag(tag)}
+                  aria-label={t("targets.actions.filterByTag", { tag })}
+                  className="rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  <Badge variant="secondary" className="hover:bg-secondary/70">
+                    {tag}
+                  </Badge>
+                </button>
               ))}
             </span>
           ),
         }),
         column.accessor("activeHosts", {
           header: t("targets.columns.activeHosts"),
+          enableSorting: false,
           meta: { className: "text-right tabular-nums" },
+          cell: ({ getValue }) => formatNumber(getValue(), locale),
         }),
         column.accessor("lastScanAt", {
           header: t("targets.columns.lastScan"),
-          sortFn: "datetime",
+          enableSorting: false,
           meta: { className: "text-muted-foreground" },
-          cell: ({ getValue }) => {
-            const value = getValue();
-            return value ? formatDateTime(value, locale) : t("targets.never");
-          },
+          cell: ({ row: { original: target } }) =>
+            target.lastScanId && target.lastScanAt ? (
+              <Link
+                to={`/app/scans/${target.lastScanId}`}
+                aria-label={t("targets.actions.openLastScan", { value: target.value })}
+                className="hover:text-foreground hover:underline"
+              >
+                {formatDateTime(target.lastScanAt, locale)}
+              </Link>
+            ) : (
+              t("targets.never")
+            ),
         }),
         column.display({
           id: "actions",
@@ -82,7 +105,7 @@ export function TargetsTable({ targets, onEdit, onDelete }: TargetsTableProps) {
           ),
         }),
       ]),
-    [t, locale, onEdit, onDelete],
+    [t, locale, onEdit, onDelete, onFilterTag],
   );
 
   return <DataTable columns={columns} data={targets} />;

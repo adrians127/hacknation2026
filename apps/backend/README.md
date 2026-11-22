@@ -26,6 +26,7 @@ pnpm --filter @subsurf/backend db:studio    # Prisma Studio
 pnpm --filter @subsurf/backend db:seed      # system roles, admin, demo accounts (idempotent)
 pnpm --filter @subsurf/backend db:seed:hosts  # demo scan data: four scans of a /18 (see "Demo data")
 pnpm --filter @subsurf/backend db:refingerprint  # recompute stored port fingerprints after comparable.ts changes
+pnpm --filter @subsurf/backend db:encrypt      # encrypt values a migration left as plain text (also done at startup)
 pnpm db:reset                                  # from the repo root: drop + all migrations + seed
 pnpm vulns:sync                                # from the repo root: the vulnerability sync process (see "Vulnerabilities")
 pnpm vulns:sync --once [--source nvd|osv] [--full] [--rematch]   # one pass, then exit
@@ -43,13 +44,14 @@ index.ts               listen, DB connection check, graceful shutdown
 vuln-sync.ts           the vulnerability sync process and its CLI (`pnpm vulns:*`), separate from the API
 config/                env.ts (zod + process.loadEnvFile), database-url.ts (DB_* -> URL)
 lib/                   prisma, logger, http-error, api-docs, password, tokens, auth-cookies, auth-context, chunks,
-                       crypto (field encryption at rest)
+                       crypto (field encryption at rest), encrypt-legacy (encrypts what a migration left plain)
 middleware/            validate, authenticate (requireAuth/requireSession), authorize (requirePermission),
                        worker-token (requireWorkerToken), trusted-origin (CSRF), error-handler, not-found
 routes/index.ts        apiRouter: one apiRouter.use("/x", ...) line per module
 modules/<feature>/     <feature>.routes.ts | .controller.ts | .service.ts | .test.ts
 modules/auth|users|roles   sign-in and sessions, user accounts, roles (+ system-roles sync, first-admin bootstrap)
-modules/targets        target inventory: POST /targets/import (manual, CSV and JSON all arrive as one JSON body)
+modules/targets        target inventory: GET /targets, PATCH and DELETE /targets/{id}, and POST /targets/import
+                       (manual, CSV and JSON all arrive as one JSON body)
 modules/scans          GET /scans… (scan results, hosts per scan, changes: scan-results.*, scan-diff.ts), the scan's
                        jobs and POST /scans/{id}/stop; an import's scan (scans.service.ts, dns.ts, batching.ts);
                        exports a scan and imports a results file (scan-export.ts, scan-import.*)
@@ -99,7 +101,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Permissions and roles
 
-- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|create|update|delete|run`, `hosts:update`, `vulnerabilities:*`, `pipelines:*`, `workers:read|update|delete` and `defectdojo:read|import|export`. `scans:run` also covers running a pipeline, stopping a scan and changing a pipeline's schedule; `workers:update|delete` are global scanner limits (admin only). `scans:read` guards the scan results (hosts and their vulnerabilities included, and their export to a file), `scans:create` importing a results file as a scan, `scans:update` a scan's name and note, `scans:delete` deleting a scan, `hosts:update` the edits of hosts and services; `vulnerabilities:read` the databases' state and the mappings, `:update` the triage of a service's vulnerabilities, `:run` syncing and enabling sources, `:create`/`:delete` the mappings; `defectdojo:read` the sync and push history, `:import` pulling from DefectDojo, `:export` pushing to it; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
+- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|create|update|delete|run`, `hosts:update`, `vulnerabilities:*`, `pipelines:*`, `workers:read|update|delete` and `defectdojo:read|import|export`. `scans:run` also covers running a pipeline, stopping a scan and changing a pipeline's schedule; `workers:update|delete` are global scanner limits (admin only). `scans:read` guards the scan results (hosts and their vulnerabilities included, and their export to a file), `scans:create` importing a results file as a scan, `scans:update` a scan's name and note, `scans:delete` deleting a scan, `hosts:update` the edits of hosts and services; `vulnerabilities:read` the databases' state and the mappings, `:update` the triage of a service's vulnerabilities, `:run` syncing and enabling sources, `:create`/`:delete` the mappings; `defectdojo:read` the sync and push history, `:import` pulling from DefectDojo, `:export` pushing to it; `targets:read` the inventory, `:create` the import, `:update` a target's note and tags, `:delete` removing one. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
 - A route checks permissions with `requirePermission("users:read")` after `requireAuth`. Services that act on other accounts or roles also call `assertHoldsAll` (below).
 - **System roles** (`admin`, `editor`, `analyst`, `viewer`) are read-only. `syncSystemRoles()` (`modules/roles/system-roles.ts`) runs at startup and in the seed: it gives them exactly `SYSTEM_ROLE_PERMISSIONS` and drops permissions that no longer exist from custom roles.
 - **Custom roles** are rows with a `permissions` array. Deleting a role that users still have needs `reassignToRoleId` (and `users:update`); the users move and the role is deleted in one transaction.
@@ -144,9 +146,44 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `s
 - `prisma.config.ts`: schema path, migrations, seed and the URL built from `DB_*`. A placeholder URL lets `prisma generate` run on a fresh clone without a database.
 - `prisma/schema/schema.prisma`: only the generator and the datasource. Models live in `prisma/schema/<module>/<model>.prisma` (one file per model, in a folder named after the module in `src/modules/` that owns the table).
 - Every relation field needs an `@@index`, because Prisma does not create indexes on foreign keys in Postgres.
-- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF). `src/lib/crypto.ts` does it at the field level: AES-256-GCM with `DATA_ENCRYPTION_KEY`, a value becomes `{ "$enc": "v1.<base64(iv | tag | ciphertext)>" }`, and `decryptJson` returns `unknown`, so readers validate with zod. Scan results use it (see [Scan results](#scan-results)). The auth tables hold only hashes (passwords, refresh secrets), emails and display names. `Host.note`, `Service.note` and `ServiceVulnerabilityTriage.note` (free text from analysts) are encrypted with `encryptText`. The vulnerability databases are public and stay plaintext; `VulnerabilityMatch` rows only restate what the plaintext service columns (`serviceCpe`, `serviceVersion`) already show, and must stay queryable for the vulnerability filter. Still to cover: `Target.value` and `note`, `ScanJob.targets`, `hosts` and `params`, `Pipeline.targetSelector` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
+- Fields holding sensitive data are encrypted at rest (requirement 16 in the PDF), in two layers:
+  - **Field level**, in the application (`src/lib/crypto.ts`): AES-256-GCM with `DATA_ENCRYPTION_KEY`. A value becomes `{ "$enc": "v1.<base64(iv | tag | ciphertext)>" }`, and `decryptJson` returns `unknown`, so readers validate with zod. The key never reaches the database, so a dump or SQL access does not reveal these fields.
+  - **Storage level**, in the deployment: the PostgreSQL volume and its backups must sit on an encrypted disk (see [`docker/README.md`](../../docker/README.md)). This is what protects the columns that stay plaintext.
+
+  | Encrypted in the application | What it is |
+  |---|---|
+  | `PortObservation.details`: `banner`, `scripts`, `http[].headers`, `cookies`, `body.content`, `tls.cert`, `probes` | What scanned hosts returned (see [Scan results](#scan-results)) |
+  | `Host.note`, `Service.note`, `ServiceVulnerabilityTriage.note`, `Target.note`, `Scan.note` | Free text written by users (`encryptText`) |
+  | `Scan.warnings` | The domains a scan could not resolve or had to leave out (`encryptJson`); nothing queries them |
+
+  | Plaintext on purpose | Why |
+  |---|---|
+  | Addresses, hostnames, ports, service name/product/version, HTTP status and page title (`HostObservation`, `HostnameObservation`, `PortObservation` columns and the rest of `details`) | SQL filters, sorts and diffs on them. Fixed by the locked [worker result format](../../docs/worker-result-format.md) |
+  | `Target.value`, `Target.rangeStart`/`rangeEnd`, `ScanJob.subnet`/`targets`/`hosts`/`params`, `Pipeline.targetSelector` | The scan scope. `Target.value` is the inventory's dedup, search and sort key, and a scan writes the same addresses and names to `HostObservation.ip` and `HostnameObservation.name` anyway: a blind index would cost substring search and address order without hiding anything |
+  | Tags, triage, `VulnerabilityMatch` | SQL filters; a match only restates the plaintext service columns |
+  | The vulnerability databases | Public data |
+  | The auth tables | Only hashes (passwords, refresh secrets), emails and display names |
+
+  Not covered yet: `Pipeline.description` is free text in a plaintext column.
+
+  **Rule for a new column:** it is plaintext only when SQL has to filter, sort, join or diff on it. Anything else a user typed or a scanned host returned goes through `lib/crypto.ts`; a note is a `Json?` column written with `encryptText(text.trim()) ?? Prisma.DbNull` and read with `decryptText`.
+- A column that becomes encrypted keeps its rows: the migration leaves the values plain in the JSON column (a note as a string, scan warnings as their list), and `encryptLegacyRows()` (`lib/encrypt-legacy.ts`) encrypts whatever is not an envelope yet. It runs when the backend starts, before `db:seed:hosts`, and as `db:encrypt`; it is idempotent and safe from several processes. Readers stay strict: a row that was not encrypted yet fails loudly instead of being read as plaintext.
 
 ## Targets and scan jobs
+
+The inventory (`modules/targets/`):
+
+| Endpoint | Permission | What it does |
+|---|---|---|
+| `GET /targets` | `targets:read` | One page in address order: a block before the addresses and blocks it contains, domains last. Filters: `kind`, `tag`, and `q` (part of the value, a tag, or an IPv4 address, which finds the targets that contain it) |
+| `PATCH /targets/{id}` | `targets:update` | The note and the tags. The value cannot change: past scans refer to it |
+| `DELETE /targets/{id}` | `targets:delete` | Removes the target. Past scans lose only the link to it (`ScanTarget`); their results and the hosts' notes, tags and triage stay |
+| `POST /targets/import` | `targets:create` | Adds targets, below |
+
+- `Target.rangeStart`/`rangeEnd` hold the addresses an `ip` or `cidr` covers as integers (null for a domain). They give the address order and the containment search; the import fills them from the shared parser's range (`target-row.ts`).
+- Each target carries `lastScanId`/`lastScanAt`, the newest scan with results that covered it (through `ScanTarget`), and `activeHosts`, its addresses that answered `up` in that scan: a block by its range, a domain by the hostnames the scan observed. They are computed for the page only, in three queries.
+- An edit survives a later import of the same value: the import leaves existing targets as they are (PDF item 14).
+- The list is raw SQL: the search needs explicit `LIKE` escaping (`lib/like.ts`).
 
 `POST /targets/import` takes entries from the import page (the entry form, text, CSV or JSON, parsed in the browser by the shared parser in `@subsurf/contracts/targets/target-input`) and runs the same parser again: `validate()` rejects what it rejects, the service normalizes and deduplicates. An IP range (`10.0.0.1-10.0.0.200`) arrives as one entry and is stored as the CIDR blocks that cover it, each with the range's note.
 

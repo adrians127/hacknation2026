@@ -75,6 +75,16 @@
     "subtitle": "Adresy IP, zakresy CIDR i domeny objęte skanowaniem",
     "add": "Dodaj cele",
     "never": "Nigdy",
+    "emptyFiltered": "Żaden cel nie pasuje do tych filtrów.",
+    "search": {
+      "label": "Szukaj celów",
+      "placeholder": "Szukaj po adresie, domenie lub tagu"
+    },
+    "filters": {
+      "kind": "Typ celu",
+      "allKinds": "Wszystkie typy",
+      "clearTag": "Usuń filtr tagu {{tag}}"
+    },
     "columns": {
       "value": "Cel",
       "kind": "Typ",
@@ -92,7 +102,9 @@
     },
     "actions": {
       "edit": "Edytuj {{value}}",
-      "delete": "Usuń {{value}}"
+      "delete": "Usuń {{value}}",
+      "filterByTag": "Pokaż cele z tagiem {{tag}}",
+      "openLastScan": "Otwórz ostatni skan celu {{value}}"
     },
     "form": {
       "editTitle": "Edytuj cel",
@@ -107,7 +119,7 @@
     },
     "confirmDelete": {
       "title": "Usunąć {{value}}?",
-      "description": "Ten cel nie będzie już skanowany.",
+      "description": "Cel zniknie z inwentarza i nie trafi do nowych skanów. Wyniki wcześniejszych skanów zostaną zachowane.",
       "confirm": "Usuń"
     },
     "toast": {
