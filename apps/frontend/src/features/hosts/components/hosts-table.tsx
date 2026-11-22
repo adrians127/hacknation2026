@@ -90,7 +90,7 @@ export function HostsTable({
               column.display({
                 id: "select",
                 header: () => <span className="sr-only">{t("columns.select")}</span>,
-                meta: { className: "w-8" },
+                meta: { className: "w-[3%]" },
                 cell: ({ row: { original: host } }) => (
                   <Checkbox
                     checked={selection.hostIds.has(host.id)}
@@ -104,7 +104,7 @@ export function HostsTable({
         column.display({
           id: "expand",
           header: () => <span className="sr-only">{t("columns.expand")}</span>,
-          meta: { className: "w-10" },
+          meta: { className: "w-[5%]" },
           cell: ({ row: { original: host } }) => {
             const open = expanded.has(host.id);
             return (
@@ -123,7 +123,11 @@ export function HostsTable({
         column.accessor("ip", {
           header: t("columns.host"),
           enableSorting: false,
-          meta: { className: "w-[18%]" },
+          meta: {
+            className: compared
+              ? selection ? "w-[14%]" : "w-[17%]"
+              : selection ? "w-[17%]" : "w-[20%]",
+          },
           cell: ({ row: { original: host } }) => (
             <div className="grid gap-0.5">
               <span className="flex items-center gap-1.5">
@@ -156,6 +160,7 @@ export function HostsTable({
         column.accessor("status", {
           header: t("columns.status"),
           enableSorting: false,
+          meta: { className: compared ? "w-[7%]" : "w-[8%]" },
           cell: ({ getValue }) => <HostStatusBadge status={getValue()} />,
         }),
         ...(compared
@@ -163,6 +168,7 @@ export function HostsTable({
               column.accessor("change", {
                 header: t("columns.change"),
                 enableSorting: false,
+                meta: { className: "w-[8%]" },
                 cell: ({ getValue }) => <ChangeBadge change={getValue()} />,
               }),
             ]
@@ -170,12 +176,13 @@ export function HostsTable({
         column.accessor("services", {
           header: t("columns.services"),
           enableSorting: false,
-          meta: { className: "w-[22%]" },
+          meta: { className: compared ? "w-[18%]" : "w-[22%]" },
           cell: ({ getValue }) => <PortChips services={getValue()} />,
         }),
         column.accessor("vulnerabilities", {
           header: tv("columns.vulnerabilities"),
           enableSorting: false,
+          meta: { className: "w-[14%]" },
           cell: ({ getValue }) => <VulnerabilitySummaryBadge summary={getValue()} />,
         }),
         column.accessor("triage", {
@@ -194,12 +201,13 @@ export function HostsTable({
         column.accessor("tags", {
           header: t("columns.tags"),
           enableSorting: false,
+          meta: { className: "w-[7%]" },
           cell: ({ getValue }) => <TagList tags={getValue()} />,
         }),
         column.display({
           id: "actions",
           header: () => <span className="sr-only">{t("columns.actions")}</span>,
-          meta: { className: "w-20" },
+          meta: { className: "w-[9%]" },
           cell: ({ row: { original: host } }) => (
             <div className="flex justify-end gap-1">
               <IconAction
@@ -255,11 +263,12 @@ export function HostsTable({
           );
         })}
       </div>
-      <div className="hidden min-w-0 xl:block [&_[data-slot=table-container]]:overflow-x-hidden [&_[data-slot=table]]:table-fixed [&_[data-slot=table-cell]]:wrap-anywhere [&_[data-slot=table-cell]]:whitespace-normal [&_[data-slot=table-head]]:wrap-anywhere [&_[data-slot=table-head]]:whitespace-normal [&_[data-slot=badge]]:h-auto [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:break-all [&_[data-slot=badge]]:whitespace-normal [&_[data-slot=select-trigger]]:min-w-0 [&_[data-slot=select-trigger]]:w-full">
+      <div className="hidden min-w-0 xl:block">
         <DataTable
           columns={columns}
           data={hosts}
           emptyLabel={t("noMatches")}
+          tableClassName="table-fixed [&>tbody>tr>td:not([colspan])]:wrap-anywhere [&>tbody>tr>td:not([colspan])]:whitespace-normal"
           renderExpanded={(host) =>
             expanded.has(host.id) ? (
               <ServicesTable host={host} compared={compared} onEdit={onEditService} selection={selection} />
