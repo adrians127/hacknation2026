@@ -225,6 +225,98 @@ export interface paths {
         patch: operations["updateHostService"];
         trace?: never;
     };
+    "/pipelines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List scan pipelines
+         * @description Requires `pipelines:read`. By name, with their steps, schedule, next and last run.
+         */
+        get: operations["listPipelines"];
+        put?: never;
+        /**
+         * Create a pipeline from worker steps
+         * @description Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). The first step scans the pipeline's targets; a later one may take the previous step's up hosts and open ports instead (`input: previous`).
+         */
+        post: operations["createPipeline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipelines/schedule/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The next run times of a schedule
+         * @description Requires `pipelines:read`. Computed as the scheduler does, from now on.
+         */
+        post: operations["previewPipelineSchedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipelines/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a pipeline with its recent runs
+         * @description Requires `pipelines:read`.
+         */
+        get: operations["getPipeline"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a pipeline
+         * @description Requires `pipelines:delete`. Its scans and their results stay.
+         */
+        delete: operations["deletePipeline"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a pipeline
+         * @description Requires `pipelines:update`, and `scans:run` to change `schedule` or `enabled`. `steps`, when given, replaces every step. Runs already queued keep the steps they started with.
+         */
+        patch: operations["updatePipeline"];
+        trace?: never;
+    };
+    "/pipelines/{id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a pipeline now
+         * @description Requires `scans:run`. Queues a scan of the pipeline's targets with its current steps; a schedule's time window does not apply to a manual run.
+         */
+        post: operations["runPipeline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/roles": {
         parameters: {
             query?: never;
@@ -391,6 +483,46 @@ export interface paths {
         get: operations["exportScanChanges"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scans/{id}/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a scan's jobs
+         * @description Requires `scans:read`. In step order, then sequence; `step` and `status` filter. A step that takes the previous step's hosts gets a job each time one of the previous step's jobs completes.
+         */
+        get: operations["listScanJobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scans/{id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop a scan
+         * @description Requires `scans:read` and `scans:run`. Queued jobs are stopped; leased ones finish their current run (worker-manager has no cancel channel), and the scan ends once they do.
+         */
+        post: operations["stopScan"];
         delete?: never;
         options?: never;
         head?: never;
@@ -669,6 +801,70 @@ export interface paths {
         patch: operations["updateServiceVulnerability"];
         trace?: never;
     };
+    "/workers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the workers pipelines are built from, and the worker managers seen
+         * @description Requires `workers:read`. Built-in workers come from the code catalog; a name a manager offers that the catalog lacks is registered as a disabled custom worker.
+         */
+        get: operations["listWorkers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a custom worker no pipeline uses
+         * @description Requires `workers:delete`.
+         */
+        delete: operations["deleteWorker"];
+        options?: never;
+        head?: never;
+        /**
+         * Enable or disable a worker, or change its rate cap and defaults
+         * @description Requires `workers:update`. A built-in worker accepts only `enabled`, `maxRate` and `defaults`; a custom one also its description, stage, inputs, split strategies and fields. `defaults` must match the worker's fields.
+         */
+        patch: operations["updateWorker"];
+        trace?: never;
+    };
+    "/workers/manager/lease": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lease queued scan jobs to a worker-manager (long poll)
+         * @description Called by worker-manager in `--poll` mode with `Authorization: Bearer <WORKER_TOKEN>`. Records the manager and the workers it offers (unknown names become disabled custom workers), then leases up to `max_parallel` × `WORKER_LEASE_JOBS_PER_SLOT` queued jobs of running scans whose worker is enabled and offered. Without work it holds the request for up to `wait_seconds` (at most 60) and answers 204. Each job's `deadline` is capped by the scan's time window; its lease lasts until the deadline plus `WORKER_LEASE_GRACE_SECONDS`.
+         */
+        post: operations["leaseManagerJobs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workers/manager/results": {
         parameters: {
             query?: never;
@@ -747,7 +943,7 @@ export interface components {
                 message: string;
                 status: number;
                 /** @enum {string} */
-                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN" | "PACKAGE_MAPPING_EXISTS" | "SOURCE_DISABLED" | "BASE_SCAN_NOT_OLDER" | "DEFECTDOJO_NOT_CONFIGURED" | "DEFECTDOJO_UNAVAILABLE" | "DEFECTDOJO_SYNC_RUNNING" | "DEFECTDOJO_PUSH_RUNNING" | "NOTHING_TO_PUSH";
+                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN" | "PACKAGE_MAPPING_EXISTS" | "SOURCE_DISABLED" | "BASE_SCAN_NOT_OLDER" | "PIPELINE_NAME_TAKEN" | "PIPELINE_RUN_ACTIVE" | "NO_SCANNABLE_TARGETS" | "WORKER_DISABLED" | "WORKER_IN_USE" | "WORKER_BUILTIN" | "PORTS_NOT_ALLOWED" | "SCAN_NOT_STOPPABLE" | "DEFECTDOJO_NOT_CONFIGURED" | "DEFECTDOJO_UNAVAILABLE" | "DEFECTDOJO_SYNC_RUNNING" | "DEFECTDOJO_PUSH_RUNNING" | "NOTHING_TO_PUSH";
                 details?: unknown;
             };
         };
@@ -764,7 +960,7 @@ export interface components {
                 key: "admin" | "editor" | "analyst" | "viewer" | null;
                 name: string;
             };
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
             mustChangePassword: boolean;
         };
         HealthResponse: {
@@ -777,6 +973,197 @@ export interface components {
             /** Format: date-time */
             timestamp: string;
         };
+        Pipeline: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: string;
+            enabled: boolean;
+            targets: {
+                tags: string[];
+                ranges: (string)[];
+            };
+            steps: {
+                /** Format: uuid */
+                workerId: string;
+                /** @enum {string} */
+                input: "targets" | "previous";
+                ports: string;
+                rate: number;
+                batchSize: number;
+                maxDurationSeconds: number;
+                split: {
+                    /** @enum {string} */
+                    strategy: "none" | "shard" | "ranges" | "chunk";
+                    maxTasks?: number;
+                    maxItemsPerTask?: number;
+                };
+                params: {
+                    [key: string]: number | boolean | string | string[];
+                };
+                position: number;
+                worker: {
+                    /** Format: uuid */
+                    id: string;
+                    name: string;
+                    displayName: string;
+                    enabled: boolean;
+                };
+            }[];
+            schedule: {
+                every: number;
+                /** @enum {string} */
+                unit: "hour" | "day" | "week";
+                startsAt: string;
+                daysOfWeek: number[];
+                windowMinutes: number | null;
+                timezone: string;
+            } | null;
+            /** Format: date-time */
+            nextRunAt: string | null;
+            lastRun: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                status: "queued" | "running" | "paused" | "completed" | "stopped" | "failed";
+                /** @enum {string} */
+                trigger: "import" | "manual" | "schedule";
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                startedAt: string | null;
+                /** Format: date-time */
+                finishedAt: string | null;
+                /** Format: date-time */
+                windowEndsAt: string | null;
+                jobCount: number;
+            } | null;
+            activeRun: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                status: "queued" | "running" | "paused" | "completed" | "stopped" | "failed";
+                /** @enum {string} */
+                trigger: "import" | "manual" | "schedule";
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                startedAt: string | null;
+                /** Format: date-time */
+                finishedAt: string | null;
+                /** Format: date-time */
+                windowEndsAt: string | null;
+                jobCount: number;
+            } | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PipelineDetail: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: string;
+            enabled: boolean;
+            targets: {
+                tags: string[];
+                ranges: (string)[];
+            };
+            steps: {
+                /** Format: uuid */
+                workerId: string;
+                /** @enum {string} */
+                input: "targets" | "previous";
+                ports: string;
+                rate: number;
+                batchSize: number;
+                maxDurationSeconds: number;
+                split: {
+                    /** @enum {string} */
+                    strategy: "none" | "shard" | "ranges" | "chunk";
+                    maxTasks?: number;
+                    maxItemsPerTask?: number;
+                };
+                params: {
+                    [key: string]: number | boolean | string | string[];
+                };
+                position: number;
+                worker: {
+                    /** Format: uuid */
+                    id: string;
+                    name: string;
+                    displayName: string;
+                    enabled: boolean;
+                };
+            }[];
+            schedule: {
+                every: number;
+                /** @enum {string} */
+                unit: "hour" | "day" | "week";
+                startsAt: string;
+                daysOfWeek: number[];
+                windowMinutes: number | null;
+                timezone: string;
+            } | null;
+            /** Format: date-time */
+            nextRunAt: string | null;
+            lastRun: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                status: "queued" | "running" | "paused" | "completed" | "stopped" | "failed";
+                /** @enum {string} */
+                trigger: "import" | "manual" | "schedule";
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                startedAt: string | null;
+                /** Format: date-time */
+                finishedAt: string | null;
+                /** Format: date-time */
+                windowEndsAt: string | null;
+                jobCount: number;
+            } | null;
+            activeRun: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                status: "queued" | "running" | "paused" | "completed" | "stopped" | "failed";
+                /** @enum {string} */
+                trigger: "import" | "manual" | "schedule";
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                startedAt: string | null;
+                /** Format: date-time */
+                finishedAt: string | null;
+                /** Format: date-time */
+                windowEndsAt: string | null;
+                jobCount: number;
+            } | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            runs: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                status: "queued" | "running" | "paused" | "completed" | "stopped" | "failed";
+                /** @enum {string} */
+                trigger: "import" | "manual" | "schedule";
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                startedAt: string | null;
+                /** Format: date-time */
+                finishedAt: string | null;
+                /** Format: date-time */
+                windowEndsAt: string | null;
+                jobCount: number;
+            }[];
+        };
         Role: {
             /** Format: uuid */
             id: string;
@@ -785,7 +1172,7 @@ export interface components {
             name: string;
             description: string;
             isSystem: boolean;
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
             userCount: number;
             /** Format: date-time */
             createdAt: string;
@@ -800,7 +1187,7 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 /** @enum {string} */
-                status: "queued" | "running" | "completed" | "stopped" | "failed";
+                status: "queued" | "running" | "paused" | "completed" | "stopped" | "failed";
                 targetCount: number;
                 addressCount: number;
                 jobCount: number;
@@ -914,6 +1301,62 @@ export interface components {
                 displayName: string;
             } | null;
         };
+        Worker: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            displayName: string;
+            description: string;
+            isBuiltin: boolean;
+            enabled: boolean;
+            stage: number;
+            inputs: ("targets" | "hosts")[];
+            splitStrategies: ("none" | "shard" | "ranges" | "chunk")[];
+            paramFields: ({
+                key: string;
+                label: string;
+                description?: string;
+                /** @enum {string} */
+                type: "integer";
+                min: number;
+                max: number;
+                /** @enum {string} */
+                unit?: "seconds" | "milliseconds";
+                default?: number;
+            } | {
+                key: string;
+                label: string;
+                description?: string;
+                /** @enum {string} */
+                type: "boolean";
+                default?: boolean;
+            } | {
+                key: string;
+                label: string;
+                description?: string;
+                /** @enum {string} */
+                type: "enum";
+                options: string[];
+                default?: string;
+            } | {
+                key: string;
+                label: string;
+                description?: string;
+                /** @enum {string} */
+                type: "paths";
+                maxItems: number;
+                default?: string[];
+            })[];
+            defaults: {
+                [key: string]: number | boolean | string | string[];
+            };
+            maxRate: number;
+            onlineManagers: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         NmapJob: {
             /** Format: uuid */
             job_id: string;
@@ -969,22 +1412,22 @@ export interface components {
                 };
                 params: {
                     /** Format: ipv4-cidr */
-                    subnet: string;
-                    ports: string;
-                    maxParallel: number;
-                    maxRatePerProcess: number;
-                    hostTimeoutMs: number;
-                    httpTimeoutMs: number;
-                    maxBodyBytes: number;
-                    maxRedirects: number;
+                    subnet: string | null;
+                    ports: string | null;
+                    maxParallel: number | null;
+                    maxRatePerProcess: number | null;
+                    hostTimeoutMs: number | null;
+                    httpTimeoutMs: number | null;
+                    maxBodyBytes: number | null;
+                    maxRedirects: number | null;
                     nmapArgs: string[];
                 };
                 counts: {
-                    addresses: number;
+                    addresses: number | null;
                     up: number;
-                    down: number;
+                    down: number | null;
                     timeout: number;
-                    cancelled: number;
+                    cancelled: number | null;
                     failed: number;
                     openPorts: number;
                     httpEndpoints: number;
@@ -1039,6 +1482,26 @@ export interface components {
                     scripts: {
                         id: string;
                         output: string;
+                    }[];
+                    tls: {
+                        vhost: string | null;
+                        version: string | null;
+                        cipher: string | null;
+                        alpn: string | null;
+                        cert: {
+                            subjectCn: string | null;
+                            san: string[];
+                            issuer: string | null;
+                            /** Format: date-time */
+                            notBefore: string | null;
+                            /** Format: date-time */
+                            notAfter: string | null;
+                            serial: string | null;
+                            sha256: string | null;
+                            selfSigned: boolean | null;
+                            keyAlgorithm: string | null;
+                            keyBits: number | null;
+                        } | null;
                     }[];
                     http: {
                         /** @enum {string} */
@@ -1124,6 +1587,39 @@ export interface components {
                 }[];
             }[];
         };
+        ManagerLeaseRequest: {
+            manager_id: string;
+            version: string;
+            workers: string[];
+            max_parallel: number;
+            wait_seconds?: number;
+        };
+        ManagerJobList: {
+            /** @enum {number} */
+            schema_version: 1;
+            server_time: string;
+            next_poll_ms: number;
+            jobs: {
+                /** Format: uuid */
+                job_id: string;
+                /** Format: uuid */
+                scan_id: string;
+                /** Format: uuid */
+                lease_id: string;
+                lease_expires_at: string;
+                deadline: string;
+                worker: string;
+                split: {
+                    /** @enum {string} */
+                    strategy: "none" | "shard" | "ranges" | "chunk";
+                    max_tasks?: number;
+                    max_items_per_task?: number;
+                };
+                params: {
+                    [key: string]: unknown;
+                };
+            }[];
+        };
         ManagerResultUpload: {
             task_index: number;
             task_count: number;
@@ -1156,22 +1652,22 @@ export interface components {
                     };
                     params: {
                         /** Format: ipv4-cidr */
-                        subnet: string;
-                        ports: string;
-                        maxParallel: number;
-                        maxRatePerProcess: number;
-                        hostTimeoutMs: number;
-                        httpTimeoutMs: number;
-                        maxBodyBytes: number;
-                        maxRedirects: number;
+                        subnet: string | null;
+                        ports: string | null;
+                        maxParallel: number | null;
+                        maxRatePerProcess: number | null;
+                        hostTimeoutMs: number | null;
+                        httpTimeoutMs: number | null;
+                        maxBodyBytes: number | null;
+                        maxRedirects: number | null;
                         nmapArgs: string[];
                     };
                     counts: {
-                        addresses: number;
+                        addresses: number | null;
                         up: number;
-                        down: number;
+                        down: number | null;
                         timeout: number;
-                        cancelled: number;
+                        cancelled: number | null;
                         failed: number;
                         openPorts: number;
                         httpEndpoints: number;
@@ -1226,6 +1722,26 @@ export interface components {
                         scripts: {
                             id: string;
                             output: string;
+                        }[];
+                        tls: {
+                            vhost: string | null;
+                            version: string | null;
+                            cipher: string | null;
+                            alpn: string | null;
+                            cert: {
+                                subjectCn: string | null;
+                                san: string[];
+                                issuer: string | null;
+                                /** Format: date-time */
+                                notBefore: string | null;
+                                /** Format: date-time */
+                                notAfter: string | null;
+                                serial: string | null;
+                                sha256: string | null;
+                                selfSigned: boolean | null;
+                                keyAlgorithm: string | null;
+                                keyBits: number | null;
+                            } | null;
                         }[];
                         http: {
                             /** @enum {string} */
@@ -1566,7 +2082,7 @@ export interface operations {
                             ports: number[];
                             fields: {
                                 /** @enum {string} */
-                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname";
+                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname";
                                 endpoint: {
                                     /** @enum {string} */
                                     scheme: "http" | "https";
@@ -2092,6 +2608,570 @@ export interface operations {
             };
         };
     };
+    listPipelines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All pipelines */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            description: string;
+                            enabled: boolean;
+                            targets: {
+                                tags: string[];
+                                ranges: (string)[];
+                            };
+                            steps: {
+                                /** Format: uuid */
+                                workerId: string;
+                                /** @enum {string} */
+                                input: "targets" | "previous";
+                                ports: string;
+                                rate: number;
+                                batchSize: number;
+                                maxDurationSeconds: number;
+                                split: {
+                                    /** @enum {string} */
+                                    strategy: "none" | "shard" | "ranges" | "chunk";
+                                    maxTasks?: number;
+                                    maxItemsPerTask?: number;
+                                };
+                                params: {
+                                    [key: string]: number | boolean | string | string[];
+                                };
+                                position: number;
+                                worker: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                    displayName: string;
+                                    enabled: boolean;
+                                };
+                            }[];
+                            schedule: {
+                                every: number;
+                                /** @enum {string} */
+                                unit: "hour" | "day" | "week";
+                                startsAt: string;
+                                daysOfWeek: number[];
+                                windowMinutes: number | null;
+                                timezone: string;
+                            } | null;
+                            /** Format: date-time */
+                            nextRunAt: string | null;
+                            lastRun: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                status: "queued" | "running" | "paused" | "completed" | "stopped" | "failed";
+                                /** @enum {string} */
+                                trigger: "import" | "manual" | "schedule";
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                startedAt: string | null;
+                                /** Format: date-time */
+                                finishedAt: string | null;
+                                /** Format: date-time */
+                                windowEndsAt: string | null;
+                                jobCount: number;
+                            } | null;
+                            activeRun: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                status: "queued" | "running" | "paused" | "completed" | "stopped" | "failed";
+                                /** @enum {string} */
+                                trigger: "import" | "manual" | "schedule";
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                startedAt: string | null;
+                                /** Format: date-time */
+                                finishedAt: string | null;
+                                /** Format: date-time */
+                                windowEndsAt: string | null;
+                                jobCount: number;
+                            } | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createPipeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description: string;
+                    enabled: boolean;
+                    targets: {
+                        tags: string[];
+                        ranges: (string)[];
+                    };
+                    steps: {
+                        /** Format: uuid */
+                        workerId: string;
+                        /** @enum {string} */
+                        input: "targets" | "previous";
+                        ports: string;
+                        rate: number;
+                        batchSize: number;
+                        maxDurationSeconds: number;
+                        split: {
+                            /** @enum {string} */
+                            strategy: "none" | "shard" | "ranges" | "chunk";
+                            maxTasks?: number;
+                            maxItemsPerTask?: number;
+                        };
+                        params: {
+                            [key: string]: number | boolean | string | string[];
+                        };
+                    }[];
+                    schedule: {
+                        every: number;
+                        /** @enum {string} */
+                        unit: "hour" | "day" | "week";
+                        startsAt: string;
+                        daysOfWeek: number[];
+                        windowMinutes: number | null;
+                        timezone: string;
+                    } | null;
+                };
+            };
+        };
+        responses: {
+            /** @description The new pipeline */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pipeline"];
+                };
+            };
+            /** @description Validation failed: also a disabled worker (`WORKER_DISABLED`), a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another pipeline has this name (`PIPELINE_NAME_TAKEN`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    previewPipelineSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    schedule: {
+                        every: number;
+                        /** @enum {string} */
+                        unit: "hour" | "day" | "week";
+                        startsAt: string;
+                        daysOfWeek: number[];
+                        windowMinutes: number | null;
+                        timezone: string;
+                    };
+                    count?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Up to `count` (default 5) run times, in UTC */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        times: string[];
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getPipeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pipeline */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineDetail"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deletePipeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updatePipeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    enabled?: boolean;
+                    targets?: {
+                        tags: string[];
+                        ranges: (string)[];
+                    };
+                    steps?: {
+                        /** Format: uuid */
+                        workerId: string;
+                        /** @enum {string} */
+                        input: "targets" | "previous";
+                        ports: string;
+                        rate: number;
+                        batchSize: number;
+                        maxDurationSeconds: number;
+                        split: {
+                            /** @enum {string} */
+                            strategy: "none" | "shard" | "ranges" | "chunk";
+                            maxTasks?: number;
+                            maxItemsPerTask?: number;
+                        };
+                        params: {
+                            [key: string]: number | boolean | string | string[];
+                        };
+                    }[];
+                    schedule?: {
+                        every: number;
+                        /** @enum {string} */
+                        unit: "hour" | "day" | "week";
+                        startsAt: string;
+                        daysOfWeek: number[];
+                        windowMinutes: number | null;
+                        timezone: string;
+                    } | null;
+                };
+            };
+        };
+        responses: {
+            /** @description The updated pipeline */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pipeline"];
+                };
+            };
+            /** @description Validation failed: also a disabled worker (`WORKER_DISABLED`), a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another pipeline has this name (`PIPELINE_NAME_TAKEN`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    runPipeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The queued scan */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        scan: {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            status: "queued" | "running" | "paused" | "completed" | "stopped" | "failed";
+                            targetCount: number;
+                            addressCount: number;
+                            jobCount: number;
+                            ports: string;
+                            maxRate: number;
+                        };
+                        warnings: {
+                            /** @enum {string} */
+                            code: "dns_not_found" | "dns_no_addresses" | "dns_timeout" | "dns_failed" | "resolves_to_reserved" | "no_scannable_targets";
+                            value: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A run is still active (`PIPELINE_RUN_ACTIVE`), nothing to scan (`NO_SCANNABLE_TARGETS`), or a disabled worker (`WORKER_DISABLED`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     listRoles: {
         parameters: {
             query?: never;
@@ -2116,7 +3196,7 @@ export interface operations {
                             name: string;
                             description: string;
                             isSystem: boolean;
-                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
                             userCount: number;
                             /** Format: date-time */
                             createdAt: string;
@@ -2158,7 +3238,7 @@ export interface operations {
                 "application/json": {
                     name: string;
                     description: string;
-                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
                 };
             };
         };
@@ -2235,7 +3315,7 @@ export interface operations {
                         name: string;
                         description: string;
                         isSystem: boolean;
-                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
                         userCount: number;
                         /** Format: date-time */
                         createdAt: string;
@@ -2353,7 +3433,7 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     description?: string;
-                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
                 };
             };
         };
@@ -2434,7 +3514,7 @@ export interface operations {
                             /** Format: uuid */
                             id: string;
                             /** @enum {string} */
-                            status: "queued" | "running" | "completed" | "stopped" | "failed";
+                            status: "queued" | "running" | "paused" | "completed" | "stopped" | "failed";
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -2453,6 +3533,15 @@ export interface operations {
                                 failed: number;
                             };
                             openPorts: number;
+                            pipeline: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            } | null;
+                            /** @enum {string} */
+                            trigger: "import" | "manual" | "schedule";
+                            /** Format: date-time */
+                            windowEndsAt: string | null;
                         }[];
                     };
                 };
@@ -2500,7 +3589,7 @@ export interface operations {
                         /** Format: uuid */
                         id: string;
                         /** @enum {string} */
-                        status: "queued" | "running" | "completed" | "stopped" | "failed";
+                        status: "queued" | "running" | "paused" | "completed" | "stopped" | "failed";
                         /** Format: date-time */
                         createdAt: string;
                         /** Format: date-time */
@@ -2519,6 +3608,15 @@ export interface operations {
                             failed: number;
                         };
                         openPorts: number;
+                        pipeline: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                        } | null;
+                        /** @enum {string} */
+                        trigger: "import" | "manual" | "schedule";
+                        /** Format: date-time */
+                        windowEndsAt: string | null;
                         ports: string;
                         maxRate: number;
                         batchSize: number;
@@ -2529,6 +3627,21 @@ export interface operations {
                             failed: number;
                             stopped: number;
                         };
+                        steps: {
+                            index: number;
+                            worker: string;
+                            /** @enum {string} */
+                            input: "targets" | "previous";
+                            ports: string;
+                            rate: number;
+                            jobs: {
+                                queued: number;
+                                leased: number;
+                                completed: number;
+                                failed: number;
+                                stopped: number;
+                            };
+                        }[];
                         baseScan: {
                             /** Format: uuid */
                             id: string;
@@ -3017,6 +4130,26 @@ export interface operations {
                                         message: string;
                                     } | null;
                                 }[];
+                                tls: {
+                                    vhost: string | null;
+                                    version: string | null;
+                                    cipher: string | null;
+                                    alpn: string | null;
+                                    cert: {
+                                        subjectCn: string | null;
+                                        san: string[];
+                                        issuer: string | null;
+                                        /** Format: date-time */
+                                        notBefore: string | null;
+                                        /** Format: date-time */
+                                        notAfter: string | null;
+                                        serial: string | null;
+                                        sha256: string | null;
+                                        selfSigned: boolean | null;
+                                        keyAlgorithm: string | null;
+                                        keyBits: number | null;
+                                    } | null;
+                                }[];
                             } | null;
                             /** @enum {string} */
                             triage: "unreviewed" | "reviewed" | "important" | "false_positive";
@@ -3052,9 +4185,29 @@ export interface operations {
                                 id: string;
                                 output: string;
                             }[];
+                            tls: {
+                                vhost: string | null;
+                                version: string | null;
+                                cipher: string | null;
+                                alpn: string | null;
+                                cert: {
+                                    subjectCn: string | null;
+                                    san: string[];
+                                    issuer: string | null;
+                                    /** Format: date-time */
+                                    notBefore: string | null;
+                                    /** Format: date-time */
+                                    notAfter: string | null;
+                                    serial: string | null;
+                                    sha256: string | null;
+                                    selfSigned: boolean | null;
+                                    keyAlgorithm: string | null;
+                                    keyBits: number | null;
+                                } | null;
+                            }[];
                             fieldChanges: {
                                 /** @enum {string} */
-                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname";
+                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname";
                                 endpoint: {
                                     /** @enum {string} */
                                     scheme: "http" | "https";
@@ -3115,7 +4268,7 @@ export interface operations {
                         }[];
                         fieldChanges: {
                             /** @enum {string} */
-                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname";
+                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname";
                             endpoint: {
                                 /** @enum {string} */
                                 scheme: "http" | "https";
@@ -3299,7 +4452,7 @@ export interface operations {
                             /** @enum {string} */
                             change: "new" | "gone" | "changed" | "unchanged" | "unknown";
                             /** @enum {string|null} */
-                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname" | null;
+                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | null;
                             endpoint: {
                                 /** @enum {string} */
                                 scheme: "http" | "https";
@@ -3352,6 +4505,156 @@ export interface operations {
             };
             /** @description Not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listScanJobs: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                step?: number;
+                status?: "queued" | "leased" | "completed" | "failed" | "stopped";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of jobs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            sequence: number;
+                            stepIndex: number;
+                            worker: string;
+                            /** @enum {string} */
+                            kind: "discovery" | "service";
+                            /** @enum {string} */
+                            status: "queued" | "leased" | "completed" | "failed" | "stopped";
+                            subnet: string;
+                            addressCount: number;
+                            attempts: number;
+                            leasedBy: string | null;
+                            /** Format: date-time */
+                            leaseExpiresAt: string | null;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                            /** Format: date-time */
+                            finishedAt: string | null;
+                            durationMs: number | null;
+                            resultCount: number;
+                            error: {
+                                code: string;
+                                message: string;
+                            } | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    stopScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stopped, or stopping once the leased jobs end */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The scan has already ended (`SCAN_NOT_STOPPABLE`) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4436,6 +5739,345 @@ export interface operations {
             };
         };
     };
+    listWorkers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Workers by stage, then managers by last seen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            displayName: string;
+                            description: string;
+                            isBuiltin: boolean;
+                            enabled: boolean;
+                            stage: number;
+                            inputs: ("targets" | "hosts")[];
+                            splitStrategies: ("none" | "shard" | "ranges" | "chunk")[];
+                            paramFields: ({
+                                key: string;
+                                label: string;
+                                description?: string;
+                                /** @enum {string} */
+                                type: "integer";
+                                min: number;
+                                max: number;
+                                /** @enum {string} */
+                                unit?: "seconds" | "milliseconds";
+                                default?: number;
+                            } | {
+                                key: string;
+                                label: string;
+                                description?: string;
+                                /** @enum {string} */
+                                type: "boolean";
+                                default?: boolean;
+                            } | {
+                                key: string;
+                                label: string;
+                                description?: string;
+                                /** @enum {string} */
+                                type: "enum";
+                                options: string[];
+                                default?: string;
+                            } | {
+                                key: string;
+                                label: string;
+                                description?: string;
+                                /** @enum {string} */
+                                type: "paths";
+                                maxItems: number;
+                                default?: string[];
+                            })[];
+                            defaults: {
+                                [key: string]: number | boolean | string | string[];
+                            };
+                            maxRate: number;
+                            onlineManagers: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                        managers: {
+                            /** Format: uuid */
+                            id: string;
+                            managerId: string;
+                            version: string;
+                            workers: string[];
+                            maxParallel: number;
+                            /** Format: date-time */
+                            firstSeenAt: string;
+                            /** Format: date-time */
+                            lastSeenAt: string;
+                            isOnline: boolean;
+                        }[];
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteWorker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Built-in (`WORKER_BUILTIN`) or used by a pipeline (`WORKER_IN_USE`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateWorker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    enabled?: boolean;
+                    maxRate?: number;
+                    defaults?: {
+                        [key: string]: number | boolean | string | string[];
+                    };
+                    displayName?: string;
+                    description?: string;
+                    stage?: number;
+                    inputs?: ("targets" | "hosts")[];
+                    splitStrategies?: ("none" | "shard" | "ranges" | "chunk")[];
+                    paramFields?: ({
+                        key: string;
+                        label: string;
+                        description?: string;
+                        /** @enum {string} */
+                        type: "integer";
+                        min: number;
+                        max: number;
+                        /** @enum {string} */
+                        unit?: "seconds" | "milliseconds";
+                        default?: number;
+                    } | {
+                        key: string;
+                        label: string;
+                        description?: string;
+                        /** @enum {string} */
+                        type: "boolean";
+                        default?: boolean;
+                    } | {
+                        key: string;
+                        label: string;
+                        description?: string;
+                        /** @enum {string} */
+                        type: "enum";
+                        options: string[];
+                        default?: string;
+                    } | {
+                        key: string;
+                        label: string;
+                        description?: string;
+                        /** @enum {string} */
+                        type: "paths";
+                        maxItems: number;
+                        default?: string[];
+                    })[];
+                };
+            };
+        };
+        responses: {
+            /** @description The updated worker */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Worker"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A built-in worker's definition cannot change (`WORKER_BUILTIN`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    leaseManagerJobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ManagerLeaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Leased jobs, in worker-manager's job list format */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagerJobList"];
+                };
+            };
+            /** @description No work within `wait_seconds` */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or wrong worker token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Worker endpoints are disabled: the backend has no WORKER_TOKEN */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     submitManagerResult: {
         parameters: {
             query?: never;
@@ -4624,22 +6266,22 @@ export interface operations {
                         };
                         params: {
                             /** Format: ipv4-cidr */
-                            subnet: string;
-                            ports: string;
-                            maxParallel: number;
-                            maxRatePerProcess: number;
-                            hostTimeoutMs: number;
-                            httpTimeoutMs: number;
-                            maxBodyBytes: number;
-                            maxRedirects: number;
+                            subnet: string | null;
+                            ports: string | null;
+                            maxParallel: number | null;
+                            maxRatePerProcess: number | null;
+                            hostTimeoutMs: number | null;
+                            httpTimeoutMs: number | null;
+                            maxBodyBytes: number | null;
+                            maxRedirects: number | null;
                             nmapArgs: string[];
                         };
                         counts: {
-                            addresses: number;
+                            addresses: number | null;
                             up: number;
-                            down: number;
+                            down: number | null;
                             timeout: number;
-                            cancelled: number;
+                            cancelled: number | null;
                             failed: number;
                             openPorts: number;
                             httpEndpoints: number;
@@ -4694,6 +6336,26 @@ export interface operations {
                             scripts: {
                                 id: string;
                                 output: string;
+                            }[];
+                            tls: {
+                                vhost: string | null;
+                                version: string | null;
+                                cipher: string | null;
+                                alpn: string | null;
+                                cert: {
+                                    subjectCn: string | null;
+                                    san: string[];
+                                    issuer: string | null;
+                                    /** Format: date-time */
+                                    notBefore: string | null;
+                                    /** Format: date-time */
+                                    notAfter: string | null;
+                                    serial: string | null;
+                                    sha256: string | null;
+                                    selfSigned: boolean | null;
+                                    keyAlgorithm: string | null;
+                                    keyBits: number | null;
+                                } | null;
                             }[];
                             http: {
                                 /** @enum {string} */

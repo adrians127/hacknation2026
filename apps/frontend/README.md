@@ -137,6 +137,7 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 - **Labels:** system roles are translated by key and custom roles show their stored name (`useRoleLabels`); permissions read as "Resource: Action" (`usePermissionLabel`, keys in `auth.json`). A new permission needs `permissions.resources.<resource>` (and a new action) in both languages.
 - **Errors:** `useErrorMessage()` turns anything a query or mutation threw into a translated message, by the API's `error.code` (`common.json`, `errors.*`) or by status.
 - **Admin panel:** `features/users` and `features/roles` (the permission matrix in `features/roles/lib/permission-matrix.ts` is built from the contracts catalog). The admin routes compose them, e.g. the user form gets the role list from `features/roles`.
+- **Pipelines and workers:** `features/pipelines` is the block builder (`/app/pipelines`, `/app/pipelines/new`, `/app/pipelines/:pipelineId`): targets (tags and ranges), an ordered chain of worker steps whose own settings are rendered from the worker's `paramFields` (`features/workers/components/worker-param-input.tsx`), and the schedule with a "Next runs" preview computed by the backend. The form is checked with the contracts' `PipelineBodySchema` and `validateStepParams`; without `pipelines:update` it is read-only, without `scans:run` the schedule controls are. `start-scan-dialog.tsx` is the scans page's "Start scan". `features/workers` is the Workers page (`app/routes/admin/workers.tsx`: the registry and the worker managers, refreshed every 30 s). The scan detail's Jobs tab (`features/scans/components/scan-jobs-panel.tsx`) shows each step's progress and the jobs; scan queries refresh every 5 s while a scan is queued, running or paused.
 - **Vulnerabilities:** `features/vulnerabilities` holds the badges and the per-service list that `features/hosts` shows (the data comes with the scan's host responses, under `scans:read`), and the panels of the Vulnerability databases page (`app/routes/admin/vulnerabilities.tsx`: sources, sync history, CPE → package mappings). The sources query polls while a sync runs or waits for the sync process.
 
 ## Pages and tables
@@ -161,4 +162,8 @@ English is the default language: the fallback for unsupported browser languages 
 
 | Variable | Description |
 |---|---|
-| `VITE_API_BASE_URL` | Backend URL without `/v1`, e.g. `http://localhost:3001` |
+| `VITE_API_BASE_URL` | Backend URL without `/v1`, e.g. `http://localhost:3001`; `/` = the page's own origin (the Docker image, whose nginx proxies `/v1` to the backend) |
+
+## Docker
+
+`apps/frontend/Dockerfile` (built from the repo root; `Dockerfile.dockerignore` replaces the root `.dockerignore`) builds the app with `VITE_API_BASE_URL=/` and serves it with nginx (`nginx.conf`), which proxies `/v1` to the `backend` container. One origin means cookies, CORS and the backend's Origin check work under any host name or IP. Compose runs it as `frontend` in the `app` profile ([`docker/README.md`](../../docker/README.md#everything-in-docker)).

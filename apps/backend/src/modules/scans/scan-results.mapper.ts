@@ -53,7 +53,12 @@ export interface HostInScan {
   };
 }
 
-export function toScan(scan: ScanRow, hosts: ScanHostCounts, openPorts: number): Scan {
+/** A scan with its pipeline's name (`SCAN_INCLUDE`). */
+export const SCAN_INCLUDE = { pipeline: { select: { id: true, name: true } } } as const satisfies Prisma.ScanInclude;
+
+export type ScanWithPipeline = ScanRow & { pipeline: { id: string; name: string } | null };
+
+export function toScan(scan: ScanWithPipeline, hosts: ScanHostCounts, openPorts: number): Scan {
   return {
     id: scan.id,
     status: scan.status,
@@ -69,6 +74,9 @@ export function toScan(scan: ScanRow, hosts: ScanHostCounts, openPorts: number):
     jobCount: scan.jobCount,
     hosts,
     openPorts,
+    pipeline: scan.pipeline,
+    trigger: scan.trigger,
+    windowEndsAt: scan.windowEndsAt?.toISOString() ?? null,
   };
 }
 

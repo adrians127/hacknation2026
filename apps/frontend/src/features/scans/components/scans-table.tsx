@@ -60,6 +60,22 @@ export function ScansTable({
             <Badge variant={SCAN_STATUS_VARIANT[getValue()]}>{t(`scans.statuses.${getValue()}`)}</Badge>
           ),
         }),
+        column.accessor((scan) => scan.pipeline?.name ?? "", {
+          id: "pipeline",
+          header: t("scans.columns.pipeline"),
+          cell: ({ row: { original: scan } }) => (
+            <div className="grid">
+              {scan.pipeline ? (
+                <Link to={`/app/pipelines/${scan.pipeline.id}`} className="hover:underline">
+                  {scan.pipeline.name}
+                </Link>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+              <span className="text-xs text-muted-foreground">{t(`scans.triggers.${scan.trigger}`)}</span>
+            </div>
+          ),
+        }),
         column.accessor("addressCount", {
           header: t("scans.columns.addresses"),
           meta: { className: "text-right tabular-nums" },

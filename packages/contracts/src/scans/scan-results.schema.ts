@@ -19,7 +19,8 @@ import {
   VulnerabilityFilterSchema,
   VulnerabilitySummarySchema,
 } from "../vulnerabilities/vulnerabilities.schema";
-import { ScanSchema, type ScanJobStatus } from "./scans.schema";
+import { ScanJobCountsSchema, ScanStepSchema } from "./scan-jobs.schema";
+import { ScanSchema } from "./scans.schema";
 
 // Separate from scans.schema.ts: worker-result.schema imports that file, so it cannot import back.
 
@@ -84,13 +85,9 @@ export const ScanDetailSchema = ScanSchema.extend({
   ports: z.string(),
   maxRate: z.number().int(),
   batchSize: z.number().int(),
-  jobs: z.object({
-    queued: CountSchema,
-    leased: CountSchema,
-    completed: CountSchema,
-    failed: CountSchema,
-    stopped: CountSchema,
-  }) satisfies z.ZodType<Record<ScanJobStatus, number>>,
+  jobs: ScanJobCountsSchema,
+  /** The pipeline steps the scan runs, in order, with their jobs so far. */
+  steps: z.array(ScanStepSchema),
   /** The scan this one is compared with; `null` for the first scan. */
   baseScan: z.object({ id: z.uuid(), startedAt: z.iso.datetime().nullable() }).nullable(),
   /** `null` without a base scan. */

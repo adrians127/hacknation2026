@@ -15,6 +15,9 @@ export const TEST_ENV = {
   JWT_SECRET: "test-only-jwt-secret-at-least-32-characters-long",
   DATA_ENCRYPTION_KEY: "dGVzdC1vbmx5LWRhdGEta2V5LTAxMjM0NTY3ODlhYmM=",
   WORKER_TOKEN: "test-only-worker-token-0123456789",
+  // Below 65535, so a step outside the allowed ports can be tested.
+  SCAN_ALLOWED_PORTS: "1-60000",
+  PIPELINE_SCHEDULER_ENABLED: "false",
   // Never reached: defectdojo.test.ts answers these requests from a fetch stub.
   DEFECTDOJO_URL: "http://defectdojo.test",
   DEFECTDOJO_API_TOKEN: "test-only-defectdojo-token",

@@ -3,8 +3,10 @@ import { z } from "zod";
 
 import { env } from "~backend/config/env";
 import { prisma } from "~backend/lib/prisma";
+import { defaultSteps } from "~backend/modules/pipelines/steps";
 import { syncSystemRoles } from "~backend/modules/roles/system-roles";
 import { ensureUser } from "~backend/modules/users/bootstrap";
+import { syncWorkerCatalog } from "~backend/modules/workers/worker-catalog.sync";
 
 const seedEnv = z
   .object({
@@ -19,9 +21,45 @@ const DEMO_USERS = [
   { email: "viewer@hacknation.local", displayName: "Demo Viewer", role: "viewer" },
 ] as const;
 
+const DEFAULT_PIPELINE_NAME = "Default discovery";
+
+/** masscan over the whole inventory, then nmap on its hits, with the env defaults; no schedule. */
+async function ensureDefaultPipeline(ownerEmail: string): Promise<"created" | "exists"> {
+  if (await prisma.pipeline.findUnique({ where: { name: DEFAULT_PIPELINE_NAME } })) return "exists";
+  const owner = await prisma.user.findUniqueOrThrow({ where: { email: ownerEmail.toLowerCase() } });
+  const workers = await prisma.worker.findMany({ where: { name: { in: ["masscan", "nmap"] } } });
+  const steps = defaultSteps().map((step, index) => {
+    const worker = workers.find((candidate) => candidate.name === step.worker);
+    if (!worker) throw new Error(`The worker catalog has no ${step.worker}`);
+    return {
+      position: index + 1,
+      workerId: worker.id,
+      input: step.input,
+      ports: step.ports,
+      rate: Math.min(step.rate, worker.maxRate),
+      batchSize: step.batchSize,
+      maxDurationSeconds: step.maxDurationSeconds,
+      split: step.split,
+      params: {},
+    };
+  });
+  await prisma.pipeline.create({
+    data: {
+      name: DEFAULT_PIPELINE_NAME,
+      description: "Masscan over every target, then Nmap on the open ports it found.",
+      targetSelector: { tags: [], ranges: [] },
+      createdById: owner.id,
+      steps: { create: steps },
+    },
+  });
+  return "created";
+}
+
 async function main(): Promise<void> {
   await syncSystemRoles();
   console.log("System roles: admin, editor, analyst, viewer");
+  await syncWorkerCatalog();
+  console.log("Worker catalog: masscan, nmap");
 
   if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
     const result = await ensureUser({
@@ -31,6 +69,7 @@ async function main(): Promise<void> {
       role: "admin",
     });
     console.log(`Admin ${env.ADMIN_EMAIL}: ${result}`);
+    console.log(`Pipeline "${DEFAULT_PIPELINE_NAME}": ${await ensureDefaultPipeline(env.ADMIN_EMAIL)}`);
   } else {
     console.warn("ADMIN_EMAIL / ADMIN_PASSWORD not set: no admin account seeded");
   }
