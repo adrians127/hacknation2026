@@ -56,5 +56,7 @@ if(BUILD_TESTING)
   if(Python3_Interpreter_FOUND)
     add_test(NAME nmap-worker-integration
       COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_worker.py $<TARGET_FILE:nmap-worker>)
+    add_test(NAME nmap-worker-real-scan
+      COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_smoke.py $<TARGET_FILE:nmap-worker>)
   endif()
 endif()

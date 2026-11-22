@@ -25,13 +25,16 @@ pnpm infra:down
 pnpm dojo:up        # DefectDojo only
 pnpm dojo:logs      # follow the DefectDojo containers (initializer included)
 pnpm dojo:smoke     # check the API token and import sample findings
+pnpm dojo:seed      # fictional demo data (people, assets, two scan runs, triage); -- --reset to start over
 
-# workers (docker-compose.workers.yml): masscan-worker only
+# workers (docker-compose.workers.yml)
 pnpm workers:build                # build the masscan-worker image
 pnpm workers:masscan < job.json   # one masscan sweep, result JSON on stdout
+pnpm workers:nmap:build           # build nmap-worker and run its tests
+pnpm workers:nmap < apps/workers/nmap-worker/examples/job-local.json > result.json
 ```
 
-nmap-worker is opt-in, so it has no pnpm script. Start it explicitly when you need it:
+nmap-worker's long-running HTTP pull mode is opt-in. Start it explicitly when you need it:
 
 ```bash
 docker compose -f docker/docker-compose.workers.yml --profile nmap up -d --build
@@ -47,7 +50,7 @@ docker compose -f docker/docker-compose.workers.yml --profile nmap down
 
 ## nmap-worker
 
-Opt-in (profile `nmap`, see the commands above). By default it connects to the backend on the host via `host.docker.internal:3001`. Set `WORKER_TOKEN` before starting the worker. The backend worker endpoints are not implemented yet; the worker can be exercised with a JSON job file until they are available. Compose selects SYN scanning and grants `cap_add: [NET_RAW, NET_ADMIN]`. Details are in [`apps/workers/nmap-worker/README.md`](../apps/workers/nmap-worker/README.md).
+Use `pnpm workers:nmap:build` and `pnpm workers:nmap < job.json` for one-shot jobs, as with masscan. The opt-in HTTP pull mode connects to the backend on the host via `host.docker.internal:3001`; set `WORKER_TOKEN` before starting it. The backend worker endpoints are not implemented yet. Compose selects SYN scanning, grants `cap_add: [NET_RAW, NET_ADMIN]`, and sets `NMAP_PRIVILEGED=1` so Nmap recognizes the granted capabilities. Details are in [`apps/workers/nmap-worker/README.md`](../apps/workers/nmap-worker/README.md).
 
 ## masscan-worker
 
@@ -82,6 +85,7 @@ Every default is for local development only. Override them in your shell or in `
 - DefectDojo uses its own `postgres:18.6-alpine` (the version upstream tests against) and Valkey, with no host port. Our `postgres` is untouched.
 - Volumes: `defectdojo-postgres-data`, `defectdojo-valkey-data`, `defectdojo-media`. A clean DefectDojo: `docker compose -f docker/docker-compose.yml down` and then `docker volume rm hacknation_defectdojo-postgres-data hacknation_defectdojo-valkey-data hacknation_defectdojo-media`.
 - Bumping `DD_VERSION`: use a release that is more than 48 hours old, the same rule as `minimumReleaseAge` for npm.
+- Port 8080 taken (`bind: An attempt was made to access a socket in a way forbidden`): set `DD_PORT=8088` in `docker/.env` and `DD_URL=http://localhost:8088` for the scripts below.
 
 ### Smoke test
 
@@ -92,10 +96,24 @@ Every default is for local development only. Override them in your shell or in `
 
 It reads `DD_URL` and `DD_API_TOKEN` from the environment and exits non-zero on any error.
 
+### Demo data
+
+`pnpm dojo:seed` ([`defectdojo/seed-demo.mjs`](defectdojo/seed-demo.mjs), plain Node) fills DefectDojo with a fictional *Demo University*. Addresses come from the RFC 5737 documentation ranges and domains end in `.example`; the CVEs are real and match the product versions. Findings go through `import-scan` and `reimport-scan` as `Generic Findings Import`, the path the backend export will use.
+
+| | |
+|---|---|
+| People | `anna.nowak`, `piotr.kowalski`, `marta.wisniewska`, `tomasz.zielinski`, `ewa.lewandowska`, password `SubSurf-demo-2026!` (`DD_DEMO_PASSWORD`). Each sees only the assets they own |
+| Organizations and assets | *Core Infrastructure* → `Campus DMZ 192.0.2.0/24`, *Research Networks* → `Research Lab Network 198.51.100.0/24`, *Public Web* → `Public Websites *.uni.example`. Owners, access (`authorized_users`), tags and the *SubSurf demo SLA* (3/14/60/180 days) |
+| Scan runs | Run 1 (2026-11-20) is an import, run 2 (2026-11-21) a reimport: Redis and TLS 1.0 disappear and are closed, Jenkins (CVE-2024-23897) is new. Findings are grouped by component |
+| Findings | 23: KEV-listed CVEs (Apache httpd, Tomcat Ghostcat, Confluence, Jenkins), OpenSSH regreSSHion, exposed services, TLS, headers, cookies, CMS fingerprints |
+| Triage | Verified with reviewers and planned fix dates, under review, false positive, out of scope, risk accepted until 2026-12-31, closed manually, notes |
+
+The script is idempotent: a second run only adds what is missing. `pnpm dojo:seed -- --reset` deletes the three demo organizations (with their findings) and their risk acceptance first; people and the SLA are kept. It reads `DD_URL`, `DD_API_TOKEN` and `DD_DEMO_PASSWORD`.
+
 ### Backend integration (not implemented yet)
 
 The backend runs on the host, so it will reach DefectDojo at `http://localhost:8080` with the token above. The smoke test shows the intended calls: nmap XML can go straight to `import-scan` as `Nmap Scan`, and fingerprinting and signature observations as `Generic Findings Import` with `severity: "Info"`. Re-sending an updated scan into the same test is `POST /api/v2/reimport-scan/`.
 
 - DefectDojo converts finding titles to Title Case (`/wp-admin/` becomes `/Wp-Admin/`). Keep paths and identifiers in `description`, `endpoints` and `unique_id_from_tool`, not in `title`.
-- DefectDojo deduplicates `Generic Findings Import` by a hash code computed from the finding's fields, not by `unique_id_from_tool` (`DEDUPLICATION_ALGORITHM_PER_PARSER` in its settings). A recurring observation is recognized as the same finding only if its text stays stable.
+- DefectDojo deduplicates `Generic Findings Import` by the legacy hash `title + cwe + line + file_path + description` (+ `service`), not by `unique_id_from_tool` or `endpoints`. Put `host:port` in the description and keep the text stable across runs. Details, the push/pull API and status mapping: [`docs/defectdojo-integration.md`](../docs/defectdojo-integration.md).
 - `POST /api/v2/api-token-auth/` with the admin's username and password returns the same pinned token.

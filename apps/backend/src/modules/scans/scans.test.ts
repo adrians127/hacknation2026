@@ -9,7 +9,10 @@ import {
 } from "@subsurf/contracts/scans/scan-results.schema";
 import { ScanListResponseSchema } from "@subsurf/contracts/scans/scans.schema";
 import type { ObservedHost } from "@subsurf/contracts/workers/worker-result.schema";
+import { buildWorkerResult } from "@subsurf/contracts/workers/worker-result.fixture";
 
+import { prisma } from "~backend/lib/prisma";
+import { resultsService } from "~backend/modules/results/results.service";
 import { signInAs } from "~backend/test/auth";
 import { startTestServer, TestClient, type TestServer } from "~backend/test/http";
 import { databaseHost, hostIdOf, ingestScan } from "~backend/test/scans";
@@ -68,6 +71,62 @@ describe("GET /scans", () => {
       openPorts: 3,
       addressCount: 256,
     });
+  });
+
+  it("counts a host once when two worker results observe it in one scan", async () => {
+    const scanId = await ingestScan();
+    const job = await prisma.scanJob.findFirstOrThrow({ where: { scanId }, select: { id: true } });
+    const second = buildWorkerResult({ scanId, jobId: job.id, leaseId: randomUUID() });
+    second.hosts[0] = {
+      ...second.hosts[0],
+      status: "down",
+      reason: "no-response",
+      ports: [],
+    };
+    await resultsService.ingest(second);
+    const { client } = await signInAs(server, { role: "viewer" });
+
+    const { items } = ScanListResponseSchema.parse(await getJson(client, "/v1/scans"));
+    expect(items[0]).toMatchObject({
+      hosts: { up: 1, down: 1, timeout: 1, cancelled: 1, failed: 0 },
+      openPorts: 2,
+    });
+    const page = ScanHostListResponseSchema.parse(
+      await getJson(client, `/v1/scans/${scanId}/hosts`),
+    );
+    expect(page.total).toBe(1);
+    expect(page.items.map((host) => host.ip)).toEqual(["10.0.5.7"]);
+    const detail = ScanHostDetailSchema.parse(
+      await getJson(client, `/v1/scans/${scanId}/hosts/${await hostIdOf("10.0.5.7")}`),
+    );
+    expect(detail.status).toBe("up");
+    expect(detail.history).toHaveLength(1);
+  });
+
+  it("searches the selected observation, not a superseded worker result", async () => {
+    const scanId = await ingestScan();
+    const job = await prisma.scanJob.findFirstOrThrow({ where: { scanId }, select: { id: true } });
+    const second = buildWorkerResult({ scanId, jobId: job.id, leaseId: randomUUID() });
+    second.hosts[0] = {
+      ...second.hosts[0],
+      observedAt: "2026-11-22T14:03:11Z",
+      ports: [],
+    };
+    await resultsService.ingest(second);
+    const { client } = await signInAs(server, { role: "viewer" });
+
+    const page = ScanHostListResponseSchema.parse(
+      await getJson(client, `/v1/scans/${scanId}/hosts`),
+    );
+    expect(page.items[0].services).toEqual([]);
+    const byOldPort = ScanHostListResponseSchema.parse(
+      await getJson(client, `/v1/scans/${scanId}/hosts?q=22`),
+    );
+    expect(byOldPort.total).toBe(0);
+    const byOldTitle = ScanHostListResponseSchema.parse(
+      await getJson(client, `/v1/scans/${scanId}/hosts?q=login`),
+    );
+    expect(byOldTitle.total).toBe(0);
   });
 });
 

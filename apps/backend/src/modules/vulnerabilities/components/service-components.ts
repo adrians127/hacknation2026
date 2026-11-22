@@ -49,8 +49,9 @@ function toSubject(row: IdentityRow): ServiceSubject {
 }
 
 /**
- * The newest observation of each service: by scan creation, then observation time (results arrive
- * out of order and retries replace observations, so there is no "last written" to rely on).
+ * The newest observation of each service: by scan creation, then (several workers may report one
+ * address in a scan) Nmap's service data before discovery-only results, then observation time.
+ * The same preference as the scan views (`effectiveSql` in scan-results.service.ts).
  */
 async function newestIdentities(where: Prisma.Sql, limit: number | null): Promise<IdentityRow[]> {
   return prisma.$queryRaw<IdentityRow[]>`
@@ -59,9 +60,12 @@ async function newestIdentities(where: Prisma.Sql, limit: number | null): Promis
       po."serviceExtraInfo" AS "extraInfo"
     FROM "PortObservation" po
     JOIN "HostObservation" ho ON ho.id = po."hostObservationId"
+    JOIN "ScanJobResult" r ON r.id = ho."resultId"
     JOIN "Scan" s ON s.id = ho."scanId"
     WHERE ${where}
-    ORDER BY po."serviceId", s."createdAt" DESC, ho."observedAt" DESC NULLS LAST
+    ORDER BY po."serviceId", s."createdAt" DESC,
+      CASE WHEN r."workerId" LIKE 'nmap%' THEN 0 ELSE 1 END,
+      ho."observedAt" DESC NULLS LAST, r."receivedAt" DESC
     ${limit === null ? Prisma.empty : Prisma.sql`LIMIT ${limit}`}`;
 }
 

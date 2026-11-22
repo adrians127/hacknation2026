@@ -791,8 +791,11 @@ export interface components {
             } | null;
         };
         NmapJob: {
+            /** Format: uuid */
             job_id: string;
             lease_id: string;
+            /** Format: uuid */
+            scan_id: string;
             /** Format: ipv4-cidr */
             subnet: string;
             deadline: string;
@@ -800,10 +803,15 @@ export interface components {
                 max_parallel?: number;
                 max_rate_per_process?: number;
                 host_timeout_ms?: number;
+                http_timeout_ms?: number;
+                max_body_bytes?: number;
+                max_redirects?: number;
             };
+            probe_paths?: string[];
             targets: {
                 /** Format: ip */
                 ip: string;
+                domains?: string[];
                 domain?: string | null;
                 tcp_ports: number[];
             }[];
@@ -3329,8 +3337,11 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** Format: uuid */
                         job_id: string;
                         lease_id: string;
+                        /** Format: uuid */
+                        scan_id: string;
                         /** Format: ipv4-cidr */
                         subnet: string;
                         deadline: string;
@@ -3338,10 +3349,15 @@ export interface operations {
                             max_parallel?: number;
                             max_rate_per_process?: number;
                             host_timeout_ms?: number;
+                            http_timeout_ms?: number;
+                            max_body_bytes?: number;
+                            max_redirects?: number;
                         };
+                        probe_paths?: string[];
                         targets: {
                             /** Format: ip */
                             ip: string;
+                            domains?: string[];
                             domain?: string | null;
                             tcp_ports: number[];
                         }[];

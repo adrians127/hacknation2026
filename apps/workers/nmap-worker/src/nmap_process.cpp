@@ -48,7 +48,7 @@ public:
         const int descriptor = mkstemp(pattern.data());
         if (descriptor < 0) {
             return std::unexpected(Error{
-                "temp_file_failed", std::error_code{errno, std::generic_category()}.message()});
+                "temp-file-failed", std::error_code{errno, std::generic_category()}.message()});
         }
         return TemporaryFile{std::move(pattern), descriptor};
     }
@@ -118,10 +118,10 @@ private:
 
 std::expected<std::string, Error> read_bounded(std::string_view path, std::size_t maximum_size) {
     std::ifstream stream{std::string{path}, std::ios::binary | std::ios::ate};
-    if (!stream) return std::unexpected(Error{"output_read_failed", "Cannot read Nmap output"});
+    if (!stream) return std::unexpected(Error{"output-read-failed", "Cannot read Nmap output"});
     const auto size = stream.tellg();
     if (size < 0 || static_cast<std::uintmax_t>(size) > maximum_size) {
-        return std::unexpected(Error{"output_too_large", "Nmap output exceeded the size limit"});
+        return std::unexpected(Error{"output-too-large", "Nmap output exceeded the size limit"});
     }
     stream.seekg(0);
     return std::string{std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{}};
@@ -152,6 +152,7 @@ std::expected<NmapOutput, Error> run_nmap(const Target& target, const ScanLimits
                                        "-Pn",
                                        config.scan_type,
                                        "-sV",
+                                       "--version-light",
                                        "--max-rate",
                                        std::to_string(limits.max_rate_per_process),
                                        "-p",
@@ -167,7 +168,7 @@ std::expected<NmapOutput, Error> run_nmap(const Target& target, const ScanLimits
     SpawnActions actions;
     if (!actions.is_valid()) {
         return std::unexpected(Error{
-            "spawn_failed", std::error_code{actions.error(), std::generic_category()}.message()});
+            "spawn-failed", std::error_code{actions.error(), std::generic_category()}.message()});
     }
     int action_error =
         posix_spawn_file_actions_addopen(actions.get(), STDOUT_FILENO, "/dev/null", O_WRONLY, 0);
@@ -183,7 +184,7 @@ std::expected<NmapOutput, Error> run_nmap(const Target& target, const ScanLimits
     }
     if (action_error != 0) {
         return std::unexpected(Error{
-            "spawn_failed", std::error_code{action_error, std::generic_category()}.message()});
+            "spawn-failed", std::error_code{action_error, std::generic_category()}.message()});
     }
 
     pid_t pid = -1;
@@ -191,7 +192,7 @@ std::expected<NmapOutput, Error> run_nmap(const Target& target, const ScanLimits
                                          argument_pointers.data(), environ);
     if (spawn_error != 0) {
         return std::unexpected(
-            Error{"spawn_failed", std::error_code{spawn_error, std::generic_category()}.message()});
+            Error{"spawn-failed", std::error_code{spawn_error, std::generic_category()}.message()});
     }
     ChildProcess child{pid};
     bool is_stopping = false;
@@ -206,7 +207,7 @@ std::expected<NmapOutput, Error> run_nmap(const Target& target, const ScanLimits
         }
         if (waited < 0 && errno != EINTR) {
             return std::unexpected(
-                Error{"wait_failed", std::error_code{errno, std::generic_category()}.message()});
+                Error{"wait-failed", std::error_code{errno, std::generic_category()}.message()});
         }
         const auto now = std::chrono::steady_clock::now();
         if (!is_stopping && (stop_token.stop_requested() || now >= deadline)) {
@@ -227,7 +228,7 @@ std::expected<NmapOutput, Error> run_nmap(const Target& target, const ScanLimits
     if (!stderr_text) return std::unexpected(stderr_text.error());
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
         return std::unexpected(Error{
-            "nmap_failed", stderr_text->empty() ? "Nmap exited with an error" : *stderr_text});
+            "nmap-exit", stderr_text->empty() ? "Nmap exited with an error" : *stderr_text});
     }
     const auto xml = read_bounded(xml_file->path(), 4 * 1024 * 1024);
     if (!xml) return std::unexpected(xml.error());
