@@ -14,6 +14,11 @@ import { LoginRoute } from "@/app/routes/login";
 import { NotFoundRoute } from "@/app/routes/not-found";
 import { PipelineEditRoute } from "@/app/routes/pipeline-edit";
 import { PipelinesRoute } from "@/app/routes/pipelines";
+import { DiffReportRoute } from "@/app/routes/reports/diff-report";
+import { StabilityReportRoute, TimeOfDayReportRoute } from "@/app/routes/reports/history-reports";
+import { IpReportRoute } from "@/app/routes/reports/ip-report";
+import { ReportsRoute } from "@/app/routes/reports/reports";
+import { ScanReportRoute } from "@/app/routes/reports/scan-report";
 import { RequirePermission } from "@/app/routes/require-permission";
 import { RootLayout } from "@/app/routes/root-layout";
 import { RouteError } from "@/app/routes/route-error";
@@ -67,6 +72,18 @@ export const router = createBrowserRouter([
               { index: true, Component: ScansRoute },
               { path: "compare", Component: ScanCompareRoute },
               { path: ":scanId", Component: ScanDetailRoute },
+            ],
+          },
+          {
+            path: "reports",
+            element: <RequirePermission permission="scans:read" />,
+            children: [
+              { index: true, Component: ReportsRoute },
+              { path: "scans/:scanId/:kind", Component: ScanReportRoute },
+              { path: "diff", Component: DiffReportRoute },
+              { path: "ips/:ip", Component: IpReportRoute },
+              { path: "stability", Component: StabilityReportRoute },
+              { path: "time-of-day", Component: TimeOfDayReportRoute },
             ],
           },
           {

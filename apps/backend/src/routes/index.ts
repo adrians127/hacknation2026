@@ -6,6 +6,7 @@ import { defectDojoRoutes } from "~backend/modules/defectdojo/defectdojo.routes"
 import { healthRoutes } from "~backend/modules/health/health.routes";
 import { hostsRoutes } from "~backend/modules/hosts/hosts.routes";
 import { pipelinesRoutes } from "~backend/modules/pipelines/pipelines.routes";
+import { reportsRoutes } from "~backend/modules/reports/reports.routes";
 import { rolesRoutes } from "~backend/modules/roles/roles.routes";
 import { scansRoutes } from "~backend/modules/scans/scans.routes";
 import { targetsRoutes } from "~backend/modules/targets/targets.routes";
@@ -26,6 +27,7 @@ apiRouter.use("/defectdojo", defectDojoRoutes);
 apiRouter.use("/health", healthRoutes);
 apiRouter.use("/hosts", hostsRoutes);
 apiRouter.use("/pipelines", pipelinesRoutes);
+apiRouter.use("/reports", reportsRoutes);
 apiRouter.use("/roles", rolesRoutes);
 apiRouter.use("/scans", scansRoutes);
 apiRouter.use("/targets", targetsRoutes);

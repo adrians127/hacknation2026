@@ -341,6 +341,7 @@
     },
     "detail": {
       "back": "Wszystkie skany",
+      "report": "Raport skanu",
       "title": "Skan z {{date}}",
       "subtitle": "Co znalazł ten skan. Zmiany liczymy względem poprzedniego skanu, tylko dla adresów, które odpowiedziały w obu.",
       "addresses": "Adresy",
@@ -483,6 +484,7 @@
     "dashboard": "Pulpit",
     "targets": "Cele",
     "scans": "Skany",
+    "reports": "Raporty",
     "users": "Użytkownicy",
     "roles": "Role",
     "vulnerabilities": "Podatności",
@@ -586,6 +588,7 @@
     "DEFECTDOJO_UNAVAILABLE": "DefectDojo nie odpowiada albo odrzucił token API.",
     "DEFECTDOJO_SYNC_RUNNING": "Synchronizacja z DefectDojo już trwa.",
     "DEFECTDOJO_PUSH_RUNNING": "Wysyłka do DefectDojo już trwa.",
-    "NOTHING_TO_PUSH": "Nie ma czego wysłać: brak otwartych usług w tym skanie lub zaznaczeniu."
+    "NOTHING_TO_PUSH": "Nie ma czego wysłać: brak otwartych usług w tym skanie lub zaznaczeniu.",
+    "SAME_SCAN": "Wybierz dwa różne skany do porównania."
   }
 }

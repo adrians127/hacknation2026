@@ -101,7 +101,8 @@
                   "DEFECTDOJO_UNAVAILABLE",
                   "DEFECTDOJO_SYNC_RUNNING",
                   "DEFECTDOJO_PUSH_RUNNING",
-                  "NOTHING_TO_PUSH"
+                  "NOTHING_TO_PUSH",
+                  "SAME_SCAN"
                 ]
               },
               "details": {}
@@ -7687,6 +7688,4811 @@
           },
           "409": {
             "description": "A run is still active (`PIPELINE_RUN_ACTIVE`), nothing to scan (`NO_SCANNABLE_TARGETS`), or a disabled worker (`WORKER_DISABLED`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/scans/{id}/summary": {
+      "get": {
+        "operationId": "getScanSummaryReport",
+        "summary": "Post-scan summary report",
+        "description": "Requires `scans:read`. Execution, results, changes against the base scan, top findings, ports, technologies and triage of one scan.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "scan": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "paused",
+                            "completed",
+                            "stopped",
+                            "failed"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "durationMs": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "minimum": 0
+                        },
+                        "targetCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "addressCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "jobCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "hosts": {
+                          "type": "object",
+                          "properties": {
+                            "up": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "down": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "timeout": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "cancelled": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "failed": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "up",
+                            "down",
+                            "timeout",
+                            "cancelled",
+                            "failed"
+                          ]
+                        },
+                        "openPorts": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "pipeline": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ]
+                        },
+                        "trigger": {
+                          "type": "string",
+                          "enum": [
+                            "import",
+                            "manual",
+                            "schedule"
+                          ]
+                        },
+                        "windowEndsAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "ports": {
+                          "type": "string"
+                        },
+                        "maxRate": {
+                          "type": "integer"
+                        },
+                        "batchSize": {
+                          "type": "integer"
+                        },
+                        "jobs": {
+                          "type": "object",
+                          "properties": {
+                            "queued": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "leased": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "completed": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "failed": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "stopped": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "queued",
+                            "leased",
+                            "completed",
+                            "failed",
+                            "stopped"
+                          ]
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "index": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "worker": {
+                                "type": "string"
+                              },
+                              "input": {
+                                "type": "string",
+                                "enum": [
+                                  "targets",
+                                  "previous"
+                                ]
+                              },
+                              "ports": {
+                                "type": "string"
+                              },
+                              "rate": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "jobs": {
+                                "type": "object",
+                                "properties": {
+                                  "queued": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "leased": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "completed": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "failed": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "stopped": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "queued",
+                                  "leased",
+                                  "completed",
+                                  "failed",
+                                  "stopped"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "index",
+                              "worker",
+                              "input",
+                              "ports",
+                              "rate",
+                              "jobs"
+                            ]
+                          }
+                        },
+                        "baseScan": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "startedAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "startedAt"
+                          ]
+                        },
+                        "changes": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "hosts": {
+                              "type": "object",
+                              "properties": {
+                                "new": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "gone": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "changed": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "unknown": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "new",
+                                "gone",
+                                "changed",
+                                "unknown"
+                              ]
+                            },
+                            "services": {
+                              "type": "object",
+                              "properties": {
+                                "new": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "gone": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "changed": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "new",
+                                "gone",
+                                "changed"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "hosts",
+                            "services"
+                          ]
+                        },
+                        "coverage": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "both": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "onlyBase": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "onlyCurrent": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "both",
+                            "onlyBase",
+                            "onlyCurrent"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt",
+                        "durationMs",
+                        "targetCount",
+                        "addressCount",
+                        "jobCount",
+                        "hosts",
+                        "openPorts",
+                        "pipeline",
+                        "trigger",
+                        "windowEndsAt",
+                        "ports",
+                        "maxRate",
+                        "batchSize",
+                        "jobs",
+                        "steps",
+                        "baseScan",
+                        "changes",
+                        "coverage"
+                      ]
+                    },
+                    "execution": {
+                      "type": "object",
+                      "properties": {
+                        "results": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "partialResults": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "failedResults": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "stopReasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "reason": {
+                                "type": "string"
+                              },
+                              "count": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "reason",
+                              "count"
+                            ]
+                          }
+                        },
+                        "workers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "version": {
+                                "type": "string"
+                              },
+                              "nmapVersion": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version",
+                              "nmapVersion"
+                            ]
+                          }
+                        },
+                        "phasesMs": {
+                          "type": "object",
+                          "properties": {
+                            "hostDiscovery": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "portScan": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "serviceDetection": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "http": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "hostDiscovery",
+                            "portScan",
+                            "serviceDetection",
+                            "http"
+                          ]
+                        },
+                        "httpEndpoints": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "httpRequests": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "results",
+                        "partialResults",
+                        "failedResults",
+                        "stopReasons",
+                        "workers",
+                        "phasesMs",
+                        "httpEndpoints",
+                        "httpRequests"
+                      ]
+                    },
+                    "findings": {
+                      "type": "object",
+                      "properties": {
+                        "high": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "medium": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "low": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "info": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "high",
+                        "medium",
+                        "low",
+                        "info"
+                      ]
+                    },
+                    "topHosts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "hostnames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "score": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "change": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "new",
+                              "gone",
+                              "changed",
+                              "unchanged",
+                              "unknown",
+                              null
+                            ]
+                          },
+                          "triage": {
+                            "type": "string",
+                            "enum": [
+                              "unreviewed",
+                              "reviewed",
+                              "important",
+                              "false_positive"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "findings": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "rule": {
+                                  "type": "string",
+                                  "enum": [
+                                    "database-exposed",
+                                    "debug-or-staging",
+                                    "tls-expired",
+                                    "admin-panel",
+                                    "cleartext-protocol",
+                                    "directory-listing",
+                                    "tls-expiring",
+                                    "tls-weak",
+                                    "outdated-software",
+                                    "remote-access",
+                                    "tls-self-signed",
+                                    "cookie-insecure",
+                                    "cors-wildcard",
+                                    "default-page",
+                                    "missing-security-headers",
+                                    "version-disclosure"
+                                  ]
+                                },
+                                "severity": {
+                                  "type": "string",
+                                  "enum": [
+                                    "high",
+                                    "medium",
+                                    "low",
+                                    "info"
+                                  ]
+                                },
+                                "hostId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "serviceId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "ip": {
+                                  "type": "string",
+                                  "format": "ip"
+                                },
+                                "port": {
+                                  "type": "integer"
+                                },
+                                "evidence": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "rule",
+                                "severity",
+                                "hostId",
+                                "serviceId",
+                                "ip",
+                                "port",
+                                "evidence"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "hostId",
+                          "ip",
+                          "hostnames",
+                          "score",
+                          "change",
+                          "triage",
+                          "tags",
+                          "findings"
+                        ]
+                      }
+                    },
+                    "topPorts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "port": {
+                            "type": "integer"
+                          },
+                          "hosts": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "port",
+                          "hosts"
+                        ]
+                      }
+                    },
+                    "topTechnologies": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "cms",
+                              "web-server",
+                              "language",
+                              "framework",
+                              "application",
+                              "device",
+                              "service"
+                            ]
+                          },
+                          "hosts": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "category",
+                          "hosts"
+                        ]
+                      }
+                    },
+                    "triage": {
+                      "type": "object",
+                      "properties": {
+                        "hosts": {
+                          "type": "object",
+                          "properties": {
+                            "unreviewed": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "reviewed": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "important": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "false_positive": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "unreviewed",
+                            "reviewed",
+                            "important",
+                            "false_positive"
+                          ]
+                        },
+                        "services": {
+                          "type": "object",
+                          "properties": {
+                            "unreviewed": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "reviewed": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "important": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "false_positive": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "unreviewed",
+                            "reviewed",
+                            "important",
+                            "false_positive"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "hosts",
+                        "services"
+                      ]
+                    },
+                    "changes": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "newHosts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "hostId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "ip": {
+                                "type": "string",
+                                "format": "ip"
+                              },
+                              "hostnames": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            "required": [
+                              "hostId",
+                              "ip",
+                              "hostnames",
+                              "ports"
+                            ]
+                          }
+                        },
+                        "goneHosts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "hostId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "ip": {
+                                "type": "string",
+                                "format": "ip"
+                              },
+                              "hostnames": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            "required": [
+                              "hostId",
+                              "ip",
+                              "hostnames",
+                              "ports"
+                            ]
+                          }
+                        },
+                        "changedServices": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "hostId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "ip": {
+                                "type": "string",
+                                "format": "ip"
+                              },
+                              "port": {
+                                "type": "integer"
+                              },
+                              "change": {
+                                "type": "string",
+                                "enum": [
+                                  "new",
+                                  "gone",
+                                  "changed",
+                                  "unchanged",
+                                  "unknown"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "hostId",
+                              "ip",
+                              "port",
+                              "change"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "newHosts",
+                        "goneHosts",
+                        "changedServices"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "scan",
+                    "execution",
+                    "findings",
+                    "topHosts",
+                    "topPorts",
+                    "topTechnologies",
+                    "triage",
+                    "changes"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/scans/{id}/findings": {
+      "get": {
+        "operationId": "getFindingsReport",
+        "summary": "Interesting findings and host priority",
+        "description": "Requires `scans:read`. Passive rules over what the scan collected (exposed databases, admin panels, TLS, cookies, headers), with an analytical priority per host.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "scan": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "paused",
+                            "completed",
+                            "stopped",
+                            "failed"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt"
+                      ]
+                    },
+                    "counts": {
+                      "type": "object",
+                      "properties": {
+                        "high": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "medium": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "low": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "info": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "high",
+                        "medium",
+                        "low",
+                        "info"
+                      ]
+                    },
+                    "byRule": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rule": {
+                            "type": "string",
+                            "enum": [
+                              "database-exposed",
+                              "debug-or-staging",
+                              "tls-expired",
+                              "admin-panel",
+                              "cleartext-protocol",
+                              "directory-listing",
+                              "tls-expiring",
+                              "tls-weak",
+                              "outdated-software",
+                              "remote-access",
+                              "tls-self-signed",
+                              "cookie-insecure",
+                              "cors-wildcard",
+                              "default-page",
+                              "missing-security-headers",
+                              "version-disclosure"
+                            ]
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "high",
+                              "medium",
+                              "low",
+                              "info"
+                            ]
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "rule",
+                          "severity",
+                          "count"
+                        ]
+                      }
+                    },
+                    "hosts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "hostnames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "score": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "change": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "new",
+                              "gone",
+                              "changed",
+                              "unchanged",
+                              "unknown",
+                              null
+                            ]
+                          },
+                          "triage": {
+                            "type": "string",
+                            "enum": [
+                              "unreviewed",
+                              "reviewed",
+                              "important",
+                              "false_positive"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "findings": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "rule": {
+                                  "type": "string",
+                                  "enum": [
+                                    "database-exposed",
+                                    "debug-or-staging",
+                                    "tls-expired",
+                                    "admin-panel",
+                                    "cleartext-protocol",
+                                    "directory-listing",
+                                    "tls-expiring",
+                                    "tls-weak",
+                                    "outdated-software",
+                                    "remote-access",
+                                    "tls-self-signed",
+                                    "cookie-insecure",
+                                    "cors-wildcard",
+                                    "default-page",
+                                    "missing-security-headers",
+                                    "version-disclosure"
+                                  ]
+                                },
+                                "severity": {
+                                  "type": "string",
+                                  "enum": [
+                                    "high",
+                                    "medium",
+                                    "low",
+                                    "info"
+                                  ]
+                                },
+                                "hostId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "serviceId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "ip": {
+                                  "type": "string",
+                                  "format": "ip"
+                                },
+                                "port": {
+                                  "type": "integer"
+                                },
+                                "evidence": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "rule",
+                                "severity",
+                                "hostId",
+                                "serviceId",
+                                "ip",
+                                "port",
+                                "evidence"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "hostId",
+                          "ip",
+                          "hostnames",
+                          "score",
+                          "change",
+                          "triage",
+                          "tags",
+                          "findings"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "scan",
+                    "counts",
+                    "byRule",
+                    "hosts"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/scans/{id}/technologies": {
+      "get": {
+        "operationId": "getTechnologiesReport",
+        "summary": "Technologies, CMSs and groups of similar services",
+        "description": "Requires `scans:read`. Software identified from service detection, headers, meta generator tags, cookies and titles, with a confidence per detection.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "scan": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "paused",
+                            "completed",
+                            "stopped",
+                            "failed"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt"
+                      ]
+                    },
+                    "technologies": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "cms",
+                              "web-server",
+                              "language",
+                              "framework",
+                              "application",
+                              "device",
+                              "service"
+                            ]
+                          },
+                          "hosts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "services": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "versions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "version": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "services": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "version",
+                                "services"
+                              ]
+                            }
+                          },
+                          "instances": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "hostId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "serviceId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "ip": {
+                                  "type": "string",
+                                  "format": "ip"
+                                },
+                                "port": {
+                                  "type": "integer"
+                                },
+                                "version": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "sources": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "service-detection",
+                                      "header",
+                                      "meta-generator",
+                                      "body",
+                                      "cookie",
+                                      "title",
+                                      "probe"
+                                    ]
+                                  }
+                                },
+                                "confidence": {
+                                  "type": "string",
+                                  "enum": [
+                                    "high",
+                                    "medium",
+                                    "low"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "hostId",
+                                "serviceId",
+                                "ip",
+                                "port",
+                                "version",
+                                "sources",
+                                "confidence"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "category",
+                          "hosts",
+                          "services",
+                          "versions",
+                          "instances"
+                        ]
+                      }
+                    },
+                    "groups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "software",
+                              "web-page"
+                            ]
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "services": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "members": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "hostId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "serviceId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "ip": {
+                                  "type": "string",
+                                  "format": "ip"
+                                },
+                                "port": {
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "hostId",
+                                "serviceId",
+                                "ip",
+                                "port"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "label",
+                          "services",
+                          "members"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "scan",
+                    "technologies",
+                    "groups"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/scans/{id}/exposure": {
+      "get": {
+        "operationId": "getExposureReport",
+        "summary": "Open ports by port and by /24 network",
+        "description": "Requires `scans:read`. How many hosts expose each port, and where in the network the live hosts are.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "scan": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "paused",
+                            "completed",
+                            "stopped",
+                            "failed"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt"
+                      ]
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "hostsUp": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "openPorts": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "distinctPorts": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "hostsUp",
+                        "openPorts",
+                        "distinctPorts"
+                      ]
+                    },
+                    "ports": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "port": {
+                            "type": "integer"
+                          },
+                          "protocol": {
+                            "type": "string",
+                            "enum": [
+                              "tcp"
+                            ]
+                          },
+                          "hosts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "newHosts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "services": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "count": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "count"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "port",
+                          "protocol",
+                          "hosts",
+                          "newHosts",
+                          "services"
+                        ]
+                      }
+                    },
+                    "subnets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "cidr": {
+                            "type": "string",
+                            "format": "ipv4-cidr"
+                          },
+                          "hostsUp": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "openPorts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "topPorts": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "required": [
+                          "cidr",
+                          "hostsUp",
+                          "openPorts",
+                          "topPorts"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "scan",
+                    "totals",
+                    "ports",
+                    "subnets"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/scans/{id}/triage": {
+      "get": {
+        "operationId": "getTriageReport",
+        "summary": "Triage progress",
+        "description": "Requires `scans:read`. Verdicts on the scan's hosts and services, new services nobody reviewed yet, and DefectDojo remediation dates.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "scan": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "paused",
+                            "completed",
+                            "stopped",
+                            "failed"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt"
+                      ]
+                    },
+                    "hosts": {
+                      "type": "object",
+                      "properties": {
+                        "unreviewed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "reviewed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "important": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "false_positive": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "unreviewed",
+                        "reviewed",
+                        "important",
+                        "false_positive"
+                      ]
+                    },
+                    "services": {
+                      "type": "object",
+                      "properties": {
+                        "unreviewed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "reviewed": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "important": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "false_positive": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "unreviewed",
+                        "reviewed",
+                        "important",
+                        "false_positive"
+                      ]
+                    },
+                    "progress": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "newUnreviewed": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "serviceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "port": {
+                            "type": "integer"
+                          },
+                          "identity": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "product": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "version": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "product",
+                              "version"
+                            ]
+                          },
+                          "change": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "new",
+                              "gone",
+                              "changed",
+                              "unchanged",
+                              "unknown",
+                              null
+                            ]
+                          },
+                          "triage": {
+                            "type": "string",
+                            "enum": [
+                              "unreviewed",
+                              "reviewed",
+                              "important",
+                              "false_positive"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "remediation": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "plannedOn": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              },
+                              "slaDueOn": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              },
+                              "riskAcceptedUntil": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              }
+                            },
+                            "required": [
+                              "plannedOn",
+                              "slaDueOn",
+                              "riskAcceptedUntil"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostId",
+                          "serviceId",
+                          "ip",
+                          "port",
+                          "identity",
+                          "change",
+                          "triage",
+                          "tags",
+                          "remediation"
+                        ]
+                      }
+                    },
+                    "important": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "serviceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "port": {
+                            "type": "integer"
+                          },
+                          "identity": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "product": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "version": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "product",
+                              "version"
+                            ]
+                          },
+                          "change": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "new",
+                              "gone",
+                              "changed",
+                              "unchanged",
+                              "unknown",
+                              null
+                            ]
+                          },
+                          "triage": {
+                            "type": "string",
+                            "enum": [
+                              "unreviewed",
+                              "reviewed",
+                              "important",
+                              "false_positive"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "remediation": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "plannedOn": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              },
+                              "slaDueOn": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              },
+                              "riskAcceptedUntil": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              }
+                            },
+                            "required": [
+                              "plannedOn",
+                              "slaDueOn",
+                              "riskAcceptedUntil"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostId",
+                          "serviceId",
+                          "ip",
+                          "port",
+                          "identity",
+                          "change",
+                          "triage",
+                          "tags",
+                          "remediation"
+                        ]
+                      }
+                    },
+                    "remediation": {
+                      "type": "object",
+                      "properties": {
+                        "overdue": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "hostId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "serviceId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "ip": {
+                                "type": "string",
+                                "format": "ip"
+                              },
+                              "port": {
+                                "type": "integer"
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "product": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "version": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "product",
+                                  "version"
+                                ]
+                              },
+                              "change": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "new",
+                                  "gone",
+                                  "changed",
+                                  "unchanged",
+                                  "unknown",
+                                  null
+                                ]
+                              },
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "unreviewed",
+                                  "reviewed",
+                                  "important",
+                                  "false_positive"
+                                ]
+                              },
+                              "tags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "remediation": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "properties": {
+                                  "plannedOn": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "date"
+                                  },
+                                  "slaDueOn": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "date"
+                                  },
+                                  "riskAcceptedUntil": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "date"
+                                  }
+                                },
+                                "required": [
+                                  "plannedOn",
+                                  "slaDueOn",
+                                  "riskAcceptedUntil"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "hostId",
+                              "serviceId",
+                              "ip",
+                              "port",
+                              "identity",
+                              "change",
+                              "triage",
+                              "tags",
+                              "remediation"
+                            ]
+                          }
+                        },
+                        "dueSoon": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "hostId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "serviceId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "ip": {
+                                "type": "string",
+                                "format": "ip"
+                              },
+                              "port": {
+                                "type": "integer"
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "product": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "version": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "product",
+                                  "version"
+                                ]
+                              },
+                              "change": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "new",
+                                  "gone",
+                                  "changed",
+                                  "unchanged",
+                                  "unknown",
+                                  null
+                                ]
+                              },
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "unreviewed",
+                                  "reviewed",
+                                  "important",
+                                  "false_positive"
+                                ]
+                              },
+                              "tags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "remediation": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "properties": {
+                                  "plannedOn": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "date"
+                                  },
+                                  "slaDueOn": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "date"
+                                  },
+                                  "riskAcceptedUntil": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "date"
+                                  }
+                                },
+                                "required": [
+                                  "plannedOn",
+                                  "slaDueOn",
+                                  "riskAcceptedUntil"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "hostId",
+                              "serviceId",
+                              "ip",
+                              "port",
+                              "identity",
+                              "change",
+                              "triage",
+                              "tags",
+                              "remediation"
+                            ]
+                          }
+                        },
+                        "riskAcceptanceExpiring": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "hostId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "serviceId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "ip": {
+                                "type": "string",
+                                "format": "ip"
+                              },
+                              "port": {
+                                "type": "integer"
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "product": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "version": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "product",
+                                  "version"
+                                ]
+                              },
+                              "change": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "new",
+                                  "gone",
+                                  "changed",
+                                  "unchanged",
+                                  "unknown",
+                                  null
+                                ]
+                              },
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "unreviewed",
+                                  "reviewed",
+                                  "important",
+                                  "false_positive"
+                                ]
+                              },
+                              "tags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "remediation": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "properties": {
+                                  "plannedOn": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "date"
+                                  },
+                                  "slaDueOn": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "date"
+                                  },
+                                  "riskAcceptedUntil": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "date"
+                                  }
+                                },
+                                "required": [
+                                  "plannedOn",
+                                  "slaDueOn",
+                                  "riskAcceptedUntil"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "hostId",
+                              "serviceId",
+                              "ip",
+                              "port",
+                              "identity",
+                              "change",
+                              "triage",
+                              "tags",
+                              "remediation"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "overdue",
+                        "dueSoon",
+                        "riskAcceptanceExpiring"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "scan",
+                    "hosts",
+                    "services",
+                    "progress",
+                    "newUnreviewed",
+                    "important",
+                    "remediation"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/scans/{id}/tags": {
+      "get": {
+        "operationId": "getTagsReport",
+        "summary": "Hosts by tag",
+        "description": "Requires `scans:read`. Every tag of the scan's hosts and services; with `tag`, the hosts carrying it.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            },
+            "required": false,
+            "name": "tag",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "scan": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "paused",
+                            "completed",
+                            "stopped",
+                            "failed"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt"
+                      ]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "tag": {
+                            "type": "string"
+                          },
+                          "hosts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "services": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "changedHosts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "findings": {
+                            "type": "object",
+                            "properties": {
+                              "high": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "medium": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "low": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "info": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "high",
+                              "medium",
+                              "low",
+                              "info"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "tag",
+                          "hosts",
+                          "services",
+                          "changedHosts",
+                          "findings"
+                        ]
+                      }
+                    },
+                    "selected": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "tag": {
+                          "type": "string"
+                        },
+                        "changes": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "hosts": {
+                              "type": "object",
+                              "properties": {
+                                "new": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "gone": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "changed": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "unknown": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "new",
+                                "gone",
+                                "changed",
+                                "unknown"
+                              ]
+                            },
+                            "services": {
+                              "type": "object",
+                              "properties": {
+                                "new": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "gone": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "changed": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "new",
+                                "gone",
+                                "changed"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "hosts",
+                            "services"
+                          ]
+                        },
+                        "hosts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "hostId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "ip": {
+                                "type": "string",
+                                "format": "ip"
+                              },
+                              "hostnames": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "up",
+                                  "down",
+                                  "timeout",
+                                  "cancelled",
+                                  "failed"
+                                ]
+                              },
+                              "change": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "new",
+                                  "gone",
+                                  "changed",
+                                  "unchanged",
+                                  "unknown",
+                                  null
+                                ]
+                              },
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "unreviewed",
+                                  "reviewed",
+                                  "important",
+                                  "false_positive"
+                                ]
+                              },
+                              "tags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "findings": {
+                                "type": "object",
+                                "properties": {
+                                  "high": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "medium": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "low": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "info": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "high",
+                                  "medium",
+                                  "low",
+                                  "info"
+                                ]
+                              },
+                              "services": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "serviceId": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "port": {
+                                      "type": "integer"
+                                    },
+                                    "identity": {
+                                      "type": "object",
+                                      "properties": {
+                                        "name": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "product": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "version": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "name",
+                                        "product",
+                                        "version"
+                                      ]
+                                    },
+                                    "change": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "enum": [
+                                        "new",
+                                        "gone",
+                                        "changed",
+                                        "unchanged",
+                                        "unknown",
+                                        null
+                                      ]
+                                    },
+                                    "triage": {
+                                      "type": "string",
+                                      "enum": [
+                                        "unreviewed",
+                                        "reviewed",
+                                        "important",
+                                        "false_positive"
+                                      ]
+                                    },
+                                    "tags": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "serviceId",
+                                    "port",
+                                    "identity",
+                                    "change",
+                                    "triage",
+                                    "tags"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "hostId",
+                              "ip",
+                              "hostnames",
+                              "status",
+                              "change",
+                              "triage",
+                              "tags",
+                              "findings",
+                              "services"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "tag",
+                        "changes",
+                        "hosts"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "scan",
+                    "tags",
+                    "selected"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/diff": {
+      "get": {
+        "operationId": "getDiffReport",
+        "summary": "Changes between any two scans",
+        "description": "Requires `scans:read`. Compares scan `to` with scan `from` by the same rules as a scan's changes against its base scan. 400 `SAME_SCAN` when both are one scan.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "from": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "paused",
+                            "completed",
+                            "stopped",
+                            "failed"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt"
+                      ]
+                    },
+                    "to": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "paused",
+                            "completed",
+                            "stopped",
+                            "failed"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt"
+                      ]
+                    },
+                    "counts": {
+                      "type": "object",
+                      "properties": {
+                        "hosts": {
+                          "type": "object",
+                          "properties": {
+                            "new": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "gone": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "changed": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "unknown": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "new",
+                            "gone",
+                            "changed",
+                            "unknown"
+                          ]
+                        },
+                        "services": {
+                          "type": "object",
+                          "properties": {
+                            "new": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "gone": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "changed": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "new",
+                            "gone",
+                            "changed"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "hosts",
+                        "services"
+                      ]
+                    },
+                    "hosts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "hostnames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "change": {
+                            "type": "string",
+                            "enum": [
+                              "new",
+                              "gone",
+                              "changed",
+                              "unchanged",
+                              "unknown"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "down",
+                              "timeout",
+                              "cancelled",
+                              "failed"
+                            ]
+                          },
+                          "triage": {
+                            "type": "string",
+                            "enum": [
+                              "unreviewed",
+                              "reviewed",
+                              "important",
+                              "false_positive"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "services": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "serviceId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "port": {
+                                  "type": "integer"
+                                },
+                                "protocol": {
+                                  "type": "string",
+                                  "enum": [
+                                    "tcp"
+                                  ]
+                                },
+                                "change": {
+                                  "type": "string",
+                                  "enum": [
+                                    "new",
+                                    "gone",
+                                    "changed",
+                                    "unchanged",
+                                    "unknown"
+                                  ]
+                                },
+                                "before": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "identity": {
+                                      "type": "object",
+                                      "properties": {
+                                        "name": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "product": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "version": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "name",
+                                        "product",
+                                        "version"
+                                      ]
+                                    },
+                                    "software": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "http": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "url": {
+                                            "type": "string"
+                                          },
+                                          "statusCode": {
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ]
+                                          },
+                                          "title": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "finalUrl": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "url",
+                                          "statusCode",
+                                          "title",
+                                          "finalUrl"
+                                        ]
+                                      }
+                                    },
+                                    "certSha256": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "certNotAfter": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "format": "date-time"
+                                    }
+                                  },
+                                  "required": [
+                                    "identity",
+                                    "software",
+                                    "http",
+                                    "certSha256",
+                                    "certNotAfter"
+                                  ]
+                                },
+                                "after": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "identity": {
+                                      "type": "object",
+                                      "properties": {
+                                        "name": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "product": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "version": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "name",
+                                        "product",
+                                        "version"
+                                      ]
+                                    },
+                                    "software": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "http": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "url": {
+                                            "type": "string"
+                                          },
+                                          "statusCode": {
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ]
+                                          },
+                                          "title": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "finalUrl": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "url",
+                                          "statusCode",
+                                          "title",
+                                          "finalUrl"
+                                        ]
+                                      }
+                                    },
+                                    "certSha256": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "certNotAfter": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "format": "date-time"
+                                    }
+                                  },
+                                  "required": [
+                                    "identity",
+                                    "software",
+                                    "http",
+                                    "certSha256",
+                                    "certNotAfter"
+                                  ]
+                                },
+                                "fields": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "name",
+                                      "product",
+                                      "version",
+                                      "software",
+                                      "http-status",
+                                      "http-title",
+                                      "redirect",
+                                      "certificate",
+                                      "other"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "serviceId",
+                                "port",
+                                "protocol",
+                                "change",
+                                "before",
+                                "after",
+                                "fields"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "hostId",
+                          "ip",
+                          "hostnames",
+                          "change",
+                          "status",
+                          "triage",
+                          "tags",
+                          "services"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "from",
+                    "to",
+                    "counts",
+                    "hosts"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/ips/{ip}": {
+      "get": {
+        "operationId": "getIpReport",
+        "summary": "One IP address across every scan",
+        "description": "Requires `scans:read`. Its status in every scan, how each service changed over time, and findings and technologies from the latest scan it answered.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "ip"
+            },
+            "required": true,
+            "name": "ip",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "ip": {
+                      "type": "string",
+                      "format": "ip"
+                    },
+                    "host": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "hostnames": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "firstSeenAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lastSeenAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "triage": {
+                          "type": "string",
+                          "enum": [
+                            "unreviewed",
+                            "reviewed",
+                            "important",
+                            "false_positive"
+                          ]
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "note": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "hostnames",
+                        "firstSeenAt",
+                        "lastSeenAt",
+                        "triage",
+                        "tags",
+                        "note"
+                      ]
+                    },
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "scans": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "up": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "availability": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "transitions": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "lastStatus": {
+                          "type": "string",
+                          "enum": [
+                            "up",
+                            "down",
+                            "timeout",
+                            "cancelled",
+                            "failed"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "scans",
+                        "up",
+                        "availability",
+                        "transitions",
+                        "lastStatus"
+                      ]
+                    },
+                    "timeline": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "scanId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "scannedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "down",
+                              "timeout",
+                              "cancelled",
+                              "failed"
+                            ]
+                          },
+                          "latencyMs": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "openPorts": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          },
+                          "opened": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          },
+                          "closed": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          },
+                          "changed": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "required": [
+                          "scanId",
+                          "scannedAt",
+                          "status",
+                          "latencyMs",
+                          "openPorts",
+                          "opened",
+                          "closed",
+                          "changed"
+                        ]
+                      }
+                    },
+                    "services": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "serviceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "port": {
+                            "type": "integer"
+                          },
+                          "protocol": {
+                            "type": "string",
+                            "enum": [
+                              "tcp"
+                            ]
+                          },
+                          "isOpen": {
+                            "type": "boolean"
+                          },
+                          "firstSeenAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "lastSeenAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "seenInScans": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "triage": {
+                            "type": "string",
+                            "enum": [
+                              "unreviewed",
+                              "reviewed",
+                              "important",
+                              "false_positive"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "note": {
+                            "type": "string"
+                          },
+                          "remediation": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "plannedOn": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              },
+                              "slaDueOn": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              },
+                              "riskAcceptedUntil": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date"
+                              }
+                            },
+                            "required": [
+                              "plannedOn",
+                              "slaDueOn",
+                              "riskAcceptedUntil"
+                            ]
+                          },
+                          "states": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "firstScanAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "lastScanAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "scans": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "snapshot": {
+                                  "type": "object",
+                                  "properties": {
+                                    "identity": {
+                                      "type": "object",
+                                      "properties": {
+                                        "name": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "product": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "version": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "name",
+                                        "product",
+                                        "version"
+                                      ]
+                                    },
+                                    "software": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "http": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "url": {
+                                            "type": "string"
+                                          },
+                                          "statusCode": {
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ]
+                                          },
+                                          "title": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "finalUrl": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "url",
+                                          "statusCode",
+                                          "title",
+                                          "finalUrl"
+                                        ]
+                                      }
+                                    },
+                                    "certSha256": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "certNotAfter": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "format": "date-time"
+                                    }
+                                  },
+                                  "required": [
+                                    "identity",
+                                    "software",
+                                    "http",
+                                    "certSha256",
+                                    "certNotAfter"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "firstScanAt",
+                                "lastScanAt",
+                                "scans",
+                                "snapshot"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "serviceId",
+                          "port",
+                          "protocol",
+                          "isOpen",
+                          "firstSeenAt",
+                          "lastSeenAt",
+                          "seenInScans",
+                          "triage",
+                          "tags",
+                          "note",
+                          "remediation",
+                          "states"
+                        ]
+                      }
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rule": {
+                            "type": "string",
+                            "enum": [
+                              "database-exposed",
+                              "debug-or-staging",
+                              "tls-expired",
+                              "admin-panel",
+                              "cleartext-protocol",
+                              "directory-listing",
+                              "tls-expiring",
+                              "tls-weak",
+                              "outdated-software",
+                              "remote-access",
+                              "tls-self-signed",
+                              "cookie-insecure",
+                              "cors-wildcard",
+                              "default-page",
+                              "missing-security-headers",
+                              "version-disclosure"
+                            ]
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "high",
+                              "medium",
+                              "low",
+                              "info"
+                            ]
+                          },
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "serviceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "port": {
+                            "type": "integer"
+                          },
+                          "evidence": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "rule",
+                          "severity",
+                          "hostId",
+                          "serviceId",
+                          "ip",
+                          "port",
+                          "evidence"
+                        ]
+                      }
+                    },
+                    "technologies": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "cms",
+                              "web-server",
+                              "language",
+                              "framework",
+                              "application",
+                              "device",
+                              "service"
+                            ]
+                          },
+                          "version": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "port": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "category",
+                          "version",
+                          "port"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "ip",
+                    "host",
+                    "stats",
+                    "timeline",
+                    "services",
+                    "findings",
+                    "technologies"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/stability": {
+      "get": {
+        "operationId": "getStabilityReport",
+        "summary": "Unstable and inactive hosts",
+        "description": "Requires `scans:read`. Hosts that come and go across the latest scans, ports that open and close, and hosts that should be reported as inactive.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "scanId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 30,
+              "default": 10
+            },
+            "required": false,
+            "name": "window",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30,
+              "default": 3
+            },
+            "required": false,
+            "name": "inactiveAfter",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "scans": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "queued",
+                              "running",
+                              "paused",
+                              "completed",
+                              "stopped",
+                              "failed"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "startedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "finishedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "createdAt",
+                          "startedAt",
+                          "finishedAt"
+                        ]
+                      }
+                    },
+                    "inactiveAfter": {
+                      "type": "integer"
+                    },
+                    "counts": {
+                      "type": "object",
+                      "properties": {
+                        "flapping": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "unresponsive": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "inactive": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "going-quiet": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "unstable-ports": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "returned": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "flapping",
+                        "unresponsive",
+                        "inactive",
+                        "going-quiet",
+                        "unstable-ports",
+                        "returned"
+                      ]
+                    },
+                    "hosts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "hostnames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "class": {
+                            "type": "string",
+                            "enum": [
+                              "flapping",
+                              "unresponsive",
+                              "inactive",
+                              "going-quiet",
+                              "unstable-ports",
+                              "returned"
+                            ]
+                          },
+                          "history": {
+                            "type": "array",
+                            "items": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "enum": [
+                                "up",
+                                "down",
+                                "timeout",
+                                "cancelled",
+                                "failed",
+                                null
+                              ]
+                            }
+                          },
+                          "up": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "transitions": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "sinceLastUp": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "unstablePorts": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          },
+                          "recheck": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "hostId",
+                          "ip",
+                          "hostnames",
+                          "class",
+                          "history",
+                          "up",
+                          "transitions",
+                          "sinceLastUp",
+                          "unstablePorts",
+                          "recheck"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "scans",
+                    "inactiveAfter",
+                    "counts",
+                    "hosts"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/time-of-day": {
+      "get": {
+        "operationId": "getTimeOfDayReport",
+        "summary": "Availability by time of day",
+        "description": "Requires `scans:read`. Hosts and ports that answer in some parts of the day only, across the latest scans.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 100,
+              "default": 30
+            },
+            "required": false,
+            "name": "scans",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": -840,
+              "maximum": 840,
+              "default": 0
+            },
+            "required": false,
+            "name": "utcOffsetMinutes",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "utcOffsetMinutes": {
+                      "type": "integer"
+                    },
+                    "periods": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "period": {
+                            "type": "string",
+                            "enum": [
+                              "night",
+                              "morning",
+                              "afternoon",
+                              "evening"
+                            ]
+                          },
+                          "scans": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "period",
+                          "scans"
+                        ]
+                      }
+                    },
+                    "comparable": {
+                      "type": "boolean"
+                    },
+                    "hosts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "hostnames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "periods": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "period": {
+                                  "type": "string",
+                                  "enum": [
+                                    "night",
+                                    "morning",
+                                    "afternoon",
+                                    "evening"
+                                  ]
+                                },
+                                "observed": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "up": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "ports": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "period",
+                                "observed",
+                                "up",
+                                "ports"
+                              ]
+                            }
+                          },
+                          "upIn": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "night",
+                                "morning",
+                                "afternoon",
+                                "evening"
+                              ]
+                            }
+                          },
+                          "downIn": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "night",
+                                "morning",
+                                "afternoon",
+                                "evening"
+                              ]
+                            }
+                          },
+                          "periodPorts": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "required": [
+                          "hostId",
+                          "ip",
+                          "hostnames",
+                          "periods",
+                          "upIn",
+                          "downIn",
+                          "periodPorts"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "utcOffsetMinutes",
+                    "periods",
+                    "comparable",
+                    "hosts"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {

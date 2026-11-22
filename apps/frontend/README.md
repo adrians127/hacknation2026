@@ -33,7 +33,7 @@ config/                  typed env variables (fail-fast)
 features/<name>/         api/, components/, hooks/, lib/, types/ (no barrel files)
 hooks/ lib/ stores/ types/   shared code
 lib/auth/                useMe, useCan/usePermissions, role and permission labels, safe redirects
-lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin,hosts,vulnerabilities}.json, parity test
+lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin,hosts,vulnerabilities,reports}.json, parity test
 ```
 
 Outside `src/`, `public/` is served as-is; `public/samples/targets.{csv,json}` are the sample files linked from the target import page.
@@ -153,6 +153,15 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 - A page with unsaved input the user built up (the target entry form) asks before leaving: `useLeaveGuard` in `features/targets/hooks/` (`useBlocker` + `beforeunload`).
 - Details that do not fit a row open in a `Sheet` (`components/ui/sheet.tsx`, a side panel on the Radix dialog). It was written by hand: `shadcn add sheet` also tried to add an unrelated npm package.
 - The app is dark-only (`class="dark"` in `index.html`); `brand` is the accent color (`text-brand`, `bg-brand/15`).
+
+## Reports
+
+`features/reports` renders the backend's `/reports/*` endpoints ([backend README](../backend/README.md#reports)) under `/app/reports` (`scans:read`). The hub (`/app/reports`) picks a scan, two scans or an IP address; the scan page links to its summary report and the host panel to the host's IP report.
+
+- **Routes:** `scans/:scanId/:kind` (`summary`, `findings`, `technologies`, `exposure`, `triage`, `tags`), `diff?from=&to=`, `ips/:ip`, `stability?window=&inactiveAfter=`, `time-of-day?scans=`. Options live in the URL, so a report can be shared and reloaded.
+- **`ReportShell`** (`components/report-parts.tsx`) gives every report its header, the generated-at line and three actions: **Print / PDF** (`window.print()`), **JSON** (the API response as is) and **CSV** (one flat table per report, built in the report's component).
+- **Print:** the `@media print` block in `index.css` switches the dark tokens to light ones; the sidebar, controls and buttons carry `print:hidden`. `ReportTable` shows the first rows on screen with a toggle, but every row on paper.
+- **CSV** (`lib/export.ts`): UTF-8 with a BOM for Excel, and cells starting with `=`, `+`, `-` or `@` are prefixed with `'` so a spreadsheet does not run them as formulas.
 
 ## Translations
 
