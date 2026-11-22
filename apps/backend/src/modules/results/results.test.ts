@@ -51,9 +51,14 @@ describe("resultsService.ingest", () => {
 
     expect(outcome).toMatchObject({ status: "ingested", hostsWritten: 4 });
     const stored = await prisma.scanJobResult.findUniqueOrThrow({
-      where: { leaseId: result.scan.leaseId },
+      where: { leaseId_taskIndex: { leaseId: result.scan.leaseId, taskIndex: 1 } },
     });
-    expect(stored).toMatchObject({ status: "partial", stopReason: "deadline", durationMs: 912000 });
+    expect(stored).toMatchObject({
+      status: "partial",
+      stopReason: "deadline",
+      durationMs: 912000,
+      taskCount: 1,
+    });
 
     const observations = await prisma.hostObservation.findMany({
       orderBy: { ipNumber: "asc" },
@@ -121,6 +126,25 @@ describe("resultsService.ingest", () => {
     expect(second).toEqual({ status: "duplicate", resultId: first.resultId });
     expect(await prisma.scanJobResult.count()).toBe(1);
     expect(await prisma.hostObservation.count()).toBe(4);
+  });
+
+  it("keeps every task of a split lease as its own result", async () => {
+    // Two masscan shards of one job: same lease, same addresses, one worker run each.
+    const result = await exampleResult();
+    const first = await resultsService.ingest(result, { taskIndex: 1, taskCount: 2 });
+    const second = await resultsService.ingest(result, { taskIndex: 2, taskCount: 2 });
+    const resent = await resultsService.ingest(result, { taskIndex: 2, taskCount: 2 });
+
+    expect(first.status).toBe("ingested");
+    expect(second.status).toBe("ingested");
+    expect(resent).toEqual({ status: "duplicate", resultId: second.resultId });
+    const stored = await prisma.scanJobResult.findMany({ orderBy: { taskIndex: "asc" } });
+    expect(stored.map((row) => [row.leaseId, row.taskIndex, row.taskCount])).toEqual([
+      [result.scan.leaseId, 1, 2],
+      [result.scan.leaseId, 2, 2],
+    ]);
+    expect(await prisma.hostObservation.count()).toBe(8);
+    expect(await prisma.host.count()).toBe(1);
   });
 
   it("preserves each worker run's observations, including inconclusive results", async () => {

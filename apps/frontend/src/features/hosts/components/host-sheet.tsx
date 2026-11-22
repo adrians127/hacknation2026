@@ -1,21 +1,33 @@
-import { Pencil } from "lucide-react";
+import { Columns2, Pencil } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Link, useNavigate } from "react-router";
 
-import type { ScanHostDetail, ScanServiceDetail } from "@subsurf/contracts/scans/scan-results.schema";
+import type {
+  HostHistoryEntry,
+  ScanHostDetail,
+  ScanServiceDetail,
+} from "@subsurf/contracts/scans/scan-results.schema";
 
 import { GuardedButton } from "@/components/guarded-button";
 import { IconAction } from "@/components/icon-action";
+import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScanHost } from "@/features/hosts/api/get-scan-host";
 import { ChangeBadge } from "@/features/hosts/components/change-badge";
+import { FieldChangeList } from "@/features/hosts/components/field-change-list";
 import { HostStatusBadge } from "@/features/hosts/components/host-status-badge";
+import { HostTimeline } from "@/features/hosts/components/host-timeline";
 import { HttpEndpointDetails } from "@/features/hosts/components/http-endpoint-details";
+import { LifecycleBadge } from "@/features/hosts/components/lifecycle-badge";
 import { RemediationDates } from "@/features/hosts/components/remediation-dates";
 import { ServiceIdentity } from "@/features/hosts/components/service-identity";
 import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageBadge } from "@/features/hosts/components/triage-badge";
+import { compareUrl } from "@/features/scans/lib/pair";
+import { ServiceVulnerabilities } from "@/features/vulnerabilities/components/service-vulnerabilities";
+import { VulnerabilitySummaryBadge } from "@/features/vulnerabilities/components/vulnerability-summary";
 import { useErrorMessage } from "@/hooks/use-error-message";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -31,9 +43,15 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function ServiceSection({
   service,
+  ip,
+  scanId,
+  history,
   onEdit,
 }: {
   service: ScanServiceDetail;
+  ip: string;
+  scanId: string;
+  history: readonly HostHistoryEntry[];
   onEdit: (service: ScanServiceDetail) => void;
 }) {
   const { t, i18n } = useTranslation("hosts");
@@ -48,6 +66,7 @@ function ServiceSection({
         <ServiceIdentity service={service} />
         <ChangeBadge change={service.change} />
         <TriageBadge status={service.triage} />
+        <VulnerabilitySummaryBadge summary={service.vulnerabilities} />
         <span className="ml-auto">
           <IconAction
             label={t("actions.editService", { name: String(service.port) })}
@@ -57,6 +76,13 @@ function ServiceSection({
           />
         </span>
       </header>
+
+      {service.fieldChanges.length > 0 && (
+        <div className="grid gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2">
+          <h5 className="text-xs font-medium text-amber-500">{t("fieldChange.title")}</h5>
+          <FieldChangeList changes={service.fieldChanges} ip={ip} port={service.port} />
+        </div>
+      )}
 
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
         <Field label={t("detail.firstSeen")}>{formatDateTime(service.firstSeenAt, locale)}</Field>
@@ -78,6 +104,8 @@ function ServiceSection({
           </Field>
         )}
       </dl>
+
+      <ServiceVulnerabilities service={service} scanId={scanId} history={history} />
 
       {(service.note || service.tags.length > 0) && (
         <div className="grid gap-1.5 rounded-lg bg-muted/40 p-2 text-sm">
@@ -114,17 +142,21 @@ function ServiceSection({
 
 function HostDetails({
   scanId,
+  baseScanId,
   host,
   onEditHost,
   onEditService,
 }: {
   scanId: string;
+  baseScanId: string | null;
   host: ScanHostDetail;
   onEditHost: (host: ScanHostDetail) => void;
   onEditService: (host: ScanHostDetail, service: ScanServiceDetail) => void;
 }) {
   const { t, i18n } = useTranslation("hosts");
+  const { t: tc } = useTranslation();
   const locale = i18n.resolvedLanguage;
+  const navigate = useNavigate();
 
   return (
     <>
@@ -136,18 +168,29 @@ function HostDetails({
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <HostStatusBadge status={host.status} />
           <ChangeBadge change={host.change} />
+          <LifecycleBadge lifecycle={host.lifecycle} />
           <TriageBadge status={host.triage} />
+          <VulnerabilitySummaryBadge summary={host.vulnerabilities} />
           <TagList tags={host.tags} />
-          <GuardedButton
-            size="sm"
-            variant="outline"
-            className="ml-auto"
-            permissions={["hosts:update"]}
-            onClick={() => onEditHost(host)}
-          >
-            <Pencil />
-            {t("actions.edit")}
-          </GuardedButton>
+          <span className="ml-auto flex gap-2">
+            {baseScanId && (
+              <Button asChild size="sm" variant="outline">
+                <Link to={compareUrl({ base: baseScanId, target: scanId, host: host.id })}>
+                  <Columns2 />
+                  {tc("scans.compare.openSideBySide")}
+                </Link>
+              </Button>
+            )}
+            <GuardedButton
+              size="sm"
+              variant="outline"
+              permissions={["hosts:update"]}
+              onClick={() => onEditHost(host)}
+            >
+              <Pencil />
+              {t("actions.edit")}
+            </GuardedButton>
+          </span>
         </div>
       </SheetHeader>
 
@@ -169,6 +212,23 @@ function HostDetails({
             {host.note || t("detail.noNote")}
           </p>
         </section>
+
+        {host.fieldChanges.length > 0 && (
+          <section className="grid gap-2">
+            <h4 className="text-sm font-medium">{t("fieldChange.title")}</h4>
+            <FieldChangeList changes={host.fieldChanges} ip={host.ip} />
+          </section>
+        )}
+
+        <HostTimeline
+          history={host.history}
+          baseScanId={baseScanId}
+          targetScanId={scanId}
+          // The compare page puts the older scan on the left whichever way round they come.
+          onPick={(entry) =>
+            void navigate(compareUrl({ base: entry.scanId, target: scanId, host: host.id }))
+          }
+        />
 
         <section className="grid gap-2">
           <h4 className="text-sm font-medium">{t("detail.history")}</h4>
@@ -209,6 +269,9 @@ function HostDetails({
               <ServiceSection
                 key={service.id}
                 service={service}
+                ip={host.ip}
+                scanId={scanId}
+                history={host.history}
                 onEdit={(selected) => onEditService(host, selected)}
               />
             ))
@@ -222,12 +285,15 @@ function HostDetails({
 /** One host as one scan saw it: decrypted HTTP details, TLS, banners, and its scan history. */
 export function HostSheet({
   scanId,
+  baseScanId,
   hostId,
   onClose,
   onEditHost,
   onEditService,
 }: {
   scanId: string;
+  /** The scan this one is compared with, for the side-by-side link. */
+  baseScanId: string | null;
   hostId: string;
   onClose: () => void;
   onEditHost: (host: ScanHostDetail) => void;
@@ -243,6 +309,7 @@ export function HostSheet({
         {host.isSuccess ? (
           <HostDetails
             scanId={scanId}
+            baseScanId={baseScanId}
             host={host.data}
             onEditHost={onEditHost}
             onEditService={onEditService}

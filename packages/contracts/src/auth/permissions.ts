@@ -7,9 +7,11 @@ export const PERMISSION_RESOURCES = [
   "targets",
   "scans",
   "hosts",
+  "vulnerabilities",
   "defectdojo",
 ] as const;
-// `run` starts, stops and schedules scans; `import`/`export` exchange data with an external system.
+// `run` starts, stops and schedules scans, and starts vulnerability database syncs;
+// `import`/`export` exchange data with an external system.
 export const PERMISSION_ACTIONS = [
   "read",
   "create",
@@ -44,6 +46,11 @@ export const PERMISSIONS = [
   "scans:read",
   "scans:run",
   "hosts:update",
+  "vulnerabilities:read",
+  "vulnerabilities:update",
+  "vulnerabilities:create",
+  "vulnerabilities:delete",
+  "vulnerabilities:run",
   "defectdojo:read",
   "defectdojo:import",
   "defectdojo:export",
@@ -65,6 +72,7 @@ export type SystemRoleKey = z.infer<typeof SystemRoleKeySchema>;
 const READ = [
   "targets:read",
   "scans:read",
+  "vulnerabilities:read",
   "defectdojo:read",
 ] as const satisfies readonly Permission[];
 
@@ -78,9 +86,13 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRoleKey, readonly Permission[
     "targets:delete",
     "scans:run",
     "hosts:update",
+    "vulnerabilities:update",
+    "vulnerabilities:create",
+    "vulnerabilities:delete",
+    "vulnerabilities:run",
     "defectdojo:import",
     "defectdojo:export",
   ],
-  analyst: [...READ, "targets:update", "hosts:update"],
+  analyst: [...READ, "targets:update", "hosts:update", "vulnerabilities:update"],
   viewer: READ,
 };

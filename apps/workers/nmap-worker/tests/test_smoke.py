@@ -1,6 +1,5 @@
 """Exercise the complete one-shot worker with a real Nmap process and a local service."""
 
-import datetime
 import errno
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -56,15 +55,15 @@ class SmokeTest(unittest.TestCase):
         self.addCleanup(server.shutdown)
 
         port = server.server_address[1]
-        deadline = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=90)
         job = {
             "job_id": "0193a1aa-6c1e-7b3f-9d2a-4e5f60718293",
             "lease_id": "smoke-lease",
             "scan_id": "0193a0f2-1b2c-7d3e-8f40-516273849506",
-            "subnet": "127.0.0.1/32",
-            "deadline": deadline.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "limits": {"max_parallel": 1, "host_timeout_ms": 60000},
-            "targets": [{"ip": "127.0.0.1", "tcp_ports": [port]}],
+            "targets": ["127.0.0.1"],
+            "ports": [port],
+            "max_duration_seconds": 90,
+            "max_parallel": 1,
+            "host_timeout_ms": 60000,
         }
         env = os.environ.copy()
         env["NMAP_SCAN_TYPE"] = "connect"

@@ -6,8 +6,10 @@
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
+#include <atomic>
 #include <charconv>
 #include <chrono>
+#include <csignal>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
@@ -22,6 +24,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <pthread.h>
 #include <unistd.h>
 
 namespace nmap_worker {
@@ -165,23 +168,84 @@ bool write_output(std::string_view path, const std::string& output) {
     return true;
 }
 
+// SIGINT/SIGTERM (Ctrl+C, docker stop, worker-manager) stop the scan instead of killing the
+// process, so a partial result is still written. Signals are blocked in every thread and
+// consumed here; SIGUSR1 ends the thread.
+class SignalStop {
+public:
+    explicit SignalStop(std::stop_source stop) : stop_{std::move(stop)} {
+        thread_ = std::jthread{[this] { run(); }};
+    }
+    SignalStop(const SignalStop&) = delete;
+    SignalStop& operator=(const SignalStop&) = delete;
+    ~SignalStop() noexcept { ::kill(::getpid(), SIGUSR1); }
+
+    // Before any other thread starts, so all of them inherit the mask.
+    static void block_signals() noexcept {
+        const sigset_t set = signal_set();
+        ::pthread_sigmask(SIG_BLOCK, &set, nullptr);
+    }
+
+private:
+    static sigset_t signal_set() noexcept {
+        sigset_t set{};
+        sigemptyset(&set);
+        sigaddset(&set, SIGINT);
+        sigaddset(&set, SIGTERM);
+        sigaddset(&set, SIGUSR1);
+        return set;
+    }
+
+    void run() noexcept {
+        const sigset_t set = signal_set();
+        while (true) {
+            int signal = 0;
+            if (::sigwait(&set, &signal) != 0) continue;
+            if (signal == SIGUSR1) return;
+            if (!stop_.stop_requested()) {
+                std::println(stderr, "nmap-worker: signal {} received, stopping; unfinished "
+                                     "hosts are reported as cancelled", signal);
+                stop_.request_stop();
+            }
+        }
+    }
+
+    std::stop_source stop_;
+    std::jthread thread_;  // last: joined before stop_ is destroyed
+};
+
 int run_file_mode(const CliOptions& options, const WorkerConfig& config) {
     const auto input = read_job_file(options.input);
     if (!input) {
-        const auto output = serialize_failed_job("", input.error(), config.maximum_limits);
+        const auto output = serialize_failed_job("", input.error(), options.pretty);
         if (!write_output(options.output, output)) return EXIT_FAILURE;
         return 2;
     }
     const auto job = parse_scan_job(*input, config.maximum_limits);
     if (!job) {
-        std::string output = serialize_failed_job(*input, job.error(), config.maximum_limits);
-        if (options.pretty) output = nlohmann::json::parse(output).dump(2);
+        const std::string output = serialize_failed_job(*input, job.error(), options.pretty);
         if (!write_output(options.output, output)) return EXIT_FAILURE;
         return 2;
     }
-    const auto result = scan_job(*job, config.process, std::stop_token{});
-    std::string output = serialize_job_result(result);
-    if (options.pretty) output = nlohmann::json::parse(output).dump(2);
+    std::println(stderr, "nmap-worker: job {} accepted: {} hosts, max_parallel={} rate={}",
+                 job->job_id, job->targets.size(), job->limits.max_parallel,
+                 job->rate ? std::to_string(*job->rate) : std::string{"none"});
+    SignalStop::block_signals();
+    JobResult result;
+    {
+        std::stop_source stop;
+        const SignalStop signals{stop};
+        result = scan_job(*job, config.process, stop.get_token(), "stop-requested");
+    }
+    std::size_t up = 0;
+    std::size_t open_ports = 0;
+    for (const auto& host : result.hosts) {
+        up += host.status == "up" ? 1 : 0;
+        open_ports += host.ports.size();
+    }
+    std::println(stderr, "nmap-worker: job {} {}: hosts_up={} open_ports={} duration_ms={}",
+                 result.job_id, result.status, up, open_ports, result.duration.count());
+    const std::string output = serialize_job_result(result, options.pretty);
     if (!write_output(options.output, output)) return EXIT_FAILURE;
     return result.status == "failed" ? EXIT_FAILURE : EXIT_SUCCESS;
 }
@@ -235,7 +299,7 @@ void run_http_mode(const WorkerConfig& config) {
                 scan_stop.request_stop();
             }
         });
-        const auto result = scan_job(*job, config.process, scan_stop.get_token());
+        const auto result = scan_job(*job, config.process, scan_stop.get_token(), "lease-lost");
         const std::string body = serialize_job_result(result);
         bool is_sent = false;
         for (int attempt = 0; attempt < 3 && !is_sent; ++attempt) {

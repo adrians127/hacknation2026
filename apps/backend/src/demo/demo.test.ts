@@ -11,6 +11,7 @@ import { DEMO_NETWORK, DEMO_SCAN_PORTS, demoDomainHosts, demoNetwork } from "~ba
 import { buildDemoRun, DEMO_RUNS, type DemoJob } from "~backend/demo/runs";
 import { portsOutsideSpec } from "~backend/modules/results/job-scope";
 import { planScanJobs } from "~backend/modules/scans/batching";
+import { hostLifecycle } from "~backend/modules/scans/host-lifecycle";
 
 const jobs: DemoJob[] = planScanJobs([cidrToRange(parseCidr(DEMO_NETWORK))], demoDomainHosts(), 256).map(
   (job, index) => ({
@@ -20,7 +21,8 @@ const jobs: DemoJob[] = planScanJobs([cidrToRange(parseCidr(DEMO_NETWORK))], dem
     targets: job.targets,
   }),
 );
-const [first, second] = DEMO_RUNS.map((run) => buildDemoRun(run, jobs));
+const runs = DEMO_RUNS.map((run) => buildDemoRun(run, jobs));
+const [first, second, , fourth] = runs;
 const results = (run: typeof first) => run.map((entry) => entry.result);
 const hostsOf = (run: typeof first) => results(run).flatMap((result) => result.hosts);
 
@@ -35,7 +37,8 @@ function portKey(host: ObservedHost) {
 describe("demo scan data", () => {
   it("covers a /18 in 64 jobs of 256 addresses, every address exactly once per run", () => {
     expect(jobs).toHaveLength(64);
-    for (const run of [first, second]) {
+    expect(runs).toHaveLength(4);
+    for (const run of runs) {
       const ips = hostsOf(run).map((host) => host.ip);
       expect(ips).toHaveLength(16_384);
       expect(new Set(ips).size).toBe(16_384);
@@ -43,7 +46,7 @@ describe("demo scan data", () => {
   });
 
   it("produces results in the locked worker format, with consistent counts and ports", () => {
-    for (const result of [...results(first), ...results(second)]) {
+    for (const result of runs.flatMap(results)) {
       const parsed: WorkerResult = WorkerResultSchema.parse(result);
       const { counts } = parsed.scan;
       const count = (status: ObservedHost["status"]) =>
@@ -105,5 +108,21 @@ describe("demo scan data", () => {
     expect(deadline).toHaveLength(1);
     expect(deadline[0].result.scan).toMatchObject({ status: "partial", stopReason: "deadline" });
     expect(deadline[0].result.scan.counts.cancelled).toBe(128);
+  });
+
+  it("has unstable and inactive hosts by the fourth run, and one new admin panel", () => {
+    const statuses = new Map<string, ObservedHost["status"][]>();
+    for (const run of runs.toReversed()) {
+      for (const host of hostsOf(run)) statuses.set(host.ip, [...(statuses.get(host.ip) ?? []), host.status]);
+    }
+    const lifecycleOf = (ip: string) => hostLifecycle(statuses.get(ip) ?? []).state;
+    const states = [...statuses.keys()].map(lifecycleOf);
+
+    expect(states.filter((state) => state === "inactive").length).toBeGreaterThanOrEqual(6);
+    expect(states.filter((state) => state === "unstable").length).toBeGreaterThanOrEqual(4);
+    expect(lifecycleOf("10.40.1.21")).toBe("inactive");
+    expect(lifecycleOf("10.40.4.15")).toBe("unstable");
+    expect(upHosts(fourth).has("10.40.4.17")).toBe(true);
+    expect(fourth.some((entry) => entry.hitDeadline)).toBe(false);
   });
 });

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { WorkerResultSchema } from "./worker-result.schema";
+
 const TcpPortSchema = z.number().int().min(1).max(65535);
 
 export const NmapTargetSchema = z.object({
@@ -41,3 +43,30 @@ export const NmapHeartbeatSchema = z.object({
 });
 
 export type NmapJob = z.infer<typeof NmapJobSchema>;
+
+/** worker-manager splits a job into at most this many tasks (WORKER_MANAGER_MAX_TASKS_PER_JOB). */
+const MAX_TASKS_PER_JOB = 1024;
+
+/**
+ * One worker run's result. worker-manager may split a leased job into tasks: each task is one
+ * worker run and is uploaded on its own, so one lease can have several results.
+ */
+export const ManagerResultUploadSchema = z
+  .object({
+    task_index: z.number().int().min(1).max(MAX_TASKS_PER_JOB),
+    task_count: z.number().int().min(1).max(MAX_TASKS_PER_JOB),
+    result: WorkerResultSchema,
+  })
+  .refine((upload) => upload.task_index <= upload.task_count, {
+    message: "task_index must not exceed task_count",
+    path: ["task_index"],
+  });
+
+export const ManagerResultUploadResponseSchema = z.object({
+  /** `duplicate`: this lease and task were stored before; nothing was written. */
+  status: z.enum(["ingested", "duplicate"]),
+  resultId: z.uuid(),
+});
+
+export type ManagerResultUpload = z.infer<typeof ManagerResultUploadSchema>;
+export type ManagerResultUploadResponse = z.infer<typeof ManagerResultUploadResponseSchema>;

@@ -14,7 +14,7 @@
       "new": "Nowe",
       "gone": "Zniknięte",
       "changed": "Zmienione",
-      "unknown": "Bez odpowiedzi"
+      "unknown": "Nieustalone"
     }
   },
   "change": {
@@ -22,7 +22,7 @@
     "gone": "Zniknął",
     "changed": "Zmieniony",
     "unchanged": "Bez zmian",
-    "unknown": "Brak odpowiedzi"
+    "unknown": "Nieustalony"
   },
   "triage": {
     "unreviewed": "Nieprzejrzany",
@@ -142,9 +142,131 @@
     "submit": "Zapisz",
     "submitting": "Zapisywanie…"
   },
+  "bulkTag": {
+    "open": "Otaguj hosty",
+    "title": "Tag dla grupy hostów",
+    "description": "Zmienia hosty z listy tego skanu, których adres mieści się w podanych zakresach. Tag zostaje na hostach, więc widać go w każdym skanie.",
+    "action": {
+      "label": "Akcja",
+      "add": "Dodaj tag",
+      "remove": "Usuń tag"
+    },
+    "selectors": "Adresy i CIDR-y",
+    "selectorsPlaceholder": "10.0.5.0/24, 10.0.6.7",
+    "selectorsHint": "Tylko IPv4. Oddzielaj przecinkami, spacjami lub nowymi liniami.",
+    "selectorsRequired": "Wpisz co najmniej jeden adres lub CIDR",
+    "selectorsInvalid": "To nie jest adres IPv4 ani CIDR: {{list}}",
+    "selectorsTooMany": "Najwyżej {{max}} adresów i CIDR-ów naraz",
+    "tag": "Tag",
+    "tagPlaceholder": "np. dmz",
+    "tagInvalid": "Tag musi mieć od 1 do 50 znaków",
+    "noMatch": "Żaden host tego skanu nie mieści się w tych adresach. Nic nie zmieniono.",
+    "submit": {
+      "add": "Dodaj tag",
+      "remove": "Usuń tag"
+    },
+    "toast": {
+      "add_one": "Dodano tag „{{tag}}” do {{count}} hosta",
+      "add_few": "Dodano tag „{{tag}}” do {{count}} hostów",
+      "add_many": "Dodano tag „{{tag}}” do {{count}} hostów",
+      "add_other": "Dodano tag „{{tag}}” do {{count}} hosta",
+      "remove_one": "Usunięto tag „{{tag}}” z {{count}} hosta",
+      "remove_few": "Usunięto tag „{{tag}}” z {{count}} hostów",
+      "remove_many": "Usunięto tag „{{tag}}” z {{count}} hostów",
+      "remove_other": "Usunięto tag „{{tag}}” z {{count}} hosta",
+      "unchanged": {
+        "add_one": "{{count}} host już go miał",
+        "add_few": "{{count}} hosty już go miały",
+        "add_many": "{{count}} hostów już go miało",
+        "add_other": "{{count}} hosta już go miało",
+        "remove_one": "{{count}} host go nie miał",
+        "remove_few": "{{count}} hosty go nie miały",
+        "remove_many": "{{count}} hostów go nie miało",
+        "remove_other": "{{count}} hosta go nie miało"
+      },
+      "limitReached_one": "Pominięto {{count}} host: ma już {{max}} tagów",
+      "limitReached_few": "Pominięto {{count}} hosty: mają już {{max}} tagów",
+      "limitReached_many": "Pominięto {{count}} hostów: mają już {{max}} tagów",
+      "limitReached_other": "Pominięto {{count}} hosta: mają już {{max}} tagów"
+    }
+  },
   "toast": {
     "hostSaved": "Zapisano hosta",
     "serviceSaved": "Zapisano usługę",
     "triageSaved": "Zapisano status triage"
+  },
+  "lifecycle": {
+    "label": "Cykl życia",
+    "active": "Obecny",
+    "unstable": "Niestabilny",
+    "missing": "Brak {{misses}}/{{max}}",
+    "inactive": "Nieobecny",
+    "hint": {
+      "active": "Odpowiadał w ostatnich skanach, które go objęły.",
+      "unstable": "W ostatnich skanach {{flips}} razy na przemian odpowiadał i nie odpowiadał.",
+      "missing": "Brak odpowiedzi w ostatnich skanach: {{misses}}; nieobecny po {{max}}.",
+      "inactive": "Brak odpowiedzi w ostatnich skanach: {{misses}}. Uznajemy go za nieobecny."
+    }
+  },
+  "timeline": {
+    "title": "Obecność w czasie",
+    "hint": "Każda kropka to skan, najstarszy po lewej. Wybierz kropkę, aby porównać z tym skanem.",
+    "dot": "{{date}}: {{status}}, otwarte porty: {{ports}}",
+    "base": "A",
+    "target": "B"
+  },
+  "fieldChange": {
+    "title": "Co się zmieniło",
+    "hostTitle": "Host",
+    "none": "Nic z porównywanych pól się nie zmieniło.",
+    "yes": "tak",
+    "no": "nie",
+    "fields": {
+      "service": {
+        "name": "Usługa",
+        "product": "Produkt",
+        "version": "Wersja",
+        "extraInfo": "Szczegóły",
+        "cpe": "CPE"
+      },
+      "ssh": {
+        "hostKey": "Klucz hosta SSH"
+      },
+      "http": {
+        "endpoint": "Endpoint HTTP",
+        "status": "Kod odpowiedzi",
+        "title": "Tytuł strony",
+        "redirect": "Cel przekierowania",
+        "header": "Nagłówek",
+        "securityHeader": "Nagłówek bezpieczeństwa",
+        "cookie": "Ciasteczko",
+        "cookieFlags": "Flagi ciasteczka",
+        "favicon": "Favicona (mmh3)",
+        "probe": "Sprawdzana ścieżka"
+      },
+      "tls": {
+        "cert": "Certyfikat",
+        "issuer": "Wystawca certyfikatu",
+        "expiry": "Certyfikat ważny do",
+        "selfSigned": "Certyfikat self-signed",
+        "version": "Wersja TLS"
+      },
+      "host": {
+        "hostname": "Nazwa hosta"
+      }
+    }
+  },
+  "compare": {
+    "notScanned": "Poza skanem",
+    "notOpen": "zamknięty",
+    "openInScan": "Otwórz w widoku skanu",
+    "services": "Porty obok siebie",
+    "endpointAdded": "nowy endpoint",
+    "endpointRemoved": "endpoint zniknął",
+    "securityHeaders": "Nagłówki bezpieczeństwa",
+    "techHeaders": "Nagłówki technologii",
+    "cookies": "Ciasteczka",
+    "probes": "Sprawdzane ścieżki",
+    "tls": "TLS"
   }
 }

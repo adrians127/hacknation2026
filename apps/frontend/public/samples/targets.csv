@@ -3,5 +3,6 @@ target,note
 198.51.100.10,Web server
 198.51.100.11,"Mail server; relay"
 203.0.113.0/28,DMZ
+198.51.100.20-198.51.100.40,Lab (an IP range is saved as CIDR blocks)
 portal.campus.example,Student portal
 https://intranet.campus.example/login,Intranet (the URL is reduced to its host name)

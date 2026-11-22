@@ -33,7 +33,7 @@ config/                  typed env variables (fail-fast)
 features/<name>/         api/, components/, hooks/, lib/, types/ (no barrel files)
 hooks/ lib/ stores/ types/   shared code
 lib/auth/                useMe, useCan/usePermissions, role and permission labels, safe redirects
-lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin}.json, parity test
+lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin,hosts,vulnerabilities}.json, parity test
 ```
 
 Outside `src/`, `public/` is served as-is; `public/samples/targets.{csv,json}` are the sample files linked from the target import page.
@@ -137,6 +137,7 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 - **Labels:** system roles are translated by key and custom roles show their stored name (`useRoleLabels`); permissions read as "Resource: Action" (`usePermissionLabel`, keys in `auth.json`). A new permission needs `permissions.resources.<resource>` (and a new action) in both languages.
 - **Errors:** `useErrorMessage()` turns anything a query or mutation threw into a translated message, by the API's `error.code` (`common.json`, `errors.*`) or by status.
 - **Admin panel:** `features/users` and `features/roles` (the permission matrix in `features/roles/lib/permission-matrix.ts` is built from the contracts catalog). The admin routes compose them, e.g. the user form gets the role list from `features/roles`.
+- **Vulnerabilities:** `features/vulnerabilities` holds the badges and the per-service list that `features/hosts` shows (the data comes with the scan's host responses, under `scans:read`), and the panels of the Vulnerability databases page (`app/routes/admin/vulnerabilities.tsx`: sources, sync history, CPE → package mappings). The sources query polls while a sync runs or waits for the sync process.
 
 ## Pages and tables
 
@@ -145,6 +146,10 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
   - `renderExpanded(row)` adds a full-width row under a row (return `null` while it is collapsed); the scan's host table uses it for each host's services.
   - Lists the server pages (`page`, `pageSize`, `total` in the response) put `DataTablePagination` under the table and disable column sorting (`enableSorting: false`), since sorting one page would mislead.
   - Filters, the page number and an open side panel live in the URL (`useSearchParams`), so a filtered view can be reloaded and shared (see `app/routes/scan-detail.tsx`).
+- **Comparing scans** (`app/routes/scan-compare.tsx`, `/app/scans/compare?base=&target=`): scan A is always the older one (`orderPair` in `features/scans/lib/pair.ts` puts a pair given the wrong way round in order, so links can pass either order); without parameters B is the newest scan with results and A its base scan. Hosts come from `GET /scans/{target}/hosts?base=` and the side-by-side panel from `GET /scans/{target}/hosts/{id}?base=`, with each port's `before` and `fieldChanges`. Entry points: the scan list's checkboxes, "Compare side by side" on a scan and on its host panel, and the host timeline (`HostTimeline`), whose dots switch the compared scan.
+- **Dashboard** (`features/dashboard`, `GET /dashboard`): stat tiles for the newest scan (hosts up and open ports with the change since the previous scan and a per-scan trend from `GET /scans`; new and gone hosts and service changes link into the comparison) and the most important changes, each opening in the comparison. The trend line is a native range input over an SVG, so the pointer and the arrow keys both step through the scans.
+- A list whose rows hold inputs (the target entry form's list) uses the `Table` primitives with keys from the data instead of `DataTable`: `DataTable` rebuilds when `data` changes, which would remount an input while someone types in it.
+- A page with unsaved input the user built up (the target entry form) asks before leaving: `useLeaveGuard` in `features/targets/hooks/` (`useBlocker` + `beforeunload`).
 - Details that do not fit a row open in a `Sheet` (`components/ui/sheet.tsx`, a side panel on the Radix dialog). It was written by hand: `shadcn add sheet` also tried to add an unrelated npm package.
 - The app is dark-only (`class="dark"` in `index.html`); `brand` is the accent color (`text-brand`, `bg-brand/15`).
 

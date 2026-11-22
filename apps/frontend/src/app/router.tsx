@@ -4,6 +4,7 @@ import { guestLoader, requireAuthLoader } from "@/app/loaders";
 import { RoleDetailRoute } from "@/app/routes/admin/role-detail";
 import { RolesRoute } from "@/app/routes/admin/roles";
 import { UsersRoute } from "@/app/routes/admin/users";
+import { VulnerabilitiesRoute } from "@/app/routes/admin/vulnerabilities";
 import { AppLayout } from "@/app/routes/app-layout";
 import { ChangePasswordRoute } from "@/app/routes/change-password";
 import { DashboardRoute } from "@/app/routes/dashboard";
@@ -13,6 +14,7 @@ import { NotFoundRoute } from "@/app/routes/not-found";
 import { RequirePermission } from "@/app/routes/require-permission";
 import { RootLayout } from "@/app/routes/root-layout";
 import { RouteError } from "@/app/routes/route-error";
+import { ScanCompareRoute } from "@/app/routes/scan-compare";
 import { ScanDetailRoute } from "@/app/routes/scan-detail";
 import { ScansRoute } from "@/app/routes/scans";
 import { StatusRoute } from "@/app/routes/status";
@@ -60,6 +62,7 @@ export const router = createBrowserRouter([
             element: <RequirePermission permission="scans:read" />,
             children: [
               { index: true, Component: ScansRoute },
+              { path: "compare", Component: ScanCompareRoute },
               { path: ":scanId", Component: ScanDetailRoute },
             ],
           },
@@ -75,6 +78,11 @@ export const router = createBrowserRouter([
               { index: true, Component: RolesRoute },
               { path: ":roleId", Component: RoleDetailRoute },
             ],
+          },
+          {
+            path: "admin/vulnerabilities",
+            element: <RequirePermission permission="vulnerabilities:read" />,
+            children: [{ index: true, Component: VulnerabilitiesRoute }],
           },
           { path: "*", Component: NotFoundRoute },
         ],

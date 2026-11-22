@@ -24,8 +24,13 @@ pnpm --filter @subsurf/backend test         # vitest, integration tests: needs `
 pnpm --filter @subsurf/backend db:migrate   # prisma migrate dev (new migration)
 pnpm --filter @subsurf/backend db:studio    # Prisma Studio
 pnpm --filter @subsurf/backend db:seed      # system roles, admin, demo accounts (idempotent)
-pnpm --filter @subsurf/backend db:seed:hosts  # demo scan data: two scans of a /18 (see "Demo data")
+pnpm --filter @subsurf/backend db:seed:hosts  # demo scan data: four scans of a /18 (see "Demo data")
+pnpm --filter @subsurf/backend db:refingerprint  # recompute stored port fingerprints after comparable.ts changes
 pnpm db:reset                                  # from the repo root: drop + all migrations + seed
+pnpm vulns:sync                                # from the repo root: the vulnerability sync process (see "Vulnerabilities")
+pnpm vulns:sync --once [--source nvd|osv] [--full] [--rematch]   # one pass, then exit
+pnpm vulns:mirror <dir>                        # download the sources' files for an offline lab
+pnpm vulns:import --source <id> <file>         # import a file in the source's own format
 ```
 
 Swagger UI is at `http://localhost:3001/docs` (only when `NODE_ENV=development`) and serves the committed `openapi.json` from the contract.
@@ -35,19 +40,24 @@ Swagger UI is at `http://localhost:3001/docs` (only when `NODE_ENV=development`)
 ```
 app.ts                 buildApp(): middleware -> /v1 -> notFound -> errorHandler
 index.ts               listen, DB connection check, graceful shutdown
+vuln-sync.ts           the vulnerability sync process and its CLI (`pnpm vulns:*`), separate from the API
 config/                env.ts (zod + process.loadEnvFile), database-url.ts (DB_* -> URL)
 lib/                   prisma, logger, http-error, api-docs, password, tokens, auth-cookies, auth-context, chunks,
                        crypto (field encryption at rest)
 middleware/            validate, authenticate (requireAuth/requireSession), authorize (requirePermission),
-                       trusted-origin (CSRF), error-handler, not-found
+                       worker-token (requireWorkerToken), trusted-origin (CSRF), error-handler, not-found
 routes/index.ts        apiRouter: one apiRouter.use("/x", ...) line per module
 modules/<feature>/     <feature>.routes.ts | .controller.ts | .service.ts | .test.ts
 modules/auth|users|roles   sign-in and sessions, user accounts, roles (+ system-roles sync, first-admin bootstrap)
 modules/targets        target inventory: POST /targets/import (manual, CSV and JSON all arrive as one JSON body)
 modules/scans          GET /scans… (scan results, hosts per scan, changes: scan-results.*, scan-diff.ts);
                        queues a Scan and its ScanJob batches (scans.service.ts, dns.ts, batching.ts)
-modules/results        no routes yet: ingests worker results into observations (details.ts, fingerprint.ts, job-scope.ts)
-modules/hosts          PATCH /hosts…: edits of the Host and Service assets; ingest's helpers for those assets
+modules/results        ingests worker results into observations (details.ts, fingerprint.ts, job-scope.ts)
+modules/workers        /workers…: machine endpoints for the scan workers (WORKER_TOKEN): POST /workers/manager/results
+modules/hosts          PATCH /hosts…: edits of the Host and Service assets (bulk tags too, routed under /scans);
+                       ingest's helpers for those assets
+modules/vulnerabilities  /vulnerabilities…: sources (NVD, OSV) mirrored into the database, matching services
+                       against them, triage; see "Vulnerabilities"
 modules/defectdojo     GET|POST /defectdojo/sync: pulls DefectDojo tags, owners, triage and remediation dates
                        into hosts and services; POST /defectdojo/push: a scan (or a selection) as Info
                        findings (client, import rules, report builder, sync and push runs)
@@ -60,7 +70,7 @@ generated/prisma       Prisma Client (gitignored, generated in postinstall)
 
 **New module:** schemas in `packages/contracts/src/<feature>/` (+ `pnpm generate`), then `src/modules/<feature>/` and one line in `routes/index.ts`. A route declares its contract with `validate({ params, query, body })`, and when a request does not match, the `ZodError` is turned into a 400 automatically. Protected routes start with `requireAuth` and `requirePermission(...)` (see [Auth and RBAC](#auth-and-rbac)).
 
-Request bodies: `app.ts` parses JSON with a 1 MB limit, except for the paths in `OWN_BODY_PARSER_PATHS`, which parse their own larger body in the route, after `requireAuth`/`requirePermission` (`POST /targets/import`: 10 MB, up to 100k entries).
+Request bodies: `app.ts` parses JSON with a 1 MB limit, except for the paths in `OWN_BODY_PARSER_PATHS`, which parse their own larger body in the route, after authentication (`POST /targets/import`: 10 MB, up to 100k entries; `POST /workers/manager/results`: 64 MB, gzip accepted).
 
 Controllers are objects of arrow functions (oxlint's `unbound-method` rejects methods passed to the router). Errors carry an optional machine-readable `code` (`HttpError.forbidden(message, "LAST_ADMIN")`), sent as `error.code` and translated by the frontend; the codes are listed in `contracts/src/common/common.schema.ts`.
 
@@ -83,7 +93,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Permissions and roles
 
-- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|run`, `hosts:update` and `defectdojo:read|import|export`. `scans:read` guards the scan results (hosts included), `hosts:update` the edits of hosts and services; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
+- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|run`, `hosts:update`, `vulnerabilities:*` and `defectdojo:read|import|export`. `scans:read` guards the scan results (hosts and their vulnerabilities included), `hosts:update` the edits of hosts and services; `vulnerabilities:read` the databases' state and the mappings, `:update` the triage of a service's vulnerabilities, `:run` syncing and enabling sources, `:create`/`:delete` the mappings; `defectdojo:read` the sync and push history, `:import` pulling from DefectDojo, `:export` pushing to it; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
 - A route checks permissions with `requirePermission("users:read")` after `requireAuth`. Services that act on other accounts or roles also call `assertHoldsAll` (below).
 - **System roles** (`admin`, `editor`, `analyst`, `viewer`) are read-only. `syncSystemRoles()` (`modules/roles/system-roles.ts`) runs at startup and in the seed: it gives them exactly `SYSTEM_ROLE_PERMISSIONS` and drops permissions that no longer exist from custom roles.
 - **Custom roles** are rows with a `permissions` array. Deleting a role that users still have needs `reassignToRoleId` (and `users:update`); the users move and the role is deleted in one transaction.
@@ -128,23 +138,25 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `s
 - `prisma.config.ts`: schema path, migrations, seed and the URL built from `DB_*`. A placeholder URL lets `prisma generate` run on a fresh clone without a database.
 - `prisma/schema/schema.prisma`: only the generator and the datasource. Models live in `prisma/schema/<module>/<model>.prisma` (one file per model, in a folder named after the module in `src/modules/` that owns the table).
 - Every relation field needs an `@@index`, because Prisma does not create indexes on foreign keys in Postgres.
-- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF). `src/lib/crypto.ts` does it at the field level: AES-256-GCM with `DATA_ENCRYPTION_KEY`, a value becomes `{ "$enc": "v1.<base64(iv | tag | ciphertext)>" }`, and `decryptJson` returns `unknown`, so readers validate with zod. Scan results use it (see [Scan results](#scan-results)). The auth tables hold only hashes (passwords, refresh secrets), emails and display names. `Host.note` and `Service.note` (free text from analysts) are encrypted with `encryptText`. Still to cover: `Target.value` and `note`, `ScanJob.targets` and `hosts` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
+- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF). `src/lib/crypto.ts` does it at the field level: AES-256-GCM with `DATA_ENCRYPTION_KEY`, a value becomes `{ "$enc": "v1.<base64(iv | tag | ciphertext)>" }`, and `decryptJson` returns `unknown`, so readers validate with zod. Scan results use it (see [Scan results](#scan-results)). The auth tables hold only hashes (passwords, refresh secrets), emails and display names. `Host.note`, `Service.note` and `ServiceVulnerabilityTriage.note` (free text from analysts) are encrypted with `encryptText`. The vulnerability databases are public and stay plaintext; `VulnerabilityMatch` rows only restate what the plaintext service columns (`serviceCpe`, `serviceVersion`) already show, and must stay queryable for the vulnerability filter. Still to cover: `Target.value` and `note`, `ScanJob.targets` and `hosts` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
 
 ## Targets and scan jobs
 
-`POST /targets/import` takes entries from the import form (manual, CSV or JSON, parsed in the browser by the shared parser in `@subsurf/contracts/targets/target-input`) and runs the same parser again: `validate()` rejects what it rejects, the service normalizes and deduplicates.
+`POST /targets/import` takes entries from the import page (the entry form, text, CSV or JSON, parsed in the browser by the shared parser in `@subsurf/contracts/targets/target-input`) and runs the same parser again: `validate()` rejects what it rejects, the service normalizes and deduplicates. An IP range (`10.0.0.1-10.0.0.200`) arrives as one entry and is stored as the CIDR blocks that cover it, each with the range's note.
 
-1. New values go into `Target` (`createMany` with `skipDuplicates`); values already in the inventory are counted as `skipped` and left unchanged.
+1. New values go into `Target` (`createMany` with `skipDuplicates`) with the import's optional `tags`; values already in the inventory are counted as `skipped` and left unchanged (note and tags included).
 2. With `startScan` (also requires `scans:run`): domains are resolved to A records **before** the transaction (`modules/scans/dns.ts`: 50 lookups at a time, 2 s timeout, 2 tries). Failures and reserved addresses become `warnings`; the import still succeeds.
 3. In one transaction: a `Scan` with `SCAN_DEFAULT_PORTS`, `SCAN_DEFAULT_MAX_RATE` and `SCAN_BATCH_SIZE` snapshotted, a `ScanTarget` row per entry and the `ScanJob` batches from `planScanJobs` (`modules/scans/batching.ts`): addresses merged, split in address order into batches of at most `SCAN_BATCH_SIZE`, never across two /16 blocks. Each job has a `subnet` (the smallest aligned CIDR around it), its `targets` (CIDRs/IPs) and `hosts` (resolved domain → IP pairs).
 
-Jobs start as `queued` with `kind = discovery`. Leasing them (`/workers/*`, machine token) is the workers team's part; see [`apps/workers/README.md`](../workers/README.md#scan-jobs-in-the-database).
+Jobs start as `queued` with `kind = discovery`. Leasing them (`/workers/*`, machine token) is not implemented yet; see [`apps/workers/README.md`](../workers/README.md#scan-jobs-in-the-database).
 
 ## Scan results
 
 The result a worker sends for a job is fixed in [`docs/worker-result-format.md`](../../docs/worker-result-format.md) (locked). It is the backend's single input for scan data. Results storage, diffs between scans, the dashboard, signatures, export/import and DefectDojo all build on it. That document also lists what the backend derives itself: target membership, detections, coverage, new/gone/changed and host lifecycle.
 
-`resultsService.ingest(result)` (`modules/results/`) takes a result already validated with `WorkerResultSchema` and writes it in one transaction. No route calls it yet: `POST /workers/nmap/results` comes with the lease endpoints and the worker token.
+`resultsService.ingest(result, { taskIndex, taskCount })` (`modules/results/`) takes a result already validated with `WorkerResultSchema` and writes it in one transaction.
+
+`POST /workers/manager/results` (`modules/workers/`) calls it. worker-manager uploads one worker run's result per request, `{ task_index, task_count, result }`, with `Authorization: Bearer <WORKER_TOKEN>` (`middleware/worker-token.ts`: no user session, compared in constant time; without `WORKER_TOKEN` the endpoint answers 503). A leased job that the manager split into tasks comes back as several results under one `leaseId`, told apart by `task_index`; the results of a scan are tied together by `scanId`. The reply is `{ status: "ingested" | "duplicate", resultId }`. The lease and heartbeat endpoints do not exist yet, so the job must already exist as a `ScanJob` (created by the import).
 
 **Two layers of tables:**
 
@@ -162,11 +174,11 @@ The result a worker sends for a job is fixed in [`docs/worker-result-format.md`]
 - The rest stays plaintext under a GIN index (`jsonb_path_ops`), for containment queries such as `details @> '{"http":[{"favicon":{"mmh3":…}}]}'`. Queries on encrypted fields (expired certificates, cookie flags) are meant to go through detections computed at ingest.
 
 **Rules ingest applies:**
-- **Idempotency:** `ScanJobResult.leaseId` is unique. A result resent under the same lease is a no-op that returns the stored id.
+- **Idempotency:** `(leaseId, taskIndex)` is unique on `ScanJobResult`. A result resent under the same lease and task is a no-op that returns the stored id; another task of the same lease is a new result.
 - **Scope:** the job must exist and belong to `scan.scanId` (404 / 400). Every address must be inside the job's `targets`, and every open port inside the scan's `ports` (400 otherwise, nothing is written).
 - **Separate runs:** `(resultId, ip)` is unique. A new lease writes its own host and port observations, even when another result in the same scan reported the same address. Same-lease resends remain idempotent.
 - **Seen window:** results may arrive out of order, so ingest only ever widens `firstSeenAt`/`lastSeenAt`.
-- **Fingerprint** (`fingerprint.ts`): SHA-256 over the service detection and, per HTTP endpoint, status, title, final path, software headers (`server`, `x-powered-by`, …), certificate and favicon hashes. Request-dependent values (dates, cookie values, body hashes, query strings) are left out so unchanged pages do not show up as changed.
+- **Fingerprint** (`fingerprint.ts`): SHA-256 over the port's comparable view (`comparable.ts`): service detection, SSH host key and, per HTTP endpoint, status, title, final path, technology headers by value and security headers by presence (lists in `contracts/src/scans/compared-fields.ts`), cookie names and flags, certificate, TLS version, favicon and probe statuses. Request-dependent values (dates, cookie values, body hashes, query strings) are left out so unchanged pages do not show up as changed. After changing the view, run `db:refingerprint`: it rebuilds each stored port from its columns and decrypted `details` and rewrites fingerprints that differ.
 - `ScanJob` itself (status, timings) is not touched: its lifecycle belongs to the lease handlers.
 
 ## Browsing scan results
@@ -176,9 +188,11 @@ Users reach hosts through scans: `/scans` → a scan → the hosts it saw (`modu
 | Endpoint | What it returns |
 |---|---|
 | `GET /scans` | Every scan, newest first: status, timing, hosts by status (`up`, `down`, `timeout`, `cancelled`, `failed`) and open ports |
-| `GET /scans/{id}` | The same plus parameters, jobs by status, the base scan and the change counts |
+| `GET /scans/{id}` | The same plus parameters, jobs by status, the base scan, the change counts and the coverage of both scans |
 | `GET /scans/{id}/hosts` | The scan's hosts with their services, as this scan saw them, paged in address order. Filters: `q` (IP prefix, hostname, tag, port, service name/product, HTTP title), `triage` (host or any service), `change` |
-| `GET /scans/{id}/hosts/{hostId}` | One host in that scan: decrypted HTTP details, banner, NSE scripts, and the address's scan history |
+| `GET /scans/{id}/hosts/{hostId}` | One host in that scan: decrypted HTTP details, banner, NSE scripts, the base scan's observation of each port (`before`), what changed field by field, and the address's scan history |
+
+All three scan endpoints take `?base=<scanId>` to compare with a chosen scan instead of the previous one; it must be older (`400 BASE_SCAN_NOT_OLDER` otherwise, 404 if it does not exist). The frontend's compare page (`/app/scans/compare`) is built on it.
 
 When several worker results in one scan report the same IP, the stored observations remain
 separate. These endpoints select one effective observation per IP: `up` takes precedence over
@@ -186,24 +200,96 @@ separate. These endpoints select one effective observation per IP: `up` takes pr
 precedence over discovery, then the latest observation. Scan counters, diffs and history
 use that same selection, so a retry does not duplicate a host in the scan view.
 
-**Changes** (`scan-diff.ts`, PDF items 8–9) compare a scan with its **base scan**, the previous scan (by `createdAt`) that has results. They follow the rules in [`docs/worker-result-format.md`](../../docs/worker-result-format.md#what-the-backend-derives):
+**Changes** (`scan-diff.ts`, PDF items 8–9) compare a scan with its **base scan**: `?base=` if given, otherwise the previous scan (by `createdAt`) that has results. They follow the rules in [`docs/worker-result-format.md`](../../docs/worker-result-format.md#what-the-backend-derives):
 - Hosts are keyed by IP and services by IP + protocol + port. A service is `changed` when its `fingerprint` differs.
-- A host is `new` (up now, not before), `gone` (up before, `down` now), `changed` (a service is new, gone or changed), `unchanged`, or `unknown` (up before, `timeout`/`cancelled`/`failed` now). Unknown is never gone, and addresses outside this scan's coverage are left out.
+- A host is `new` (up now, answered `down` in the base scan), `gone` (up before, `down` now), `changed` (a service is new, gone or changed), `unchanged`, or `unknown`: up before and `timeout`/`cancelled`/`failed` now, or up now while the base scan got no answer from it or did not cover it. Only conclusive answers count, and a base host outside this scan's coverage is left out. Each host carries `baseStatus` (what the base scan got, `null` if it did not cover the address).
+- `coverage` on the scan counts addresses with a conclusive answer in both scans, only in the base scan, or only in this one.
 - The first scan has no base scan: every `change` is `null`.
-- The diff reads only IPs, statuses and fingerprints, so it runs over a whole scan per request; details are loaded for the requested page only. The list's plaintext HTTP summaries come from `httpSummaries()`, without decrypting anything.
+- The diff reads only IPs, statuses and fingerprints, so it runs over a whole scan per request; details are loaded for the requested page only. The list's plaintext HTTP summaries come from `httpSummaries()`, without decrypting anything; each service's `before` is the base scan's plaintext summary of the port.
+
+**What changed** (`field-changes.ts`): the host detail compares the two observations of each `changed` port on the same comparable view the fingerprint hashes, and returns `fieldChanges` as `{ field, endpoint, key, before, after }` (`service.version`, `http.title`, `http.header` with the header name as `key`, `tls.cert`, `http.probe`, …; `null` = absent on that side). Hostnames that appeared or went are host-level `fieldChanges`. Only the detail decrypts, so the list stays cheap.
+
+**Lifecycle** (`host-lifecycle.ts`, the PDF's "after how long without an answer is a host inactive?"): every host in a scan carries its lifecycle as of that scan, from its latest 10 conclusive answers (`up`/`down`) in that scan and earlier ones; `timeout`, `cancelled` and `failed` say nothing. `inactive` after 3 `down` in a row, `unstable` after 2 up/down switches, `missing` after fewer misses, `active` otherwise (constants in `scan-results.schema.ts`). A pair comparison still reports a host `gone` after one `down`: the lifecycle tells a blip from a host that is really gone.
+
+**Export and priorities** (`GET /scans/{id}/changes?base=&format=json|csv`): every change between the two scans, one row each. A row is a host that is new, gone or unknown (`before`/`after` are the statuses), a port that opened or closed (`before`/`after` name the service), or one changed field. `change-priority.ts` rates each row `high`, `medium` or `low` with a `reason`:
+- **high:** a new host; a risky port opening (remote access, file sharing, databases); an admin or login path that started answering 2xx; a changed SSH host key; a self-signed certificate;
+- **medium:** software, page, certificate or technology-header changes; a removed security header; weakened cookie flags; a gone host that is `inactive`; a host that came back while `unstable`;
+- **low:** everything else. A returning unstable host's ports are `low`: they are not newly exposed.
+
+CSV is RFC 4180 with a leading `'` on cells that start with `=`, `+`, `-` or `@`, so spreadsheets do not run them (CSV injection). The comparison page downloads both formats.
+
+**Dashboard** (`modules/dashboard`, `GET /dashboard`, `scans:read`): the newest scan with results against its base scan: hosts up and open ports, change counts, how many known hosts are `unstable` or `inactive` as of that scan, and the 20 most important changes. Rows are grouped by `top-changes.ts` into one item per new, gone or unknown host (with the ports it opened or closed) and one per changed service; an item is as important as its most important row.
 
 **DefectDojo sync** (`modules/defectdojo/`): `POST /defectdojo/sync` merges DefectDojo tags into host and service tags, sets triage on services still `unreviewed` and replaces `Service.remediationPlannedOn`/`slaDueOn`/`riskAcceptedUntil` (returned as `remediation` on every scan service). `POST /defectdojo/push` sends a scan's services (all, or the selected hosts and services) as `Generic Findings Import` findings, importing once and reimporting into the same test later (`DefectDojoPush` rows keep the test id). Rules: [`docs/defectdojo-integration.md`](../../docs/defectdojo-integration.md#sync-into-subsurf-implemented) and [push](../../docs/defectdojo-integration.md#push-from-subsurf-implemented).
 
 **Edits** (`modules/hosts/`, `hosts:update`): `PATCH /hosts/{id}` (note, tags, triage) and `PATCH /hosts/{id}/services/{serviceId}` (the same plus `nameOverride`/`productOverride`/`versionOverride`, `null` clears one). They write the `Host`/`Service` assets, which ingest never touches, so an edit made from any scan shows in every scan and survives later ones (PDF item 14). Triage is `unreviewed | reviewed | important | false_positive`.
 
+**Bulk tags** (`POST /scans/{id}/hosts/tags`, `scans:read` + `hosts:update`): adds or removes one tag on the scan's hosts inside the given IPv4 addresses and CIDRs (`parseHostSelectors`/`selectorRanges` in `contracts/src/hosts/host-selectors.ts`, shared with the dialog). It matches the hosts the scan lists, gone and unknown included, whatever filters the table has. One raw SQL statement updates every matched `Host`; hosts already at `MAX_TAGS` (20) are skipped, so their edit dialog still validates. The response counts `matched`, `changed`, `unchanged` (already had it / never had it) and `limitReached`.
+
+## Vulnerabilities
+
+`modules/vulnerabilities` mirrors public vulnerability databases into PostgreSQL and matches the services the scans find against them. Two sources are implemented: **NVD** (CVEs with CPE applicability) and **OSV.dev** (advisories per package ecosystem, Debian and Alpine packages included). Everything heavy runs in a separate process, `src/vuln-sync.ts` (`pnpm vulns:sync`), never in the API.
+
+### How a source plugs in
+
+```
+ feed / zip ──► VulnerabilitySource (sources/registry.ts: nvd, osv)
+                  └─► NormalizedVulnerability { canonicalId, severity, …, criteria: [{ kind, matchKey, data }] }
+ Service (newest PortObservation) ──► components/ ──► Component { cpe, version, distro }
+                  └─► matchers/registry.ts (cpe, package): keysFor() + evaluate() ──► verdict
+```
+
+- A **source** (`sources/source.ts`) knows only its format and transport. It emits `upsert`, `checkpoint` (its own cursor), `scopeCompleted` and `needsFull` events; `sync/sync.service.ts` writes them. Adding one: implement the interface, add its factory to `FACTORIES` in `sources/registry.ts`, add its id to `VULN_SOURCES`.
+- A **criterion** has a `kind`, a version-independent `matchKey` and `data` (JSONB): `cpe` (`cpe:a:openbsd:openssh`, version ranges) from NVD, `package` (`pkg:Debian:openssh`, OSV ranges per release) from OSV. A new source that describes software the same way reuses a matcher; a new data model adds one matcher in `matchers/` (`defineMatcher` with a zod schema for its data). The tables do not change.
+- **Canonical id:** records merge across sources by CVE: the CVE in the record's id (`DEBIAN-CVE-2023-48795`), else the single CVE among `aliases` and `upstream`, else the record's own id.
+
+### Sync
+
+- **Schedule:** incremental every `VULN_SYNC_INTERVAL_HOURS` (8), full every `VULN_FULL_SYNC_INTERVAL_DAYS` (7) and on the first run; "Sync now" and the source toggle in the UI queue a `VulnerabilityJobRequest` that the process picks up within `VULN_SYNC_POLL_SECONDS`. One process works at a time: a lease in `VulnerabilitySyncState` (database clock, renewed every minute); cursors and sweeps are written only while it is held. Runs are recorded in `VulnerabilitySyncRun`.
+- **NVD:** full = every year file `nvdcve-2.0-<year>.json.gz` (streamed, never loaded whole), then `modified`; incremental = `modified` only (the last 8 days), skipped when its `.meta` checksum is unchanged; older than 7 days → a full sync. The `.meta` sha256 is checked against the uncompressed bytes. `Rejected` CVEs are kept as `rejected`, without criteria.
+- **OSV:** full = each ecosystem's `all.zip`; incremental = `<ecosystem>/modified_id.csv` read up to the cursor, changed records fetched one by one (more than `OSV_INCREMENTAL_MAX_RECORDS` → the zip). `withdrawn` records become `withdrawn`. `MAL-*` (malicious packages) and `DSA-`/`DLA-`/`DTSA-` (bundles of CVEs the `DEBIAN-CVE-*` records cover) are skipped.
+- **Writes:** batches of 1,000 through `jsonb_to_recordset`; a record whose `sourceModifiedAt` and status did not change only gets `lastSeenAt`, a changed one gets its criteria replaced. One row per record and match key, so a CVE listing hundreds of firmware versions is one row.
+- **Corrected entries** (the reason to re-sync often): a changed record replaces its criteria; a rejected or withdrawn one stops matching; a record a complete full sync no longer sees is withdrawn (`removed_from_source`), never deleted. That sweep refuses to withdraw more than `VULN_SWEEP_MAX_RATIO` of a scope (a truncated download), and a failed or partial run never sweeps.
+- **Offline:** downloads land in `VULN_CACHE_DIR` in each source's layout, so the directory is a mirror: `pnpm vulns:mirror <dir>` on a connected machine, then `NVD_FEED_URL=file://<dir>/nvd` and `OSV_BASE_URL=file://<dir>/osv` in the lab. `pnpm vulns:import --source <id> <file>` imports a single file.
+
+### Matching
+
+- **Input:** nmap's own fields of the service's newest observation (by scan, then observation time): `serviceCpe`, plus `serviceVersion`/`serviceExtraInfo`/OS CPEs for the distribution and package revision (`9.2p1 Debian 2+deb12u3`, `Ubuntu 3ubuntu13.5`). User corrections of product or version do not change matching. Application CPEs without a version, and nmap's guesses (`5.X`), match as `potential` (`version_unknown`); OS and hardware CPEs without a version are only platform hints.
+- **cpe matcher:** NVD version and update are joined (`9.6` + `p1` = `9.6p1`), ranges compared with `versioning/generic.ts` (rc < release < p1). `AND` configurations (vulnerable only on a platform) check the service's OS hints: no hint → `potential` (`platform_condition`).
+- **package matcher:** `PackageMapping` (CPE vendor:product → package per ecosystem, starter rows in the migration, editable in the UI) leads a component to OSV packages; distribution ecosystems only when the service runs on that distribution. The Debian revision is compared with dpkg rules on the exact release (epochs ignored: banners never show them).
+- **Backports:** `matching/resolver.ts` merges every source's verdict per CVE. When the distribution's own data on the exact package revision says "fixed", the NVD hit becomes `potential` (`fixed_by_backport`); an NVD hit on a distribution package without such data is `potential` (`distro_backport_possible`).
+- **When:** after every sync (all services), after a mapping or source change, and for the services of new scan results: the process follows `ScanJobResult.receivedAt` with a 2-minute look-back (ingest commits up to 60 s after the row is stamped), so `ingest()` does not change. A match that no longer holds is **retracted**, not deleted, with a reason (`service_changed`, `criteria_changed`, `source_withdrawn`, `source_disabled`), and comes back with its `firstMatchedAt` if it holds again. The analyst's verdict lives in `ServiceVulnerabilityTriage` per service and CVE, so it survives both.
+- **Reading:** matches belong to the Service asset; the scan views show them whatever scan is open (`basis.scanId` says which scan they were evaluated on). Summaries count each CVE once and leave false positives out; the host list filters by `vulnerability=any|critical|high|kev`.
+
+### Numbers and limits
+
+Measured on 2026-11-22 (MacBook, local Docker PostgreSQL 19, real downloads):
+
+| | NVD | OSV (7 default ecosystems) |
+|---|---|---|
+| Records | 430,357 (411,161 active, 19,196 rejected) | 122,808 (120,629 active, 2,179 withdrawn) |
+| Download | 25 year files + `modified`, ~260 MB gz | ~390 MB of zips |
+| First full sync | ~8 min | ~3 min |
+| Later full sync | ~7 min (22 records changed) | — |
+| Criteria rows | 927,367 (`cpe`) | 141,499 (`package`) |
+
+The tables take about 1 GB (`Vulnerability` 592 MB, `VulnerabilityCriterion` 418 MB); the process peaks at about 660 MB of memory. Re-matching the demo network's 644 services takes seconds. On the demo data a full sync gives 2,924 confirmed and 5,842 potential matches.
+
+- Many 2024–2026 CVEs have no CPE configuration in NVD yet (NVD's analysis backlog): NVD cannot match them; OSV often can.
+- Ubuntu is not in the default `OSV_ECOSYSTEMS` (820 MB): NVD hits on Ubuntu hosts are `potential`. The distribution parser already reads Ubuntu revisions, so adding `Ubuntu` to the list is enough.
+- Attribution: "This product uses data from the NVD API but is not endorsed or certified by the NVD." OSV data comes from many databases under their own licenses (GitHub Advisory Database CC-BY 4.0, Alpine SecDB CC-BY-SA 4.0, …); the admin page shows the notice.
+
 ## Demo data
 
 `pnpm db:seed:hosts` (after `pnpm db:reset` or `pnpm db:seed`, which create the admin who owns the scans) fills the database with realistic scan results to build features on (`src/demo/`, entry `prisma/seed-hosts.ts`):
 - **Network:** 10.40.0.0/18 (16,384 addresses, 64 jobs of 256), about 250 live hosts with domains under `campus.example`: CMSs (WordPress, Joomla, Drupal, Moodle, MediaWiki), CI and admin panels (Jenkins, GitLab, Tomcat manager, phpMyAdmin, Grafana, Kibana, Zabbix), staging (`x-environment: staging`, Django debug page, Swagger UI), databases, Linux and Windows servers, cameras, printers, UPS, BMCs and NAS boxes. Certificates include self-signed, expired and expiring ones; cookies lack `Secure`/`HttpOnly` here and there.
-- **Two nightly runs** (2026-11-20 and 2026-11-21, 01:00 UTC) through the real `resultsService.ingest()`. The second run has new, gone and unstable hosts, upgraded software, opened and closed ports, a renewed certificate and a maintenance page, and its last job stops at the deadline (`partial`, `stopReason: "deadline"`, 128 addresses `cancelled`), so the scan ends `stopped`.
+- **Four runs** through the real `resultsService.ingest()`: nights of 2026-11-20, -21 and -22 (01:00 UTC) and the afternoon of the 21st (13:00 UTC).
+  - The second run has new, gone and unknown hosts, upgraded software, opened and closed ports, a renewed certificate and a maintenance page, and its last job stops at the deadline (`partial`, `stopReason: "deadline"`, 128 addresses `cancelled`), so the scan ends `stopped`.
+  - Runs 3 and 4 exercise the lifecycle: hosts gone in run 2 stay down (inactive by run 4), two workstations reboot during the afternoon run and a lab host and a test proxy come and go (unstable), RDP opens on a workstation and a phpMyAdmin panel appears in run 4. Runs 1 and 2 are the same as before they were added, so a database seeded earlier only gains runs 3 and 4.
 - **Deterministic and idempotent:** fixed scan ids and lease ids, a seeded PRNG. Re-running skips what is already there; a fresh copy needs `pnpm db:reset` first. It takes about 10 s.
 - `pnpm db:seed:hosts --json <dir>` also writes every worker result as `run-N/job-NNN.json`, e.g. for testing an import of scan results.
-- The generator's tests (`src/demo/demo.test.ts`) check that every result passes `WorkerResultSchema` and that the second run really differs.
+- The generator's tests (`src/demo/demo.test.ts`) check that every result passes `WorkerResultSchema`, that the second run really differs and that the fourth has unstable and inactive hosts.
+- **Vulnerabilities:** before the runs, the seed loads `src/demo/vulnerabilities/{nvd,osv}.json` (real NVD and OSV records for the demo network's software) through the sources' parsers, and re-matches services after each run, so the second run's upgrades retract what they fixed. The slice leaves the sources' cursors alone: the first real sync is still a full one. `src/demo/vulnerabilities/build-fixture.ts` rebuilds it from a database with the demo scans and a full sync of every source.
 
 ## Environment variables
 
@@ -218,11 +304,24 @@ use that same selection, so a retry does not duplicate a host in the scan view.
 | `DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASSWORD` `DB_SSLMODE` | — | Postgres connection in parts, no `DATABASE_URL` |
 | `JWT_SECRET` | — | HS256 key for access tokens, ≥ 32 characters. Production refuses the `.env.example` value |
 | `DATA_ENCRYPTION_KEY` | — | AES-256-GCM key for fields encrypted at rest: 32 bytes, base64 (`openssl rand -base64 32`). Production refuses the `.env.example` value. Changing it makes stored encrypted fields unreadable |
+| `WORKER_TOKEN` | — | Bearer token of the scan workers on `/workers/*`, ≥ 16 characters; unset turns those endpoints off (503). worker-manager sends it as `WORKER_MANAGER_TOKEN`. Production refuses the `.env.example` value |
 | `ADMIN_EMAIL` `ADMIN_PASSWORD` | — | First admin (startup while there are no users, and the seed). Production refuses the example password |
 | `SEED_DEMO_USERS` `DEMO_USER_PASSWORD` | `false` | Seed only: demo accounts for the editor, analyst and viewer roles |
 | `SCAN_DEFAULT_PORTS` | 28 common TCP ports | Ports snapshotted onto every queued scan (`22,80,8000-8100` syntax) |
 | `SCAN_DEFAULT_MAX_RATE` | `100` | Packets per second a worker may send for one job |
 | `SCAN_BATCH_SIZE` | `256` | Addresses per scan job, a power of two from 16 to 1024 |
+| `VULN_SOURCES` | `nvd,osv` | Vulnerability sources to run, from the registry; the order is the preference when two describe the same CVE |
+| `VULN_SYNC_INTERVAL_HOURS` | `8` | Incremental sync of each source every N hours |
+| `VULN_FULL_SYNC_INTERVAL_DAYS` | `7` | Full sync (which also withdraws records the source dropped) every N days |
+| `VULN_SYNC_POLL_SECONDS` | `30` | How often the sync process checks for requests from the API and new scan results |
+| `VULN_SWEEP_MAX_RATIO` | `0.05` | A full sync that would withdraw more than this share of a scope's records (and more than 25) fails instead |
+| `VULN_CACHE_DIR` | `.cache/vulnerabilities` | Downloads, in each source's own layout: also an offline mirror |
+| `NVD_FEED_URL` | `https://nvd.nist.gov/feeds/json/cve/2.0` | NVD JSON 2.0 feeds; `file:///…/nvd` for a mirror |
+| `NVD_FIRST_YEAR` | `2002` | First CVE year file of a full sync |
+| `OSV_BASE_URL` | `https://storage.googleapis.com/osv-vulnerabilities` | OSV bulk export; `file:///…/osv` for a mirror |
+| `OSV_ECOSYSTEMS` | `Maven,Go,Packagist,PyPI,Debian,Alpine,npm` | OSV ecosystems to mirror (each is a zip; Ubuntu alone is 820 MB) |
+| `OSV_SKIP_PREFIXES` | `MAL-,DSA-,DLA-,DTSA-` | Record ids left out: malicious-package reports, Debian advisories that bundle CVEs |
+| `OSV_INCREMENTAL_MAX_RECORDS` | `2000` | More changes than this since the last sync: read the ecosystem's whole zip instead |
 | `DEFECTDOJO_URL` `DEFECTDOJO_API_TOKEN` | — | DefectDojo API for the sync (local: `http://localhost:8080` and the dev token from `docker/README.md`). Unset = the sync answers 503 `DEFECTDOJO_NOT_CONFIGURED` |
 
 ## Docker
@@ -231,4 +330,4 @@ use that same selection, so a retry does not duplicate a host in the scan view.
 docker build -f apps/backend/Dockerfile .      # from the repo root
 ```
 
-A multi-stage build on `node:26.13.1-slim` using `pnpm deploy`; the process runs as `USER node`. The same image runs migrations: `node_modules/.bin/prisma migrate deploy`.
+A multi-stage build on `node:26.13.1-slim` using `pnpm deploy`; the process runs as `USER node`. The same image runs migrations: `node_modules/.bin/prisma migrate deploy`, and the vulnerability sync process: `node dist/vuln-sync.mjs` (one container of it per deployment; give `VULN_CACHE_DIR` a volume).

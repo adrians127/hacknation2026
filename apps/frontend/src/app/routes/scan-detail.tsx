@@ -1,4 +1,4 @@
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, Tags } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router";
@@ -9,8 +9,13 @@ import {
   ScanChangeFilterSchema,
   type ScanChangeFilter,
 } from "@subsurf/contracts/scans/scan-results.schema";
+import {
+  VulnerabilityFilterSchema,
+  type VulnerabilityFilter,
+} from "@subsurf/contracts/vulnerabilities/vulnerabilities.schema";
 
 import { DataTablePagination } from "@/components/data-table-pagination";
+import { GuardedButton } from "@/components/guarded-button";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { DefectDojoPushActions } from "@/features/defectdojo/components/defectdojo-push-actions";
 import { useScanHosts } from "@/features/hosts/api/get-scan-hosts";
+import { BulkTagDialog } from "@/features/hosts/components/bulk-tag-dialog";
 import { HostEditDialog } from "@/features/hosts/components/host-edit-dialog";
 import { HostSheet } from "@/features/hosts/components/host-sheet";
 import { HostsTable } from "@/features/hosts/components/hosts-table";
@@ -38,7 +44,8 @@ type HostRef = HostEdits & { ip: string };
 type ServiceRef = ServiceEdits & { port: number; protocol: string; observed: ServiceIdentity };
 type Dialog =
   | { kind: "host"; host: HostRef }
-  | { kind: "service"; host: HostRef; service: ServiceRef };
+  | { kind: "service"; host: HostRef; service: ServiceRef }
+  | { kind: "bulkTag" };
 
 type IdSet = ReadonlySet<string>;
 
@@ -66,6 +73,7 @@ export function ScanDetailRoute() {
   const { scanId = "" } = useParams();
   const { t, i18n } = useTranslation();
   const { t: th } = useTranslation("hosts");
+  const { t: tv } = useTranslation("vulnerabilities");
   const locale = i18n.resolvedLanguage;
   const errorMessage = useErrorMessage();
   const [params, setParams] = useSearchParams();
@@ -73,6 +81,10 @@ export function ScanDetailRoute() {
   const q = params.get("q") ?? "";
   const triage: TriageStatus | undefined = parseOr(TriageStatusSchema, params.get("triage"));
   const change: ScanChangeFilter | undefined = parseOr(ScanChangeFilterSchema, params.get("change"));
+  const vulnerability: VulnerabilityFilter | undefined = parseOr(
+    VulnerabilityFilterSchema,
+    params.get("vulnerability"),
+  );
   const openHostId = params.get("host");
 
   const [search, setSearch] = useState(q);
@@ -117,7 +129,14 @@ export function ScanDetailRoute() {
   }, [debouncedSearch, q, update]);
 
   const scan = useScan(scanId);
-  const hosts = useScanHosts(scanId, { page, pageSize: PAGE_SIZE, q: q || undefined, triage, change });
+  const hosts = useScanHosts(scanId, {
+    page,
+    pageSize: PAGE_SIZE,
+    q: q || undefined,
+    triage,
+    change,
+    vulnerability,
+  });
 
   const openHost = useCallback((host: { id: string }) => update({ host: host.id }), [update]);
   const editHost = useCallback((host: HostRef) => setDialog({ kind: "host", host }), []);
@@ -158,11 +177,21 @@ export function ScanDetailRoute() {
         }
         description={t("scans.detail.subtitle")}
         actions={
-          <DefectDojoPushActions
-            scanId={scanId}
-            selection={selection}
-            onClearSelection={clearSelection}
-          />
+          <>
+            <GuardedButton
+              variant="outline"
+              permissions={["hosts:update"]}
+              onClick={() => setDialog({ kind: "bulkTag" })}
+            >
+              <Tags />
+              {th("bulkTag.open")}
+            </GuardedButton>
+            <DefectDojoPushActions
+              scanId={scanId}
+              selection={selection}
+              onClearSelection={clearSelection}
+            />
+          </>
         }
       />
 
@@ -218,6 +247,24 @@ export function ScanDetailRoute() {
             ))}
           </SelectContent>
         </Select>
+        <Select
+          value={vulnerability ?? ANY}
+          onValueChange={(value) =>
+            update({ vulnerability: value === ANY ? null : value, page: null })
+          }
+        >
+          <SelectTrigger aria-label={tv("filter.label")} className="min-w-52">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ANY}>{tv("filter.all")}</SelectItem>
+            {VulnerabilityFilterSchema.options.map((option) => (
+              <SelectItem key={option} value={option}>
+                {tv(`filter.options.${option}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {hosts.isPending ? (
@@ -250,6 +297,7 @@ export function ScanDetailRoute() {
       {openHostId && (
         <HostSheet
           scanId={scanId}
+          baseScanId={scanData.baseScan?.id ?? null}
           hostId={openHostId}
           onClose={() => update({ host: null })}
           onEditHost={editHost}
@@ -259,6 +307,9 @@ export function ScanDetailRoute() {
 
       {dialog?.kind === "host" && (
         <HostEditDialog key={dialog.host.id} host={dialog.host} onClose={() => setDialog(null)} />
+      )}
+      {dialog?.kind === "bulkTag" && (
+        <BulkTagDialog scanId={scanId} onClose={() => setDialog(null)} />
       )}
       {dialog?.kind === "service" && (
         <ServiceEditDialog

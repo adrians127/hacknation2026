@@ -19,6 +19,7 @@ const blankAsAbsent = <T extends z.ZodType>(schema: T) =>
 const EXAMPLE_JWT_SECRET = "dev-only-jwt-secret-change-me-in-production";
 const EXAMPLE_ADMIN_PASSWORD = "admin-change-me-now";
 const EXAMPLE_DATA_ENCRYPTION_KEY = "ZGV2LW9ubHktZGF0YS1rZXktY2hhbmdlLW1lLTAwMDA=";
+const EXAMPLE_WORKER_TOKEN = "dev-only-worker-token-change-me";
 
 // Must match .env.example.
 const DEFAULT_SCAN_PORTS =
@@ -58,6 +59,12 @@ const envSchema = z
         message: "DATA_ENCRYPTION_KEY must be 32 bytes, base64-encoded",
       }),
 
+    // Bearer token of the scan workers on /workers/* (src/middleware/worker-token.ts). Unset:
+    // those endpoints answer 503.
+    WORKER_TOKEN: blankAsAbsent(
+      z.string().min(16, "WORKER_TOKEN must be at least 16 characters").optional(),
+    ),
+
     // First admin, created at startup while there are no users (and by the seed).
     ADMIN_EMAIL: blankAsAbsent(z.email().optional()),
     ADMIN_PASSWORD: blankAsAbsent(z.string().min(12).max(128).optional()),
@@ -76,6 +83,22 @@ const envSchema = z
         .default(256),
     ),
 
+    // Vulnerability databases (src/modules/vulnerabilities): used by the vuln-sync process and,
+    // for the sources' state and links, by the API. Source-specific settings live next to each
+    // source (nvd.config.ts, osv.config.ts).
+    VULN_SOURCES: blankAsAbsent(
+      z
+        .string()
+        .regex(/^[a-z0-9-]+(,[a-z0-9-]+)*$/, "Comma-separated source ids, e.g. nvd,osv")
+        .default("nvd,osv"),
+    ),
+    VULN_SYNC_INTERVAL_HOURS: blankAsAbsent(z.coerce.number().positive().max(24 * 7).default(8)),
+    VULN_FULL_SYNC_INTERVAL_DAYS: blankAsAbsent(z.coerce.number().positive().max(90).default(7)),
+    VULN_SYNC_POLL_SECONDS: blankAsAbsent(z.coerce.number().int().min(5).max(3600).default(30)),
+    // A full sync that would withdraw more than this share of a source's records stops instead.
+    VULN_SWEEP_MAX_RATIO: blankAsAbsent(z.coerce.number().min(0).max(1).default(0.05)),
+    // Downloads land here, in the sources' own layout: the directory doubles as an offline mirror.
+    VULN_CACHE_DIR: blankAsAbsent(z.string().min(1).default(".cache/vulnerabilities")),
     // DefectDojo API (src/modules/defectdojo); both unset = the integration is off.
     DEFECTDOJO_URL: blankAsAbsent(z.url().optional()),
     DEFECTDOJO_API_TOKEN: blankAsAbsent(z.string().min(1).optional()),
@@ -90,6 +113,13 @@ const envSchema = z
     {
       path: ["DATA_ENCRYPTION_KEY"],
       message: "Set a real DATA_ENCRYPTION_KEY in production (the .env.example value is public)",
+    },
+  )
+  .refine(
+    (value) => value.NODE_ENV !== "production" || value.WORKER_TOKEN !== EXAMPLE_WORKER_TOKEN,
+    {
+      path: ["WORKER_TOKEN"],
+      message: "Set a real WORKER_TOKEN in production (the .env.example value is public)",
     },
   )
   .refine(

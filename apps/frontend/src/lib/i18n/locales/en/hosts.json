@@ -14,7 +14,7 @@
       "new": "New",
       "gone": "Gone",
       "changed": "Changed",
-      "unknown": "No answer"
+      "unknown": "Unknown"
     }
   },
   "change": {
@@ -22,7 +22,7 @@
     "gone": "Gone",
     "changed": "Changed",
     "unchanged": "Unchanged",
-    "unknown": "No answer"
+    "unknown": "Unknown"
   },
   "triage": {
     "unreviewed": "Unreviewed",
@@ -142,9 +142,121 @@
     "submit": "Save",
     "submitting": "Saving…"
   },
+  "bulkTag": {
+    "open": "Tag hosts",
+    "title": "Tag a group of hosts",
+    "description": "Changes the hosts this scan lists whose address is in the ranges you enter. Tags stay on the hosts, so every scan shows them.",
+    "action": {
+      "label": "Action",
+      "add": "Add tag",
+      "remove": "Remove tag"
+    },
+    "selectors": "Addresses and CIDRs",
+    "selectorsPlaceholder": "10.0.5.0/24, 10.0.6.7",
+    "selectorsHint": "IPv4 only. Separate with commas, spaces or new lines.",
+    "selectorsRequired": "Enter at least one address or CIDR",
+    "selectorsInvalid": "Not an IPv4 address or CIDR: {{list}}",
+    "selectorsTooMany": "At most {{max}} addresses and CIDRs at once",
+    "tag": "Tag",
+    "tagPlaceholder": "e.g. dmz",
+    "tagInvalid": "A tag needs 1 to 50 characters",
+    "noMatch": "No host of this scan is in these addresses. Nothing was changed.",
+    "submit": {
+      "add": "Add tag",
+      "remove": "Remove tag"
+    },
+    "toast": {
+      "add_one": "Tag “{{tag}}” added to {{count}} host",
+      "add_other": "Tag “{{tag}}” added to {{count}} hosts",
+      "remove_one": "Tag “{{tag}}” removed from {{count}} host",
+      "remove_other": "Tag “{{tag}}” removed from {{count}} hosts",
+      "unchanged": {
+        "add_one": "{{count}} host already had it",
+        "add_other": "{{count}} hosts already had it",
+        "remove_one": "{{count}} host did not have it",
+        "remove_other": "{{count}} hosts did not have it"
+      },
+      "limitReached_one": "{{count}} host skipped: it already has {{max}} tags",
+      "limitReached_other": "{{count}} hosts skipped: they already have {{max}} tags"
+    }
+  },
   "toast": {
     "hostSaved": "Host saved",
     "serviceSaved": "Service saved",
     "triageSaved": "Triage status saved"
+  },
+  "lifecycle": {
+    "label": "Lifecycle",
+    "active": "Active",
+    "unstable": "Unstable",
+    "missing": "Missing {{misses}}/{{max}}",
+    "inactive": "Inactive",
+    "hint": {
+      "active": "Answered in the latest scans that reached it.",
+      "unstable": "Switched between up and down {{flips}} times in its latest scans.",
+      "missing": "No answer in the last {{misses}} scans; inactive after {{max}}.",
+      "inactive": "No answer in the last {{misses}} scans."
+    }
+  },
+  "timeline": {
+    "title": "Presence over time",
+    "hint": "Each dot is a scan, oldest on the left. Pick one to compare with it.",
+    "dot": "{{date}}: {{status}}, {{ports}} open ports",
+    "base": "A",
+    "target": "B"
+  },
+  "fieldChange": {
+    "title": "What changed",
+    "hostTitle": "Host",
+    "none": "Nothing that is compared changed.",
+    "yes": "yes",
+    "no": "no",
+    "fields": {
+      "service": {
+        "name": "Service",
+        "product": "Product",
+        "version": "Version",
+        "extraInfo": "Details",
+        "cpe": "CPE"
+      },
+      "ssh": {
+        "hostKey": "SSH host key"
+      },
+      "http": {
+        "endpoint": "HTTP endpoint",
+        "status": "Status code",
+        "title": "Page title",
+        "redirect": "Redirect target",
+        "header": "Header",
+        "securityHeader": "Security header",
+        "cookie": "Cookie",
+        "cookieFlags": "Cookie flags",
+        "favicon": "Favicon (mmh3)",
+        "probe": "Probed path"
+      },
+      "tls": {
+        "cert": "Certificate",
+        "issuer": "Certificate issuer",
+        "expiry": "Certificate valid until",
+        "selfSigned": "Self-signed certificate",
+        "version": "TLS version"
+      },
+      "host": {
+        "hostname": "Hostname"
+      }
+    }
+  },
+  "compare": {
+    "notScanned": "Not in scan",
+    "notOpen": "not open",
+    "openInScan": "Open in the scan view",
+    "services": "Ports side by side",
+    "endpointAdded": "new endpoint",
+    "endpointRemoved": "endpoint gone",
+    "securityHeaders": "Security headers",
+    "techHeaders": "Technology headers",
+    "cookies": "Cookies",
+    "probes": "Probed paths",
+    "tls": "TLS"
   }
 }

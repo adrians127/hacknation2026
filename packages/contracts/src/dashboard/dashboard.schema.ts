@@ -1,24 +1,58 @@
 import { z } from "zod";
 
-export const ChangeKindSchema = z.enum(["new", "disappeared", "changed"]);
+import { ChangePrioritySchema, ChangeReasonSchema } from "../scans/scan-changes.schema";
+import {
+  FieldChangeSchema,
+  HostLifecycleSchema,
+  ScanChangeCountsSchema,
+  ScanChangeSchema,
+} from "../scans/scan-results.schema";
 
-export const ChangeSchema = z.object({
-  id: z.uuid(),
-  kind: ChangeKindSchema,
-  host: z.string(),
-  service: z.string(),
-  detail: z.string(),
-  detectedAt: z.iso.datetime(),
+/** How many changes the dashboard lists, most important first. */
+export const DASHBOARD_TOP_CHANGES = 20;
+
+const CountSchema = z.number().int().nonnegative();
+const ScanRefSchema = z.object({ id: z.uuid(), startedAt: z.iso.datetime().nullable() });
+
+/**
+ * One change worth a look: a host that is new, gone or unknown (`port: null`, with the ports
+ * that opened or closed), or one changed service with what changed in it.
+ */
+export const DashboardChangeSchema = z.object({
+  hostId: z.uuid(),
+  ip: z.ipv4(),
+  hostnames: z.array(z.string()),
+  /** `null` for a change of the whole host. */
+  port: z.number().int().nullable(),
+  change: ScanChangeSchema,
+  priority: ChangePrioritySchema,
+  /** Why, most important first. */
+  reasons: z.array(ChangeReasonSchema),
+  /** The ports a new or gone host opened or closed. */
+  ports: z.array(z.number().int()),
+  /** What changed in a changed service (or a changed host's names). */
+  fields: z.array(FieldChangeSchema),
+  lifecycle: HostLifecycleSchema,
 });
 
 export const DashboardResponseSchema = z.object({
-  activeHosts: z.number().int().nonnegative(),
-  newServices: z.number().int().nonnegative(),
-  disappearedServices: z.number().int().nonnegative(),
-  changedServices: z.number().int().nonnegative(),
-  recentChanges: z.array(ChangeSchema),
+  /** The newest scan with results; `null` before the first one. */
+  scan: ScanRefSchema.nullable(),
+  /** What it is compared with; `null` for the first scan. */
+  baseScan: ScanRefSchema.nullable(),
+  hosts: z.object({
+    /** Up in the newest scan. */
+    up: CountSchema,
+    /** Every known host's lifecycle as of the newest scan. */
+    unstable: CountSchema,
+    inactive: CountSchema,
+  }),
+  openPorts: CountSchema,
+  changes: ScanChangeCountsSchema.nullable(),
+  /** The grouped changes by priority, all of them (not only the listed ones). */
+  priorities: z.object({ high: CountSchema, medium: CountSchema, low: CountSchema }),
+  topChanges: z.array(DashboardChangeSchema).max(DASHBOARD_TOP_CHANGES),
 });
 
-export type ChangeKind = z.infer<typeof ChangeKindSchema>;
-export type Change = z.infer<typeof ChangeSchema>;
+export type DashboardChange = z.infer<typeof DashboardChangeSchema>;
 export type DashboardResponse = z.infer<typeof DashboardResponseSchema>;

@@ -1,11 +1,13 @@
-/// One worker result for one lease of a ScanJob: the `scan` object of docs/worker-result-format.md.
-/// Written by results ingest, never edited.
+/// One worker run's result for one lease of a ScanJob: the `scan` object of
+/// docs/worker-result-format.md. Written by results ingest, never edited.
 model ScanJobResult {
   id            String              @id @default(uuid(7)) @db.Uuid
   scanId        String              @db.Uuid
   scanJobId     String              @db.Uuid
-  /// Workers resend a result when the response is lost: a second copy is ignored.
-  leaseId       String              @unique
+  leaseId       String
+  /// worker-manager splits a leased job into tasks, one worker run and one result each.
+  taskIndex     Int                 @default(1)
+  taskCount     Int                 @default(1)
   workerId      String
   workerVersion String
   nmapVersion   String?
@@ -27,6 +29,8 @@ model ScanJobResult {
   scanJob ScanJob           @relation(fields: [scanJobId], references: [id], onDelete: Cascade)
   hosts   HostObservation[]
 
+  /// Workers resend a result when the response is lost: a second copy is ignored.
+  @@unique([leaseId, taskIndex])
   @@index([scanId])
   @@index([scanJobId])
 }
