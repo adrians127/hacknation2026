@@ -52,7 +52,20 @@ const probe = (path: string, status: number[], extra: { title?: SignatureMatcher
   ...extra,
 });
 
+const favicon = (...mmh3: number[]): SignatureCondition => ({ target: "favicon", mmh3 });
+const banner = (value: SignatureMatcher, version?: string): SignatureCondition => ({
+  target: "banner",
+  value,
+  ...(version && { version }),
+});
+const service = (value: SignatureMatcher): SignatureCondition => ({ target: "service", field: "product", value });
+
 const any = (...conditions: SignatureCondition[]): SignatureDefinition => ({ match: "any", conditions });
+
+// Favicon hashes measured on the images of docker/lab (Shodan's mmh3 of the base64 icon), 2026-11-22.
+const PHPMYADMIN_FAVICON = -476231906;
+const RABBITMQ_FAVICON = -1015107330;
+const DVWA_FAVICON = -231109625;
 
 /** A version-like token at the start of a header value (`2.426.1`). */
 const LEADING_VERSION = String.raw`^\s*v?(\d[\w.+-]*)`;
@@ -136,8 +149,10 @@ const TECHNOLOGIES: BuiltInSignature[] = [
     cookie(m("equals", "grafana_session")),
     title(m("equals", "grafana")),
   )),
-  technology("phpmyadmin", "phpMyAdmin", "application", "phpMyAdmin in the page title.", any(
+  technology("phpmyadmin", "phpMyAdmin", "application", "phpMyAdmin's page title, cookies or favicon.", any(
     title(m("contains", "phpmyadmin")),
+    cookie(m("regex", "^(phpmyadmin|pma_lang)$")),
+    favicon(PHPMYADMIN_FAVICON),
   )),
   technology("swagger-ui", "Swagger UI", "application", "A Swagger UI page.", any(title(m("equals", "swagger ui")))),
   technology("synology-dsm", "Synology DSM", "device", "A Synology DiskStation login page.", any(
@@ -159,6 +174,30 @@ const TECHNOLOGIES: BuiltInSignature[] = [
   technology("nginx-welcome", "nginx", "web-server", "The nginx welcome page.", any(
     title(m("regex", "^welcome to nginx!?$")),
   )),
+  technology("gitea", "Gitea", "application", "Gitea's cookie, page title or footer.", any(
+    cookie(m("equals", "i_like_gitea")),
+    title(m("contains", "gitea: git with a cup of tea")),
+    body(m("contains", "powered by gitea")),
+  )),
+  technology("adminer", "Adminer", "application", "Adminer's login page or cookies.", any(
+    title(m("contains", "adminer")),
+    cookie(m("prefix", "adminer_")),
+  )),
+  technology("rabbitmq", "RabbitMQ", "service", "The RabbitMQ management console.", any(
+    title(m("equals", "rabbitmq management")),
+    favicon(RABBITMQ_FAVICON),
+  )),
+  technology("traefik", "Traefik", "web-server", "The Traefik dashboard (/ redirects to /dashboard/).", any(
+    title(m("equals", "traefik")),
+    probe("/dashboard/", [200], { title: m("equals", "traefik") }),
+  )),
+  technology("httpbin", "httpbin", "application", "httpbin, an HTTP testing service.", any(
+    title(m("equals", "httpbin.org")),
+  )),
+  technology("vsftpd", "vsftpd", "service", "The vsftpd FTP server's banner (with the version) or nmap's product.", any(
+    banner(m("contains", "vsftpd"), String.raw`vsftpd ([\d.]+)`),
+    service(m("contains", "vsftpd")),
+  )),
   technology("apache-httpd", "Apache httpd", "web-server", "The Apache default page or its status page.", any(
     title(m("regex", "apache2 (ubuntu|debian) default page")),
     probe("/server-status", [200], { title: m("equals", "Apache Status") }),
@@ -179,6 +218,7 @@ const ADMIN_PANELS: BuiltInSignature[] = [
         String.raw`idrac|ilo\b|integrated lights-out`,
         "synology diskstation",
         "webmin|portainer|pfsense|proxmox|cpanel|plesk",
+        "adminer|rabbitmq management|^traefik$",
         String.raw`\badmin(istration|istrator)?\b|panel administracyjny`,
       ].join("|"))),
     )),
@@ -192,6 +232,7 @@ const ADMIN_PANELS: BuiltInSignature[] = [
       probe("/wp-login.php", [200]),
       probe("/administrator/", [200]),
       probe("/phpmyadmin/", [200, 401]),
+      probe("/dashboard/", [200], { title: m("equals", "traefik") }),
     )),
   finding("admin-path", "/admin answers", "admin-panel", "info",
     "The /admin/ path answers or asks for a login.", any(probe("/admin/", [200, 401]))),
@@ -226,6 +267,23 @@ const STAGING: BuiltInSignature[] = [
     )),
 ];
 
+const TEST_APPLICATIONS: BuiltInSignature[] = [
+  {
+    key: "dvwa",
+    name: "DVWA (deliberately vulnerable)",
+    description: "Damn Vulnerable Web Application, a training target that must never be reachable in production.",
+    category: "staging",
+    product: "DVWA",
+    severity: "high",
+    confidence: "low",
+    definition: any(
+      probe("/login.php", [200], { title: m("contains", "damn vulnerable web application") }),
+      cookie(m("equals", "security")),
+      favicon(DVWA_FAVICON),
+    ),
+  },
+];
+
 const DEFAULT_PAGES: BuiltInSignature[] = [
   finding("default-page", "Default web server page", "default-page", "low",
     "A web server's default or test page: nothing is deployed here yet.", any(
@@ -243,5 +301,6 @@ export const BUILT_IN_SIGNATURES: readonly BuiltInSignature[] = [
   ...TECHNOLOGIES,
   ...ADMIN_PANELS,
   ...STAGING,
+  ...TEST_APPLICATIONS,
   ...DEFAULT_PAGES,
 ];

@@ -267,6 +267,28 @@ describe("built-in signatures", () => {
     expect(new Set(BUILT_IN_SIGNATURES.map((builtIn) => builtIn.name)).size).toBe(BUILT_IN_SIGNATURES.length);
   });
 
+  it("recognise the services of docker/lab as measured there", () => {
+    const keys = (http: HttpEndpoint[], extra: Partial<SignatureInput> = {}) =>
+      evaluateService(compiled, input({ http, ...extra })).map((detection) => detection.signature.id);
+    const icon = (mmh3: number) => ({ url: "http://10.0.0.1/favicon.ico", mmh3, sha256: SHA });
+
+    expect(keys([endpoint({ title: null, cookies: [cookie("security")], favicon: icon(-231109625) })])).toContain("dvwa");
+    expect(keys([endpoint({ title: "RabbitMQ Management", favicon: icon(-1015107330) })])).toEqual(
+      expect.arrayContaining(["rabbitmq", "admin-panel-title"]),
+    );
+    expect(keys([endpoint({ title: "Login - Adminer", cookies: [cookie("adminer_sid")] })])).toEqual(
+      expect.arrayContaining(["adminer", "admin-panel-title"]),
+    );
+    const traefik = endpoint({
+      title: null,
+      probes: [{ path: "/dashboard/", statusCode: 200, location: null, title: "Traefik", size: 1, bodySha256: null, error: null }],
+    });
+    expect(keys([traefik])).toEqual(expect.arrayContaining(["traefik", "admin-panel-path"]));
+    expect(keys([], { port: 21, banner: "220 (vsFTPd 3.0.3)" })).toContain("vsftpd");
+    const vsftpd = evaluateService(compiled, input({ port: 21, http: [], banner: "220 (vsFTPd 3.0.3)" }));
+    expect(vsftpd.find((detection) => detection.signature.id === "vsftpd")?.version).toBe("3.0.3");
+  });
+
   it("flag a staging WordPress", () => {
     const http = [
       endpoint({
