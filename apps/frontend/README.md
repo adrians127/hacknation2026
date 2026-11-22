@@ -137,6 +137,7 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 - **Labels:** system roles are translated by key and custom roles show their stored name (`useRoleLabels`); permissions read as "Resource: Action" (`usePermissionLabel`, keys in `auth.json`). A new permission needs `permissions.resources.<resource>` (and a new action) in both languages.
 - **Errors:** `useErrorMessage()` turns anything a query or mutation threw into a translated message, by the API's `error.code` (`common.json`, `errors.*`) or by status.
 - **Admin panel:** `features/users` and `features/roles` (the permission matrix in `features/roles/lib/permission-matrix.ts` is built from the contracts catalog). The admin routes compose them, e.g. the user form gets the role list from `features/roles`.
+- **Vulnerabilities:** `features/vulnerabilities` holds the badges and the per-service list that `features/hosts` shows (the data comes with the scan's host responses, under `scans:read`), and the panels of the Vulnerability databases page (`app/routes/admin/vulnerabilities.tsx`: sources, sync history, CPE → package mappings). The sources query polls while a sync runs or waits for the sync process.
 
 ## Pages and tables
 

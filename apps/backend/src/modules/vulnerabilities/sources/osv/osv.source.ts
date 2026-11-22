@@ -174,8 +174,14 @@ export function createOsvSource(config: OsvConfig = osvConfig()): VulnerabilityS
         }
         return;
       }
-      const record = toRecord(await readFile(path, "utf8"));
-      if (record) yield record;
+      // One record, or an array of them (the demo data).
+      const text = await readFile(path, "utf8");
+      const parsed: unknown = JSON.parse(text);
+      const texts = Array.isArray(parsed) ? parsed.map((item) => JSON.stringify(item)) : [text];
+      for (const item of texts) {
+        const record = toRecord(item);
+        if (record) yield record;
+      }
     },
   };
 }

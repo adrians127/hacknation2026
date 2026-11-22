@@ -26,6 +26,10 @@ pnpm --filter @subsurf/backend db:studio    # Prisma Studio
 pnpm --filter @subsurf/backend db:seed      # system roles, admin, demo accounts (idempotent)
 pnpm --filter @subsurf/backend db:seed:hosts  # demo scan data: two scans of a /18 (see "Demo data")
 pnpm db:reset                                  # from the repo root: drop + all migrations + seed
+pnpm vulns:sync                                # from the repo root: the vulnerability sync process (see "Vulnerabilities")
+pnpm vulns:sync --once [--source nvd|osv] [--full] [--rematch]   # one pass, then exit
+pnpm vulns:mirror <dir>                        # download the sources' files for an offline lab
+pnpm vulns:import --source <id> <file>         # import a file in the source's own format
 ```
 
 Swagger UI is at `http://localhost:3001/docs` (only when `NODE_ENV=development`) and serves the committed `openapi.json` from the contract.
@@ -35,6 +39,7 @@ Swagger UI is at `http://localhost:3001/docs` (only when `NODE_ENV=development`)
 ```
 app.ts                 buildApp(): middleware -> /v1 -> notFound -> errorHandler
 index.ts               listen, DB connection check, graceful shutdown
+vuln-sync.ts           the vulnerability sync process and its CLI (`pnpm vulns:*`), separate from the API
 config/                env.ts (zod + process.loadEnvFile), database-url.ts (DB_* -> URL)
 lib/                   prisma, logger, http-error, api-docs, password, tokens, auth-cookies, auth-context, chunks,
                        crypto (field encryption at rest)
@@ -48,6 +53,8 @@ modules/scans          GET /scans… (scan results, hosts per scan, changes: sca
                        queues a Scan and its ScanJob batches (scans.service.ts, dns.ts, batching.ts)
 modules/results        no routes yet: ingests worker results into observations (details.ts, fingerprint.ts, job-scope.ts)
 modules/hosts          PATCH /hosts…: edits of the Host and Service assets; ingest's helpers for those assets
+modules/vulnerabilities  /vulnerabilities…: sources (NVD, OSV) mirrored into the database, matching services
+                       against them, triage; see "Vulnerabilities"
 demo/                  deterministic demo scan data for `db:seed:hosts` (not part of the API build)
 test/                  integration test setup: test database, TestClient (fetch + cookie jar), sign-in helpers,
                        ingestScan() (scans.ts)
@@ -80,7 +87,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Permissions and roles
 
-- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|run` and `hosts:update`. `scans:read` guards the scan results (hosts included), `hosts:update` the edits of hosts and services; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
+- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|run`, `hosts:update` and `vulnerabilities:*`. `scans:read` guards the scan results (hosts and their vulnerabilities included), `hosts:update` the edits of hosts and services; `vulnerabilities:read` the databases' state and the mappings, `:update` the triage of a service's vulnerabilities, `:run` syncing and enabling sources, `:create`/`:delete` the mappings; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
 - A route checks permissions with `requirePermission("users:read")` after `requireAuth`. Services that act on other accounts or roles also call `assertHoldsAll` (below).
 - **System roles** (`admin`, `editor`, `analyst`, `viewer`) are read-only. `syncSystemRoles()` (`modules/roles/system-roles.ts`) runs at startup and in the seed: it gives them exactly `SYSTEM_ROLE_PERMISSIONS` and drops permissions that no longer exist from custom roles.
 - **Custom roles** are rows with a `permissions` array. Deleting a role that users still have needs `reassignToRoleId` (and `users:update`); the users move and the role is deleted in one transaction.
@@ -124,7 +131,7 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `s
 - `prisma.config.ts`: schema path, migrations, seed and the URL built from `DB_*`. A placeholder URL lets `prisma generate` run on a fresh clone without a database.
 - `prisma/schema/schema.prisma`: only the generator and the datasource. Models live in `prisma/schema/<module>/<model>.prisma` (one file per model, in a folder named after the module in `src/modules/` that owns the table).
 - Every relation field needs an `@@index`, because Prisma does not create indexes on foreign keys in Postgres.
-- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF). `src/lib/crypto.ts` does it at the field level: AES-256-GCM with `DATA_ENCRYPTION_KEY`, a value becomes `{ "$enc": "v1.<base64(iv | tag | ciphertext)>" }`, and `decryptJson` returns `unknown`, so readers validate with zod. Scan results use it (see [Scan results](#scan-results)). The auth tables hold only hashes (passwords, refresh secrets), emails and display names. `Host.note` and `Service.note` (free text from analysts) are encrypted with `encryptText`. Still to cover: `Target.value` and `note`, `ScanJob.targets` and `hosts` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
+- Fields holding sensitive data must be encrypted at rest (requirement 16 in the PDF). `src/lib/crypto.ts` does it at the field level: AES-256-GCM with `DATA_ENCRYPTION_KEY`, a value becomes `{ "$enc": "v1.<base64(iv | tag | ciphertext)>" }`, and `decryptJson` returns `unknown`, so readers validate with zod. Scan results use it (see [Scan results](#scan-results)). The auth tables hold only hashes (passwords, refresh secrets), emails and display names. `Host.note`, `Service.note` and `ServiceVulnerabilityTriage.note` (free text from analysts) are encrypted with `encryptText`. The vulnerability databases are public and stay plaintext; `VulnerabilityMatch` rows only restate what the plaintext service columns (`serviceCpe`, `serviceVersion`) already show, and must stay queryable for the vulnerability filter. Still to cover: `Target.value` and `note`, `ScanJob.targets` and `hosts` (`Target.value` is the dedup key, so it will need a blind index such as an HMAC).
 
 ## Targets and scan jobs
 
@@ -184,6 +191,59 @@ Users reach hosts through scans: `/scans` → a scan → the hosts it saw (`modu
 
 **Edits** (`modules/hosts/`, `hosts:update`): `PATCH /hosts/{id}` (note, tags, triage) and `PATCH /hosts/{id}/services/{serviceId}` (the same plus `nameOverride`/`productOverride`/`versionOverride`, `null` clears one). They write the `Host`/`Service` assets, which ingest never touches, so an edit made from any scan shows in every scan and survives later ones (PDF item 14). Triage is `unreviewed | reviewed | important | false_positive`.
 
+## Vulnerabilities
+
+`modules/vulnerabilities` mirrors public vulnerability databases into PostgreSQL and matches the services the scans find against them. Two sources are implemented: **NVD** (CVEs with CPE applicability) and **OSV.dev** (advisories per package ecosystem, Debian and Alpine packages included). Everything heavy runs in a separate process, `src/vuln-sync.ts` (`pnpm vulns:sync`), never in the API.
+
+### How a source plugs in
+
+```
+ feed / zip ──► VulnerabilitySource (sources/registry.ts: nvd, osv)
+                  └─► NormalizedVulnerability { canonicalId, severity, …, criteria: [{ kind, matchKey, data }] }
+ Service (newest PortObservation) ──► components/ ──► Component { cpe, version, distro }
+                  └─► matchers/registry.ts (cpe, package): keysFor() + evaluate() ──► verdict
+```
+
+- A **source** (`sources/source.ts`) knows only its format and transport. It emits `upsert`, `checkpoint` (its own cursor), `scopeCompleted` and `needsFull` events; `sync/sync.service.ts` writes them. Adding one: implement the interface, add its factory to `FACTORIES` in `sources/registry.ts`, add its id to `VULN_SOURCES`.
+- A **criterion** has a `kind`, a version-independent `matchKey` and `data` (JSONB): `cpe` (`cpe:a:openbsd:openssh`, version ranges) from NVD, `package` (`pkg:Debian:openssh`, OSV ranges per release) from OSV. A new source that describes software the same way reuses a matcher; a new data model adds one matcher in `matchers/` (`defineMatcher` with a zod schema for its data). The tables do not change.
+- **Canonical id:** records merge across sources by CVE: the CVE in the record's id (`DEBIAN-CVE-2023-48795`), else the single CVE among `aliases` and `upstream`, else the record's own id.
+
+### Sync
+
+- **Schedule:** incremental every `VULN_SYNC_INTERVAL_HOURS` (8), full every `VULN_FULL_SYNC_INTERVAL_DAYS` (7) and on the first run; "Sync now" and the source toggle in the UI queue a `VulnerabilityJobRequest` that the process picks up within `VULN_SYNC_POLL_SECONDS`. One process works at a time: a lease in `VulnerabilitySyncState` (database clock, renewed every minute); cursors and sweeps are written only while it is held. Runs are recorded in `VulnerabilitySyncRun`.
+- **NVD:** full = every year file `nvdcve-2.0-<year>.json.gz` (streamed, never loaded whole), then `modified`; incremental = `modified` only (the last 8 days), skipped when its `.meta` checksum is unchanged; older than 7 days → a full sync. The `.meta` sha256 is checked against the uncompressed bytes. `Rejected` CVEs are kept as `rejected`, without criteria.
+- **OSV:** full = each ecosystem's `all.zip`; incremental = `<ecosystem>/modified_id.csv` read up to the cursor, changed records fetched one by one (more than `OSV_INCREMENTAL_MAX_RECORDS` → the zip). `withdrawn` records become `withdrawn`. `MAL-*` (malicious packages) and `DSA-`/`DLA-`/`DTSA-` (bundles of CVEs the `DEBIAN-CVE-*` records cover) are skipped.
+- **Writes:** batches of 1,000 through `jsonb_to_recordset`; a record whose `sourceModifiedAt` and status did not change only gets `lastSeenAt`, a changed one gets its criteria replaced. One row per record and match key, so a CVE listing hundreds of firmware versions is one row.
+- **Corrected entries** (the reason to re-sync often): a changed record replaces its criteria; a rejected or withdrawn one stops matching; a record a complete full sync no longer sees is withdrawn (`removed_from_source`), never deleted. That sweep refuses to withdraw more than `VULN_SWEEP_MAX_RATIO` of a scope (a truncated download), and a failed or partial run never sweeps.
+- **Offline:** downloads land in `VULN_CACHE_DIR` in each source's layout, so the directory is a mirror: `pnpm vulns:mirror <dir>` on a connected machine, then `NVD_FEED_URL=file://<dir>/nvd` and `OSV_BASE_URL=file://<dir>/osv` in the lab. `pnpm vulns:import --source <id> <file>` imports a single file.
+
+### Matching
+
+- **Input:** nmap's own fields of the service's newest observation (by scan, then observation time): `serviceCpe`, plus `serviceVersion`/`serviceExtraInfo`/OS CPEs for the distribution and package revision (`9.2p1 Debian 2+deb12u3`, `Ubuntu 3ubuntu13.5`). User corrections of product or version do not change matching. Application CPEs without a version, and nmap's guesses (`5.X`), match as `potential` (`version_unknown`); OS and hardware CPEs without a version are only platform hints.
+- **cpe matcher:** NVD version and update are joined (`9.6` + `p1` = `9.6p1`), ranges compared with `versioning/generic.ts` (rc < release < p1). `AND` configurations (vulnerable only on a platform) check the service's OS hints: no hint → `potential` (`platform_condition`).
+- **package matcher:** `PackageMapping` (CPE vendor:product → package per ecosystem, starter rows in the migration, editable in the UI) leads a component to OSV packages; distribution ecosystems only when the service runs on that distribution. The Debian revision is compared with dpkg rules on the exact release (epochs ignored: banners never show them).
+- **Backports:** `matching/resolver.ts` merges every source's verdict per CVE. When the distribution's own data on the exact package revision says "fixed", the NVD hit becomes `potential` (`fixed_by_backport`); an NVD hit on a distribution package without such data is `potential` (`distro_backport_possible`).
+- **When:** after every sync (all services), after a mapping or source change, and for the services of new scan results: the process follows `ScanJobResult.receivedAt` with a 2-minute look-back (ingest commits up to 60 s after the row is stamped), so `ingest()` does not change. A match that no longer holds is **retracted**, not deleted, with a reason (`service_changed`, `criteria_changed`, `source_withdrawn`, `source_disabled`), and comes back with its `firstMatchedAt` if it holds again. The analyst's verdict lives in `ServiceVulnerabilityTriage` per service and CVE, so it survives both.
+- **Reading:** matches belong to the Service asset; the scan views show them whatever scan is open (`basis.scanId` says which scan they were evaluated on). Summaries count each CVE once and leave false positives out; the host list filters by `vulnerability=any|critical|high|kev`.
+
+### Numbers and limits
+
+Measured on 2026-11-22 (MacBook, local Docker PostgreSQL 19, real downloads):
+
+| | NVD | OSV (7 default ecosystems) |
+|---|---|---|
+| Records | 430,357 (411,161 active, 19,196 rejected) | 122,808 (120,629 active, 2,179 withdrawn) |
+| Download | 25 year files + `modified`, ~320 MB gz | ~390 MB of zips |
+| First full sync | ~8 min | ~3 min |
+| Later full sync | ~7 min (22 records changed) | — |
+| Criteria rows | 927,367 (`cpe`) | 141,499 (`package`) |
+
+The tables take about 1 GB (`Vulnerability` 592 MB, `VulnerabilityCriterion` 418 MB); the process peaks at about 660 MB of memory. Re-matching the demo network's 644 services takes seconds. On the demo data a full sync gives 2,924 confirmed and 5,842 potential matches.
+
+- Many 2024–2026 CVEs have no CPE configuration in NVD yet (NVD's analysis backlog): NVD cannot match them; OSV often can.
+- Ubuntu is not in the default `OSV_ECOSYSTEMS` (820 MB): NVD hits on Ubuntu hosts are `potential`. The distribution parser already reads Ubuntu revisions, so adding `Ubuntu` to the list is enough.
+- Attribution: "This product uses data from the NVD API but is not endorsed or certified by the NVD." OSV data comes from many databases under their own licenses (GitHub Advisory Database CC-BY 4.0, Alpine SecDB CC-BY-SA 4.0, …); the admin page shows the notice.
+
 ## Demo data
 
 `pnpm db:seed:hosts` (after `pnpm db:reset` or `pnpm db:seed`, which create the admin who owns the scans) fills the database with realistic scan results to build features on (`src/demo/`, entry `prisma/seed-hosts.ts`):
@@ -192,6 +252,7 @@ Users reach hosts through scans: `/scans` → a scan → the hosts it saw (`modu
 - **Deterministic and idempotent:** fixed scan ids and lease ids, a seeded PRNG. Re-running skips what is already there; a fresh copy needs `pnpm db:reset` first. It takes about 10 s.
 - `pnpm db:seed:hosts --json <dir>` also writes every worker result as `run-N/job-NNN.json`, e.g. for testing an import of scan results.
 - The generator's tests (`src/demo/demo.test.ts`) check that every result passes `WorkerResultSchema` and that the second run really differs.
+- **Vulnerabilities:** before the runs, the seed loads `src/demo/vulnerabilities/{nvd,osv}.json` (real NVD and OSV records for the demo network's software) through the sources' parsers, and re-matches services after each run, so the second run's upgrades retract what they fixed. The slice leaves the sources' cursors alone: the first real sync is still a full one. `src/demo/vulnerabilities/build-fixture.ts` rebuilds it from a database with the demo scans and a full sync of every source.
 
 ## Environment variables
 
@@ -211,6 +272,18 @@ Users reach hosts through scans: `/scans` → a scan → the hosts it saw (`modu
 | `SCAN_DEFAULT_PORTS` | 28 common TCP ports | Ports snapshotted onto every queued scan (`22,80,8000-8100` syntax) |
 | `SCAN_DEFAULT_MAX_RATE` | `100` | Packets per second a worker may send for one job |
 | `SCAN_BATCH_SIZE` | `256` | Addresses per scan job, a power of two from 16 to 1024 |
+| `VULN_SOURCES` | `nvd,osv` | Vulnerability sources to run, from the registry; the order is the preference when two describe the same CVE |
+| `VULN_SYNC_INTERVAL_HOURS` | `8` | Incremental sync of each source every N hours |
+| `VULN_FULL_SYNC_INTERVAL_DAYS` | `7` | Full sync (which also withdraws records the source dropped) every N days |
+| `VULN_SYNC_POLL_SECONDS` | `30` | How often the sync process checks for requests from the API and new scan results |
+| `VULN_SWEEP_MAX_RATIO` | `0.05` | A full sync that would withdraw more than this share of a scope's records (and more than 25) fails instead |
+| `VULN_CACHE_DIR` | `.cache/vulnerabilities` | Downloads, in each source's own layout: also an offline mirror |
+| `NVD_FEED_URL` | `https://nvd.nist.gov/feeds/json/cve/2.0` | NVD JSON 2.0 feeds; `file:///…/nvd` for a mirror |
+| `NVD_FIRST_YEAR` | `2002` | First CVE year file of a full sync |
+| `OSV_BASE_URL` | `https://storage.googleapis.com/osv-vulnerabilities` | OSV bulk export; `file:///…/osv` for a mirror |
+| `OSV_ECOSYSTEMS` | `Maven,Go,Packagist,PyPI,Debian,Alpine,npm` | OSV ecosystems to mirror (each is a zip; Ubuntu alone is 820 MB) |
+| `OSV_SKIP_PREFIXES` | `MAL-,DSA-,DLA-,DTSA-` | Record ids left out: malicious-package reports, Debian advisories that bundle CVEs |
+| `OSV_INCREMENTAL_MAX_RECORDS` | `2000` | More changes than this since the last sync: read the ecosystem's whole zip instead |
 
 ## Docker
 
@@ -218,4 +291,4 @@ Users reach hosts through scans: `/scans` → a scan → the hosts it saw (`modu
 docker build -f apps/backend/Dockerfile .      # from the repo root
 ```
 
-A multi-stage build on `node:26.13.1-slim` using `pnpm deploy`; the process runs as `USER node`. The same image runs migrations: `node_modules/.bin/prisma migrate deploy`.
+A multi-stage build on `node:26.13.1-slim` using `pnpm deploy`; the process runs as `USER node`. The same image runs migrations: `node_modules/.bin/prisma migrate deploy`, and the vulnerability sync process: `node dist/vuln-sync.mjs` (one container of it per deployment; give `VULN_CACHE_DIR` a volume).

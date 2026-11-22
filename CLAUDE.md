@@ -79,6 +79,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
   - the PDF's four roles (item 13) are locked system roles, and admins create custom roles (item 12);
   - details and the rules for mapping new permissions onto system roles: [`apps/backend/README.md`](apps/backend/README.md#auth-and-rbac).
 - **Sensitive data:** encrypted at rest at the application level (AES-256-GCM, `DATA_ENCRYPTION_KEY`, `apps/backend/src/lib/crypto.ts`). Scan results store sensitive JSON fields as `{ "$enc": "v1.…" }`, and host/service notes are encrypted too; the other tables are still to be covered (see the backend README).
+- **Vulnerabilities:** `modules/vulnerabilities` mirrors NVD and OSV.dev into PostgreSQL and matches services (nmap CPE + distribution package revision of the newest observation) against them. Sources and matchers are plug-ins (`sources/registry.ts`, `matchers/registry.ts`); syncs (incremental every 8 h, full weekly) and all matching run in the separate `vuln-sync` process (`pnpm vulns:sync`), never in the API, which only queues requests. Matches are retracted with a reason, never deleted; triage is kept per service and CVE. Details: [`apps/backend/README.md`](apps/backend/README.md#vulnerabilities).
 - **DefectDojo:** a local instance runs in `docker/` (`http://localhost:8080`, fixed dev API token). The backend will push findings through `/api/v2/import-scan/`. Not implemented yet.
 
 ## Monorepo commands
@@ -98,6 +99,8 @@ pnpm clean
 pnpm db:up          # PostgreSQL in Docker (pnpm db:logs)
 pnpm db:reset       # drop + migrations + seed (system roles, admin, demo accounts)
 pnpm db:seed:hosts  # demo scan data: two scans of a /18 through the real ingest (--json <dir> also writes the results)
+pnpm vulns:sync     # vulnerability sync process (NVD, OSV); --once [--source id] [--full] [--rematch] for one pass
+pnpm vulns:mirror <dir>   # download the vulnerability sources for an offline lab (vulns:import imports a file)
 pnpm infra:up       # all infrastructure compose services, DefectDojo included (infra:down, infra:logs)
 pnpm dojo:up        # DefectDojo only, :8080 (dojo:logs, dojo:smoke)
 pnpm workers:build  # build the masscan-worker image (run a sweep: pnpm workers:masscan < job.json)
