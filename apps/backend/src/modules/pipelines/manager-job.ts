@@ -1,3 +1,4 @@
+import { SignatureProbePathSchema } from "@subsurf/contracts/signatures/signatures.schema";
 import { randomUUID } from "node:crypto";
 
 import type { ManagerJob } from "@subsurf/contracts/workers/workers.schema";
@@ -41,7 +42,25 @@ export interface JobLease {
  * Leases one job: its deadline is the step's max duration from now, cut at the scan's time
  * window, and the lease outlives it by `WORKER_LEASE_GRACE_SECONDS` for the result uploads.
  */
-export function leaseJob(job: ScanJob, scan: Scan, now: Date): JobLease {
+/** Probe paths a worker takes (`probe_paths` in its manifest) and the ones the signatures need. */
+export interface SignatureProbes {
+  paths: readonly string[];
+  maxItems: number;
+}
+
+/**
+ * The step's own probe paths first (never dropped), then the signatures' ones not already there,
+ * up to the field's limit. Paths are checked again: an imported signature passed the same check.
+ */
+export function mergeProbePaths(own: unknown, probes: SignatureProbes): string[] {
+  const kept = Array.isArray(own) ? own.filter((path): path is string => typeof path === "string") : [];
+  const added = probes.paths.filter(
+    (path) => !kept.includes(path) && SignatureProbePathSchema.safeParse(path).success,
+  );
+  return [...kept, ...added].slice(0, Math.max(kept.length, Math.min(probes.maxItems, 128)));
+}
+
+export function leaseJob(job: ScanJob, scan: Scan, now: Date, probes?: SignatureProbes): JobLease {
   const step = jobStep(job, scan);
   const ownDeadline = now.getTime() + step.maxDurationSeconds * 1000;
   const deadline = new Date(Math.min(ownDeadline, scan.windowEndsAt?.getTime() ?? ownDeadline));
@@ -59,6 +78,8 @@ export function leaseJob(job: ScanJob, scan: Scan, now: Date): JobLease {
           ),
         };
   params.max_duration_seconds = Math.max(1, Math.floor((deadline.getTime() - now.getTime()) / 1000));
+  // At lease time, so queued and re-leased jobs follow the signatures as they are now.
+  if (probes) params.probe_paths = mergeProbePaths(params.probe_paths, probes);
 
   const { strategy, maxTasks, maxItemsPerTask } = step.split;
   return {

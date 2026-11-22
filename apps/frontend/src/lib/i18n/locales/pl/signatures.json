@@ -227,5 +227,6 @@
     "newHosts_few": "{{count}} nowe od poprzedniego skanu",
     "newHosts_many": "{{count}} nowych od poprzedniego skanu",
     "newHosts_other": "{{count}} nowego od poprzedniego skanu"
-  }
+  },
+  "probePathsHint": "Ścieżki potrzebne włączonym sygnaturom detekcyjnym są dodawane automatycznie (zob. Sygnatury)."
 }

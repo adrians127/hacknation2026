@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { WorkerParamField, WorkerParamValue } from "@subsurf/contracts/workers/worker-catalog";
 
@@ -104,6 +105,7 @@ export function WorkerParamInput({ id, field, value, onChange, error, disabled }
           describedBy={describedBy}
         />
       )}
+      {field.key === "probe_paths" && <SignatureProbesHint />}
       {hint}
     </div>
   );
@@ -147,4 +149,10 @@ function PathsInput({
       }}
     />
   );
+}
+
+/** Scans also request what the enabled detection signatures need, without listing it here. */
+function SignatureProbesHint() {
+  const { t } = useTranslation("signatures");
+  return <p className="text-xs text-muted-foreground">{t("probePathsHint")}</p>;
 }

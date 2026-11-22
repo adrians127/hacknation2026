@@ -219,5 +219,6 @@
     "hostCount": "hosts: {{hosts}} · services: {{services}}",
     "newHosts_one": "{{count}} new since the previous scan",
     "newHosts_other": "{{count}} new since the previous scan"
-  }
+  },
+  "probePathsHint": "Paths the enabled detection signatures need are added automatically (see Signatures)."
 }

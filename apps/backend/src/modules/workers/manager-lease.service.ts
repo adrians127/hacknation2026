@@ -1,9 +1,26 @@
+import { WorkerParamFieldsSchema } from "@subsurf/contracts/workers/worker-catalog";
 import type { ManagerJob, ManagerLeaseRequest } from "@subsurf/contracts/workers/workers.schema";
 
 import { env } from "~backend/config/env";
 import { prisma } from "~backend/lib/prisma";
 import { leaseJob } from "~backend/modules/pipelines/manager-job";
 import { MIN_WINDOW_LEFT_MS } from "~backend/modules/pipelines/pipeline-runs.service";
+import { loadActiveSet } from "~backend/modules/signatures/signature-catalog";
+
+/** The limit of each offered worker's `probe_paths` field; workers without one get no probes. */
+async function probeLimits(workers: readonly string[]): Promise<Map<string, number>> {
+  const rows = await prisma.worker.findMany({
+    where: { name: { in: [...workers] } },
+    select: { name: true, paramFields: true },
+  });
+  const limits = new Map<string, number>();
+  for (const row of rows) {
+    const fields = WorkerParamFieldsSchema.safeParse(row.paramFields);
+    const field = fields.success ? fields.data.find((candidate) => candidate.key === "probe_paths") : undefined;
+    if (field?.type === "paths") limits.set(row.name, field.maxItems);
+  }
+  return limits;
+}
 
 /**
  * Leases queued jobs to one manager: only for workers it offers, only of scans that may run now
@@ -25,6 +42,7 @@ export async function leaseJobs(request: ManagerLeaseRequest, now = new Date()):
 
   const limit = request.max_parallel * env.WORKER_LEASE_JOBS_PER_SLOT;
   const scanIds = scans.map((scan) => scan.id);
+  const [limits, { probePaths }] = await Promise.all([probeLimits(workers), loadActiveSet()]);
   return prisma.$transaction(async (tx) => {
     const picked = await tx.$queryRaw<{ id: string }[]>`
       SELECT j.id FROM "ScanJob" j
@@ -46,7 +64,8 @@ export async function leaseJobs(request: ManagerLeaseRequest, now = new Date()):
 
     const jobs: ManagerJob[] = [];
     for (const row of rows) {
-      const lease = leaseJob(row, row.scan, now);
+      const maxItems = limits.get(row.worker);
+      const lease = leaseJob(row, row.scan, now, maxItems === undefined ? undefined : { paths: probePaths, maxItems });
       await tx.scanJob.update({
         where: { id: row.id },
         data: {
