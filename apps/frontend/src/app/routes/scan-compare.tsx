@@ -1,7 +1,8 @@
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Download, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
+import { toast } from "sonner";
 
 import {
   ScanChangeFilterSchema,
@@ -12,19 +13,21 @@ import type { Scan } from "@subsurf/contracts/scans/scans.schema";
 
 import { DataTablePagination } from "@/components/data-table-pagination";
 import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScanHosts } from "@/features/hosts/api/get-scan-hosts";
 import { CompareHostSheet } from "@/features/hosts/components/compare-host-sheet";
+import { useExportChanges, type ChangesFormat } from "@/features/scans/api/export-changes";
 import { useScan } from "@/features/scans/api/get-scan";
 import { useScans } from "@/features/scans/api/get-scans";
 import { ChangeFilterCards } from "@/features/scans/components/change-filter-cards";
 import { CompareHostsTable } from "@/features/scans/components/compare-hosts-table";
 import { ScanPairPicker } from "@/features/scans/components/scan-pair-picker";
 import { ScanPairStats } from "@/features/scans/components/scan-pair-stats";
-import { hasResults, orderPair } from "@/features/scans/lib/pair";
+import { hasResults, orderPair, scanDate } from "@/features/scans/lib/pair";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useErrorMessage } from "@/hooks/use-error-message";
 
@@ -37,6 +40,10 @@ function parsePage(raw: string | null): number {
   const page = Number(raw);
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
+
+/** `2026-11-21-01-00` */
+const fileStamp = (scan: Scan | undefined) =>
+  scan ? scanDate(scan).slice(0, 16).replaceAll(/[:T]/g, "-") : "scan";
 
 function parseChange(raw: string | null): ScanChangeFilter | undefined {
   if (raw === ALL) return undefined;
@@ -100,6 +107,23 @@ export function ScanCompareRoute() {
     { enabled: Boolean(targetId && baseId) },
   );
 
+  const exportChanges = useExportChanges();
+  const download = (format: ChangesFormat) => {
+    if (!targetId || !baseId) return;
+    const [before, after] = [baseId, targetId].map((id) => items.find((scan) => scan.id === id));
+    exportChanges.mutate(
+      {
+        scanId: targetId,
+        base: baseId,
+        format,
+        fileName: `scan-changes-${fileStamp(before)}-to-${fileStamp(after)}.${format}`,
+      },
+      {
+        onError: (error) => toast.error(t("scans.compare.exportFailed", { message: errorMessage(error) })),
+      },
+    );
+  };
+
   const pickScan = useCallback(
     (entry: HostHistoryEntry) => {
       if (!targetId) return;
@@ -118,7 +142,25 @@ export function ScanCompareRoute() {
         <ArrowLeft className="size-4" />
         {t("scans.detail.back")}
       </Link>
-      <PageHeader title={t("scans.compare.title")} description={t("scans.compare.subtitle")} />
+      <PageHeader
+        title={t("scans.compare.title")}
+        description={t("scans.compare.subtitle")}
+        actions={
+          targetId && baseId
+            ? (["csv", "json"] as const).map((format) => (
+                <Button
+                  key={format}
+                  variant="outline"
+                  disabled={exportChanges.isPending}
+                  onClick={() => download(format)}
+                >
+                  <Download />
+                  {t("scans.compare.export", { format: format.toUpperCase() })}
+                </Button>
+              ))
+            : undefined
+        }
+      />
     </>
   );
 

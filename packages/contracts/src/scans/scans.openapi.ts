@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { registry } from "../../scripts/registry";
 import {
   cookieAuth,
@@ -17,6 +19,7 @@ import {
   TagScanHostsBodySchema,
   TagScanHostsResponseSchema,
 } from "./scan-results.schema";
+import { ScanChangesQuerySchema, ScanChangesResponseSchema } from "./scan-changes.schema";
 import { ScanListResponseSchema } from "./scans.schema";
 
 const tags = ["Scans"];
@@ -134,6 +137,35 @@ registry.registerPath({
     200: {
       description: "How many hosts matched and how many changed",
       content: { "application/json": { schema: TagScanHostsResponseSchema } },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/scans/{id}/changes",
+  operationId: "exportScanChanges",
+  summary: "Export the changes since the base scan, one row per change, as JSON or CSV",
+  description: [
+    "Requires `scans:read`. Compared with `base` (older) or the previous scan with results. Rows",
+    "for new, gone and unknown hosts, opened and closed ports, and each changed field, with a",
+    "priority and its reason. CSV cells that start with `=`, `+`, `-` or `@` get a leading `'`",
+    "so spreadsheets do not run them as formulas.",
+  ].join(" "),
+  tags,
+  security,
+  request: { params: IdParamsSchema, query: ScanChangesQuerySchema },
+  responses: {
+    200: {
+      description: "The changes",
+      content: {
+        "application/json": { schema: ScanChangesResponseSchema },
+        "text/csv": { schema: z.string() },
+      },
     },
     400: validationFailed,
     401: unauthenticated,

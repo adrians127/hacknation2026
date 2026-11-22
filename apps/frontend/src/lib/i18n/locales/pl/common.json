@@ -354,7 +354,9 @@
         "change": "Zmiana",
         "base": "A · {{date}}",
         "target": "B · {{date}}"
-      }
+      },
+      "export": "Eksportuj zmiany jako {{format}}",
+      "exportFailed": "Eksport się nie powiódł: {{message}}"
     }
   },
   "language": {

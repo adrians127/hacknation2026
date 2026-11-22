@@ -313,6 +313,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scans/{id}/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the changes since the base scan, one row per change, as JSON or CSV
+         * @description Requires `scans:read`. Compared with `base` (older) or the previous scan with results. Rows for new, gone and unknown hosts, opened and closed ports, and each changed field, with a priority and its reason. CSV cells that start with `=`, `+`, `-` or `@` get a leading `'` so spreadsheets do not run them as formulas.
+         */
+        get: operations["exportScanChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/targets/import": {
         parameters: {
             query?: never;
@@ -2484,6 +2504,109 @@ export interface operations {
                         unchanged: number;
                         limitReached: number;
                     };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    exportScanChanges: {
+        parameters: {
+            query?: {
+                base?: string;
+                format?: "json" | "csv";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The changes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        scan: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                        };
+                        baseScan: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                        } | null;
+                        items: {
+                            /** Format: uuid */
+                            hostId: string;
+                            /** Format: ip */
+                            ip: string;
+                            hostnames: string[];
+                            /** @enum {string|null} */
+                            protocol: "tcp" | null;
+                            port: number | null;
+                            /** @enum {string} */
+                            change: "new" | "gone" | "changed" | "unchanged" | "unknown";
+                            /** @enum {string|null} */
+                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname" | null;
+                            endpoint: {
+                                /** @enum {string} */
+                                scheme: "http" | "https";
+                                vhost: string | null;
+                            } | null;
+                            key: string | null;
+                            before: string | null;
+                            after: string | null;
+                            /** @enum {string} */
+                            priority: "high" | "medium" | "low";
+                            /** @enum {string} */
+                            reason: "new-host" | "returning-host" | "risky-port" | "new-service" | "admin-panel" | "ssh-key-changed" | "self-signed" | "version-change" | "new-endpoint" | "page-change" | "cert-change" | "security-header-removed" | "cookie-flags-weakened" | "technology-header" | "host-inactive" | "host-gone" | "service-gone" | "no-answer" | "other";
+                            /** @enum {string} */
+                            lifecycle: "active" | "unstable" | "missing" | "inactive";
+                        }[];
+                    };
+                    "text/csv": string;
                 };
             };
             /** @description Validation failed */

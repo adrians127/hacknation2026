@@ -1,3 +1,4 @@
+import type { ScanChangeRow } from "@subsurf/contracts/scans/scan-changes.schema";
 import type {
   HostLifecycle,
   ScanHost,
@@ -18,6 +19,7 @@ import type { Prisma, Scan as ScanRow } from "~backend/generated/prisma/client";
 import { decryptText } from "~backend/lib/crypto";
 import { comparablePort } from "~backend/modules/results/comparable";
 import { httpSummaries, openPortDetails, storedOpenPort } from "~backend/modules/results/details";
+import { rateChange, type ChangeFacts } from "~backend/modules/scans/change-priority";
 import { fieldChanges, hostnameChanges } from "~backend/modules/scans/field-changes";
 import type { HostDiff, ServiceDiff } from "~backend/modules/scans/scan-diff";
 import { EMPTY_SUMMARY } from "~backend/modules/vulnerabilities/vulnerabilities.mapper";
@@ -212,4 +214,76 @@ export function toScanHostDetail(
       };
     }),
   };
+}
+
+const identityText = (port: PortRow | undefined) =>
+  port ? [port.serviceName, port.serviceProduct, port.serviceVersion].filter(Boolean).join(" ") || null : null;
+
+/** The host's changes as rows for export and the dashboard (`ScanChangeRowSchema`). */
+export function toChangeRows(entry: HostInScan): ScanChangeRow[] {
+  const { diff, host, current, base } = entry;
+  // Kept in a const: narrowing does not reach into the callbacks below.
+  const hostChange = diff.change;
+  if (hostChange === null || hostChange === "unchanged") return [];
+  const common = {
+    hostId: host.id,
+    ip: host.ip,
+    hostnames: hostnames(current.status === "up" ? current : base),
+    lifecycle: entry.lifecycle.state,
+    endpoint: null,
+    key: null,
+  };
+  const hostLevel: ChangeFacts[] =
+    hostChange === "changed"
+      ? current.status === "up" && base
+        ? hostnameChanges(hostnames(base), hostnames(current)).map((change) => ({
+            ...common,
+            protocol: null,
+            port: null,
+            change: hostChange,
+            field: change.field,
+            before: change.before,
+            after: change.after,
+          }))
+        : []
+      : [
+          {
+            ...common,
+            protocol: null,
+            port: null,
+            change: hostChange,
+            field: null,
+            before: diff.baseStatus,
+            after: current.status,
+          },
+        ];
+  // An unknown host's services are not known to have changed.
+  const services: ChangeFacts[] =
+    hostChange === "unknown"
+      ? []
+      : resolveServices(entry).flatMap((resolved): ChangeFacts[] => {
+          const { change } = resolved.diff;
+          const service = { ...common, protocol: resolved.port.protocol, port: resolved.port.port };
+          if (change === "new" || change === "gone") {
+            return [
+              {
+                ...service,
+                change,
+                field: null,
+                before: change === "gone" ? identityText(resolved.port) : null,
+                after: change === "new" ? identityText(resolved.port) : null,
+              },
+            ];
+          }
+          return changesOf(resolved).map((field) => ({
+            ...service,
+            change: "changed" as const,
+            field: field.field,
+            endpoint: field.endpoint,
+            key: field.key,
+            before: field.before,
+            after: field.after,
+          }));
+        });
+  return [...hostLevel, ...services].map(rateChange);
 }

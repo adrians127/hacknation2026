@@ -10,6 +10,7 @@ import {
   type ScanHostListResponse,
   type ScanCoverage,
 } from "@subsurf/contracts/scans/scan-results.schema";
+import type { ScanChangesResponse } from "@subsurf/contracts/scans/scan-changes.schema";
 import type { Scan, ScanHostCounts, ScanJobStatus } from "@subsurf/contracts/scans/scans.schema";
 import type { Ipv4Range } from "@subsurf/contracts/targets/ipv4";
 
@@ -30,6 +31,7 @@ import {
 } from "~backend/modules/scans/scan-diff";
 import {
   OBSERVATION_INCLUDE,
+  toChangeRows,
   toScan,
   toScanHost,
   toScanHostDetail,
@@ -258,6 +260,14 @@ async function filteredHostIds(
   return new Set(first.filter((id) => others.every((ids) => ids.has(id))));
 }
 
+/** Hosts loaded per query when every change is needed: keeps the IP lists well under the bind limit. */
+const CHANGES_BATCH = 500;
+
+const scanRef = (scan: { id: string; startedAt: Date | null }) => ({
+  id: scan.id,
+  startedAt: scan.startedAt?.toISOString() ?? null,
+});
+
 /** Scans that did not cover an address, or got no answer, do not count: look further back. */
 const LIFECYCLE_SCANS = LIFECYCLE_WINDOW * 3;
 
@@ -430,6 +440,21 @@ export const scanResultsService = {
       page: query.page,
       pageSize: query.pageSize,
     };
+  },
+
+  /** Every change since the base scan, one row each, rated (export and dashboard). */
+  async changes(scanId: string, baseId?: string): Promise<ScanChangesResponse> {
+    const scan = await findScan(scanId);
+    const base = await resolveBase(scan, baseId);
+    if (!base) return { scan: scanRef(scan), baseScan: null, items: [] };
+    const { entries } = await diffWithBase(scan, base);
+    const changed = entries.filter((entry) => entry.change !== null && entry.change !== "unchanged");
+    const items = [];
+    for (let start = 0; start < changed.length; start += CHANGES_BATCH) {
+      const page = await hostsInScan(scan, base, changed.slice(start, start + CHANGES_BATCH));
+      items.push(...page.flatMap(toChangeRows));
+    }
+    return { scan: scanRef(scan), baseScan: scanRef(base), items };
   },
 
   /** Host assets the scan lists (gone and unknown included) inside `ranges` (sorted, merged). */

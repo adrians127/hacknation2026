@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { IdParamsSchema } from "@subsurf/contracts/common/common.schema";
+import { ScanChangesQuerySchema } from "@subsurf/contracts/scans/scan-changes.schema";
 import {
   ScanCompareQuerySchema,
   ScanHostListQuerySchema,
@@ -19,6 +20,11 @@ scansRoutes.use(requireAuth, requirePermission("scans:read"));
 
 scansRoutes.get("/", c.list);
 scansRoutes.get("/:id", validate({ params: IdParamsSchema, query: ScanCompareQuerySchema }), c.get);
+scansRoutes.get(
+  "/:id/changes",
+  validate({ params: IdParamsSchema, query: ScanChangesQuerySchema }),
+  c.changes,
+);
 scansRoutes.get(
   "/:id/hosts",
   validate({ params: IdParamsSchema, query: ScanHostListQuerySchema }),

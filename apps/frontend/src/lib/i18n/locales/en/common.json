@@ -318,7 +318,9 @@
         "change": "Change",
         "base": "A · {{date}}",
         "target": "B · {{date}}"
-      }
+      },
+      "export": "Export changes as {{format}}",
+      "exportFailed": "The export failed: {{message}}"
     }
   },
   "language": {
