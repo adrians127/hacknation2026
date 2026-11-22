@@ -5,17 +5,26 @@ import { RoleDetailRoute } from "@/app/routes/admin/role-detail";
 import { RolesRoute } from "@/app/routes/admin/roles";
 import { UsersRoute } from "@/app/routes/admin/users";
 import { VulnerabilitiesRoute } from "@/app/routes/admin/vulnerabilities";
+import { WorkersRoute } from "@/app/routes/admin/workers";
 import { AppLayout } from "@/app/routes/app-layout";
 import { ChangePasswordRoute } from "@/app/routes/change-password";
 import { DashboardRoute } from "@/app/routes/dashboard";
 import { LandingRoute } from "@/app/routes/landing";
 import { LoginRoute } from "@/app/routes/login";
 import { NotFoundRoute } from "@/app/routes/not-found";
+import { PipelineEditRoute } from "@/app/routes/pipeline-edit";
+import { PipelinesRoute } from "@/app/routes/pipelines";
+import { DiffReportRoute } from "@/app/routes/reports/diff-report";
+import { StabilityReportRoute, TimeOfDayReportRoute } from "@/app/routes/reports/history-reports";
+import { IpReportRoute } from "@/app/routes/reports/ip-report";
+import { ReportsRoute } from "@/app/routes/reports/reports";
+import { ScanReportRoute } from "@/app/routes/reports/scan-report";
 import { RequirePermission } from "@/app/routes/require-permission";
 import { RootLayout } from "@/app/routes/root-layout";
 import { RouteError } from "@/app/routes/route-error";
 import { ScanCompareRoute } from "@/app/routes/scan-compare";
 import { ScanDetailRoute } from "@/app/routes/scan-detail";
+import { ScanImportRoute } from "@/app/routes/scan-import";
 import { ScansRoute } from "@/app/routes/scans";
 import { StatusRoute } from "@/app/routes/status";
 import { TargetsRoute } from "@/app/routes/targets";
@@ -63,7 +72,37 @@ export const router = createBrowserRouter([
             children: [
               { index: true, Component: ScansRoute },
               { path: "compare", Component: ScanCompareRoute },
+              {
+                path: "import",
+                element: <RequirePermission permission="scans:create" />,
+                children: [{ index: true, Component: ScanImportRoute }],
+              },
               { path: ":scanId", Component: ScanDetailRoute },
+            ],
+          },
+          {
+            path: "reports",
+            element: <RequirePermission permission="scans:read" />,
+            children: [
+              { index: true, Component: ReportsRoute },
+              { path: "scans/:scanId/:kind", Component: ScanReportRoute },
+              { path: "diff", Component: DiffReportRoute },
+              { path: "ips/:ip", Component: IpReportRoute },
+              { path: "stability", Component: StabilityReportRoute },
+              { path: "time-of-day", Component: TimeOfDayReportRoute },
+            ],
+          },
+          {
+            path: "pipelines",
+            element: <RequirePermission permission="pipelines:read" />,
+            children: [
+              { index: true, Component: PipelinesRoute },
+              {
+                path: "new",
+                element: <RequirePermission permission="pipelines:create" />,
+                children: [{ index: true, Component: PipelineEditRoute }],
+              },
+              { path: ":pipelineId", Component: PipelineEditRoute },
             ],
           },
           {
@@ -78,6 +117,11 @@ export const router = createBrowserRouter([
               { index: true, Component: RolesRoute },
               { path: ":roleId", Component: RoleDetailRoute },
             ],
+          },
+          {
+            path: "admin/workers",
+            element: <RequirePermission permission="workers:read" />,
+            children: [{ index: true, Component: WorkersRoute }],
           },
           {
             path: "admin/vulnerabilities",

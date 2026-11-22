@@ -43,6 +43,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
       message: status >= 500 && !isDevelopment ? "Internal Server Error" : message,
       status,
       ...(err instanceof HttpError && err.code ? { code: err.code } : {}),
+      ...(err instanceof HttpError && err.details !== undefined ? { details: err.details } : {}),
       ...(isDevelopment && err instanceof Error ? { stack: err.stack } : {}),
     },
   };

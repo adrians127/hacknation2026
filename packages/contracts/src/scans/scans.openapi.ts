@@ -3,6 +3,7 @@ import { z } from "zod";
 import { registry } from "../../scripts/registry";
 import {
   cookieAuth,
+  errorResponse,
   forbidden,
   notFound,
   unauthenticated,
@@ -20,7 +21,10 @@ import {
   TagScanHostsResponseSchema,
 } from "./scan-results.schema";
 import { ScanChangesQuerySchema, ScanChangesResponseSchema } from "./scan-changes.schema";
-import { ScanListResponseSchema } from "./scans.schema";
+import { ScanExportDocumentSchema, ScanExportQuerySchema } from "./scan-export.schema";
+import { ImportScanQuerySchema, ImportScanResponseSchema } from "./scan-import.schema";
+import { ScanJobListQuerySchema, ScanJobListResponseSchema } from "./scan-jobs.schema";
+import { UpdatedScanSchema, ScanListResponseSchema, UpdateScanBodySchema } from "./scans.schema";
 
 const tags = ["Scans"];
 const security = cookieAuth;
@@ -171,5 +175,171 @@ registry.registerPath({
     401: unauthenticated,
     403: forbidden,
     404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/scans/{id}/export",
+  operationId: "exportScan",
+  summary: "Export a scan's results, with the users' edits, as JSON or CSV",
+  description: [
+    "Requires `scans:read`. Every address the scan covered as this scan saw it, sensitive fields",
+    "decrypted, plus the notes, tags, triage and service corrections of its hosts. JSON lists the",
+    "addresses that are not `down` in the worker result's host shape and names the covered blocks",
+    "in `coverage` (an address in them without an entry is `down`); `POST /scans/import` reads the",
+    "file back. CSV has one row per HTTP endpoint and leaves out headers, cookies, certificates,",
+    "banners and probes; cells that start with `=`, `+`, `-` or `@` get a leading `'`.",
+  ].join(" "),
+  tags,
+  security,
+  request: { params: IdParamsSchema, query: ScanExportQuerySchema },
+  responses: {
+    200: {
+      description: "The scan as a file",
+      content: {
+        "application/json": { schema: ScanExportDocumentSchema },
+        "text/csv": { schema: z.string() },
+      },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/scans/import",
+  operationId: "importScan",
+  summary: "Import a results file as a new scan",
+  description: [
+    "Requires `scans:read` and `scans:create`; `edits=fill` also requires `hosts:update`. The body",
+    "is the file itself: a scan export (`GET /scans/{id}/export`) as JSON or CSV, one worker result",
+    "(`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. CSV needs only an `ip`",
+    "column; rows it cannot read are skipped and reported in `warnings`. The results are ingested",
+    "the way a worker's own are. The scan takes its place among the others by when the file says",
+    "it ran, so it can become the base scan of a newer one. The same content is imported once",
+    "(`SCAN_ALREADY_IMPORTED` carries the existing scan's id in `details.scanId`).",
+    "`SCAN_IMPORT_INVALID` lists what is wrong in `details.issues`.",
+  ].join(" "),
+  tags,
+  security,
+  request: {
+    query: ImportScanQuerySchema,
+    body: {
+      required: true,
+      content: {
+        "application/json": { schema: z.unknown() },
+        "text/csv": { schema: z.string() },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: "The scan the file became",
+      content: { "application/json": { schema: ImportScanResponseSchema } },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    409: errorResponse("The file was imported before, or another import is running"),
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/scans/{id}/jobs",
+  operationId: "listScanJobs",
+  summary: "List a scan's jobs",
+  description: [
+    "Requires `scans:read`. In step order, then sequence; `step` and `status` filter. A step that",
+    "takes the previous step's hosts gets a job each time one of the previous step's jobs completes.",
+  ].join(" "),
+  tags,
+  security,
+  request: { params: IdParamsSchema, query: ScanJobListQuerySchema },
+  responses: {
+    200: {
+      description: "One page of jobs",
+      content: { "application/json": { schema: ScanJobListResponseSchema } },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/scans/{id}/stop",
+  operationId: "stopScan",
+  summary: "Stop a scan",
+  description: [
+    "Requires `scans:read` and `scans:run`. Queued jobs are stopped; leased ones finish their",
+    "current run (worker-manager has no cancel channel), and the scan ends once they do.",
+  ].join(" "),
+  tags,
+  security,
+  request: { params: IdParamsSchema },
+  responses: {
+    204: { description: "Stopped, or stopping once the leased jobs end" },
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+    409: errorResponse("The scan has already ended (`SCAN_NOT_STOPPABLE`)"),
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/scans/{id}",
+  operationId: "updateScan",
+  summary: "Change a scan's name and note",
+  description: [
+    "Requires `scans:read` and `scans:update`. Works in any state of the scan. Only the name and",
+    "the note change: what the scan found and the parameters it ran with are never edited. The",
+    "note is encrypted at rest.",
+  ].join(" "),
+  tags,
+  security,
+  request: {
+    params: IdParamsSchema,
+    body: { content: { "application/json": { schema: UpdateScanBodySchema } } },
+  },
+  responses: {
+    200: {
+      description: "The scan's name and note",
+      content: { "application/json": { schema: UpdatedScanSchema } },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/scans/{id}",
+  operationId: "deleteScan",
+  summary: "Delete a scan with everything it observed",
+  description: [
+    "Requires `scans:read` and `scans:delete`. Removes the scan, its jobs and its observations.",
+    "Hosts and services stay, with their notes, tags and triage, and the other scans are then",
+    "compared with each other. A running scan answers `409 SCAN_RUNNING`.",
+  ].join(" "),
+  tags,
+  security,
+  request: { params: IdParamsSchema },
+  responses: {
+    204: { description: "Deleted" },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+    409: errorResponse("The scan is running"),
   },
 });

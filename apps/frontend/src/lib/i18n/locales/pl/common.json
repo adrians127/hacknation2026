@@ -222,12 +222,6 @@
         "hint": "Tablica adresów albo obiektów z polami target i note, opcjonalnie pod kluczem targets.",
         "sample": "Pobierz przykładowy JSON"
       },
-      "file": {
-        "label": "Plik",
-        "selected": "{{name}} ({{size}} kB)",
-        "tooLarge": "Plik jest większy niż 10 MB.",
-        "unreadable": "Nie udało się odczytać pliku."
-      },
       "preview": {
         "title": "Podgląd",
         "empty": "Wpisz cele albo wybierz plik, aby zobaczyć, co zostanie zaimportowane.",
@@ -339,17 +333,21 @@
       "up": "Aktywne hosty",
       "noAnswer": "Bez odpowiedzi",
       "openPorts": "Otwarte porty",
-      "duration": "Czas trwania"
+      "duration": "Czas trwania",
+      "pipeline": "Potok",
+      "trigger": "Uruchomiony przez"
     },
     "statuses": {
       "queued": "W kolejce",
       "running": "W toku",
       "completed": "Zakończony",
       "stopped": "Zatrzymany",
-      "failed": "Błąd"
+      "failed": "Błąd",
+      "paused": "Wstrzymany"
     },
     "detail": {
       "back": "Wszystkie skany",
+      "report": "Raport skanu",
       "title": "Skan z {{date}}",
       "subtitle": "Co znalazł ten skan. Zmiany liczymy względem poprzedniego skanu, tylko dla adresów, które odpowiedziały w obu.",
       "addresses": "Adresy",
@@ -357,8 +355,8 @@
       "down": "nieaktywne: {{formatted}}",
       "noAnswer": "Bez odpowiedzi",
       "openPorts": "Otwarte porty",
-      "jobs": "Zakończone joby",
-      "stoppedJobs": "zatrzymane na końcu okna czasowego: {{formatted}}",
+      "jobs": "Zakończone zadania",
+      "stoppedJobs": "zatrzymane: {{formatted}}",
       "duration": "Czas trwania",
       "rate": "Limit tempa",
       "ports": "Skanowane porty",
@@ -370,7 +368,126 @@
         "changed": "zmienione hosty",
         "unknown": "hosty bez danych do porównania"
       },
-      "serviceChanges": "Usługi: nowe {{new}}, zniknięte {{gone}}, zmienione {{changed}}."
+      "serviceChanges": "Usługi: nowe {{new}}, zniknięte {{gone}}, zmienione {{changed}}.",
+      "pipeline": "Potok",
+      "noPipeline": "Uruchomiony przez import celów",
+      "windowEnds": "Okno czasowe kończy się {{date}}",
+      "pausedHint": "Okno czasowe zamknęło się przed końcem pracy. Pozostałe zadania ruszą w kolejnym terminie potoku.",
+      "stop": "Zatrzymaj skan",
+      "stopTitle": "Zatrzymać ten skan?",
+      "stopDescription": "Zadania w kolejce zostaną anulowane. Zadania, które worker już wykonuje, najpierw się zakończą, a potem skan się zakończy.",
+      "stopped": "Skan jest zatrzymywany",
+      "tabs": {
+        "hosts": "Hosty",
+        "jobs": "Zadania"
+      }
+    },
+    "edit": {
+      "open": "Nazwa i notatka",
+      "title": "Nazwa i notatka skanu",
+      "description": "Żeby odróżniać skany i zapisać to, co zespół powinien o tym skanie wiedzieć. Wyniki skanu się nie zmieniają.",
+      "name": "Nazwa",
+      "nameHint": "Widoczna na liście skanów obok daty.",
+      "note": "Notatka",
+      "noteHint": "Przechowywana w postaci zaszyfrowanej.",
+      "submit": "Zapisz",
+      "submitting": "Zapisywanie…",
+      "saved": "Skan zapisany."
+    },
+    "remove": {
+      "open": "Usuń",
+      "title": "Usunąć skan z {{scan}}?",
+      "description": "Jego wyniki zostaną trwale usunięte. Hosty zachowają notatki, tagi i ocenę, a pozostałe skany będą odtąd porównywane między sobą.",
+      "confirm": "Usuń skan",
+      "deleted": "Skan usunięty."
+    },
+    "export": {
+      "button": "Eksportuj {{format}}",
+      "failed": "Eksport nie powiódł się: {{message}}"
+    },
+    "import": {
+      "open": "Importuj wyniki",
+      "title": "Import wyników skanu",
+      "subtitle": "Zamień plik z wynikami w skan. Dołączy do pozostałych skanów w porównaniach, w historii hostów i na pulpicie.",
+      "hint": "JSON: plik z przycisku Eksportuj JSON na stronie skanu albo jeden lub więcej wyników workera. CSV: kolumny z Eksportuj CSV; wymagana jest tylko kolumna z adresem.",
+      "samples": {
+        "json": "Pobierz przykładowy JSON",
+        "csv": "Pobierz przykładowy CSV"
+      },
+      "empty": "Wybierz plik, aby zobaczyć, co zawiera.",
+      "reading": "Odczytywanie pliku…",
+      "formats": {
+        "subsurf-scan": "Eksport skanu (JSON)",
+        "worker-results": "Wyniki workera (JSON)",
+        "csv": "Tabela wyników (CSV)"
+      },
+      "preview": {
+        "title": "Zawartość pliku",
+        "format": "Format",
+        "ran": "Skan wykonano",
+        "ranUnknown": "Brak informacji. Skan zostanie umieszczony w chwili importu.",
+        "placement": "Skan zajmie miejsce wśród pozostałych według czasu wykonania, więc nowszy skan może być odtąd porównywany właśnie z nim.",
+        "addresses": "Adresy",
+        "up": "Aktywne hosty",
+        "down": "Nieaktywne",
+        "noAnswer": "Brak odpowiedzi",
+        "openPorts": "Otwarte porty",
+        "httpEndpoints": "Endpointy HTTP",
+        "edits": "Edycje w pliku",
+        "editsValue": "Hosty: {{hosts, number}} · Usługi: {{services, number}}",
+        "cannotImport": "Tego pliku nie można zaimportować.",
+        "warningsTitle_one": "{{count, number}} fragment pliku zostanie pominięty",
+        "warningsTitle_few": "{{count, number}} fragmenty pliku zostaną pominięte",
+        "warningsTitle_many": "{{count, number}} fragmentów pliku zostanie pominiętych",
+        "warningsTitle_other": "{{count, number}} fragmentu pliku zostanie pominięte",
+        "position": "Wiersz",
+        "problem": "Problem",
+        "more_one": "…i jeszcze {{count, number}}",
+        "more_few": "…i jeszcze {{count, number}}",
+        "more_many": "…i jeszcze {{count, number}}",
+        "more_other": "…i jeszcze {{count, number}}"
+      },
+      "issues": {
+        "not_json": "Plik nie jest poprawnym dokumentem JSON.",
+        "unknown_format": "To nie jest ani eksport skanu, ani wynik workera.",
+        "unsupported_version": "Plik zapisała nowsza wersja eksportu (wersja {{detail}}).",
+        "invalid_document": "Eksport skanu nie zgadza się ze swoim formatem: {{detail}}",
+        "invalid_result": "Wynik workera nie zgadza się z formatem wyników: {{detail}}",
+        "multiple_scans": "Wyniki należą do więcej niż jednego skanu. Zaimportuj wyniki każdego skanu osobno.",
+        "duplicate_address": "Adres {{detail}} występuje dwa razy.",
+        "nothing_to_import": "Plik nie zawiera żadnych adresów.",
+        "too_many_addresses": "Plik obejmuje {{detail}} adresów; limit to 1 048 576.",
+        "too_many_up_hosts": "Plik zawiera {{detail}} aktywnych hostów; limit to 20 000.",
+        "too_many_results": "Plik zawiera {{detail}} wyników workera; limit to 4096.",
+        "missing_ip_column": "Brak kolumny z adresem. Jedna z kolumn musi nazywać się ip.",
+        "empty_result": "Wynik workera bez hostów.",
+        "invalid_row": "Nie da się odczytać ({{detail}}).",
+        "conflicting_status": "Dwa statusy dla jednego adresu ({{detail}}). Liczy się pierwszy."
+      },
+      "name": {
+        "label": "Nazwa",
+        "hint": "Widoczna na liście skanów. Domyślnie nazwa pliku."
+      },
+      "edits": {
+        "label": "Zastosuj notatki, tagi, ocenę i korekty z pliku",
+        "hint": "Tylko tam, gdzie host lub usługa jeszcze ich nie ma. Nic, co ustawiono tutaj, nie zostanie nadpisane.",
+        "none": "Plik nie zawiera edycji."
+      },
+      "submit": "Zaimportuj jako skan",
+      "submitting": "Importowanie…",
+      "openExisting": "Otwórz ten skan",
+      "result": {
+        "title": "Skan zaimportowany",
+        "hosts": "Aktywne hosty: {{up, number}} · Nieaktywne: {{down, number}} · Brak odpowiedzi: {{noAnswer, number}} · Otwarte porty: {{ports, number}}",
+        "placed": "Umieszczony wśród skanów pod datą {{date}}.",
+        "edits": "Zastosowane edycje: {{applied, number}} · Już ustawione tutaj: {{kept, number}} · Spoza skanu: {{missing, number}}",
+        "warnings_one": "Pominięto {{count, number}} fragment pliku.",
+        "warnings_few": "Pominięto {{count, number}} fragmenty pliku.",
+        "warnings_many": "Pominięto {{count, number}} fragmentów pliku.",
+        "warnings_other": "Pominięto {{count, number}} fragmentu pliku.",
+        "open": "Otwórz skan",
+        "another": "Zaimportuj kolejny plik"
+      }
     },
     "compare": {
       "title": "Porównanie skanów",
@@ -406,6 +523,51 @@
       },
       "export": "Eksportuj zmiany jako {{format}}",
       "exportFailed": "Eksport się nie powiódł: {{message}}"
+    },
+    "triggers": {
+      "import": "Import celów",
+      "manual": "Uruchom teraz",
+      "schedule": "Harmonogram",
+      "results_import": "Zaimportowane wyniki"
+    },
+    "jobs": {
+      "steps": "Kroki",
+      "step": "Krok {{index}}: {{worker}}",
+      "stepInput": {
+        "targets": "skanuje cele",
+        "previous": "skanuje to, co znalazł krok {{index}}"
+      },
+      "progress": "Zakończone zadania: {{done}} z {{total}}",
+      "waiting": "Czeka na poprzedni krok",
+      "filters": {
+        "step": "Krok",
+        "allSteps": "Wszystkie kroki",
+        "status": "Stan",
+        "allStatuses": "Wszystkie stany"
+      },
+      "columns": {
+        "sequence": "#",
+        "step": "Krok",
+        "subnet": "Adresy",
+        "status": "Stan",
+        "attempts": "Próby",
+        "leasedBy": "Menedżer workerów",
+        "duration": "Czas trwania",
+        "results": "Wyniki",
+        "error": "Ostatni błąd"
+      },
+      "statuses": {
+        "queued": "W kolejce",
+        "leased": "W toku",
+        "completed": "Zakończone",
+        "failed": "Błąd",
+        "stopped": "Zatrzymane"
+      },
+      "addresses_one": "{{count}} adres",
+      "addresses_few": "{{count}} adresy",
+      "addresses_many": "{{count}} adresów",
+      "addresses_other": "{{count}} adresu",
+      "empty": "Brak pasujących zadań."
     }
   },
   "language": {
@@ -436,9 +598,12 @@
     "dashboard": "Pulpit",
     "targets": "Cele",
     "scans": "Skany",
+    "reports": "Raporty",
     "users": "Użytkownicy",
     "roles": "Role",
-    "vulnerabilities": "Podatności"
+    "vulnerabilities": "Podatności",
+    "pipelines": "Potoki",
+    "workers": "Workery"
   },
   "notFound": {
     "title": "Nie znaleziono strony",
@@ -467,6 +632,12 @@
       "previous": "Poprzednia",
       "next": "Następna"
     }
+  },
+  "file": {
+    "label": "Plik",
+    "selected": "{{name}} ({{size}} kB)",
+    "tooLarge": "Plik jest większy niż {{size}} MB.",
+    "unreadable": "Nie udało się odczytać pliku."
   },
   "mock": {
     "badge": "Dane przykładowe",
@@ -525,10 +696,23 @@
     "PACKAGE_MAPPING_EXISTS": "Takie mapowanie już istnieje.",
     "SOURCE_DISABLED": "Źródło jest wyłączone. Najpierw je włącz.",
     "BASE_SCAN_NOT_OLDER": "Skan, z którym porównujesz, musi być starszy od porównywanego skanu.",
+    "PIPELINE_NAME_TAKEN": "Potok o tej nazwie już istnieje.",
+    "PIPELINE_RUN_ACTIVE": "Uruchomienie tego potoku jeszcze trwa. Poczekaj na nie albo najpierw je zatrzymaj.",
+    "NO_SCANNABLE_TARGETS": "Żadnego z celów potoku nie da się przeskanować. Sprawdź jego tagi i zakresy.",
+    "WORKER_DISABLED": "Krok używa wyłączonego workera. Najpierw musi go włączyć administrator.",
+    "WORKER_IN_USE": "Ten worker jest nadal używany przez potok. Najpierw usuń go z potoku.",
+    "WORKER_BUILTIN": "Wbudowane workery pochodzą z kodu: zmienić można tylko to, czy działają, ich limit tempa i wartości domyślne.",
+    "PORTS_NOT_ALLOWED": "Te porty są poza portami, które skaner może sprawdzać.",
+    "SCAN_NOT_STOPPABLE": "Skan już się zakończył.",
     "DEFECTDOJO_NOT_CONFIGURED": "Integracja z DefectDojo nie jest skonfigurowana na serwerze.",
     "DEFECTDOJO_UNAVAILABLE": "DefectDojo nie odpowiada albo odrzucił token API.",
     "DEFECTDOJO_SYNC_RUNNING": "Synchronizacja z DefectDojo już trwa.",
     "DEFECTDOJO_PUSH_RUNNING": "Wysyłka do DefectDojo już trwa.",
-    "NOTHING_TO_PUSH": "Nie ma czego wysłać: brak otwartych usług w tym skanie lub zaznaczeniu."
+    "NOTHING_TO_PUSH": "Nie ma czego wysłać: brak otwartych usług w tym skanie lub zaznaczeniu.",
+    "SAME_SCAN": "Wybierz dwa różne skany do porównania.",
+    "SCAN_IMPORT_INVALID": "Plik nie jest eksportem skanu, wynikiem workera ani plikiem CSV z wynikami w formacie, który ta wersja potrafi odczytać.",
+    "SCAN_ALREADY_IMPORTED": "Ten plik został już zaimportowany.",
+    "SCAN_IMPORT_RUNNING": "Trwa inny import. Spróbuj ponownie, gdy się zakończy.",
+    "SCAN_RUNNING": "Nie można usunąć trwającego skanu. Najpierw go zatrzymaj."
   }
 }

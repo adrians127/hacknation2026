@@ -27,16 +27,16 @@ pnpm --filter @subsurf/frontend exec shadcn add <component>
 main.tsx                 bootstrap: i18n, App, CSS
 app/                     app.tsx (RouterProvider), router.tsx, provider.tsx, routes/
 api/                     client.ts (apiClient + `api` hooks + session refresh), query-client.ts, mock.ts (mock helpers)
-components/              shared components: data-table, page-header, guarded-button, icon-action, confirm-dialog, language-toggle, logo
+components/              shared components: data-table, page-header, guarded-button, icon-action, confirm-dialog, file-input, language-toggle, logo
 components/ui/           shadcn components (excluded from lint)
 config/                  typed env variables (fail-fast)
 features/<name>/         api/, components/, hooks/, lib/, types/ (no barrel files)
 hooks/ lib/ stores/ types/   shared code
 lib/auth/                useMe, useCan/usePermissions, role and permission labels, safe redirects
-lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin,hosts,vulnerabilities}.json, parity test
+lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin,hosts,vulnerabilities,reports}.json, parity test
 ```
 
-Outside `src/`, `public/` is served as-is; `public/samples/targets.{csv,json}` are the sample files linked from the target import page.
+Outside `src/`, `public/` is served as-is; `public/samples/targets.{csv,json}` and `scan-results.{csv,json}` are the sample files linked from the target and results import pages (`features/scans/lib/samples.test.ts` keeps the result samples importable).
 
 Imports flow shared → features → app. Shared code must not import from `features/` or `app/`, and a feature must not import from `app/`. oxlint enforces this (`no-restricted-imports` in `.oxlintrc.json`).
 
@@ -137,6 +137,7 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 - **Labels:** system roles are translated by key and custom roles show their stored name (`useRoleLabels`); permissions read as "Resource: Action" (`usePermissionLabel`, keys in `auth.json`). A new permission needs `permissions.resources.<resource>` (and a new action) in both languages.
 - **Errors:** `useErrorMessage()` turns anything a query or mutation threw into a translated message, by the API's `error.code` (`common.json`, `errors.*`) or by status.
 - **Admin panel:** `features/users` and `features/roles` (the permission matrix in `features/roles/lib/permission-matrix.ts` is built from the contracts catalog). The admin routes compose them, e.g. the user form gets the role list from `features/roles`.
+- **Pipelines and workers:** `features/pipelines` is the block builder (`/app/pipelines`, `/app/pipelines/new`, `/app/pipelines/:pipelineId`): targets (tags and ranges), an ordered chain of worker steps whose own settings are rendered from the worker's `paramFields` (`features/workers/components/worker-param-input.tsx`), and the schedule with a "Next runs" preview computed by the backend. The form is checked with the contracts' `PipelineBodySchema` and `validateStepParams`; without `pipelines:update` it is read-only, without `scans:run` the schedule controls are. `start-scan-dialog.tsx` is the scans page's "Start scan". `features/workers` is the Workers page (`app/routes/admin/workers.tsx`: the registry and the worker managers, refreshed every 30 s). The scan detail's Jobs tab (`features/scans/components/scan-jobs-panel.tsx`) shows each step's progress and the jobs; scan queries refresh every 5 s while a scan is queued, running or paused.
 - **Vulnerabilities:** `features/vulnerabilities` holds the badges and the per-service list that `features/hosts` shows (the data comes with the scan's host responses, under `scans:read`), and the panels of the Vulnerability databases page (`app/routes/admin/vulnerabilities.tsx`: sources, sync history, CPE → package mappings). The sources query polls while a sync runs or waits for the sync process.
 
 ## Pages and tables
@@ -147,11 +148,22 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
   - Lists the server pages (`page`, `pageSize`, `total` in the response) put `DataTablePagination` under the table and disable column sorting (`enableSorting: false`), since sorting one page would mislead.
   - Filters, the page number and an open side panel live in the URL (`useSearchParams`), so a filtered view can be reloaded and shared (see `app/routes/scan-detail.tsx` and `app/routes/targets.tsx`; `lib/search-params.ts` reads the page and the enum filters).
 - **Comparing scans** (`app/routes/scan-compare.tsx`, `/app/scans/compare?base=&target=`): scan A is always the older one (`orderPair` in `features/scans/lib/pair.ts` puts a pair given the wrong way round in order, so links can pass either order); without parameters B is the newest scan with results and A its base scan. Hosts come from `GET /scans/{target}/hosts?base=` and the side-by-side panel from `GET /scans/{target}/hosts/{id}?base=`, with each port's `before` and `fieldChanges`. Entry points: the scan list's checkboxes, "Compare side by side" on a scan and on its host panel, and the host timeline (`HostTimeline`), whose dots switch the compared scan.
+- **Scan name, note and removal** (`features/scans/components/scan-actions.tsx`): the scan page's "Name and note" dialog and "Delete" confirmation. Deleting invalidates every query except the deleted scan's own: refetching those would answer 404 and replace the page before it navigates back to the list.
+- **Export and import of a scan** (`features/scans`): the scan page's "Export CSV" / "Export JSON" buttons download `GET /scans/{id}/export` as a blob. `/app/scans/import` (`scans:create`, `app/routes/scan-import.tsx`) reads the chosen file in the browser with the reader the API uses (`@subsurf/contracts/scans/scan-import`) and shows what the import adds, or why the file cannot be imported, before anything is sent. The file itself is then uploaded (`bodySerializer` returns the text as it is), not the parsed result. A file imported before links to the scan it became (`error.details.scanId`).
 - **Dashboard** (`features/dashboard`, `GET /dashboard`): stat tiles for the newest scan (hosts up and open ports with the change since the previous scan and a per-scan trend from `GET /scans`; new and gone hosts and service changes link into the comparison) and the most important changes, each opening in the comparison. The trend line is a native range input over an SVG, so the pointer and the arrow keys both step through the scans.
 - A list whose rows hold inputs (the target entry form's list) uses the `Table` primitives with keys from the data instead of `DataTable`: `DataTable` rebuilds when `data` changes, which would remount an input while someone types in it.
 - A page with unsaved input the user built up (the target entry form) asks before leaving: `useLeaveGuard` in `features/targets/hooks/` (`useBlocker` + `beforeunload`).
 - Details that do not fit a row open in a `Sheet` (`components/ui/sheet.tsx`, a side panel on the Radix dialog). It was written by hand: `shadcn add sheet` also tried to add an unrelated npm package.
 - The app is dark-only (`class="dark"` in `index.html`); `brand` is the accent color (`text-brand`, `bg-brand/15`).
+
+## Reports
+
+`features/reports` renders the backend's `/reports/*` endpoints ([backend README](../backend/README.md#reports)) under `/app/reports` (`scans:read`). The hub (`/app/reports`) picks a scan, two scans or an IP address; the scan page links to its summary report and the host panel to the host's IP report.
+
+- **Routes:** `scans/:scanId/:kind` (`summary`, `findings`, `technologies`, `exposure`, `triage`, `tags`), `diff?from=&to=`, `ips/:ip`, `stability?window=&inactiveAfter=`, `time-of-day?scans=`. Options live in the URL, so a report can be shared and reloaded.
+- **`ReportShell`** (`components/report-parts.tsx`) gives every report its header, the generated-at line and three actions: **Print / PDF** (`window.print()`), **JSON** (the API response as is) and **CSV** (one flat table per report, built in the report's component).
+- **Print:** the `@media print` block in `index.css` switches the dark tokens to light ones; the sidebar, controls and buttons carry `print:hidden`. `ReportTable` shows the first rows on screen with a toggle, but every row on paper.
+- **CSV** (`lib/export.ts`): UTF-8 with a BOM for Excel, and cells starting with `=`, `+`, `-` or `@` are prefixed with `'` so a spreadsheet does not run them as formulas.
 
 ## Translations
 
@@ -161,4 +173,8 @@ English is the default language: the fallback for unsupported browser languages 
 
 | Variable | Description |
 |---|---|
-| `VITE_API_BASE_URL` | Backend URL without `/v1`, e.g. `http://localhost:3001` |
+| `VITE_API_BASE_URL` | Backend URL without `/v1`, e.g. `http://localhost:3001`; `/` = the page's own origin (the Docker image, whose nginx proxies `/v1` to the backend) |
+
+## Docker
+
+`apps/frontend/Dockerfile` (built from the repo root; `Dockerfile.dockerignore` replaces the root `.dockerignore`) builds the app with `VITE_API_BASE_URL=/` and serves it with nginx (`nginx.conf`), which proxies `/v1` to the `backend` container. One origin means cookies, CORS and the backend's Origin check work under any host name or IP. Compose runs it as `frontend` in the `app` profile ([`docker/README.md`](../../docker/README.md#everything-in-docker)).

@@ -50,7 +50,13 @@ export const UpdateHostBodySchema = z
   })
   .refine(atLeastOneField, AT_LEAST_ONE);
 
-const OverrideSchema = z.string().min(1).max(200).regex(/\S/, "Must not be blank").nullable();
+/** A user's correction of what a scan identified; `null` = not corrected. */
+export const ServiceOverrideSchema = z
+  .string()
+  .min(1)
+  .max(200)
+  .regex(/\S/, "Must not be blank")
+  .nullable();
 
 export const UpdateServiceBodySchema = z
   .object({
@@ -58,9 +64,9 @@ export const UpdateServiceBodySchema = z
     tags: TagsSchema.optional(),
     triage: TriageStatusSchema.optional(),
     /** `null` removes the correction, so the observed value shows again. */
-    nameOverride: OverrideSchema.optional(),
-    productOverride: OverrideSchema.optional(),
-    versionOverride: OverrideSchema.optional(),
+    nameOverride: ServiceOverrideSchema.optional(),
+    productOverride: ServiceOverrideSchema.optional(),
+    versionOverride: ServiceOverrideSchema.optional(),
   })
   .refine(atLeastOneField, AT_LEAST_ONE);
 

@@ -3,6 +3,8 @@ import type { ErrorCode } from "@subsurf/contracts/common/common.schema";
 export interface HttpErrorOptions extends ErrorOptions {
   /** Machine-readable reason, sent as `error.code` so the frontend can translate it. */
   code?: ErrorCode;
+  /** Sent as `error.details`: what the client needs to act on the error. Never internals. */
+  details?: unknown;
 }
 
 /**
@@ -12,12 +14,14 @@ export interface HttpErrorOptions extends ErrorOptions {
 export class HttpError extends Error {
   readonly status: number;
   readonly code: ErrorCode | undefined;
+  readonly details: unknown;
 
   constructor(status: number, message: string, options: HttpErrorOptions = {}) {
     super(message, options);
     this.name = "HttpError";
     this.status = status;
     this.code = options.code;
+    this.details = options.details;
   }
 
   static badRequest(message = "Bad Request", code?: ErrorCode) {

@@ -1,38 +1,16 @@
-import type { QueuedScan, ScanJobHost } from "@subsurf/contracts/scans/scans.schema";
-import { ipv4ToInt, type Ipv4Range } from "@subsurf/contracts/targets/ipv4";
-import { parseTargetValue, type TargetKind } from "@subsurf/contracts/targets/target-input";
-import type { ImportWarning } from "@subsurf/contracts/targets/targets.schema";
-
-import { env } from "~backend/config/env";
 import type { Prisma } from "~backend/generated/prisma/client";
 import type { AuthContext } from "~backend/lib/auth-context";
-import { chunks } from "~backend/lib/chunks";
-import { planScanJobs } from "~backend/modules/scans/batching";
+import { queueRun, type QueueRunResult, type ScanTargetRow } from "~backend/modules/pipelines/queue-run";
+import { defaultSteps } from "~backend/modules/pipelines/steps";
 import type { DnsResolution } from "~backend/modules/scans/dns";
-import { toQueuedScan } from "~backend/modules/scans/scans.mapper";
 
-const INSERT_BATCH = 2000;
-
-export interface ScanTargetRow {
-  id: string;
-  kind: TargetKind;
-  value: string;
-}
-
-export interface QueueScanResult {
-  scan: QueuedScan | null;
-  warnings: ImportWarning[];
-}
-
-function targetRange(target: ScanTargetRow): Ipv4Range | null {
-  const parsed = parseTargetValue(target.value);
-  return parsed.ok ? parsed.range : null;
-}
+export type { ScanTargetRow };
+export type QueueScanResult = QueueRunResult;
 
 export const scansService = {
   /**
-   * Queues a scan of inventory targets: a Scan with the env defaults snapshotted, the targets it
-   * covers and its jobs. Domains must be resolved beforehand (`resolveDomains`), outside `tx`.
+   * Queues a scan of inventory targets with the default steps (masscan with the env defaults,
+   * then nmap on its hits). Domains must be resolved beforehand (`resolveDomains`), outside `tx`.
    */
   async queue(
     tx: Prisma.TransactionClient,
@@ -40,48 +18,14 @@ export const scansService = {
     targets: readonly ScanTargetRow[],
     dns: DnsResolution,
   ): Promise<QueueScanResult> {
-    const hosts: ScanJobHost[] = dns.resolved.flatMap(({ domain, addresses }) =>
-      addresses.map((ip) => ({ ip, domain })),
-    );
-    const ranges: Ipv4Range[] = [
-      ...targets.flatMap((target) => targetRange(target) ?? []),
-      ...hosts.map((host) => ({ start: ipv4ToInt(host.ip), end: ipv4ToInt(host.ip) })),
-    ];
-    const jobs = planScanJobs(ranges, hosts, env.SCAN_BATCH_SIZE);
-    if (jobs.length === 0) {
-      return { scan: null, warnings: [...dns.warnings, { code: "no_scannable_targets", value: "" }] };
-    }
-
-    const scan = await tx.scan.create({
-      data: {
-        ports: env.SCAN_DEFAULT_PORTS,
-        maxRate: env.SCAN_DEFAULT_MAX_RATE,
-        batchSize: env.SCAN_BATCH_SIZE,
-        targetCount: targets.length,
-        addressCount: jobs.reduce((sum, job) => sum + job.addressCount, 0),
-        jobCount: jobs.length,
-        warnings: dns.warnings,
-        requestedById: auth.user.id,
-      },
+    return queueRun(tx, {
+      requestedById: auth.user.id,
+      pipelineId: null,
+      trigger: "import",
+      steps: defaultSteps(),
+      targets,
+      dns,
+      windowEndsAt: null,
     });
-    for (const batch of chunks(targets, INSERT_BATCH)) {
-      await tx.scanTarget.createMany({
-        data: batch.map((target) => ({ scanId: scan.id, targetId: target.id })),
-      });
-    }
-    for (const [index, batch] of [...chunks(jobs, INSERT_BATCH)].entries()) {
-      await tx.scanJob.createMany({
-        data: batch.map((job, position) => ({
-          scanId: scan.id,
-          sequence: index * INSERT_BATCH + position + 1,
-          subnet: job.subnet,
-          targets: job.targets,
-          hosts: job.hosts,
-          addressCount: job.addressCount,
-        })),
-      });
-    }
-
-    return { scan: toQueuedScan(scan), warnings: dns.warnings };
   },
 };

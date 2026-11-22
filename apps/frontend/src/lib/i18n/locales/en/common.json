@@ -202,12 +202,6 @@
         "hint": "An array of addresses, or of objects with target and note fields, optionally under a targets key.",
         "sample": "Download a sample JSON"
       },
-      "file": {
-        "label": "File",
-        "selected": "{{name}} ({{size}} kB)",
-        "tooLarge": "The file is larger than 10 MB.",
-        "unreadable": "The file could not be read."
-      },
       "preview": {
         "title": "Preview",
         "empty": "Enter targets or choose a file to see what will be imported.",
@@ -305,17 +299,21 @@
       "up": "Hosts up",
       "noAnswer": "No answer",
       "openPorts": "Open ports",
-      "duration": "Duration"
+      "duration": "Duration",
+      "pipeline": "Pipeline",
+      "trigger": "Started by"
     },
     "statuses": {
       "queued": "Queued",
       "running": "Running",
       "completed": "Completed",
       "stopped": "Stopped",
-      "failed": "Failed"
+      "failed": "Failed",
+      "paused": "Paused"
     },
     "detail": {
       "back": "All scans",
+      "report": "Scan report",
       "title": "Scan of {{date}}",
       "subtitle": "What this scan found. Changes are measured against the previous scan, only for addresses that answered both times.",
       "addresses": "Addresses",
@@ -324,7 +322,7 @@
       "noAnswer": "No answer",
       "openPorts": "Open ports",
       "jobs": "Jobs finished",
-      "stoppedJobs": "{{formatted}} stopped at the time window's end",
+      "stoppedJobs": "{{formatted}} stopped",
       "duration": "Duration",
       "rate": "Rate limit",
       "ports": "Scanned ports",
@@ -336,7 +334,120 @@
         "changed": "hosts changed",
         "unknown": "hosts with nothing to compare"
       },
-      "serviceChanges": "Services: {{new}} new, {{gone}} gone, {{changed}} changed."
+      "serviceChanges": "Services: {{new}} new, {{gone}} gone, {{changed}} changed.",
+      "pipeline": "Pipeline",
+      "noPipeline": "Started by a target import",
+      "windowEnds": "Time window ends {{date}}",
+      "pausedHint": "The time window closed with jobs left. They continue at the pipeline's next run time.",
+      "stop": "Stop scan",
+      "stopTitle": "Stop this scan?",
+      "stopDescription": "Queued jobs are cancelled. Jobs a worker is already running finish first, then the scan ends.",
+      "stopped": "Scan stopping",
+      "tabs": {
+        "hosts": "Hosts",
+        "jobs": "Jobs"
+      }
+    },
+    "edit": {
+      "open": "Name and note",
+      "title": "Name and note of the scan",
+      "description": "For telling scans apart and for what the team should know about this one. What the scan found does not change.",
+      "name": "Name",
+      "nameHint": "Shown in the scan list next to the date.",
+      "note": "Note",
+      "noteHint": "Stored encrypted.",
+      "submit": "Save",
+      "submitting": "Saving…",
+      "saved": "Scan saved."
+    },
+    "remove": {
+      "open": "Delete",
+      "title": "Delete the scan of {{scan}}?",
+      "description": "Its results are removed for good. Hosts keep their notes, tags and triage, and the other scans are compared with each other from now on.",
+      "confirm": "Delete the scan",
+      "deleted": "Scan deleted."
+    },
+    "export": {
+      "button": "Export {{format}}",
+      "failed": "The export failed: {{message}}"
+    },
+    "import": {
+      "open": "Import results",
+      "title": "Import scan results",
+      "subtitle": "Turn a results file into a scan. It joins the other scans in comparisons, in the host history and on the dashboard.",
+      "hint": "JSON: a file from Export JSON on a scan, or one or more worker results. CSV: the columns of Export CSV; only an address column is required.",
+      "samples": {
+        "json": "Download a sample JSON",
+        "csv": "Download a sample CSV"
+      },
+      "empty": "Choose a file to see what it holds.",
+      "reading": "Reading the file…",
+      "formats": {
+        "subsurf-scan": "Scan export (JSON)",
+        "worker-results": "Worker results (JSON)",
+        "csv": "Results table (CSV)"
+      },
+      "preview": {
+        "title": "What the file holds",
+        "format": "Format",
+        "ran": "Scan ran",
+        "ranUnknown": "Not recorded. The scan will be placed at the time of the import.",
+        "placement": "The scan takes its place among the others by when it ran, so a newer scan may be compared with it from now on.",
+        "addresses": "Addresses",
+        "up": "Hosts up",
+        "down": "Down",
+        "noAnswer": "No answer",
+        "openPorts": "Open ports",
+        "httpEndpoints": "HTTP endpoints",
+        "edits": "Edits in the file",
+        "editsValue": "Hosts: {{hosts, number}} · Services: {{services, number}}",
+        "cannotImport": "This file cannot be imported.",
+        "warningsTitle_one": "{{count, number}} part of the file will be skipped",
+        "warningsTitle_other": "{{count, number}} parts of the file will be skipped",
+        "position": "Line",
+        "problem": "Problem",
+        "more_one": "…and {{count, number}} more",
+        "more_other": "…and {{count, number}} more"
+      },
+      "issues": {
+        "not_json": "The file is not valid JSON.",
+        "unknown_format": "Neither a scan export nor a worker result.",
+        "unsupported_version": "Written by a newer version of the export (version {{detail}}).",
+        "invalid_document": "The scan export does not match its format: {{detail}}",
+        "invalid_result": "A worker result does not match the result format: {{detail}}",
+        "multiple_scans": "The results belong to more than one scan. Import each scan's results separately.",
+        "duplicate_address": "The address {{detail}} is listed twice.",
+        "nothing_to_import": "The file holds no addresses.",
+        "too_many_addresses": "The file covers {{detail}} addresses; the limit is 1,048,576.",
+        "too_many_up_hosts": "The file has {{detail}} hosts up; the limit is 20,000.",
+        "too_many_results": "The file has {{detail}} worker results; the limit is 4,096.",
+        "missing_ip_column": "No address column. One column must be named ip.",
+        "empty_result": "A worker result without hosts.",
+        "invalid_row": "Cannot be read ({{detail}}).",
+        "conflicting_status": "Two statuses for one address ({{detail}}). The first one counts."
+      },
+      "name": {
+        "label": "Name",
+        "hint": "Shown in the scan list. The file's name unless you change it."
+      },
+      "edits": {
+        "label": "Apply the notes, tags, triage and corrections from the file",
+        "hint": "Only where a host or service has none yet. Nothing set here is overwritten.",
+        "none": "The file carries no edits."
+      },
+      "submit": "Import as a scan",
+      "submitting": "Importing…",
+      "openExisting": "Open that scan",
+      "result": {
+        "title": "Scan imported",
+        "hosts": "Hosts up: {{up, number}} · Down: {{down, number}} · No answer: {{noAnswer, number}} · Open ports: {{ports, number}}",
+        "placed": "Placed among the scans at {{date}}.",
+        "edits": "Edits applied: {{applied, number}} · Already set here: {{kept, number}} · Not part of the scan: {{missing, number}}",
+        "warnings_one": "{{count, number}} part of the file was skipped.",
+        "warnings_other": "{{count, number}} parts of the file were skipped.",
+        "open": "Open the scan",
+        "another": "Import another file"
+      }
     },
     "compare": {
       "title": "Compare scans",
@@ -370,6 +481,49 @@
       },
       "export": "Export changes as {{format}}",
       "exportFailed": "The export failed: {{message}}"
+    },
+    "triggers": {
+      "import": "Target import",
+      "manual": "Run now",
+      "schedule": "Schedule",
+      "results_import": "Imported results"
+    },
+    "jobs": {
+      "steps": "Steps",
+      "step": "Step {{index}}: {{worker}}",
+      "stepInput": {
+        "targets": "scans the targets",
+        "previous": "scans what step {{index}} found"
+      },
+      "progress": "{{done}} of {{total}} jobs finished",
+      "waiting": "Waits for the previous step",
+      "filters": {
+        "step": "Step",
+        "allSteps": "All steps",
+        "status": "Status",
+        "allStatuses": "All statuses"
+      },
+      "columns": {
+        "sequence": "#",
+        "step": "Step",
+        "subnet": "Addresses",
+        "status": "Status",
+        "attempts": "Attempts",
+        "leasedBy": "Worker manager",
+        "duration": "Duration",
+        "results": "Results",
+        "error": "Last error"
+      },
+      "statuses": {
+        "queued": "Queued",
+        "leased": "Running",
+        "completed": "Completed",
+        "failed": "Failed",
+        "stopped": "Stopped"
+      },
+      "addresses_one": "{{count}} address",
+      "addresses_other": "{{count}} addresses",
+      "empty": "No jobs match."
     }
   },
   "language": {
@@ -400,9 +554,12 @@
     "dashboard": "Dashboard",
     "targets": "Targets",
     "scans": "Scans",
+    "reports": "Reports",
     "users": "Users",
     "roles": "Roles",
-    "vulnerabilities": "Vulnerabilities"
+    "vulnerabilities": "Vulnerabilities",
+    "pipelines": "Pipelines",
+    "workers": "Workers"
   },
   "notFound": {
     "title": "Page not found",
@@ -431,6 +588,12 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "file": {
+    "label": "File",
+    "selected": "{{name}} ({{size}} kB)",
+    "tooLarge": "The file is larger than {{size}} MB.",
+    "unreadable": "The file could not be read."
   },
   "mock": {
     "badge": "Mock data",
@@ -485,10 +648,23 @@
     "PACKAGE_MAPPING_EXISTS": "This mapping already exists.",
     "SOURCE_DISABLED": "The source is disabled. Enable it first.",
     "BASE_SCAN_NOT_OLDER": "The scan to compare with must be older than the compared scan.",
+    "PIPELINE_NAME_TAKEN": "A pipeline with this name already exists.",
+    "PIPELINE_RUN_ACTIVE": "A run of this pipeline is still going. Wait for it or stop it first.",
+    "NO_SCANNABLE_TARGETS": "None of the pipeline's targets can be scanned. Check its tags and ranges.",
+    "WORKER_DISABLED": "A step uses a disabled worker. An administrator has to enable it first.",
+    "WORKER_IN_USE": "A pipeline still uses this worker. Remove it from the pipeline first.",
+    "WORKER_BUILTIN": "Built-in workers come from code: only whether they run, their rate cap and defaults can change.",
+    "PORTS_NOT_ALLOWED": "These ports are outside the ports the scanner may probe.",
+    "SCAN_NOT_STOPPABLE": "The scan has already ended.",
     "DEFECTDOJO_NOT_CONFIGURED": "DefectDojo is not configured on the server.",
     "DEFECTDOJO_UNAVAILABLE": "DefectDojo did not answer or refused the API token.",
     "DEFECTDOJO_SYNC_RUNNING": "A DefectDojo sync is already running.",
     "DEFECTDOJO_PUSH_RUNNING": "A push to DefectDojo is already running.",
-    "NOTHING_TO_PUSH": "There is nothing to push: no open services in this scan or selection."
+    "NOTHING_TO_PUSH": "There is nothing to push: no open services in this scan or selection.",
+    "SAME_SCAN": "Pick two different scans to compare.",
+    "SCAN_IMPORT_INVALID": "The file is not a scan export, a worker result or a results CSV this version can read.",
+    "SCAN_ALREADY_IMPORTED": "This file was imported before.",
+    "SCAN_IMPORT_RUNNING": "Another import is running. Try again when it finishes.",
+    "SCAN_RUNNING": "A running scan cannot be deleted. Stop it first."
   }
 }

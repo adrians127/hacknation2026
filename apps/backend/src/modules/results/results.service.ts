@@ -228,4 +228,16 @@ export const resultsService = {
       throw error;
     }
   },
+
+  /**
+   * The same write inside the caller's transaction, for a results import that must land whole
+   * or not at all. No duplicate check: the caller hands out fresh lease ids.
+   */
+  ingestWithin(
+    tx: Prisma.TransactionClient,
+    result: WorkerResult,
+    part: ResultPart = WHOLE_JOB,
+  ): Promise<IngestOutcome> {
+    return ingestInTransaction(tx, result, part);
+  },
 };

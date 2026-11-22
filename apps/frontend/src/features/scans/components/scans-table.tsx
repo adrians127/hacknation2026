@@ -49,15 +49,34 @@ export function ScansTable({
           header: t("scans.columns.started"),
           sortFn: "datetime",
           cell: ({ row: { original: scan } }) => (
-            <Link to={`/app/scans/${scan.id}`} className="font-medium hover:underline">
-              {formatDateTime(scan.startedAt ?? scan.createdAt, locale)}
-            </Link>
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Link to={`/app/scans/${scan.id}`} className="font-medium hover:underline">
+                {formatDateTime(scan.startedAt ?? scan.createdAt, locale)}
+              </Link>
+              {scan.name && <span className="text-muted-foreground">{scan.name}</span>}
+            </span>
           ),
         }),
         column.accessor("status", {
           header: t("scans.columns.status"),
           cell: ({ getValue }) => (
             <Badge variant={SCAN_STATUS_VARIANT[getValue()]}>{t(`scans.statuses.${getValue()}`)}</Badge>
+          ),
+        }),
+        column.accessor((scan) => scan.pipeline?.name ?? "", {
+          id: "pipeline",
+          header: t("scans.columns.pipeline"),
+          cell: ({ row: { original: scan } }) => (
+            <div className="grid">
+              {scan.pipeline ? (
+                <Link to={`/app/pipelines/${scan.pipeline.id}`} className="hover:underline">
+                  {scan.pipeline.name}
+                </Link>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+              <span className="text-xs text-muted-foreground">{t(`scans.triggers.${scan.trigger}`)}</span>
+            </div>
           ),
         }),
         column.accessor("addressCount", {

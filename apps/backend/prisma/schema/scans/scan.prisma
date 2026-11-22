@@ -1,8 +1,21 @@
 /// One scan run. Its addresses are split into ScanJob batches that workers lease.
 model Scan {
-  id            String     @id @default(uuid(7)) @db.Uuid
-  status        ScanStatus @default(queued)
-  /// Parameters snapshotted from the backend's defaults when the scan was queued.
+  id            String      @id @default(uuid(7)) @db.Uuid
+  status        ScanStatus  @default(queued)
+  /// Shown in lists; an imported scan gets its file's name.
+  name          String      @default("")
+  /// { "$enc": "v1.…" } (src/lib/crypto.ts); null = no note.
+  note          Json?
+  /// SHA-256 of an imported file's content: the same file is imported once.
+  importKey     String?     @unique
+  /// Null for an import's scan, or once the pipeline was deleted.
+  pipelineId    String?     @db.Uuid
+  trigger       ScanTrigger @default(import)
+  /// ScanStepSnapshot[] (modules/pipelines): the steps as they were when the run was queued.
+  steps         Json        @default("[]")
+  /// When the current time window closes: the scheduler pauses the scan then.
+  windowEndsAt  DateTime?
+  /// Union of the steps' ports and the highest step rate: results are checked against `ports`.
   ports         String
   maxRate       Int
   batchSize     Int
@@ -10,14 +23,15 @@ model Scan {
   addressCount  Int
   jobCount      Int
   /// ImportWarning[] from @subsurf/contracts (domains that could not be scanned).
-  warnings      Json       @default("[]")
-  requestedById String     @db.Uuid
-  createdAt     DateTime   @default(now())
+  warnings      Json        @default("[]")
+  requestedById String      @db.Uuid
+  createdAt     DateTime    @default(now())
   startedAt     DateTime?
   finishedAt    DateTime?
-  updatedAt     DateTime   @updatedAt
+  updatedAt     DateTime    @updatedAt
 
   requestedBy User              @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+  pipeline    Pipeline?         @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
   targets     ScanTarget[]
   jobs        ScanJob[]
   results     ScanJobResult[]
@@ -25,13 +39,24 @@ model Scan {
   hosts       HostObservation[]
 
   @@index([requestedById])
+  @@index([pipelineId])
   @@index([status, createdAt])
 }
 
 enum ScanStatus {
   queued
   running
+  /// The time window closed with jobs left; the next run time resumes the scan.
+  paused
   completed
   stopped
   failed
+}
+
+enum ScanTrigger {
+  import
+  manual
+  schedule
+  /// Not queued at all: read from a results file (POST /scans/import).
+  results_import
 }

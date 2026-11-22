@@ -8,9 +8,14 @@ export function csvCell(value: string | number | null): string {
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
+/** One line, with its line ending. */
+export function csvRow(cells: readonly (string | number | null)[]): string {
+  return `${cells.map(csvCell).join(",")}\r\n`;
+}
+
 export function toCsv(
   header: readonly string[],
   rows: readonly (readonly (string | number | null)[])[],
 ): string {
-  return `${[header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`;
+  return [header, ...rows].map(csvRow).join("");
 }
