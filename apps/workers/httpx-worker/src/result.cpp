@@ -5,8 +5,10 @@
 #include <algorithm>
 #include <charconv>
 #include <cctype>
+#include <cstdint>
 #include <format>
 #include <map>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <tuple>
@@ -62,6 +64,34 @@ std::string str(const Json& object, const char* key) {
 int number(const Json& object, const char* key) {
     auto it = object.find(key);
     return it != object.end() && it->is_number_integer() ? it->get<int>() : 0;
+}
+
+/** httpx writes the hash as a signed decimal string (Shodan's convention for favicons). */
+[[nodiscard]] std::optional<std::int32_t> parse_mmh3(std::string_view text) {
+    std::int32_t value = 0;
+    const auto [end, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
+    if (ec != std::errc{} || end != text.data() + text.size() || text.empty()) return std::nullopt;
+    return value;
+}
+
+[[nodiscard]] bool is_sha256_hex(std::string_view text) {
+    return text.size() == 64 && std::ranges::all_of(text, [](char ch) {
+        return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f');
+    });
+}
+
+/** The `/favicon.ico` answer as the result's favicon; only a 2xx image with httpx's body hashes. */
+[[nodiscard]] std::optional<OrderedJson> favicon_json(const Json& row, std::string url) {
+    const int code = number(row, "status_code");
+    if (code < 200 || code > 299) return std::nullopt;
+    const auto type = lower(str(row, "content_type"));
+    if (!type.starts_with("image/") && !type.starts_with("application/octet-stream")) return std::nullopt;
+    const auto hashes = row.find("hash");
+    if (hashes == row.end() || !hashes->is_object()) return std::nullopt;
+    const auto mmh3 = parse_mmh3(str(*hashes, "body_mmh3"));
+    const auto digest = str(*hashes, "body_sha256");
+    if (!mmh3 || !is_sha256_hex(digest)) return std::nullopt;
+    return OrderedJson{{"url", std::move(url)}, {"mmh3", *mmh3}, {"sha256", digest}};
 }
 
 bool text_type(std::string_view type) {
@@ -245,14 +275,13 @@ OrderedJson make_result(const Job& job, const std::vector<GroupResult>& groups,
                         std::chrono::system_clock::time_point started,
                         std::chrono::milliseconds duration) {
     using Key = std::tuple<int, std::string, std::string>; // port, scheme, vhost
-    struct Draft { Json root; std::map<std::string, Json> probes; bool seen = false; };
+    struct Draft { Json root; Json favicon; std::map<std::string, Json> probes; bool seen = false; };
     std::vector<std::map<Key, Draft>> drafts(job.targets.size());
     std::size_t requests = 0;
     for (const auto& group : groups) {
         if (group.target_index >= job.targets.size()) continue;
         const auto& target = job.targets[group.target_index];
-        const std::size_t planned = count_ports(target.ports) * 2 *
-                                    (job.probe_paths.size() + 1);
+        const std::size_t planned = count_ports(target.ports) * 2 * request_paths(job);
         std::size_t rows = 0;
         std::istringstream lines{group.jsonl};
         std::string line;
@@ -275,12 +304,13 @@ OrderedJson make_result(const Job& job, const std::vector<GroupResult>& groups,
             const auto url = str(row, "url");
             if (source != expected && !url.starts_with(expected)) continue;
             const auto path = str(row, "path");
-            if (path != "/" && std::ranges::find(job.probe_paths, path) == job.probe_paths.end())
-                continue;
+            const bool probed = std::ranges::find(job.probe_paths, path) != job.probe_paths.end();
+            if (path != "/" && path != kFaviconPath && !probed) continue;
             ++rows;
             auto& draft = drafts[group.target_index][Key{port, scheme, group.domain}];
             if (path == "/") draft.root = row;
-            else draft.probes[path] = row;
+            if (path == kFaviconPath) draft.favicon = row;
+            if (probed) draft.probes[path] = row;
             draft.seen = true;
         }
         // httpx omits failed connections from JSONL, even with -probe. A completed
@@ -309,6 +339,12 @@ OrderedJson make_result(const Job& job, const std::vector<GroupResult>& groups,
             has_response = true;
             OrderedJson endpoint = endpoint_json(draft.root, target, port, scheme, domain,
                                                  job.limits.max_body_bytes);
+            if (draft.favicon.is_object()) {
+                if (auto favicon = favicon_json(draft.favicon,
+                        logical_url(target, port, scheme, domain, kFaviconPath))) {
+                    endpoint["favicon"] = std::move(*favicon);
+                }
+            }
             for (const auto& path : job.probe_paths) {
                 auto it = draft.probes.find(path);
                 endpoint["probes"].push_back(probe_json(it == draft.probes.end()

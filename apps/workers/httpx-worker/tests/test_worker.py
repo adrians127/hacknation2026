@@ -35,7 +35,8 @@ assert result["scan"]["status"] == "completed"
 assert result["scan"]["worker"]["id"] == "httpx-worker"
 assert result["scan"]["params"]["maxRatePerProcess"] == 10
 assert result["scan"]["counts"]["httpEndpoints"] == 2
-assert result["scan"]["counts"]["httpRequests"] == 12
+# Per URL: /, /favicon.ico and /admin.
+assert result["scan"]["counts"]["httpRequests"] == 18
 assert result["hosts"][0]["status"] == "up"
 assert result["hosts"][1]["status"] == "down"
 port = result["hosts"][0]["ports"][0]
@@ -47,7 +48,9 @@ for endpoint in port["http"]:
     assert endpoint["body"]["sha256"] == hashlib.sha256(b"<title>App</title>").hexdigest()
     assert endpoint["cookies"][0]["valueSha256"] == hashlib.sha256(b"very-secret").hexdigest()
     assert endpoint["headers"] == [{"name": "content-type", "value": "text/html"}]
-    assert endpoint["probes"][0]["path"] == "/admin"
+    assert [probe["path"] for probe in endpoint["probes"]] == ["/admin"]
+    assert endpoint["favicon"]["mmh3"] == -1137954245
+    assert endpoint["favicon"]["url"].endswith(":8080/favicon.ico")
     if endpoint["vhost"] is None:
         assert endpoint["probes"][0]["statusCode"] == 302
     else:

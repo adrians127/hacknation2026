@@ -1,5 +1,6 @@
 #include "process.hpp"
 
+#include <algorithm>
 #include <cerrno>
 #include <csignal>
 #include <cstdio>
@@ -83,6 +84,8 @@ std::expected<ProcessResult, Error> run_httpx(const Job& job, const Target& targ
     if (!write_all(urls.fd(), url_text))
         return std::unexpected(Error{"io-error", "Cannot write httpx input"});
     std::string path_text = "/\n";
+    if (std::ranges::find(job.probe_paths, kFaviconPath) == job.probe_paths.end())
+        path_text += std::string{kFaviconPath} + "\n";
     for (const auto& path : job.probe_paths) path_text += path + "\n";
     if (!write_all(paths.fd(), path_text))
         return std::unexpected(Error{"io-error", "Cannot write httpx paths"});
@@ -95,7 +98,8 @@ std::expected<ProcessResult, Error> run_httpx(const Job& job, const Target& targ
         "-rsts", std::to_string(job.limits.max_body_bytes),
         "-rl", std::to_string(job.limits.rate),
         "-t", std::to_string(job.limits.threads), "-retries", "0",
-        "-maxhr", std::to_string(job.probe_paths.size() + 1)};
+        "-hash", "mmh3,sha256",
+        "-maxhr", std::to_string(request_paths(job))};
     if (!domain.empty()) {
         args.insert(args.end(), {"-H", "Host: " + domain, "-sni", domain});
     }

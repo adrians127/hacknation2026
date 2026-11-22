@@ -256,8 +256,7 @@ std::expected<Job, Error> parse_job(std::string_view input) {
         target.domains.erase(std::unique(target.domains.begin(), target.domains.end()),
                              target.domains.end());
         all_ports.insert(all_ports.end(), target.ports.begin(), target.ports.end());
-        attempts += count_ports(target.ports) * (target.domains.size() + 1) * 2 *
-                    (job.probe_paths.size() + 1);
+        attempts += count_ports(target.ports) * (target.domains.size() + 1) * 2 * request_paths(job);
         job.targets.push_back(std::move(target));
     }
     if (attempts > 8192) return invalid("HTTP request plan exceeds 8192 requests; narrow ports or split the job");
