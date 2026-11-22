@@ -14,6 +14,7 @@ import { NotFoundRoute } from "@/app/routes/not-found";
 import { RequirePermission } from "@/app/routes/require-permission";
 import { RootLayout } from "@/app/routes/root-layout";
 import { RouteError } from "@/app/routes/route-error";
+import { ScanCompareRoute } from "@/app/routes/scan-compare";
 import { ScanDetailRoute } from "@/app/routes/scan-detail";
 import { ScansRoute } from "@/app/routes/scans";
 import { StatusRoute } from "@/app/routes/status";
@@ -61,6 +62,7 @@ export const router = createBrowserRouter([
             element: <RequirePermission permission="scans:read" />,
             children: [
               { index: true, Component: ScansRoute },
+              { path: "compare", Component: ScanCompareRoute },
               { path: ":scanId", Component: ScanDetailRoute },
             ],
           },

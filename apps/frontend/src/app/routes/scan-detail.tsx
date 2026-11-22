@@ -262,6 +262,7 @@ export function ScanDetailRoute() {
       {openHostId && (
         <HostSheet
           scanId={scanId}
+          baseScanId={scanData.baseScan?.id ?? null}
           hostId={openHostId}
           onClose={() => update({ host: null })}
           onEditHost={editHost}

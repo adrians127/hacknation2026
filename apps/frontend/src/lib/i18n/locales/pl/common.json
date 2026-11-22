@@ -319,9 +319,42 @@
         "new": "nowe hosty",
         "gone": "zniknięte hosty",
         "changed": "zmienione hosty",
-        "unknown": "hosty bez odpowiedzi"
+        "unknown": "hosty bez danych do porównania"
       },
       "serviceChanges": "Usługi: nowe {{new}}, zniknięte {{gone}}, zmienione {{changed}}."
+    },
+    "compare": {
+      "title": "Porównanie skanów",
+      "subtitle": "Dwa skany obok siebie: które hosty się pojawiły, zniknęły lub zmieniły, port po porcie. Za nowe lub zniknięte uznajemy tylko adresy, które odpowiedziały w obu skanach.",
+      "open": "Porównaj",
+      "openSideBySide": "Porównaj obok siebie",
+      "selected_one": "Wybrano {{count}} z 2 skanów",
+      "selected_few": "Wybrano {{count}} z 2 skanów",
+      "selected_many": "Wybrano {{count}} z 2 skanów",
+      "selected_other": "Wybrano {{count}} z 2 skanów",
+      "selectScan": "Wybierz skan z {{date}} do porównania",
+      "base": "Przed (A)",
+      "target": "Po (B)",
+      "pickScan": "Wybierz skan",
+      "noBase": "Nie ma starszego skanu z wynikami, z którym można porównać ten skan. Wybierz inny skan jako B.",
+      "noScans": "Do porównania potrzebne są co najmniej dwa skany z wynikami.",
+      "metric": "Miara",
+      "delta": "Zmiana",
+      "stats": {
+        "addresses": "Adresy",
+        "up": "Aktywne hosty",
+        "down": "Nieaktywne hosty",
+        "noAnswer": "Bez odpowiedzi",
+        "openPorts": "Otwarte porty",
+        "duration": "Czas trwania"
+      },
+      "coverage": "Oba skany dostały odpowiedź z {{both}} adresów. Tylko A: {{onlyBase}}, tylko B: {{onlyCurrent}}. Host spoza części wspólnej jest nieustalony, nigdy nowy ani zniknięty.",
+      "columns": {
+        "host": "Host",
+        "change": "Zmiana",
+        "base": "A · {{date}}",
+        "target": "B · {{date}}"
+      }
     }
   },
   "language": {

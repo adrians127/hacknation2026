@@ -285,9 +285,40 @@
         "new": "new hosts",
         "gone": "hosts gone",
         "changed": "hosts changed",
-        "unknown": "hosts without an answer"
+        "unknown": "hosts with nothing to compare"
       },
       "serviceChanges": "Services: {{new}} new, {{gone}} gone, {{changed}} changed."
+    },
+    "compare": {
+      "title": "Compare scans",
+      "subtitle": "Two scans side by side: which hosts appeared, went or changed, port by port. Only addresses both scans answered for count as new or gone.",
+      "open": "Compare",
+      "openSideBySide": "Compare side by side",
+      "selected_one": "{{count}} of 2 scans selected",
+      "selected_other": "{{count}} of 2 scans selected",
+      "selectScan": "Select the scan of {{date}} for comparison",
+      "base": "Before (A)",
+      "target": "After (B)",
+      "pickScan": "Choose a scan",
+      "noBase": "There is no older scan with results to compare this one with. Choose another scan as B.",
+      "noScans": "Comparing needs at least two scans with results.",
+      "metric": "Metric",
+      "delta": "Change",
+      "stats": {
+        "addresses": "Addresses",
+        "up": "Hosts up",
+        "down": "Hosts down",
+        "noAnswer": "No answer",
+        "openPorts": "Open ports",
+        "duration": "Duration"
+      },
+      "coverage": "Both scans answered for {{both}} addresses. Only A: {{onlyBase}}, only B: {{onlyCurrent}}. A host outside the common part is unknown, never new or gone.",
+      "columns": {
+        "host": "Host",
+        "change": "Change",
+        "base": "A · {{date}}",
+        "target": "B · {{date}}"
+      }
     }
   },
   "language": {
