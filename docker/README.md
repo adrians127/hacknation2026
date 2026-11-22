@@ -59,7 +59,7 @@ A one-shot CLI rather than a long-running service. Build it with `pnpm workers:b
 
 ## worker-manager
 
-A one-shot CLI like masscan-worker, in the `cli` profile. `pnpm workers:manager` (`docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager`) builds the image from `apps/workers/` (it contains masscan-worker and nmap-worker too) and runs `apps/workers/worker-manager/examples/example.json`. The examples directory is mounted at `/jobs` and the repo-root `worker-results/` at `/results`, and the container runs as `${WORKER_UID:-1000}:${WORKER_GID:-1000}` so the result files are yours. Network setup and capabilities are the same as masscan-worker. Details are in [`apps/workers/worker-manager/README.md`](../apps/workers/worker-manager/README.md).
+A one-shot CLI like masscan-worker, in the `cli` profile. `pnpm workers:manager` (`docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager`) builds the image from `apps/workers/` (it contains masscan-worker and nmap-worker too) and runs `apps/workers/worker-manager/examples/example.json`. The examples directory is mounted at `/jobs` and the repo-root `worker-results/` at `/results`, and the container runs as `${WORKER_UID:-1000}:${WORKER_GID:-1000}`; the pnpm script creates `worker-results/` and sets both to your uid/gid, so the result files are yours. Network setup and capabilities are the same as masscan-worker. Details are in [`apps/workers/worker-manager/README.md`](../apps/workers/worker-manager/README.md).
 
 ## DefectDojo
 

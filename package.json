@@ -28,7 +28,7 @@
     "dojo:smoke": "node docker/defectdojo/smoke-test.mjs",
     "workers:build": "docker compose -f docker/docker-compose.workers.yml build masscan-worker",
     "workers:masscan": "docker compose -f docker/docker-compose.workers.yml run --rm -T masscan-worker",
-    "workers:manager": "docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager",
+    "workers:manager": "mkdir -p worker-results && WORKER_UID=$(id -u) WORKER_GID=$(id -g) docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager",
     "workers:nmap:build": "docker compose -f docker/docker-compose.workers.yml --profile nmap build nmap-worker",
     "workers:nmap": "docker compose -f docker/docker-compose.workers.yml run --rm -T nmap-worker --input -"
   },

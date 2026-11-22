@@ -23,7 +23,7 @@ WORKER_MANAGER_MAX_PARALLEL=4 MASSCAN_WORKER_LOG_LEVEL=debug pnpm workers:manage
 | `apps/workers/worker-manager/examples/` | `/jobs` (read-only) | Job lists. Edit [`examples/example.json`](examples/example.json) or drop new files here; no rebuild needed |
 | `worker-results/` (repo root) | `/results` | Output, one subdirectory per run |
 
-**Edit the targets in `example.json` first** (it scans `192.168.1.0/24`); scan only networks you are allowed to scan. The container runs as `${WORKER_UID:-1000}:${WORKER_GID:-1000}` so result files belong to you; set both if your uid is not 1000. Like masscan-worker it uses `network_mode: host` and `NET_RAW`/`NET_ADMIN` (Linux hosts only).
+**Edit the targets in `example.json` first** (it scans `192.168.1.0/24`); scan only networks you are allowed to scan. The container runs as `${WORKER_UID:-1000}:${WORKER_GID:-1000}`; `pnpm workers:manager` creates `worker-results/` and sets both to your own uid/gid, so the result files belong to you. With plain `docker compose`, set them yourself. `Permission denied` on `/results` means the folder belongs to someone else (often root, when Docker created it): `sudo chown -R "$(id -u):$(id -g)" worker-results`. Like masscan-worker it uses `network_mode: host` and `NET_RAW`/`NET_ADMIN` (Linux hosts only).
 
 The image is built from `apps/workers/` and contains `worker-manager`, `masscan-worker`, `nmap-worker`, `masscan` and `nmap`. All three projects' tests run during the image build. The example has two masscan jobs and one nmap job; nmap job ids (`job_id`, `scan_id`) must be UUIDs, as the result contract requires.
 
