@@ -43,6 +43,7 @@ English is the project's default language: documentation, code comments, commit 
 | C++ workers (conventions, HTTP pull protocol, scan safety) | [`apps/workers/README.md`](apps/workers/README.md) |
 | nmap-worker (CMake/Docker build, network capabilities) | [`apps/workers/nmap-worker/README.md`](apps/workers/nmap-worker/README.md) |
 | Worker result format (locked source of truth for scan data) | [`docs/worker-result-format.md`](docs/worker-result-format.md) |
+| Scan export and import format (JSON document, CSV columns, import rules) | [`docs/scan-export-format.md`](docs/scan-export-format.md) |
 | Contract (zod schemas, OpenAPI generation, adding an endpoint) | [`packages/contracts/README.md`](packages/contracts/README.md) |
 | Typed API client (and why it uses TS 6) | [`packages/api-client/README.md`](packages/api-client/README.md) |
 | Local infrastructure (PostgreSQL, DefectDojo; workers: separate compose file) | [`docker/README.md`](docker/README.md) |
