@@ -249,7 +249,9 @@
         "issuer": "Wystawca certyfikatu",
         "expiry": "Certyfikat ważny do",
         "selfSigned": "Certyfikat self-signed",
-        "version": "Wersja TLS"
+        "version": "Wersja TLS",
+        "cipher": "Szyfr TLS",
+        "endpoint": "Endpoint TLS"
       },
       "host": {
         "hostname": "Nazwa hosta"
