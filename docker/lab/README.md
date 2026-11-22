@@ -14,11 +14,6 @@ Nie uruchamiaj wszystkich środowisk jednocześnie. Wybierz jeden stack.
 | `docker-compose-vulnerable.yml` | FTP `21`, WordPress `8088`, Adminer `8089`, DVWA `8090` |
 | `docker-compose-custom-network.yml` | httpbin `8888`, PostgreSQL `15432`, RabbitMQ `5673/15673`, Gitea `3001/2223`, lekka usługa HTTP `8787` |
 
-`docker-compose-all.yml` łączy wszystkie cztery stacki w jednej sieci `10.50.0.0/24`
-(każda usługa ma własny adres, bez portów na hoście). Nie uruchamia się go osobno:
-korzysta z niego `docker/docker-compose.full.yml`, który startuje całą aplikację i skanuje
-lab. Zobacz [`docker/README.md`](../README.md#full-stack-with-the-lab).
-
 ## Uruchomienie
 
 Uruchom wybrany stack, na przykład:
