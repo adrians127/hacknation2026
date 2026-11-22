@@ -273,7 +273,7 @@ One entry per `(scheme, vhost)`: once by bare IP (`vhost: null`) and once for ea
 This format depends on the following `NmapJob` inputs:
 
 - **Domains per IP:** one IP with a list of domains (`vhost`s), instead of one `domain` per target. This settles the open question in [`apps/workers/README.md`](../apps/workers/README.md#scan-jobs-in-the-database).
-- **Probe paths:** the paths taken from the active signatures (`/admin`, `/login`, `/version`, …).
+- **Probe paths:** the pipeline step's own paths plus the enabled detection signatures' paths (`/admin/`, `/login`, `/version`, …), added at lease time to workers whose manifest has a `probe_paths` field.
 - **Limits:** `maxBodyBytes`, `maxRedirects` and `httpTimeoutMs`, alongside the existing ones.
 
 ## What the backend derives
@@ -301,7 +301,7 @@ The worker result does not contain these. The backend computes them from stored 
 
 ## Current httpx-worker coverage
 
-`httpx-worker` probes assigned IPs, ports and vhosts with ProjectDiscovery httpx. It fills HTTP status, title, headers, hashed cookie values, bounded body, unfollowed redirects and explicit path probes. It leaves Nmap service metadata, favicon and TLS certificate details `null` because those values are not produced by its current invocation. For a host-object target, its ports are already known open; for an address/range target, only a responding HTTP port is reported open. The backend combines worker observations on reads, retaining Nmap service metadata and adding HTTP responses from httpx; stored results remain separate.
+`httpx-worker` probes assigned IPs, ports and vhosts with ProjectDiscovery httpx. It fills HTTP status, title, headers, hashed cookie values, bounded body, unfollowed redirects and explicit path probes. It also fetches `/favicon.ico` of the same host and fills `favicon` from httpx's body hashes. It leaves Nmap service metadata and TLS certificate details `null` because those values are not produced by its current invocation. For a host-object target, its ports are already known open; for an address/range target, only a responding HTTP port is reported open. The backend combines worker observations on reads, retaining Nmap service metadata and adding HTTP responses from httpx; stored results remain separate.
 
 ## Current naabu-worker coverage
 

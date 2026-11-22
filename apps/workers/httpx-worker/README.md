@@ -30,8 +30,9 @@ planned HTTP requests fit in one task; split larger work with the manager's `chu
 or `ranges` strategy. Each port is tried with exact HTTP and HTTPS schemes. The
 shared default `ports: "1-65535"` exceeds this worker's request cap for even one
 address, so HTTP jobs should provide discovered ports explicitly. The
-worker probes `/` plus the explicitly listed `probe_paths` (at most 128); no other
-paths are requested. It does not follow redirects.
+worker requests `/`, `/favicon.ico` and the explicitly listed `probe_paths` (at most
+128; the backend adds the enabled detection signatures' paths); no other paths are
+requested. It does not follow redirects.
 
 An object target's ports are treated as **known open** from Masscan/Nmap. The result
 reports them as open even when none speaks HTTP. A plain address/range has no such
@@ -57,9 +58,12 @@ probe is nested under that entry. `Set-Cookie` values are SHA-256 hashed and nev
 written as plaintext. Redirects are recorded with `followed: false`; `finalUrl`
 equals `url`. The body is bounded and stored only for text-like media types.
 Non-HTTP ports keep `http: []`. This worker does not fabricate Nmap service
-versions, banners, TTL or NSE output. Fields not available from its current
-httpx invocation, including favicon and complete TLS certificate metadata, are
-`null`. The raw httpx JSONL stays in temporary files and is removed.
+versions, banners, TTL or NSE output. The favicon is `/favicon.ico` of the same
+host: a 2xx image becomes `favicon: {url, mmh3, sha256}` from httpx's `-hash
+mmh3,sha256` (`mmh3` in Shodan's convention). httpx's `-favicon` is not used: it
+follows `<link rel=icon>` to other hosts (outside the allowed ranges), bypasses `-rl`
+and repeats per path. Complete TLS certificate metadata is `null`. The raw httpx
+JSONL stays in temporary files and is removed.
 
 The common result schema currently has fields named `maxRatePerProcess` and
 `nmapArgs`; for this worker they mean the effective HTTP request rate and `[]`.
