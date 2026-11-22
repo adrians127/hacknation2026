@@ -9,6 +9,7 @@ import {
   TargetSchema,
 } from "@subsurf/contracts/targets/targets.schema";
 
+import { decryptJson, isEncryptedValue } from "~backend/lib/crypto";
 import { encryptLegacyRows } from "~backend/lib/encrypt-legacy";
 import { prisma } from "~backend/lib/prisma";
 import { signInAs } from "~backend/test/auth";
@@ -237,5 +238,22 @@ describe("encryptLegacyRows", () => {
     expect(items.map((target) => target.note)).toEqual(["Already encrypted", "Legacy note", ""]);
     const stored = await prisma.target.findMany({ select: { note: true } });
     expect(JSON.stringify(stored)).not.toContain("Legacy note");
+  });
+
+  it("encrypts scan warnings a migration left as plain lists, once", async () => {
+    const warnings = [{ code: "dns_not_found", value: "legacy.example.com" }];
+    const none = await ingestScan();
+    const legacy = await ingestScan();
+    // As the migration leaves them: the list as it was stored before the column was encrypted.
+    await prisma.$executeRaw`
+      UPDATE "Scan" SET warnings = ${JSON.stringify(warnings)}::jsonb WHERE id = ${legacy}::uuid`;
+
+    expect(await encryptLegacyRows()).toBe(1);
+    expect(await encryptLegacyRows()).toBe(0);
+
+    const stored = await prisma.scan.findUniqueOrThrow({ where: { id: legacy }, select: { warnings: true } });
+    expect(JSON.stringify(stored)).not.toContain("legacy.example.com");
+    expect(isEncryptedValue(stored.warnings) && decryptJson(stored.warnings)).toEqual(warnings);
+    expect((await prisma.scan.findUniqueOrThrow({ where: { id: none } })).warnings).toBeNull();
   });
 });

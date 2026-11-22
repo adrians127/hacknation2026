@@ -22,8 +22,8 @@ model Scan {
   targetCount   Int
   addressCount  Int
   jobCount      Int
-  /// ImportWarning[] from @subsurf/contracts (domains that could not be scanned).
-  warnings      Json        @default("[]")
+  /// { "$enc": "v1.…" } holding ImportWarning[] (domains that could not be scanned); null = none.
+  warnings      Json?
   requestedById String      @db.Uuid
   createdAt     DateTime    @default(now())
   startedAt     DateTime?

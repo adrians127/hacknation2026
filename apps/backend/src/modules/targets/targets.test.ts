@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { ErrorResponseSchema } from "@subsurf/contracts/common/common.schema";
 import { ImportTargetsResponseSchema } from "@subsurf/contracts/targets/targets.schema";
 
-import { decryptText } from "~backend/lib/crypto";
+import { decryptJson, decryptText, isEncryptedValue } from "~backend/lib/crypto";
 import { prisma } from "~backend/lib/prisma";
 import { resolveDomains } from "~backend/modules/scans/dns";
 import { signInAs } from "~backend/test/auth";
@@ -154,6 +154,9 @@ describe("POST /v1/targets/import", () => {
     const body = ImportTargetsResponseSchema.parse(await res.json());
     expect(body.warnings).toEqual([{ code: "dns_not_found", value: "missing.example.com" }]);
     expect(body.scan).toMatchObject({ targetCount: 2, addressCount: 2, jobCount: 1 });
+    const { warnings: stored } = await prisma.scan.findFirstOrThrow();
+    expect(JSON.stringify(stored)).not.toContain("missing.example.com");
+    expect(isEncryptedValue(stored) && decryptJson(stored)).toEqual(body.warnings);
     const [job] = await prisma.scanJob.findMany();
     expect(job?.hosts).toEqual([
       { ip: "198.51.100.7", domain: "www.example.com" },

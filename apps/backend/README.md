@@ -154,17 +154,20 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `s
   |---|---|
   | `PortObservation.details`: `banner`, `scripts`, `http[].headers`, `cookies`, `body.content`, `tls.cert`, `probes` | What scanned hosts returned (see [Scan results](#scan-results)) |
   | `Host.note`, `Service.note`, `ServiceVulnerabilityTriage.note`, `Target.note`, `Scan.note` | Free text written by users (`encryptText`) |
+  | `Scan.warnings` | The domains a scan could not resolve or had to leave out (`encryptJson`); nothing queries them |
 
   | Plaintext on purpose | Why |
   |---|---|
   | Addresses, hostnames, ports, service name/product/version, HTTP status and page title (`HostObservation`, `HostnameObservation`, `PortObservation` columns and the rest of `details`) | SQL filters, sorts and diffs on them. Fixed by the locked [worker result format](../../docs/worker-result-format.md) |
-  | `Target.value`, `Target.rangeStart`/`rangeEnd`, `ScanJob.subnet`/`targets`/`hosts`/`params`, `Pipeline.targetSelector`, `Scan.warnings` | The scan scope. `Target.value` is the inventory's dedup, search and sort key, and a scan writes the same addresses and names to `HostObservation.ip` and `HostnameObservation.name` anyway: a blind index would cost substring search and address order without hiding anything |
+  | `Target.value`, `Target.rangeStart`/`rangeEnd`, `ScanJob.subnet`/`targets`/`hosts`/`params`, `Pipeline.targetSelector` | The scan scope. `Target.value` is the inventory's dedup, search and sort key, and a scan writes the same addresses and names to `HostObservation.ip` and `HostnameObservation.name` anyway: a blind index would cost substring search and address order without hiding anything |
   | Tags, triage, `VulnerabilityMatch` | SQL filters; a match only restates the plaintext service columns |
   | The vulnerability databases | Public data |
   | The auth tables | Only hashes (passwords, refresh secrets), emails and display names |
 
+  Not covered yet: `Pipeline.description` is free text in a plaintext column.
+
   **Rule for a new column:** it is plaintext only when SQL has to filter, sort, join or diff on it. Anything else a user typed or a scanned host returned goes through `lib/crypto.ts`; a note is a `Json?` column written with `encryptText(text.trim()) ?? Prisma.DbNull` and read with `decryptText`.
-- A column that becomes encrypted keeps its rows: the migration moves the text into the JSON column as plain strings, and `encryptLegacyRows()` (`lib/encrypt-legacy.ts`) encrypts whatever is not an envelope yet. It runs when the backend starts, before `db:seed:hosts`, and as `db:encrypt`; it is idempotent and safe from several processes. Readers stay strict: a row that was not encrypted yet fails loudly instead of being read as plaintext.
+- A column that becomes encrypted keeps its rows: the migration leaves the values plain in the JSON column (a note as a string, scan warnings as their list), and `encryptLegacyRows()` (`lib/encrypt-legacy.ts`) encrypts whatever is not an envelope yet. It runs when the backend starts, before `db:seed:hosts`, and as `db:encrypt`; it is idempotent and safe from several processes. Readers stay strict: a row that was not encrypted yet fails loudly instead of being read as plaintext.
 
 ## Targets and scan jobs
 
