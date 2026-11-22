@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { NonBlankStringSchema, TagsSchema } from "../common/common.schema";
+import { NonBlankStringSchema, TagSchema, TagsSchema } from "../common/common.schema";
 import { QueuedScanSchema } from "../scans/scans.schema";
 import {
   collectTargets,
@@ -19,12 +19,32 @@ export const TargetSchema = z.object({
   value: z.string(),
   note: z.string(),
   tags: z.array(z.string()),
+  /** Addresses of the target that answered `up` in its last scan; `0` before the first one. */
   activeHosts: z.number().int().nonnegative(),
+  /** The newest scan with results that covered the target. */
+  lastScanId: z.uuid().nullable(),
   lastScanAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
 });
 
-export const TargetListResponseSchema = z.object({ items: z.array(TargetSchema) });
+export const TARGETS_PAGE_SIZE_MAX = 200;
+
+export const TargetListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(TARGETS_PAGE_SIZE_MAX).default(50),
+  /** Part of the value, a tag, or an IPv4 address (finds the targets that contain it). */
+  q: z.string().max(200).optional(),
+  kind: TargetKindSchema.optional(),
+  tag: TagSchema.optional(),
+});
+
+/** In address order (a block before what it contains), domains last. */
+export const TargetListResponseSchema = z.object({
+  items: z.array(TargetSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+});
 
 const NoteSchema = z.string().max(TARGET_IMPORT_LIMITS.maxNoteLength);
 
@@ -98,6 +118,7 @@ export const ImportTargetsResponseSchema = z.object({
 });
 
 export type Target = z.infer<typeof TargetSchema>;
+export type TargetListQuery = z.infer<typeof TargetListQuerySchema>;
 export type TargetListResponse = z.infer<typeof TargetListResponseSchema>;
 export type UpdateTargetBody = z.infer<typeof UpdateTargetBodySchema>;
 export type ImportTargetsBody = z.infer<typeof ImportTargetsBodySchema>;

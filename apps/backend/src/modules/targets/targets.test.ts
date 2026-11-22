@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { ErrorResponseSchema } from "@subsurf/contracts/common/common.schema";
 import { ImportTargetsResponseSchema } from "@subsurf/contracts/targets/targets.schema";
 
+import { decryptText } from "~backend/lib/crypto";
 import { prisma } from "~backend/lib/prisma";
 import { resolveDomains } from "~backend/modules/scans/dns";
 import { signInAs } from "~backend/test/auth";
@@ -60,7 +61,7 @@ describe("POST /v1/targets/import", () => {
     expect(body.scan).toMatchObject({ status: "queued", targetCount: 4, addressCount: 1026, jobCount: 6 });
 
     const targets = (await prisma.target.findMany()).toSorted((a, b) => a.value.localeCompare(b.value));
-    expect(targets.map((target) => [target.kind, target.value, target.note])).toEqual([
+    expect(targets.map((target) => [target.kind, target.value, decryptText(target.note)])).toEqual([
       ["cidr", "10.0.0.0/22", "Campus"],
       ["ip", "10.0.0.5", ""],
       ["ip", "192.0.2.10", ""],
@@ -91,7 +92,8 @@ describe("POST /v1/targets/import", () => {
     const body = ImportTargetsResponseSchema.parse(await res.json());
     expect(body).toMatchObject({ received: 2, created: 1, skipped: 1 });
     expect(body.scan).toMatchObject({ targetCount: 2, addressCount: 2, jobCount: 1 });
-    expect((await prisma.target.findUniqueOrThrow({ where: { value: "192.0.2.10" } })).note).toBe("first");
+    const kept = await prisma.target.findUniqueOrThrow({ where: { value: "192.0.2.10" } });
+    expect(decryptText(kept.note)).toBe("first");
   });
 
   it("tags the targets it creates and leaves existing ones alone", async () => {
@@ -129,7 +131,7 @@ describe("POST /v1/targets/import", () => {
       orderBy: { value: "asc" },
       select: { kind: true, value: true, note: true },
     });
-    expect(targets).toEqual([
+    expect(targets.map((target) => ({ ...target, note: decryptText(target.note) }))).toEqual([
       { kind: "cidr", value: "192.0.2.0/25", note: "Lab" },
       { kind: "cidr", value: "192.0.2.128/31", note: "Lab" },
     ]);

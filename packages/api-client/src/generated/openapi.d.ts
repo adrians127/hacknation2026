@@ -397,6 +397,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the target inventory
+         * @description Requires `targets:read`. One page in address order: a block before the addresses and blocks it contains, domains last. `q` matches part of the value, a tag, or, when it is an IPv4 address, every target that contains it. Each target carries its last scan with results and how many of its addresses were up in it.
+         */
+        get: operations["listTargets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/targets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a target from the inventory
+         * @description Requires `targets:delete`. New scans no longer cover it. Past scans keep their results, and the hosts found in it keep their notes, tags and triage.
+         */
+        delete: operations["deleteTarget"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a target's note and tags
+         * @description Requires `targets:update`. The value cannot change: past scans refer to it. Delete the target and import the new one instead. A later import of the same value leaves the note and tags as they are.
+         */
+        patch: operations["updateTarget"];
+        trace?: never;
+    };
     "/targets/import": {
         parameters: {
             query?: never;
@@ -812,6 +856,22 @@ export interface components {
                 code: "dns_not_found" | "dns_no_addresses" | "dns_timeout" | "dns_failed" | "resolves_to_reserved" | "no_scannable_targets";
                 value: string;
             }[];
+        };
+        Target: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "ip" | "cidr" | "domain";
+            value: string;
+            note: string;
+            tags: string[];
+            activeHosts: number;
+            /** Format: uuid */
+            lastScanId: string | null;
+            /** Format: date-time */
+            lastScanAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
         };
         User: {
             /** Format: uuid */
@@ -3401,6 +3461,200 @@ export interface operations {
                         }[];
                     };
                     "text/csv": string;
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listTargets: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                q?: string;
+                kind?: "ip" | "cidr" | "domain";
+                tag?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of targets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            kind: "ip" | "cidr" | "domain";
+                            value: string;
+                            note: string;
+                            tags: string[];
+                            activeHosts: number;
+                            /** Format: uuid */
+                            lastScanId: string | null;
+                            /** Format: date-time */
+                            lastScanAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                        }[];
+                        total: number;
+                        page: number;
+                        pageSize: number;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                    tags?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description The target */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Target"];
                 };
             };
             /** @description Validation failed */

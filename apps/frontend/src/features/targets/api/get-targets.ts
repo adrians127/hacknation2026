@@ -1,15 +1,14 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import type { TargetListResponse } from "@subsurf/contracts/targets/targets.schema";
+import type { TargetListQuery } from "@subsurf/contracts/targets/targets.schema";
 
-import { mockResponse } from "@/api/mock";
-import { mockTargets } from "@/features/targets/api/mocks";
+import { api } from "@/api/client";
 
-// MOCK: api.queryOptions("get", "/targets")
-export const targetsQueryOptions = () =>
-  queryOptions({
-    queryKey: ["get", "/targets"] as const,
-    queryFn: (): Promise<TargetListResponse> => mockResponse(mockTargets.list()),
-  });
+export type TargetsQuery = Partial<TargetListQuery>;
 
-export const useTargets = () => useQuery(targetsQueryOptions());
+export const targetsQueryOptions = (query: TargetsQuery) =>
+  api.queryOptions("get", "/targets", { params: { query } });
+
+// The previous page stays on screen while the next one loads.
+export const useTargets = (query: TargetsQuery) =>
+  useQuery({ ...targetsQueryOptions(query), placeholderData: keepPreviousData });

@@ -4,8 +4,13 @@ model Target {
   kind        TargetKind
   /// Normalized by the shared parser (@subsurf/contracts/targets/target-input): the dedup key.
   value       String     @unique
-  note        String     @default("")
+  /// { "$enc": "v1.…" } (src/lib/crypto.ts); null = no note.
+  note        Json?
   tags        String[]   @default([])
+  /// The addresses an `ip` or `cidr` covers, as unsigned integers: address order in the list and
+  /// "which target holds this address". Null for a domain.
+  rangeStart  BigInt?
+  rangeEnd    BigInt?
   createdById String     @db.Uuid
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -14,6 +19,7 @@ model Target {
   scans     ScanTarget[]
 
   @@index([createdById])
+  @@index([rangeStart])
 }
 
 enum TargetKind {

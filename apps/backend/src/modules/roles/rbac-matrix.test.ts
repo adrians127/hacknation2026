@@ -80,6 +80,16 @@ const servicePath = async () => {
   const { hostId, serviceId } = await serviceWithMatch();
   return `/v1/hosts/${hostId}/services/${serviceId}`;
 };
+const targetPath = async () => {
+  const target = await prisma.target.create({
+    data: {
+      kind: "domain",
+      value: `host-${Math.floor(Math.random() * 1e9)}.example.org`,
+      createdById: (await createUser()).id,
+    },
+  });
+  return `/v1/targets/${target.id}`;
+};
 const importTargets = (startScan: boolean) => async () => ({
   entries: [{ value: "192.0.2.10" }],
   startScan,
@@ -141,6 +151,14 @@ const ENDPOINTS: Endpoint[] = [
   { route: "DELETE /roles/{id}", requires: ["roles:delete"], path: customRolePath },
 
   // targets
+  { route: "GET /targets", requires: ["targets:read"], path: async () => "/v1/targets" },
+  {
+    route: "PATCH /targets/{id}",
+    requires: ["targets:update"],
+    path: targetPath,
+    body: async () => ({ note: "Changed" }),
+  },
+  { route: "DELETE /targets/{id}", requires: ["targets:delete"], path: targetPath },
   {
     route: "POST /targets/import",
     requires: ["targets:create"],
