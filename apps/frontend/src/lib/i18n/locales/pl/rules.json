@@ -174,7 +174,7 @@
     "tagHint": "Zdejmowany, gdy reguła przestaje pasować",
     "changeAction": "Co zrobić ze zmianą",
     "readTimeHint": "Stosowana przy każdym odczycie zmian, więc obejmuje też wcześniejsze skany; nic nie jest zapisywane.",
-    "ownershipHint": "Zmieniane są tylko wartości „nieprzejrzane” albo ustawione przez regułę. Werdykt użytkownika zawsze zostaje.",
+    "ownershipHint": "Reguła zmienia tylko wartości „nieprzejrzane” albo ustawione przez regułę. Werdykt użytkownika zawsze zostaje.",
     "note": "Uzasadnienie (notatka)",
     "expiresAt": "Ważna do",
     "expiresHint": "Opcjonalnie; potem to, co reguła ustawiła, wraca",

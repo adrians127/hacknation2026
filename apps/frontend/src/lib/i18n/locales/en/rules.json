@@ -164,7 +164,7 @@
     "tagHint": "Removed again when the rule no longer matches",
     "changeAction": "Do with the change",
     "readTimeHint": "Applied whenever changes are read, so it also covers past scans; nothing is stored.",
-    "ownershipHint": "Only values that are unreviewed or were set by a rule change. A user's own verdict always stays.",
+    "ownershipHint": "A rule changes only values that are unreviewed or that a rule set. A user's own verdict always stays.",
     "note": "Why (note)",
     "expiresAt": "Valid until",
     "expiresHint": "Optional; afterwards what the rule set goes back",
