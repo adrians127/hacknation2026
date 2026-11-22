@@ -47,6 +47,7 @@ Json lease_request_body(const LeaseRequest& request) {
     body["manager_id"] = request.manager_id;
     body["version"] = WORKER_MANAGER_VERSION;
     body["workers"] = request.workers;
+    if (!request.worker_specs.empty()) body["worker_specs"] = request.worker_specs;
     body["max_parallel"] = request.max_parallel;
     body["wait_seconds"] = request.wait.count();
     return body;

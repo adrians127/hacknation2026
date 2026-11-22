@@ -33,7 +33,7 @@ const body: PipelineBody = {
   name: "Nightly",
   description: "",
   enabled: true,
-  targets: { tags: ["campus"], ranges: ["10.40.0.0/18"] },
+  targets: { tags: ["campus"], targetIds: [], ranges: ["10.40.0.0/18"] },
   steps: [step, { ...step, input: "previous" }],
   schedule,
 };

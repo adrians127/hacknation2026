@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,7 @@ struct BackendConfig {
     std::chrono::seconds poll_wait;    // how long the backend may hold one lease request
     std::chrono::seconds retry_delay;  // first delay after a failed lease or upload, then doubled
     std::uint32_t upload_attempts;     // per result, before it is left on disk
+    std::filesystem::path manifest_dir{};  // `<name>.json` per worker, sent as `worker_specs`
 };
 
 struct Config {

@@ -28,6 +28,7 @@ add_library(worker-manager-core STATIC
   src/ipv4.cpp
   src/job.cpp
   src/logger.cpp
+  src/manifest.cpp
   src/planner.cpp
   src/process.cpp
   src/result_uploader.cpp

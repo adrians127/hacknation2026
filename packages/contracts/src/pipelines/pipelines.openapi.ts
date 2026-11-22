@@ -26,7 +26,7 @@ const Pipeline = registry.register("Pipeline", PipelineSchema);
 const PipelineDetail = registry.register("PipelineDetail", PipelineDetailSchema);
 
 const invalidPipeline = errorResponse(
-  "Validation failed: also a disabled worker (`WORKER_DISABLED`), a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`)",
+  "Validation failed: also a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`)",
 );
 
 registry.registerPath({
@@ -54,8 +54,10 @@ registry.registerPath({
   summary: "Create a pipeline from worker steps",
   description: [
     "Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires).",
-    "The first step scans the pipeline's targets; a later one may take the previous step's up",
-    "hosts and open ports instead (`input: previous`).",
+    "Each step with `input: targets` has its own `targets`, which picks inventory targets with any",
+    "of its `tags` or listed in `targetIds` (every target when both are empty), narrowed to its",
+    "`ranges`. The first step scans targets; a later one may instead take the previous step's up",
+    "hosts and open ports (`input: previous`, `targets: null`).",
   ].join(" "),
   tags,
   security,
@@ -154,7 +156,7 @@ registry.registerPath({
   operationId: "runPipeline",
   summary: "Run a pipeline now",
   description: [
-    "Requires `scans:run`. Queues a scan of the pipeline's targets with its current steps; a",
+    "Requires `scans:run`. Queues a scan with the pipeline's current steps, each over its own targets; a",
     "schedule's time window does not apply to a manual run.",
   ].join(" "),
   tags,
@@ -169,7 +171,7 @@ registry.registerPath({
     403: forbidden,
     404: notFound,
     409: errorResponse(
-      "A run is still active (`PIPELINE_RUN_ACTIVE`), nothing to scan (`NO_SCANNABLE_TARGETS`), or a disabled worker (`WORKER_DISABLED`)",
+      "A run is still active (`PIPELINE_RUN_ACTIVE`) or nothing to scan (`NO_SCANNABLE_TARGETS`)",
     ),
   },
 });

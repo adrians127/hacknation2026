@@ -6,6 +6,9 @@ model PipelineStep {
   position           Int
   workerId           String            @db.Uuid
   input              PipelineStepInput
+  /// TargetSelector from @subsurf/contracts ({ tags, targetIds, ranges }) with input `targets`;
+  /// null with input `previous`.
+  targetSelector     Json?
   ports              String
   rate               Int
   batchSize          Int

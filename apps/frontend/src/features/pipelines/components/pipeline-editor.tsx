@@ -20,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCreatePipeline } from "@/features/pipelines/api/create-pipeline";
 import { useRunPipeline } from "@/features/pipelines/api/run-pipeline";
@@ -51,7 +50,8 @@ function stepIsRunnable(step: StepDraft, index: number, worker: Worker | undefin
     (index > 0 || step.input === "targets") &&
     step.rate <= worker.maxRate &&
     worker.splitStrategies.includes(step.split.strategy) &&
-    validateStepParams(worker.paramFields, step.params).length === 0
+    validateStepParams(worker.paramFields, step.params).length === 0 &&
+    (step.input !== "targets" || parseHostSelectors(step.target.rangesText).invalid.length === 0)
   );
 }
 
@@ -61,7 +61,8 @@ function pathsUnder(paths: readonly string[], prefix: string): Set<string> {
 }
 
 /**
- * Creates or edits a pipeline: targets, an ordered chain of worker blocks and a schedule.
+ * Creates or edits a pipeline: an ordered chain of worker blocks, each with its own targets or
+ * the previous block's hits, and a schedule.
  * Without `pipelines:update` (or `create` for a new one) it is read-only; without `scans:run`
  * the schedule stays as it is.
  */
@@ -98,12 +99,10 @@ export function PipelineEditor({ pipeline, workers }: { pipeline?: PipelineDetai
   }, [createdId, isDirty, navigate]);
 
   const workerById = useMemo(() => new Map(workers.map((worker) => [worker.id, worker])), [workers]);
-  const enabledWorkers = workers.filter((worker) => worker.enabled);
   const parsed = PipelineBodySchema.safeParse(body);
   const issuePaths = parsed.success ? [] : parsed.error.issues.map((issue) => issue.path.join("."));
-  const invalidRanges = parseHostSelectors(draft.rangesText).invalid;
   const stepsRunnable = draft.steps.every((step, index) => stepIsRunnable(step, index, workerById.get(step.workerId)));
-  const isValid = parsed.success && invalidRanges.length === 0 && stepsRunnable;
+  const isValid = parsed.success && stepsRunnable;
   const invalid = (path: string) => (showErrors && issuePaths.includes(path)) || undefined;
 
   const setDraftField = <K extends keyof PipelineDraft>(key: K, value: PipelineDraft[K]) =>
@@ -185,52 +184,6 @@ export function PipelineEditor({ pipeline, workers }: { pipeline?: PipelineDetai
 
         <Card>
           <CardHeader>
-            <CardTitle>{t("editor.targets.title")}</CardTitle>
-            <CardDescription>{t("editor.targets.hint")}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-1.5">
-              <Label htmlFor="pipeline-tags">{t("editor.targets.tags")}</Label>
-              <Input
-                id="pipeline-tags"
-                value={draft.tagsText}
-                placeholder={t("editor.targets.tagsPlaceholder")}
-                disabled={!canEdit}
-                onChange={(event) => setDraftField("tagsText", event.target.value)}
-                aria-invalid={invalid("targets.tags")}
-                aria-describedby="pipeline-tags-hint"
-              />
-              <p id="pipeline-tags-hint" className="text-xs text-muted-foreground">
-                {t("editor.targets.tagsHint")}
-              </p>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="pipeline-ranges">{t("editor.targets.ranges")}</Label>
-              <Textarea
-                id="pipeline-ranges"
-                rows={2}
-                className="font-mono text-xs"
-                value={draft.rangesText}
-                placeholder={t("editor.targets.rangesPlaceholder")}
-                disabled={!canEdit}
-                onChange={(event) => setDraftField("rangesText", event.target.value)}
-                aria-invalid={invalidRanges.length > 0 || undefined}
-                aria-describedby="pipeline-ranges-hint"
-              />
-              <p
-                id="pipeline-ranges-hint"
-                className={invalidRanges.length > 0 ? "text-sm text-destructive" : "text-xs text-muted-foreground"}
-              >
-                {invalidRanges.length > 0
-                  ? t("editor.targets.rangesInvalid", { values: invalidRanges.slice(0, 5).join(", ") })
-                  : t("editor.targets.rangesHint")}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
             <CardTitle>{t("editor.steps.title")}</CardTitle>
             <CardDescription>{t("editor.steps.hint")}</CardDescription>
           </CardHeader>
@@ -238,11 +191,11 @@ export function PipelineEditor({ pipeline, workers }: { pipeline?: PipelineDetai
             {canEdit && (
               <div className="grid gap-2">
                 <p className="text-sm font-medium">{t("editor.steps.add")}</p>
-                {enabledWorkers.length === 0 ? (
+                {workers.length === 0 ? (
                   <p className="text-sm text-muted-foreground">{t("editor.steps.noWorkers")}</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {enabledWorkers.map((worker) => (
+                    {workers.map((worker) => (
                       <Tooltip key={worker.id}>
                         <TooltipTrigger asChild>
                           <Button

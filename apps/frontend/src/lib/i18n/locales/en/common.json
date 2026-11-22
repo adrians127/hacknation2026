@@ -284,7 +284,8 @@
         "dns_timeout": "The DNS lookup timed out",
         "dns_failed": "The DNS lookup failed",
         "resolves_to_reserved": "Points to a reserved address, which was skipped",
-        "no_scannable_targets": "Nothing was left to scan, so no scan was queued."
+        "no_scannable_targets": "Nothing was left to scan, so no scan was queued.",
+        "worker_not_registered": "No worker manager has registered this worker yet, so its step was left out."
       }
     }
   },
@@ -650,10 +651,8 @@
     "BASE_SCAN_NOT_OLDER": "The scan to compare with must be older than the compared scan.",
     "PIPELINE_NAME_TAKEN": "A pipeline with this name already exists.",
     "PIPELINE_RUN_ACTIVE": "A run of this pipeline is still going. Wait for it or stop it first.",
-    "NO_SCANNABLE_TARGETS": "None of the pipeline's targets can be scanned. Check its tags and ranges.",
-    "WORKER_DISABLED": "A step uses a disabled worker. An administrator has to enable it first.",
+    "NO_SCANNABLE_TARGETS": "None of the steps' targets can be scanned. Check their tags and ranges.",
     "WORKER_IN_USE": "A pipeline still uses this worker. Remove it from the pipeline first.",
-    "WORKER_BUILTIN": "Built-in workers come from code: only whether they run, their rate cap and defaults can change.",
     "PORTS_NOT_ALLOWED": "These ports are outside the ports the scanner may probe.",
     "SCAN_NOT_STOPPABLE": "The scan has already ended.",
     "DEFECTDOJO_NOT_CONFIGURED": "DefectDojo is not configured on the server.",

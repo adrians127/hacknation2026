@@ -81,7 +81,7 @@ export function StartScanDialog({ onClose }: { onClose: () => void }) {
             {selected && (
               <p className="text-sm text-muted-foreground">
                 {selected.steps.map((step) => step.worker.displayName).join(" → ")} ·{" "}
-                {targetsSummary(selected.targets)} · {scheduleSummary(selected.schedule)}
+                {targetsSummary(selected.steps)} · {scheduleSummary(selected.schedule)}
               </p>
             )}
           </div>

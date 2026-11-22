@@ -98,11 +98,12 @@ export const ImportWarningCodeSchema = z.enum([
   "dns_failed",
   "resolves_to_reserved",
   "no_scannable_targets",
+  "worker_not_registered",
 ]);
 
 export const ImportWarningSchema = z.object({
   code: ImportWarningCodeSchema,
-  /** The domain concerned; empty for `no_scannable_targets`. */
+  /** The domain concerned; the worker's name for `worker_not_registered`; empty for `no_scannable_targets`. */
   value: z.string(),
 });
 

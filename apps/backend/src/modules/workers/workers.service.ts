@@ -1,32 +1,15 @@
-import {
-  validateStepParams,
-  type WorkerParamField,
-} from "@subsurf/contracts/workers/worker-catalog";
 import type {
   UpdateWorkerBody,
   Worker,
   WorkerListResponse,
 } from "@subsurf/contracts/workers/worker-registry.schema";
-import type { ManagerLeaseRequest } from "@subsurf/contracts/workers/workers.schema";
+import type { ManagerLeaseRequest, WorkerSpec } from "@subsurf/contracts/workers/workers.schema";
 
+import type { Worker as WorkerRow } from "~backend/generated/prisma/client";
 import { HttpError } from "~backend/lib/http-error";
 import { prisma } from "~backend/lib/prisma";
-import {
-  isManagerOnline,
-  toWorker,
-  toWorkerManager,
-  workerFields,
-} from "~backend/modules/workers/workers.mapper";
-
-const BUILTIN_EDITABLE = new Set<string>(["enabled", "maxRate", "defaults"]);
-
-function assertDefaultsMatch(fields: readonly WorkerParamField[], defaults: Record<string, unknown>) {
-  const issues = validateStepParams(fields, defaults);
-  if (issues.length > 0) {
-    const list = issues.map((issue) => `${issue.key} (${issue.code})`).join(", ");
-    throw HttpError.badRequest(`Defaults do not match the worker's fields: ${list}`);
-  }
-}
+import { sameJson } from "~backend/lib/same-json";
+import { isManagerOnline, toWorker, toWorkerManager } from "~backend/modules/workers/workers.mapper";
 
 async function findWorker(id: string) {
   const worker = await prisma.worker.findUnique({ where: { id } });
@@ -43,10 +26,24 @@ async function onlineManagersByWorker(now: Date): Promise<Map<string, number>> {
   return counts;
 }
 
+/** The part of a worker its manager owns. */
+function capabilities(spec: WorkerSpec) {
+  return {
+    inputs: [...spec.inputs],
+    splitStrategies: [...spec.split_strategies],
+    paramFields: (spec.param_fields ?? []).map((field) => ({ ...field })),
+  };
+}
+
+const sameCapabilities = (row: WorkerRow, wanted: ReturnType<typeof capabilities>) =>
+  sameJson(row.inputs, wanted.inputs) &&
+  sameJson(row.splitStrategies, wanted.splitStrategies) &&
+  sameJson(row.paramFields, wanted.paramFields);
+
 export const workersService = {
   async list(now = new Date()): Promise<WorkerListResponse> {
     const [workers, managers] = await Promise.all([
-      prisma.worker.findMany({ orderBy: [{ stage: "asc" }, { name: "asc" }] }),
+      prisma.worker.findMany({ orderBy: [{ displayName: "asc" }, { name: "asc" }] }),
       prisma.workerManager.findMany({ orderBy: { lastSeenAt: "desc" } }),
     ]);
     const online = await onlineManagersByWorker(now);
@@ -57,37 +54,14 @@ export const workersService = {
   },
 
   async update(id: string, body: UpdateWorkerBody): Promise<Worker> {
-    const worker = await findWorker(id);
-    if (worker.isBuiltin) {
-      const locked = Object.keys(body).filter((key) => !BUILTIN_EDITABLE.has(key));
-      if (locked.length > 0) {
-        throw HttpError.conflict(
-          `A built-in worker's ${locked.join(", ")} come from the code catalog`,
-          "WORKER_BUILTIN",
-        );
-      }
-    }
-    const fields = body.paramFields ?? workerFields(worker);
-    if (body.defaults) assertDefaultsMatch(fields, body.defaults);
-    else if (body.paramFields) assertDefaultsMatch(fields, {});
-
-    const updated = await prisma.worker.update({
-      where: { id },
-      data: {
-        ...body,
-        // New fields drop the old defaults unless new ones came along.
-        ...(body.paramFields && !body.defaults ? { defaults: {} } : {}),
-      },
-    });
+    await findWorker(id);
+    const updated = await prisma.worker.update({ where: { id }, data: body });
     const online = await onlineManagersByWorker(new Date());
     return toWorker(updated, online.get(updated.name) ?? 0);
   },
 
   async remove(id: string): Promise<void> {
-    const worker = await findWorker(id);
-    if (worker.isBuiltin) {
-      throw HttpError.conflict("A built-in worker cannot be deleted; disable it instead", "WORKER_BUILTIN");
-    }
+    await findWorker(id);
     if ((await prisma.pipelineStep.count({ where: { workerId: id } })) > 0) {
       throw HttpError.conflict("A pipeline still uses this worker", "WORKER_IN_USE");
     }
@@ -95,8 +69,10 @@ export const workersService = {
   },
 
   /**
-   * A manager's lease request is its registration: the manager row is upserted and worker names
-   * the registry lacks become disabled custom workers for an admin to describe and enable.
+   * A manager's lease request is its registration: the manager row is upserted and every worker
+   * it offers is registered. A worker's manifest (`worker_specs`) sets its capabilities each time
+   * (the last manager to announce them wins); display name, description and rate cap are taken
+   * from it only when the worker is new, since admins own them afterwards.
    */
   async recordManager(request: ManagerLeaseRequest, now = new Date()): Promise<void> {
     const manager = {
@@ -110,11 +86,33 @@ export const workersService = {
       create: { managerId: request.manager_id, firstSeenAt: now, ...manager },
       update: manager,
     });
-    if (request.workers.length > 0) {
-      await prisma.worker.createMany({
-        data: request.workers.map((name) => ({ name, displayName: name, enabled: false })),
-        skipDuplicates: true,
-      });
+    if (request.workers.length === 0) return;
+
+    const specs = new Map((request.worker_specs ?? []).map((spec) => [spec.name, spec]));
+    const stored = new Map(
+      (await prisma.worker.findMany({ where: { name: { in: request.workers } } })).map((row) => [row.name, row]),
+    );
+    for (const name of request.workers) {
+      const spec = specs.get(name);
+      const wanted = spec ? capabilities(spec) : undefined;
+      const row = stored.get(name);
+      if (!row) {
+        // skipDuplicates: another manager may register the same worker at the same moment.
+        await prisma.worker.createMany({
+          data: [
+            {
+              name,
+              displayName: spec?.display_name ?? name,
+              description: spec?.description ?? "",
+              ...(spec?.max_rate === undefined ? {} : { maxRate: spec.max_rate }),
+              ...wanted,
+            },
+          ],
+          skipDuplicates: true,
+        });
+      } else if (wanted && !sameCapabilities(row, wanted)) {
+        await prisma.worker.update({ where: { id: row.id }, data: wanted });
+      }
     }
   },
 };

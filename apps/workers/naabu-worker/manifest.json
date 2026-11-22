@@ -1,0 +1,26 @@
+{
+  "display_name": "Naabu",
+  "description": "TCP discovery sweep with connect or SYN scans: finds live hosts and open ports in address ranges.",
+  "inputs": ["targets"],
+  "split_strategies": ["none", "shard", "ranges"],
+  "max_rate": 10000,
+  "param_fields": [
+    {
+      "key": "scan_type",
+      "label": "Scan type",
+      "description": "Connect scans need no raw socket permissions; SYN scans are faster.",
+      "type": "enum",
+      "options": ["connect", "syn"],
+      "default": "connect"
+    },
+    {
+      "key": "retries",
+      "label": "Retries",
+      "description": "Port scan retries.",
+      "type": "integer",
+      "min": 0,
+      "max": 5,
+      "default": 3
+    }
+  ]
+}

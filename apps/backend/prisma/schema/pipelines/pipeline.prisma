@@ -1,13 +1,11 @@
-/// A scan pipeline: ordered worker steps over a selection of the target inventory, run on a
-/// schedule or on demand. Each run is a Scan.
+/// A scan pipeline: ordered worker steps, each scanning its own selection of the target inventory
+/// or the previous step's hits, run on a schedule or on demand. Each run is a Scan.
 model Pipeline {
   id             String    @id @default(uuid(7)) @db.Uuid
   name           String    @unique
   description    String    @default("")
   /// Whether the schedule fires.
   enabled        Boolean   @default(false)
-  /// TargetSelector from @subsurf/contracts: { tags, ranges }.
-  targetSelector Json
   /// Schedule from @subsurf/contracts, or null for manual runs only.
   schedule       Json?
   /// The next fire time; null while disabled or unscheduled. The scheduler claims a fire by
