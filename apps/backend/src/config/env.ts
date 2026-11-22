@@ -65,6 +65,8 @@ const envSchema = z
     WORKER_TOKEN: blankAsAbsent(
       z.string().min(16, "WORKER_TOKEN must be at least 16 characters").optional(),
     ),
+    // Unset: Secure cookies in production only (src/lib/auth-cookies.ts).
+    COOKIE_SECURE: blankAsAbsent(z.stringbool().optional()),
 
     // First admin, created at startup while there are no users (and by the seed).
     ADMIN_EMAIL: blankAsAbsent(z.email().optional()),

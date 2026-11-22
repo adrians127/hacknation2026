@@ -1,15 +1,19 @@
 # docker/
 
-Docker Compose files. You run the backend and frontend with `pnpm dev`; only what they depend on runs here. There are two separate compose projects, so scan hosts can run workers without the database and `down` on one never touches the other.
+Docker Compose files. In development you run the backend and frontend with `pnpm dev` and only what they depend on runs here; the `app` profile runs the whole app in Docker too ([Everything in Docker](#everything-in-docker)). There are two separate compose projects, so scan hosts can run workers without the database and `down` on one never touches the other.
 
 | File | Project | Services |
 |---|---|---|
-| `docker-compose.yml` | `hacknation` | Infrastructure: `postgres`, `defectdojo-*` |
+| `docker-compose.yml` | `hacknation` | Infrastructure: `postgres`, `defectdojo-*`; profile `app`: `backend-migrate`, `backend`, `frontend`; profile `vulns`: `vuln-sync` |
 | `docker-compose.workers.yml` | `hacknation-workers` | Scan workers: `nmap-worker`, `masscan-worker`, `naabu-worker`, `worker-manager` |
 
 | Service | File | Description |
 |---|---|---|
 | `postgres` | `docker-compose.yml` | PostgreSQL 19 (alpine), port bound to `127.0.0.1:5432` only |
+| `backend-migrate` | `docker-compose.yml` (profile `app`) | One-shot `prisma migrate deploy` from the backend image (`apps/backend/Dockerfile`) |
+| `backend` | `docker-compose.yml` (profile `app`) | The API, scheduler and worker endpoints, production mode, `127.0.0.1:3001` |
+| `frontend` | `docker-compose.yml` (profile `app`) | nginx with the built UI (`apps/frontend/Dockerfile`) on `APP_BIND:APP_PORT` (`127.0.0.1:3000`), `/v1` proxied to `backend` |
+| `vuln-sync` | `docker-compose.yml` (profile `vulns`) | The vulnerability sync process (NVD, OSV); start it with both profiles |
 | `defectdojo-*` | `docker-compose.yml` | DefectDojo 3.5 (7 containers), UI and API on `127.0.0.1:8080` only. See [DefectDojo](#defectdojo) |
 | `masscan-worker` | `docker-compose.workers.yml` | One-shot C++ masscan sweep from `apps/workers/masscan-worker`, a job on stdin |
 | `naabu-worker` | `docker-compose.workers.yml` | One-shot Naabu TCP discovery from `apps/workers/naabu-worker`, a job on stdin |
@@ -46,6 +50,31 @@ nmap-worker's long-running HTTP pull mode is opt-in. Start it explicitly when yo
 docker compose -f docker/docker-compose.workers.yml --profile nmap up -d --build
 docker compose -f docker/docker-compose.workers.yml --profile nmap down
 ```
+
+## Everything in Docker
+
+The `app` profile builds and runs the backend and frontend images next to PostgreSQL and DefectDojo. Only Docker (Compose v2) and `openssl` are needed on the machine. From the repo root:
+
+```bash
+cp docker/.env.example docker/.env
+sed -i \
+  -e "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|" \
+  -e "s|^DATA_ENCRYPTION_KEY=.*|DATA_ENCRYPTION_KEY=$(openssl rand -base64 32)|" \
+  -e "s|^WORKER_TOKEN=.*|WORKER_TOKEN=$(openssl rand -hex 32)|" \
+  -e "s|^ADMIN_PASSWORD=.*|ADMIN_PASSWORD=$(openssl rand -hex 8)|" \
+  docker/.env                                   # macOS: sed -i '' -e …
+grep ADMIN_ docker/.env                         # the admin's sign-in
+
+docker compose -f docker/docker-compose.yml --profile app up -d --build   # pnpm app:up
+```
+
+- Open `http://localhost:3000` and sign in as the admin; the backend creates it on its first start. It also syncs the worker catalog; there are no demo accounts (create users under Users) and no demo scan data (`pnpm db:seed:hosts` needs the development setup).
+- The first `up` builds the images and DefectDojo takes a minute or two; `docker compose -f docker/docker-compose.yml --profile app ps` shows the state. Without DefectDojo: `… --profile app up -d --build frontend` starts only the frontend and what it depends on.
+- Other machines: set `APP_BIND=0.0.0.0` and `PUBLIC_URL=http://<host>:3000` in `docker/.env`, then `up` again. The backend gets `COOKIE_SECURE=false` here because the app is served over plain http; set it to `true` behind HTTPS.
+- Scanning: run worker-manager in poll mode on the same Linux host. It reads `WORKER_TOKEN` from `docker/.env` and reaches the backend at `localhost:3001`: `mkdir -p worker-results && WORKER_UID=$(id -u) WORKER_GID=$(id -g) docker compose -f docker/docker-compose.workers.yml run --rm -d --build worker-manager --poll --output-dir /results`.
+- Vulnerability databases (optional, ~650 MB of downloads): `docker compose -f docker/docker-compose.yml --profile app --profile vulns up -d`.
+- Stop: `docker compose -f docker/docker-compose.yml --profile app --profile vulns down` (`pnpm app:down`); add `-v` to wipe every volume. Logs: `pnpm app:logs`.
+- `DATA_ENCRYPTION_KEY` encrypts stored scan data: changing it makes that data unreadable.
 
 ## PostgreSQL
 

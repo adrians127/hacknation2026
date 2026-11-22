@@ -329,6 +329,7 @@ The tables take about 1 GB (`Vulnerability` 592 MB, `VulnerabilityCriterion` 418
 | `DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASSWORD` `DB_SSLMODE` | — | Postgres connection in parts, no `DATABASE_URL` |
 | `JWT_SECRET` | — | HS256 key for access tokens, ≥ 32 characters. Production refuses the `.env.example` value |
 | `DATA_ENCRYPTION_KEY` | — | AES-256-GCM key for fields encrypted at rest: 32 bytes, base64 (`openssl rand -base64 32`). Production refuses the `.env.example` value. Changing it makes stored encrypted fields unreadable |
+| `COOKIE_SECURE` | production only | Secure flag on the session cookies. `false` for plain http opened by IP or hostname (browsers drop Secure cookies over http except on `localhost`); keep it on behind HTTPS |
 | `WORKER_TOKEN` | — | Bearer token of the scan workers on `/workers/*`, ≥ 16 characters; unset turns those endpoints off (503). worker-manager sends it as `WORKER_MANAGER_TOKEN`. Production refuses the `.env.example` value |
 | `ADMIN_EMAIL` `ADMIN_PASSWORD` | — | First admin (startup while there are no users, and the seed). Production refuses the example password |
 | `SEED_DEMO_USERS` `DEMO_USER_PASSWORD` | `false` | Seed only: demo accounts for the editor, analyst and viewer roles |
@@ -361,4 +362,4 @@ The tables take about 1 GB (`Vulnerability` 592 MB, `VulnerabilityCriterion` 418
 docker build -f apps/backend/Dockerfile .      # from the repo root
 ```
 
-A multi-stage build on `node:26.13.1-slim` using `pnpm deploy`; the process runs as `USER node`. The same image runs migrations: `node_modules/.bin/prisma migrate deploy`, and the vulnerability sync process: `node dist/vuln-sync.mjs` (one container of it per deployment; give `VULN_CACHE_DIR` a volume).
+A multi-stage build on `node:26.13.1-slim` using `pnpm deploy`; the process runs as `USER node`. `docker/docker-compose.yml` runs it in the `app` profile: `backend-migrate` (migrations), `backend` and, with the `vulns` profile, `vuln-sync` ([`docker/README.md`](../../docker/README.md#everything-in-docker)). The same image runs migrations: `node_modules/.bin/prisma migrate deploy`, and the vulnerability sync process: `node dist/vuln-sync.mjs` (one container of it per deployment; give `VULN_CACHE_DIR` a volume).

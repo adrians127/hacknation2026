@@ -162,4 +162,8 @@ English is the default language: the fallback for unsupported browser languages 
 
 | Variable | Description |
 |---|---|
-| `VITE_API_BASE_URL` | Backend URL without `/v1`, e.g. `http://localhost:3001` |
+| `VITE_API_BASE_URL` | Backend URL without `/v1`, e.g. `http://localhost:3001`; `/` = the page's own origin (the Docker image, whose nginx proxies `/v1` to the backend) |
+
+## Docker
+
+`apps/frontend/Dockerfile` (built from the repo root; `Dockerfile.dockerignore` replaces the root `.dockerignore`) builds the app with `VITE_API_BASE_URL=/` and serves it with nginx (`nginx.conf`), which proxies `/v1` to the `backend` container. One origin means cookies, CORS and the backend's Origin check work under any host name or IP. Compose runs it as `frontend` in the `app` profile ([`docker/README.md`](../../docker/README.md#everything-in-docker)).

@@ -58,7 +58,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
 - `apps/workers/<name>`: C++23 + CMake + nmap workers, built and run in Docker. **Not pnpm workspaces** (no `package.json`), so `pnpm build` does not need a local C++ compiler.
 - `packages/contracts`: `@subsurf/contracts`, zod schemas and types. Generates the committed `openapi.json`. A source-only package with no build step.
 - `packages/api-client`: `@subsurf/api-client`, types generated from `openapi.json` + `openapi-fetch`. **The only workspace on TypeScript 6** (`openapi-typescript` needs the JS API that TS 7 no longer ships).
-- `docker/`: Docker Compose. `docker-compose.yml` is infrastructure (PostgreSQL 19, local DefectDojo), `docker-compose.workers.yml` is the scan workers. Not a workspace.
+- `docker/`: Docker Compose. `docker-compose.yml` is infrastructure (PostgreSQL 19, local DefectDojo) plus the whole app in profile `app` (migrations, backend, frontend from `apps/*/Dockerfile`, secrets in `docker/.env`), `docker-compose.workers.yml` is the scan workers. Not a workspace.
 - `docs/`: technical documentation and the presentation.
 
 ## Architecture (settled)
@@ -104,6 +104,7 @@ pnpm db:seed:hosts  # demo scan data: four scans of a /18 through the real inges
 pnpm vulns:sync     # vulnerability sync process (NVD, OSV); --once [--source id] [--full] [--rematch] for one pass
 pnpm vulns:mirror <dir>   # download the vulnerability sources for an offline lab (vulns:import imports a file)
 pnpm infra:up       # all infrastructure compose services, DefectDojo included (infra:down, infra:logs)
+pnpm app:up         # the whole app in Docker (profile app; needs docker/.env, see docker/README.md); app:down, app:logs
 pnpm dojo:up        # DefectDojo only, :8080 (dojo:logs, dojo:smoke)
 pnpm workers:build  # build the masscan-worker image (run a sweep: pnpm workers:masscan < job.json)
 pnpm workers:manager  # build + run worker-manager on its example job list; results in worker-results/
