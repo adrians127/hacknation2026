@@ -4,6 +4,7 @@ import { HttpSummarySchema, type HttpSummary } from "@subsurf/contracts/hosts/ho
 import {
   HttpEndpointSchema,
   OpenPortSchema,
+  PortTlsSchema,
   TlsCertificateSchema,
   type HttpEndpoint,
   type OpenPort,
@@ -15,6 +16,7 @@ import { decryptJson, encryptJson, encryptNullable } from "~backend/lib/crypto";
 const EncryptedSchema = z.strictObject({ $enc: z.string() });
 const BodySchema = HttpEndpointSchema.shape.body.unwrap();
 const TlsSchema = HttpEndpointSchema.shape.tls.unwrap();
+const StoredPortTlsSchema = PortTlsSchema.extend({ cert: EncryptedSchema.nullable() });
 
 const StoredHttpEndpointSchema = HttpEndpointSchema.extend({
   headers: EncryptedSchema,
@@ -32,6 +34,7 @@ const StoredPortDetailsSchema = z.object({
   identity: OpenPortSchema.shape.identity,
   banner: EncryptedSchema.nullable(),
   scripts: EncryptedSchema,
+  tls: z.array(StoredPortTlsSchema).default([]),
   http: z.array(StoredHttpEndpointSchema),
 });
 
@@ -39,7 +42,7 @@ export type StoredPortDetails = z.infer<typeof StoredPortDetailsSchema>;
 type StoredHttpEndpoint = z.infer<typeof StoredHttpEndpointSchema>;
 type Encrypted = z.infer<typeof EncryptedSchema>;
 
-export type PortDetails = Pick<OpenPort, "identity" | "banner" | "scripts" | "http">;
+export type PortDetails = Pick<OpenPort, "identity" | "banner" | "scripts" | "tls" | "http">;
 
 const open = <T extends z.ZodType>(schema: T, value: Encrypted): z.infer<T> =>
   schema.parse(decryptJson(value));
@@ -49,6 +52,7 @@ export function sealPortDetails(port: OpenPort): StoredPortDetails {
     identity: port.identity,
     banner: encryptNullable(port.banner),
     scripts: encryptJson(port.scripts),
+    tls: port.tls.map((entry) => ({ ...entry, cert: entry.cert === null ? null : encryptJson(entry.cert) })),
     http: port.http.map(sealHttpEndpoint),
   };
 }
@@ -60,6 +64,10 @@ export function openPortDetails(stored: unknown): PortDetails {
     identity: details.identity,
     banner: details.banner === null ? null : open(z.string(), details.banner),
     scripts: open(OpenPortSchema.shape.scripts, details.scripts),
+    tls: details.tls.map((entry) => ({
+      ...entry,
+      cert: entry.cert === null ? null : open(PortTlsSchema.shape.cert.unwrap(), entry.cert),
+    })),
     http: details.http.map(openHttpEndpoint),
   };
 }

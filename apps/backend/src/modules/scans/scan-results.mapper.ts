@@ -180,6 +180,7 @@ function observationOf(port: PortRow): ServiceObservation {
     banner: details.banner,
     scripts: details.scripts,
     http: details.http,
+    tls: details.tls,
   };
 }
 

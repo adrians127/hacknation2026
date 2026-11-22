@@ -53,6 +53,7 @@ export interface ComparablePort {
     cpe: string[];
   } | null;
   sshHostKey: string | null;
+  tls: { vhost: string | null; version: string | null; cipher: string | null; certSha256: string | null }[];
   /** Sorted by `endpointKey`. */
   http: ComparableEndpoint[];
 }
@@ -119,6 +120,12 @@ export function comparablePort(port: OpenPort): ComparablePort {
       cpe: port.service.cpe.toSorted(),
     },
     sshHostKey: port.identity.sshHostKeySha256,
+    tls: port.tls.map((entry) => ({
+      vhost: entry.vhost,
+      version: entry.version,
+      cipher: entry.cipher,
+      certSha256: entry.cert?.sha256 ?? null,
+    })).toSorted((a, b) => (a.vhost ?? "").localeCompare(b.vhost ?? "")),
     http: port.http
       .map(comparableEndpoint)
       .toSorted((a, b) => endpointKey(a).localeCompare(endpointKey(b))),

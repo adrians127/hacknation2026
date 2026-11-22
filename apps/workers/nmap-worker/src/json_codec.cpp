@@ -269,6 +269,7 @@ OrderedJson host_json(const HostResult& host) {
                          {"tlsCertSha256", nullptr}}},
             {"banner", nullptr},
             {"scripts", std::move(scripts)},
+            {"tls", OrderedJson::array()},
             {"http", OrderedJson::array()}});
     }
     return OrderedJson{
