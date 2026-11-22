@@ -7,6 +7,7 @@ import {
   ScanDetailSchema,
   ScanHostDetailSchema,
   ScanHostListResponseSchema,
+  ScanVisualizationHostsResponseSchema,
   TagScanHostsResponseSchema,
   type TagScanHostsBody,
 } from "@subsurf/contracts/scans/scan-results.schema";
@@ -480,6 +481,30 @@ describe("GET /scans/{id}/hosts", () => {
     expect(await ips("?q=WIKI")).toEqual(["10.0.5.7"]);
     expect(await ips("?q=login&triage=unreviewed")).toEqual(["10.0.5.7"]);
   }, 30_000);
+});
+
+describe("GET /scans/{id}/visualization-hosts", () => {
+  it("returns the same unfiltered IPs as the host table, including a host gone in this scan", async () => {
+    const { first, second } = await twoScans();
+    const { client } = await signInAs(server, { role: "viewer" });
+    for (const scanId of [first, second]) {
+      const table = ScanHostListResponseSchema.parse(await getJson(client, `/v1/scans/${scanId}/hosts`));
+      const diagram = ScanVisualizationHostsResponseSchema.parse(
+        await getJson(client, `/v1/scans/${scanId}/visualization-hosts`),
+      );
+      expect(diagram.items).toEqual(table.items.map(({ id, ip, status }) => ({ id, ip, status })));
+    }
+    await prisma.hostObservation.updateMany({
+      where: { scanId: second, ip: "10.0.5.20" },
+      data: { status: "timeout" },
+    });
+    const table = ScanHostListResponseSchema.parse(await getJson(client, `/v1/scans/${second}/hosts`));
+    const diagram = ScanVisualizationHostsResponseSchema.parse(
+      await getJson(client, `/v1/scans/${second}/visualization-hosts`),
+    );
+    expect(diagram.items).toEqual(table.items.map(({ id, ip, status }) => ({ id, ip, status })));
+    expect(diagram.items.find((item) => item.ip === "10.0.5.20")?.status).toBe("timeout");
+  });
 });
 
 describe("GET /scans/{id}/hosts/{hostId}", () => {

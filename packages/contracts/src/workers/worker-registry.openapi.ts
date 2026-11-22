@@ -25,14 +25,14 @@ registry.registerPath({
   operationId: "listWorkers",
   summary: "List the workers pipelines are built from, and the worker managers seen",
   description: [
-    "Requires `workers:read`. Built-in workers come from the code catalog; a name a manager",
-    "offers that the catalog lacks is registered as a disabled custom worker.",
+    "Requires `workers:read`. Every worker is registered by a worker-manager's lease request,",
+    "with the inputs, split strategies and fields its manifest announces.",
   ].join(" "),
   tags,
   security,
   responses: {
     200: {
-      description: "Workers by stage, then managers by last seen",
+      description: "Workers by display name, then managers by last seen",
       content: { "application/json": { schema: WorkerListResponseSchema } },
     },
     401: unauthenticated,
@@ -44,11 +44,10 @@ registry.registerPath({
   method: "patch",
   path: "/workers/{id}",
   operationId: "updateWorker",
-  summary: "Enable or disable a worker, or change its rate cap and defaults",
+  summary: "Change a worker's display name, description or rate cap",
   description: [
-    "Requires `workers:update`. A built-in worker accepts only `enabled`, `maxRate` and",
-    "`defaults`; a custom one also its description, stage, inputs, split strategies and fields.",
-    "`defaults` must match the worker's fields.",
+    "Requires `workers:update`. A worker's inputs, split strategies and fields come from the",
+    "managers that register it and cannot be changed here.",
   ].join(" "),
   tags,
   security,
@@ -62,7 +61,6 @@ registry.registerPath({
     401: unauthenticated,
     403: forbidden,
     404: notFound,
-    409: errorResponse("A built-in worker's definition cannot change (`WORKER_BUILTIN`)"),
   },
 });
 
@@ -70,8 +68,8 @@ registry.registerPath({
   method: "delete",
   path: "/workers/{id}",
   operationId: "deleteWorker",
-  summary: "Delete a custom worker no pipeline uses",
-  description: "Requires `workers:delete`.",
+  summary: "Delete a worker no pipeline uses",
+  description: "Requires `workers:delete`. A manager that still offers it registers it again.",
   tags,
   security,
   request: { params: IdParamsSchema },
@@ -80,6 +78,6 @@ registry.registerPath({
     401: unauthenticated,
     403: forbidden,
     404: notFound,
-    409: errorResponse("Built-in (`WORKER_BUILTIN`) or used by a pipeline (`WORKER_IN_USE`)"),
+    409: errorResponse("Used by a pipeline (`WORKER_IN_USE`)"),
   },
 });

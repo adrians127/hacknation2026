@@ -220,6 +220,11 @@ export const ScanHostListResponseSchema = z.object({
   pageSize: z.number().int().positive(),
 });
 
+/** Lightweight, unfiltered host set for the scan visualization. */
+export const ScanVisualizationHostsResponseSchema = z.object({
+  items: z.array(z.object({ id: z.uuid(), ip: z.ipv4(), status: HostStatusSchema })),
+});
+
 /** How one scan saw a port, decrypted. */
 export const ServiceObservationSchema = z.object({
   observed: ServiceIdentitySchema,
@@ -306,6 +311,7 @@ export type ScanService = z.infer<typeof ScanServiceSchema>;
 export type ScanHost = z.infer<typeof ScanHostSchema>;
 export type ScanHostListQuery = z.infer<typeof ScanHostListQuerySchema>;
 export type ScanHostListResponse = z.infer<typeof ScanHostListResponseSchema>;
+export type ScanVisualizationHostsResponse = z.infer<typeof ScanVisualizationHostsResponseSchema>;
 export type ScanServiceDetail = z.infer<typeof ScanServiceDetailSchema>;
 export type HostHistoryEntry = z.infer<typeof HostHistoryEntrySchema>;
 export type ScanHostDetail = z.infer<typeof ScanHostDetailSchema>;

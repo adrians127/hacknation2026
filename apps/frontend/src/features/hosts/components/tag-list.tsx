@@ -5,7 +5,7 @@ export function TagList({ tags }: { tags: readonly string[] }) {
   return (
     <span className="flex flex-wrap gap-1">
       {tags.map((tag) => (
-        <Badge key={tag} variant="secondary">
+        <Badge key={tag} variant="secondary" className="h-auto max-w-full break-all whitespace-normal">
           {tag}
         </Badge>
       ))}

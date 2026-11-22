@@ -240,7 +240,7 @@ export interface paths {
         put?: never;
         /**
          * Create a pipeline from worker steps
-         * @description Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). The first step scans the pipeline's targets; a later one may take the previous step's up hosts and open ports instead (`input: previous`).
+         * @description Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). Each step with `input: targets` has its own `targets`, which picks inventory targets with any of its `tags` or listed in `targetIds` (every target when both are empty), narrowed to its `ranges`. The first step scans targets; a later one may instead take the previous step's up hosts and open ports (`input: previous`, `targets: null`).
          */
         post: operations["createPipeline"];
         delete?: never;
@@ -308,7 +308,7 @@ export interface paths {
         put?: never;
         /**
          * Run a pipeline now
-         * @description Requires `scans:run`. Queues a scan of the pipeline's targets with its current steps; a schedule's time window does not apply to a manual run.
+         * @description Requires `scans:run`. Queues a scan with the pipeline's current steps, each over its own targets; a schedule's time window does not apply to a manual run.
          */
         post: operations["runPipeline"];
         delete?: never;
@@ -697,6 +697,26 @@ export interface paths {
          * @description Requires `scans:read`. Hosts that were up in this scan, plus hosts that were up in the base scan (`base`, or the previous scan with results) and are now `down` (gone) or did not answer (unknown), in address order. Each service carries the base scan's observation (`before`).
          */
         get: operations["listScanHosts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scans/{id}/visualization-hosts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List lightweight hosts for the scan visualization
+         * @description Requires `scans:read`. The same unfiltered host set as the scan host list, ordered by IP; only ID, IP and this scan's status are returned.
+         */
+        get: operations["listScanVisualizationHosts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1170,7 +1190,7 @@ export interface paths {
         };
         /**
          * List the workers pipelines are built from, and the worker managers seen
-         * @description Requires `workers:read`. Built-in workers come from the code catalog; a name a manager offers that the catalog lacks is registered as a disabled custom worker.
+         * @description Requires `workers:read`. Every worker is registered by a worker-manager's lease request, with the inputs, split strategies and fields its manifest announces.
          */
         get: operations["listWorkers"];
         put?: never;
@@ -1192,15 +1212,15 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Delete a custom worker no pipeline uses
-         * @description Requires `workers:delete`.
+         * Delete a worker no pipeline uses
+         * @description Requires `workers:delete`. A manager that still offers it registers it again.
          */
         delete: operations["deleteWorker"];
         options?: never;
         head?: never;
         /**
-         * Enable or disable a worker, or change its rate cap and defaults
-         * @description Requires `workers:update`. A built-in worker accepts only `enabled`, `maxRate` and `defaults`; a custom one also its description, stage, inputs, split strategies and fields. `defaults` must match the worker's fields.
+         * Change a worker's display name, description or rate cap
+         * @description Requires `workers:update`. A worker's inputs, split strategies and fields come from the managers that register it and cannot be changed here.
          */
         patch: operations["updateWorker"];
         trace?: never;
@@ -1216,7 +1236,7 @@ export interface paths {
         put?: never;
         /**
          * Lease queued scan jobs to a worker-manager (long poll)
-         * @description Called by worker-manager in `--poll` mode with `Authorization: Bearer <WORKER_TOKEN>`. Records the manager and the workers it offers (unknown names become disabled custom workers), then leases up to `max_parallel` × `WORKER_LEASE_JOBS_PER_SLOT` queued jobs of running scans whose worker is enabled and offered. Without work it holds the request for up to `wait_seconds` (at most 60) and answers 204. Each job's `deadline` is capped by the scan's time window; its lease lasts until the deadline plus `WORKER_LEASE_GRACE_SECONDS`.
+         * @description Called by worker-manager in `--poll` mode with `Authorization: Bearer <WORKER_TOKEN>`. Records the manager and registers the workers it offers, with the capabilities in their `worker_specs` (manifests), then leases up to `max_parallel` × `WORKER_LEASE_JOBS_PER_SLOT` queued jobs of running scans whose worker it offers. Without work it holds the request for up to `wait_seconds` (at most 60) and answers 204. Each job's `deadline` is capped by the scan's time window; its lease lasts until the deadline plus `WORKER_LEASE_GRACE_SECONDS`.
          */
         post: operations["leaseManagerJobs"];
         delete?: never;
@@ -1303,7 +1323,7 @@ export interface components {
                 message: string;
                 status: number;
                 /** @enum {string} */
-                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN" | "PACKAGE_MAPPING_EXISTS" | "SOURCE_DISABLED" | "BASE_SCAN_NOT_OLDER" | "PIPELINE_NAME_TAKEN" | "PIPELINE_RUN_ACTIVE" | "NO_SCANNABLE_TARGETS" | "WORKER_DISABLED" | "WORKER_IN_USE" | "WORKER_BUILTIN" | "PORTS_NOT_ALLOWED" | "SCAN_NOT_STOPPABLE" | "DEFECTDOJO_NOT_CONFIGURED" | "DEFECTDOJO_UNAVAILABLE" | "DEFECTDOJO_SYNC_RUNNING" | "DEFECTDOJO_PUSH_RUNNING" | "NOTHING_TO_PUSH" | "SAME_SCAN" | "SCAN_IMPORT_INVALID" | "SCAN_ALREADY_IMPORTED" | "SCAN_IMPORT_RUNNING" | "SCAN_RUNNING";
+                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN" | "PACKAGE_MAPPING_EXISTS" | "SOURCE_DISABLED" | "BASE_SCAN_NOT_OLDER" | "PIPELINE_NAME_TAKEN" | "PIPELINE_RUN_ACTIVE" | "NO_SCANNABLE_TARGETS" | "WORKER_IN_USE" | "PORTS_NOT_ALLOWED" | "SCAN_NOT_STOPPABLE" | "DEFECTDOJO_NOT_CONFIGURED" | "DEFECTDOJO_UNAVAILABLE" | "DEFECTDOJO_SYNC_RUNNING" | "DEFECTDOJO_PUSH_RUNNING" | "NOTHING_TO_PUSH" | "SAME_SCAN" | "SCAN_IMPORT_INVALID" | "SCAN_ALREADY_IMPORTED" | "SCAN_IMPORT_RUNNING" | "SCAN_RUNNING";
                 details?: unknown;
             };
         };
@@ -1339,15 +1359,16 @@ export interface components {
             name: string;
             description: string;
             enabled: boolean;
-            targets: {
-                tags: string[];
-                ranges: (string)[];
-            };
             steps: {
                 /** Format: uuid */
                 workerId: string;
                 /** @enum {string} */
                 input: "targets" | "previous";
+                targets: {
+                    tags: string[];
+                    targetIds: string[];
+                    ranges: (string)[];
+                } | null;
                 ports: string;
                 rate: number;
                 batchSize: number;
@@ -1367,7 +1388,6 @@ export interface components {
                     id: string;
                     name: string;
                     displayName: string;
-                    enabled: boolean;
                 };
             }[];
             schedule: {
@@ -1426,15 +1446,16 @@ export interface components {
             name: string;
             description: string;
             enabled: boolean;
-            targets: {
-                tags: string[];
-                ranges: (string)[];
-            };
             steps: {
                 /** Format: uuid */
                 workerId: string;
                 /** @enum {string} */
                 input: "targets" | "previous";
+                targets: {
+                    tags: string[];
+                    targetIds: string[];
+                    ranges: (string)[];
+                } | null;
                 ports: string;
                 rate: number;
                 batchSize: number;
@@ -1454,7 +1475,6 @@ export interface components {
                     id: string;
                     name: string;
                     displayName: string;
-                    enabled: boolean;
                 };
             }[];
             schedule: {
@@ -1669,7 +1689,7 @@ export interface components {
             } | null;
             warnings: {
                 /** @enum {string} */
-                code: "dns_not_found" | "dns_no_addresses" | "dns_timeout" | "dns_failed" | "resolves_to_reserved" | "no_scannable_targets";
+                code: "dns_not_found" | "dns_no_addresses" | "dns_timeout" | "dns_failed" | "resolves_to_reserved" | "no_scannable_targets" | "worker_not_registered";
                 value: string;
             }[];
         };
@@ -1796,9 +1816,6 @@ export interface components {
             name: string;
             displayName: string;
             description: string;
-            isBuiltin: boolean;
-            enabled: boolean;
-            stage: number;
             inputs: ("targets" | "hosts")[];
             splitStrategies: ("none" | "shard" | "ranges" | "chunk")[];
             paramFields: ({
@@ -1836,9 +1853,6 @@ export interface components {
                 maxItems: number;
                 default?: string[];
             })[];
-            defaults: {
-                [key: string]: number | boolean | string | string[];
-            };
             maxRate: number;
             onlineManagers: number;
             /** Format: date-time */
@@ -2080,6 +2094,49 @@ export interface components {
             manager_id: string;
             version: string;
             workers: string[];
+            worker_specs?: {
+                name: string;
+                display_name?: string;
+                description?: string;
+                inputs: ("targets" | "hosts")[];
+                split_strategies: ("none" | "shard" | "ranges" | "chunk")[];
+                param_fields?: ({
+                    key: string;
+                    label: string;
+                    description?: string;
+                    /** @enum {string} */
+                    type: "integer";
+                    min: number;
+                    max: number;
+                    /** @enum {string} */
+                    unit?: "seconds" | "milliseconds";
+                    default?: number;
+                } | {
+                    key: string;
+                    label: string;
+                    description?: string;
+                    /** @enum {string} */
+                    type: "boolean";
+                    default?: boolean;
+                } | {
+                    key: string;
+                    label: string;
+                    description?: string;
+                    /** @enum {string} */
+                    type: "enum";
+                    options: string[];
+                    default?: string;
+                } | {
+                    key: string;
+                    label: string;
+                    description?: string;
+                    /** @enum {string} */
+                    type: "paths";
+                    maxItems: number;
+                    default?: string[];
+                })[];
+                max_rate?: number;
+            }[];
             max_parallel: number;
             wait_seconds?: number;
         };
@@ -3125,15 +3182,16 @@ export interface operations {
                             name: string;
                             description: string;
                             enabled: boolean;
-                            targets: {
-                                tags: string[];
-                                ranges: (string)[];
-                            };
                             steps: {
                                 /** Format: uuid */
                                 workerId: string;
                                 /** @enum {string} */
                                 input: "targets" | "previous";
+                                targets: {
+                                    tags: string[];
+                                    targetIds: string[];
+                                    ranges: (string)[];
+                                } | null;
                                 ports: string;
                                 rate: number;
                                 batchSize: number;
@@ -3153,7 +3211,6 @@ export interface operations {
                                     id: string;
                                     name: string;
                                     displayName: string;
-                                    enabled: boolean;
                                 };
                             }[];
                             schedule: {
@@ -3242,15 +3299,16 @@ export interface operations {
                     name: string;
                     description: string;
                     enabled: boolean;
-                    targets: {
-                        tags: string[];
-                        ranges: (string)[];
-                    };
                     steps: {
                         /** Format: uuid */
                         workerId: string;
                         /** @enum {string} */
                         input: "targets" | "previous";
+                        targets: {
+                            tags: string[];
+                            targetIds: string[];
+                            ranges: (string)[];
+                        } | null;
                         ports: string;
                         rate: number;
                         batchSize: number;
@@ -3287,7 +3345,7 @@ export interface operations {
                     "application/json": components["schemas"]["Pipeline"];
                 };
             };
-            /** @description Validation failed: also a disabled worker (`WORKER_DISABLED`), a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`) */
+            /** @description Validation failed: also a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3500,15 +3558,16 @@ export interface operations {
                     name?: string;
                     description?: string;
                     enabled?: boolean;
-                    targets?: {
-                        tags: string[];
-                        ranges: (string)[];
-                    };
                     steps?: {
                         /** Format: uuid */
                         workerId: string;
                         /** @enum {string} */
                         input: "targets" | "previous";
+                        targets: {
+                            tags: string[];
+                            targetIds: string[];
+                            ranges: (string)[];
+                        } | null;
                         ports: string;
                         rate: number;
                         batchSize: number;
@@ -3545,7 +3604,7 @@ export interface operations {
                     "application/json": components["schemas"]["Pipeline"];
                 };
             };
-            /** @description Validation failed: also a disabled worker (`WORKER_DISABLED`), a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`) */
+            /** @description Validation failed: also a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3623,7 +3682,7 @@ export interface operations {
                         };
                         warnings: {
                             /** @enum {string} */
-                            code: "dns_not_found" | "dns_no_addresses" | "dns_timeout" | "dns_failed" | "resolves_to_reserved" | "no_scannable_targets";
+                            code: "dns_not_found" | "dns_no_addresses" | "dns_timeout" | "dns_failed" | "resolves_to_reserved" | "no_scannable_targets" | "worker_not_registered";
                             value: string;
                         }[];
                     };
@@ -3656,7 +3715,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description A run is still active (`PIPELINE_RUN_ACTIVE`), nothing to scan (`NO_SCANNABLE_TARGETS`), or a disabled worker (`WORKER_DISABLED`) */
+            /** @description A run is still active (`PIPELINE_RUN_ACTIVE`) or nothing to scan (`NO_SCANNABLE_TARGETS`) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6656,6 +6715,64 @@ export interface operations {
             };
         };
     };
+    listScanVisualizationHosts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hosts to visualize */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: ip */
+                            ip: string;
+                            /** @enum {string} */
+                            status: "up" | "down" | "timeout" | "cancelled" | "failed";
+                        }[];
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getScanHost: {
         parameters: {
             query?: {
@@ -9099,7 +9216,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Workers by stage, then managers by last seen */
+            /** @description Workers by display name, then managers by last seen */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -9112,9 +9229,6 @@ export interface operations {
                             name: string;
                             displayName: string;
                             description: string;
-                            isBuiltin: boolean;
-                            enabled: boolean;
-                            stage: number;
                             inputs: ("targets" | "hosts")[];
                             splitStrategies: ("none" | "shard" | "ranges" | "chunk")[];
                             paramFields: ({
@@ -9152,9 +9266,6 @@ export interface operations {
                                 maxItems: number;
                                 default?: string[];
                             })[];
-                            defaults: {
-                                [key: string]: number | boolean | string | string[];
-                            };
                             maxRate: number;
                             onlineManagers: number;
                             /** Format: date-time */
@@ -9243,7 +9354,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Built-in (`WORKER_BUILTIN`) or used by a pipeline (`WORKER_IN_USE`) */
+            /** @description Used by a pipeline (`WORKER_IN_USE`) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -9266,51 +9377,9 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    enabled?: boolean;
-                    maxRate?: number;
-                    defaults?: {
-                        [key: string]: number | boolean | string | string[];
-                    };
                     displayName?: string;
                     description?: string;
-                    stage?: number;
-                    inputs?: ("targets" | "hosts")[];
-                    splitStrategies?: ("none" | "shard" | "ranges" | "chunk")[];
-                    paramFields?: ({
-                        key: string;
-                        label: string;
-                        description?: string;
-                        /** @enum {string} */
-                        type: "integer";
-                        min: number;
-                        max: number;
-                        /** @enum {string} */
-                        unit?: "seconds" | "milliseconds";
-                        default?: number;
-                    } | {
-                        key: string;
-                        label: string;
-                        description?: string;
-                        /** @enum {string} */
-                        type: "boolean";
-                        default?: boolean;
-                    } | {
-                        key: string;
-                        label: string;
-                        description?: string;
-                        /** @enum {string} */
-                        type: "enum";
-                        options: string[];
-                        default?: string;
-                    } | {
-                        key: string;
-                        label: string;
-                        description?: string;
-                        /** @enum {string} */
-                        type: "paths";
-                        maxItems: number;
-                        default?: string[];
-                    })[];
+                    maxRate?: number;
                 };
             };
         };
@@ -9353,15 +9422,6 @@ export interface operations {
             };
             /** @description Not found */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description A built-in worker's definition cannot change (`WORKER_BUILTIN`) */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };

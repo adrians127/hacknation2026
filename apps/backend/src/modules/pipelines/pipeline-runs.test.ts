@@ -45,7 +45,7 @@ describe("POST /v1/pipelines/:id/runs", () => {
   it("queues the tagged targets' first step with the steps snapshotted", async () => {
     await addTargets(["10.0.0.0/24", "app.example.com"], ["lab"]);
     await addTargets(["10.9.0.0/24"], ["other"]);
-    const id = await createPipeline({ targets: { tags: ["lab"], ranges: [] } });
+    const id = await createPipeline({ targets: { tags: ["lab"], targetIds: [], ranges: [] } });
 
     const res = await runNow(id);
 
@@ -70,7 +70,7 @@ describe("POST /v1/pipelines/:id/runs", () => {
 
   it("narrows the run to the selector's ranges", async () => {
     await addTargets(["10.0.0.0/24", "app.example.com"]);
-    const id = await createPipeline({ targets: { tags: [], ranges: ["10.0.0.128/25"] } });
+    const id = await createPipeline({ targets: { tags: [], targetIds: [], ranges: ["10.0.0.128/25"] } });
 
     const { scan } = RunPipelineResponseSchema.parse(await (await runNow(id)).json());
 
@@ -79,10 +79,34 @@ describe("POST /v1/pipelines/:id/runs", () => {
     expect(job.targets).toEqual(["10.0.0.128/25"]);
   });
 
+  it("adds the targets picked by id to the tagged ones", async () => {
+    await addTargets(["10.0.0.0/24"], ["lab"]);
+    await addTargets(["10.8.0.0/24", "10.9.0.0/24"]);
+    const picked = await prisma.target.findUniqueOrThrow({ where: { value: "10.9.0.0/24" } });
+    const id = await createPipeline({ targets: { tags: ["lab"], targetIds: [picked.id], ranges: [] } });
+
+    const { scan } = RunPipelineResponseSchema.parse(await (await runNow(id)).json());
+
+    expect(scan).toMatchObject({ targetCount: 2, addressCount: 512 });
+    const jobs = await prisma.scanJob.findMany({ orderBy: { sequence: "asc" } });
+    expect(jobs.map((job) => job.targets)).toEqual([["10.0.0.0/24"], ["10.9.0.0/24"]]);
+  });
+
+  it("reads a selector saved before targets could be picked by id", async () => {
+    await addTargets(["10.0.0.0/24"], ["lab"]);
+    await addTargets(["10.9.0.0/24"]);
+    const id = await createPipeline();
+    await prisma.pipeline.update({ where: { id }, data: { targetSelector: { tags: ["lab"], ranges: [] } } });
+
+    const { scan } = RunPipelineResponseSchema.parse(await (await runNow(id)).json());
+
+    expect(scan).toMatchObject({ targetCount: 1, addressCount: 256 });
+  });
+
   it("refuses a second run while one is active, and a run with nothing to scan", async () => {
     await addTargets(["10.0.0.0/24"], ["lab"]);
-    const id = await createPipeline({ targets: { tags: ["lab"], ranges: [] } });
-    const empty = await createPipeline({ targets: { tags: ["nothing-has-this"], ranges: [] } });
+    const id = await createPipeline({ targets: { tags: ["lab"], targetIds: [], ranges: [] } });
+    const empty = await createPipeline({ targets: { tags: ["nothing-has-this"], targetIds: [], ranges: [] } });
 
     await runNow(id);
     const again = await runNow(id);

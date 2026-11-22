@@ -2,11 +2,11 @@
 import { z } from "zod";
 
 import { env } from "~backend/config/env";
+import { Prisma } from "~backend/generated/prisma/client";
 import { prisma } from "~backend/lib/prisma";
 import { defaultSteps } from "~backend/modules/pipelines/steps";
 import { syncSystemRoles } from "~backend/modules/roles/system-roles";
 import { ensureUser } from "~backend/modules/users/bootstrap";
-import { syncWorkerCatalog } from "~backend/modules/workers/worker-catalog.sync";
 
 const seedEnv = z
   .object({
@@ -23,33 +23,35 @@ const DEMO_USERS = [
 
 const DEFAULT_PIPELINE_NAME = "Default discovery";
 
-/** masscan over the whole inventory, then nmap on its hits, with the env defaults; no schedule. */
-async function ensureDefaultPipeline(ownerEmail: string): Promise<"created" | "exists"> {
+/**
+ * masscan over the whole inventory, then nmap on its hits, with the env defaults; no schedule.
+ * Workers are registered by worker-manager, so on a fresh database this waits for a reseed after
+ * a manager has polled.
+ */
+async function ensureDefaultPipeline(ownerEmail: string): Promise<string> {
   if (await prisma.pipeline.findUnique({ where: { name: DEFAULT_PIPELINE_NAME } })) return "exists";
+  const { steps, missing } = await defaultSteps(prisma);
+  if (missing.length > 0) return `skipped (no worker manager has registered ${missing.join(", ")} yet)`;
   const owner = await prisma.user.findUniqueOrThrow({ where: { email: ownerEmail.toLowerCase() } });
-  const workers = await prisma.worker.findMany({ where: { name: { in: ["masscan", "nmap"] } } });
-  const steps = defaultSteps().map((step, index) => {
-    const worker = workers.find((candidate) => candidate.name === step.worker);
-    if (!worker) throw new Error(`The worker catalog has no ${step.worker}`);
-    return {
-      position: index + 1,
-      workerId: worker.id,
-      input: step.input,
-      ports: step.ports,
-      rate: Math.min(step.rate, worker.maxRate),
-      batchSize: step.batchSize,
-      maxDurationSeconds: step.maxDurationSeconds,
-      split: step.split,
-      params: {},
-    };
-  });
   await prisma.pipeline.create({
     data: {
       name: DEFAULT_PIPELINE_NAME,
       description: "Masscan over every target, then Nmap on the open ports it found.",
-      targetSelector: { tags: [], ranges: [] },
       createdById: owner.id,
-      steps: { create: steps },
+      steps: {
+        create: steps.map((step) => ({
+          position: step.index,
+          workerId: step.workerId,
+          input: step.input,
+          targetSelector: step.input === "targets" ? { tags: [], targetIds: [], ranges: [] } : Prisma.DbNull,
+          ports: step.ports,
+          rate: step.rate,
+          batchSize: step.batchSize,
+          maxDurationSeconds: step.maxDurationSeconds,
+          split: step.split,
+          params: {},
+        })),
+      },
     },
   });
   return "created";
@@ -58,8 +60,6 @@ async function ensureDefaultPipeline(ownerEmail: string): Promise<"created" | "e
 async function main(): Promise<void> {
   await syncSystemRoles();
   console.log("System roles: admin, editor, analyst, viewer");
-  await syncWorkerCatalog();
-  console.log("Worker catalog: masscan, nmap");
 
   if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
     const result = await ensureUser({

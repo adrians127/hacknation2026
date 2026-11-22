@@ -1,4 +1,4 @@
-import { ArrowLeft, FileText, Search, Square, Tags } from "lucide-react";
+import { ArrowLeft, FileText, Network, Search, Square, Tags } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router";
@@ -197,6 +197,12 @@ export function ScanDetailRoute() {
         }
         actions={
           <>
+            <Button asChild variant="outline">
+              <Link to={`/app/scans/${scanId}/visualize`}>
+                <Network />
+                {t("scans.visualization.open")}
+              </Link>
+            </Button>
             {isScanActive(scanData.status) && (
               <GuardedButton
                 variant="outline"

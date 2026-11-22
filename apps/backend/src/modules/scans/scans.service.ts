@@ -10,7 +10,8 @@ export type QueueScanResult = QueueRunResult;
 export const scansService = {
   /**
    * Queues a scan of inventory targets with the default steps (masscan with the env defaults,
-   * then nmap on its hits). Domains must be resolved beforehand (`resolveDomains`), outside `tx`.
+   * then nmap on its hits), as far as managers have registered those workers. Domains must be
+   * resolved beforehand (`resolveDomains`), outside `tx`.
    */
   async queue(
     tx: Prisma.TransactionClient,
@@ -18,14 +19,20 @@ export const scansService = {
     targets: readonly ScanTargetRow[],
     dns: DnsResolution,
   ): Promise<QueueScanResult> {
-    return queueRun(tx, {
+    const { steps, missing } = await defaultSteps(tx);
+    const unregistered = missing.map((name) => ({ code: "worker_not_registered" as const, value: name }));
+    if (steps.length === 0) return { scan: null, warnings: [...dns.warnings, ...unregistered] };
+    const queued = await queueRun(tx, {
       requestedById: auth.user.id,
       pipelineId: null,
       trigger: "import",
-      steps: defaultSteps(),
-      targets,
+      steps,
+      stepTargets: new Map(
+        steps.filter((step) => step.input === "targets").map((step) => [step.index, { targets }]),
+      ),
       dns,
       windowEndsAt: null,
     });
+    return { ...queued, warnings: [...queued.warnings, ...unregistered] };
   },
 };

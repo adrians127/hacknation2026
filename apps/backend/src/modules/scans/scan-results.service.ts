@@ -8,6 +8,7 @@ import {
   type ScanHostDetail,
   type ScanHostListQuery,
   type ScanHostListResponse,
+  type ScanVisualizationHostsResponse,
   type ScanCoverage,
 } from "@subsurf/contracts/scans/scan-results.schema";
 import type { ScanChangesResponse } from "@subsurf/contracts/scans/scan-changes.schema";
@@ -577,6 +578,36 @@ export const scanResultsService = {
       page: query.page,
       pageSize: query.pageSize,
     };
+  },
+
+  /** Only the host identity and current answer; avoids loading services for the whole diagram. */
+  async visualizationHosts(scanId: string): Promise<ScanVisualizationHostsResponse> {
+    const scan = await findScan(scanId);
+    const base = await resolveBase(scan, undefined);
+    const current = effectiveSql([scan.id]);
+    const rows = base
+      ? await prisma.$queryRaw<{ id: string; ip: string; status: HostObservationStatus }[]>(Prisma.sql`
+          WITH current_observations AS (${current}),
+               base_observations AS (${effectiveSql([base.id])})
+          SELECT CASE WHEN c.status = 'up' THEN now."hostId" ELSE previous."hostId" END AS id,
+                 c.ip, c.status
+          FROM current_observations c
+          JOIN "HostObservation" now ON now.id = c.id
+          LEFT JOIN base_observations b ON b.ip = c.ip
+          LEFT JOIN "HostObservation" previous ON previous.id = b.id
+          WHERE (c.status = 'up' AND now."hostId" IS NOT NULL)
+             OR (c.status <> 'up' AND b.status = 'up' AND previous."hostId" IS NOT NULL)
+          ORDER BY now."ipNumber"
+        `)
+      : await prisma.$queryRaw<{ id: string; ip: string; status: HostObservationStatus }[]>(Prisma.sql`
+          WITH current_observations AS (${current})
+          SELECT now."hostId" AS id, c.ip, c.status
+          FROM current_observations c
+          JOIN "HostObservation" now ON now.id = c.id
+          WHERE c.status = 'up' AND now."hostId" IS NOT NULL
+          ORDER BY now."ipNumber"
+        `);
+    return { items: rows };
   },
 
   /** Every host of the scan (unpaged) with both scans' observations, for an export. */

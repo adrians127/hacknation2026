@@ -16,6 +16,7 @@ import {
   ScanHostDetailSchema,
   ScanHostListQuerySchema,
   ScanHostListResponseSchema,
+  ScanVisualizationHostsResponseSchema,
   ScanHostParamsSchema,
   TagScanHostsBodySchema,
   TagScanHostsResponseSchema,
@@ -91,6 +92,23 @@ registry.registerPath({
       content: { "application/json": { schema: ScanHostListResponseSchema } },
     },
     400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/scans/{id}/visualization-hosts",
+  operationId: "listScanVisualizationHosts",
+  summary: "List lightweight hosts for the scan visualization",
+  description: "Requires `scans:read`. The same unfiltered host set as the scan host list, ordered by IP; only ID, IP and this scan's status are returned.",
+  tags,
+  security,
+  request: { params: IdParamsSchema },
+  responses: {
+    200: { description: "Hosts to visualize", content: { "application/json": { schema: ScanVisualizationHostsResponseSchema } } },
     401: unauthenticated,
     403: forbidden,
     404: notFound,

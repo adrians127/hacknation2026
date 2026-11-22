@@ -1,6 +1,10 @@
 import { useTranslation } from "react-i18next";
 
-import type { Schedule, TargetSelector } from "@subsurf/contracts/pipelines/pipelines.schema";
+import type {
+  PipelineStepDetail,
+  Schedule,
+  TargetSelector,
+} from "@subsurf/contracts/pipelines/pipelines.schema";
 
 export const WEEKDAY_KEYS = [
   "weekdays.1",
@@ -46,10 +50,20 @@ export function useScheduleSummary() {
   };
 }
 
+/** What the steps that scan targets cover, each prefixed with its worker when there are several. */
 export function useTargetsSummary() {
   const { t } = useTranslation("pipelines");
-  return ({ tags, ranges }: TargetSelector): string => {
-    const base = tags.length > 0 ? t("targets.tags", { tags: tags.join(", ") }) : t("targets.all");
+  const selectorSummary = ({ tags, targetIds, ranges }: TargetSelector): string => {
+    const picks = [
+      ...(tags.length > 0 ? [t("targets.tags", { tags: tags.join(", ") })] : []),
+      ...(targetIds.length > 0 ? [t("targets.picked", { count: targetIds.length })] : []),
+    ];
+    const base = picks.length > 0 ? picks.join(", ") : t("targets.all");
     return ranges.length > 0 ? `${base} ${t("targets.ranges", { count: ranges.length })}` : base;
+  };
+  return (steps: readonly PipelineStepDetail[]): string => {
+    const scanning = steps.flatMap((step) => (step.targets ? [{ worker: step.worker, targets: step.targets }] : []));
+    if (scanning.length === 1) return selectorSummary(scanning[0].targets);
+    return scanning.map(({ worker, targets }) => `${worker.displayName}: ${selectorSummary(targets)}`).join(" · ");
   };
 }

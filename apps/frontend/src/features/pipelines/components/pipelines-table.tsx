@@ -53,7 +53,7 @@ export function PipelinesTable({ pipelines, onRun, onToggleSchedule, onDelete }:
               {pipeline.steps.map((step, index) => (
                 <Fragment key={step.position}>
                   {index > 0 && <ArrowRight className="size-3 text-muted-foreground" aria-hidden />}
-                  <Badge variant={step.worker.enabled ? "secondary" : "outline"}>{step.worker.displayName}</Badge>
+                  <Badge variant="secondary">{step.worker.displayName}</Badge>
                 </Fragment>
               ))}
             </div>
@@ -63,7 +63,7 @@ export function PipelinesTable({ pipelines, onRun, onToggleSchedule, onDelete }:
           id: "targets",
           header: t("list.columns.targets"),
           cell: ({ row: { original: pipeline } }) => (
-            <span className="text-sm">{targetsSummary(pipeline.targets)}</span>
+            <span className="text-sm">{targetsSummary(pipeline.steps)}</span>
           ),
         }),
         column.display({

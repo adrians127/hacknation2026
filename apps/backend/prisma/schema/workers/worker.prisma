@@ -1,23 +1,19 @@
 /// A block pipelines are built from: one worker worker-manager can run, under the same `name`
-/// (WORKER_MANAGER_WORKERS). Built-in ones are synced from the contracts catalog at startup.
+/// (WORKER_MANAGER_WORKERS). Registered by a manager's lease request; its capabilities come from
+/// the worker's manifest the manager announces (`worker_specs`).
 model Worker {
   id              String   @id @default(uuid(7)) @db.Uuid
   name            String   @unique
+  /// Admin-owned from registration on; seeded from the manifest.
   displayName     String
   description     String   @default("")
-  /// From the code catalog: only `enabled`, `defaults` and `maxRate` belong to admins.
-  isBuiltin       Boolean  @default(false)
-  enabled         Boolean  @default(false)
-  stage           Int      @default(100)
-  /// WorkerInput[]: `targets` and/or `hosts`.
+  /// WorkerInput[]: `targets` and/or `hosts`. From the manifest, replaced on every lease request.
   inputs          String[] @default(["targets"])
-  /// SplitStrategy[] worker-manager may use on its jobs.
+  /// SplitStrategy[] worker-manager may use on its jobs. From the manifest.
   splitStrategies String[] @default(["none"])
-  /// WorkerParamField[] from @subsurf/contracts.
+  /// WorkerParamField[] from @subsurf/contracts. From the manifest.
   paramFields     Json     @default("[]")
-  /// Admin defaults for the fields, by key.
-  defaults        Json     @default("{}")
-  /// Packets per second a step of this worker may use at most.
+  /// Packets per second a step of this worker may use at most. Admin-owned; seeded from the manifest.
   maxRate         Int      @default(100)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

@@ -12,7 +12,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "What changed in the newest scan, and what deserves a look first.",
+    "subtitle": "What's new in the latest scan and where to start.",
     "noScans": "No scan has results yet. Import targets and start a scan.",
     "newest": "Newest scan of {{date}}, compared with the scan of {{base}}.",
     "newestFirst": "Newest scan of {{date}}. It is the first one, so there is nothing to compare it with yet.",
@@ -74,7 +74,7 @@
   },
   "targets": {
     "title": "Targets",
-    "subtitle": "IP addresses, CIDR ranges and domains included in scans",
+    "subtitle": "IP addresses, ranges and domains to scan.",
     "add": "Add targets",
     "never": "Never",
     "emptyFiltered": "No targets match these filters.",
@@ -130,7 +130,7 @@
     },
     "import": {
       "title": "Add targets",
-      "subtitle": "Enter IP addresses, CIDR ranges (up to /16), IP ranges and domains by hand, or load them from a CSV or JSON file.",
+      "subtitle": "Type in addresses, ranges (up to /16) and domains, or upload a CSV or JSON file.",
       "back": "Back to targets",
       "tabs": {
         "form": "Form",
@@ -286,13 +286,14 @@
         "dns_timeout": "The DNS lookup timed out",
         "dns_failed": "The DNS lookup failed",
         "resolves_to_reserved": "Points to a reserved address, which was skipped",
-        "no_scannable_targets": "Nothing was left to scan, so no scan was queued."
+        "no_scannable_targets": "Nothing was left to scan, so no scan was queued.",
+        "worker_not_registered": "No worker manager has registered this worker yet, so its step was left out."
       }
     }
   },
   "scans": {
     "title": "Scans",
-    "subtitle": "Every scan run: open one to see its hosts and what changed since the previous scan.",
+    "subtitle": "All scans. Open one to see its hosts and what changed.",
     "start": "Start scan",
     "columns": {
       "started": "Started",
@@ -317,7 +318,7 @@
       "back": "All scans",
       "report": "Scan report",
       "title": "Scan of {{date}}",
-      "subtitle": "What this scan found. Changes are measured against the previous scan, only for addresses that answered both times.",
+      "subtitle": "What this scan found and what changed since the last one.",
       "addresses": "Addresses",
       "up": "Hosts up",
       "down": "{{formatted}} down",
@@ -350,6 +351,36 @@
         "jobs": "Jobs"
       }
     },
+    "visualization": {
+      "open": "Visualize",
+      "back": "Back to scan",
+      "title": "Scan visualization",
+      "description": "Addresses grouped by shared IP prefixes. Links show logical grouping, not measured network connections. Expand a group to see its hosts.",
+      "root": "This scan",
+      "hostCount_one": "{{count}} host",
+      "hostCount_other": "{{count}} hosts",
+      "prefixAction": "Toggle {{cidr}}, {{count}} hosts",
+      "hostAction": "Open details for {{ip}}",
+      "refresh": "Refresh",
+      "empty": "This scan has no hosts to visualize yet.",
+      "addToTargets": "Add to targets",
+      "addTag": "Add tag",
+      "cancel": "Cancel",
+      "tagLabel": "Tag name",
+      "tagDescription": "Add a tag to hosts from this scan in {{address}}.",
+      "tagInvalid": "Enter a tag with 1 to 50 characters.",
+      "tagAdded": "Tag “{{tag}}” added to {{count}} hosts.",
+      "tagLimited": "{{count}} hosts reached the tag limit and were skipped.",
+      "noHosts": "No hosts in this scan match this address.",
+      "targetDescription": "Choose what to add from {{address}}. This will not start a scan.",
+      "targetScope": "Addresses to add",
+      "onlyScanned": "Only the {{count}} host IPs found in this scan",
+      "entireCidr": "The whole {{cidr}} range, including addresses not found in this scan",
+      "tooManyTargets": "This group contains {{count}} IPs, more than one import allows.",
+      "invalidTarget": "{{value}} cannot be added as a target.",
+      "targetsAdded": "Targets added: {{created}} new, {{skipped}} already present.",
+      "viewTargets": "View targets"
+    },
     "edit": {
       "open": "Name and note",
       "title": "Name and note of the scan",
@@ -376,7 +407,7 @@
     "import": {
       "open": "Import results",
       "title": "Import scan results",
-      "subtitle": "Turn a results file into a scan. It joins the other scans in comparisons, in the host history and on the dashboard.",
+      "subtitle": "Load a results file as a new scan.",
       "hint": "JSON: a file from Export JSON on a scan, or one or more worker results. CSV: the columns of Export CSV; only an address column is required.",
       "samples": {
         "json": "Download a sample JSON",
@@ -453,7 +484,7 @@
     },
     "compare": {
       "title": "Compare scans",
-      "subtitle": "Two scans side by side: which hosts appeared, went or changed, port by port. Only addresses both scans answered for count as new or gone.",
+      "subtitle": "Two scans side by side: what appeared, disappeared or changed.",
       "open": "Compare",
       "openSideBySide": "Compare side by side",
       "selected_one": "{{count}} of 2 scans selected",
@@ -653,10 +684,8 @@
     "BASE_SCAN_NOT_OLDER": "The scan to compare with must be older than the compared scan.",
     "PIPELINE_NAME_TAKEN": "A pipeline with this name already exists.",
     "PIPELINE_RUN_ACTIVE": "A run of this pipeline is still going. Wait for it or stop it first.",
-    "NO_SCANNABLE_TARGETS": "None of the pipeline's targets can be scanned. Check its tags and ranges.",
-    "WORKER_DISABLED": "A step uses a disabled worker. An administrator has to enable it first.",
+    "NO_SCANNABLE_TARGETS": "None of the steps' targets can be scanned. Check their tags and ranges.",
     "WORKER_IN_USE": "A pipeline still uses this worker. Remove it from the pipeline first.",
-    "WORKER_BUILTIN": "Built-in workers come from code: only whether they run, their rate cap and defaults can change.",
     "PORTS_NOT_ALLOWED": "These ports are outside the ports the scanner may probe.",
     "SCAN_NOT_STOPPABLE": "The scan has already ended.",
     "DEFECTDOJO_NOT_CONFIGURED": "DefectDojo is not configured on the server.",

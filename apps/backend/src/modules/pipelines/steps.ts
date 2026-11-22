@@ -7,14 +7,11 @@ import {
 } from "@subsurf/contracts/pipelines/pipelines.schema";
 import { unionPortSpecs } from "@subsurf/contracts/scans/port-spec";
 import type { ScanJobHost } from "@subsurf/contracts/scans/scans.schema";
-import {
-  BUILTIN_WORKERS,
-  defaultStepParams,
-  WorkerParamsSchema,
-} from "@subsurf/contracts/workers/worker-catalog";
+import { defaultStepParams, WorkerParamsSchema } from "@subsurf/contracts/workers/worker-catalog";
 
 import { env } from "~backend/config/env";
 import type { Prisma } from "~backend/generated/prisma/client";
+import { workerFields, workerInputs } from "~backend/modules/workers/workers.mapper";
 
 /** A pipeline step as a run snapshotted it (`Scan.steps`): editing the pipeline later does not change the run. */
 export const ScanStepSnapshotSchema = z.object({
@@ -44,46 +41,57 @@ export function readSteps(stored: unknown): ScanStepSnapshot[] {
 
 const IMPORT_STEP_MAX_DURATION_SECONDS = 3600;
 
-function builtin(name: string) {
-  const worker = BUILTIN_WORKERS.find((candidate) => candidate.name === name);
-  if (!worker) throw new Error(`Built-in worker ${name} is missing from the catalog`);
-  return worker;
+/** The workers of the default chain, as worker-manager names them. */
+const DISCOVERY_WORKER = "masscan";
+const SERVICE_WORKER = "nmap";
+
+export interface DefaultSteps {
+  steps: (ScanStepSnapshot & { workerId: string })[];
+  /** Workers of the chain no manager has registered with the input they need; their steps are left out. */
+  missing: string[];
 }
 
 /**
  * What a target import with "Start a scan right away" runs: masscan over the targets with the
- * env defaults, then nmap on the hosts and ports it found.
+ * env defaults, then nmap on the hosts and ports it found. Both come from the worker registry;
+ * without masscan nothing runs, without nmap masscan runs alone.
  */
-export function defaultSteps(): ScanStepSnapshot[] {
-  const masscan = builtin("masscan");
-  const nmap = builtin("nmap");
+export async function defaultSteps(db: Prisma.TransactionClient): Promise<DefaultSteps> {
+  const workers = await db.worker.findMany({ where: { name: { in: [DISCOVERY_WORKER, SERVICE_WORKER] } } });
+  const masscan = workers.find((worker) => worker.name === DISCOVERY_WORKER && workerInputs(worker).includes("targets"));
+  const nmap = workers.find((worker) => worker.name === SERVICE_WORKER && workerInputs(worker).includes("hosts"));
+  if (!masscan) return { steps: [], missing: [DISCOVERY_WORKER] };
+
   const common = {
-    workerId: null,
     ports: env.SCAN_DEFAULT_PORTS,
     batchSize: env.SCAN_BATCH_SIZE,
     maxDurationSeconds: IMPORT_STEP_MAX_DURATION_SECONDS,
     split: { strategy: "none" } satisfies PipelineSplit,
   };
-  return [
+  const steps: DefaultSteps["steps"] = [
     {
       ...common,
       index: 1,
+      workerId: masscan.id,
       worker: masscan.name,
-      acceptsHosts: false,
+      acceptsHosts: workerInputs(masscan).includes("hosts"),
       input: "targets",
-      rate: env.SCAN_DEFAULT_MAX_RATE,
-      params: defaultStepParams(masscan.paramFields),
-    },
-    {
-      ...common,
-      index: 2,
-      worker: nmap.name,
-      acceptsHosts: true,
-      input: "previous",
-      rate: Math.min(env.SCAN_DEFAULT_MAX_RATE, nmap.maxRate),
-      params: defaultStepParams(nmap.paramFields),
+      rate: Math.min(env.SCAN_DEFAULT_MAX_RATE, masscan.maxRate),
+      params: defaultStepParams(workerFields(masscan)),
     },
   ];
+  if (!nmap) return { steps, missing: [SERVICE_WORKER] };
+  steps.push({
+    ...common,
+    index: 2,
+    workerId: nmap.id,
+    worker: nmap.name,
+    acceptsHosts: true,
+    input: "previous",
+    rate: Math.min(env.SCAN_DEFAULT_MAX_RATE, nmap.maxRate),
+    params: defaultStepParams(workerFields(nmap)),
+  });
+  return { steps, missing: [] };
 }
 
 /** `Scan.ports` and `Scan.maxRate`: results are checked against the union of every step's ports. */

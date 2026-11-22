@@ -79,6 +79,12 @@ export const router = createBrowserRouter([
                 children: [{ index: true, Component: ScanImportRoute }],
               },
               { path: ":scanId", Component: ScanDetailRoute },
+              {
+                path: ":scanId/visualize",
+                lazy: async () => ({
+                  Component: (await import("@/app/routes/scan-visualize")).ScanVisualizeRoute,
+                }),
+              },
             ],
           },
           {

@@ -4,6 +4,7 @@ import {
   cidrToRange,
   coveringCidr,
   formatCidr,
+  intersectRanges,
   intToIpv4,
   ipv4ToInt,
   mergeRanges,
@@ -74,5 +75,24 @@ describe("coveringCidr", () => {
     expect(formatCidr(coveringCidr(range("10.0.0.10", "10.0.0.10")))).toBe("10.0.0.10");
     expect(formatCidr(coveringCidr(range("10.0.0.10", "10.0.0.20")))).toBe("10.0.0.0/27");
     expect(formatCidr(coveringCidr(range("10.0.0.255", "10.0.1.0")))).toBe("10.0.0.0/23");
+  });
+});
+
+const cidr = (value: string) => cidrToRange(parseCidr(value));
+
+describe("intersectRanges", () => {
+  it("keeps only the parts inside the other ranges", () => {
+    expect(intersectRanges([cidr("10.0.0.0/16")], [cidr("10.0.4.0/24"), cidr("10.1.0.0/24")])).toEqual([
+      cidr("10.0.4.0/24"),
+    ]);
+  });
+
+  it("clips a range that only partly overlaps", () => {
+    const upperHalfAndBeyond = { start: cidr("10.0.0.128/25").start, end: cidr("10.0.1.0/24").end };
+    expect(intersectRanges([cidr("10.0.0.0/24")], [upperHalfAndBeyond])).toEqual([cidr("10.0.0.128/25")]);
+  });
+
+  it("returns nothing for disjoint ranges", () => {
+    expect(intersectRanges([cidr("10.0.0.0/24")], [cidr("10.0.1.0/24")])).toEqual([]);
   });
 });

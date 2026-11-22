@@ -1,7 +1,7 @@
 {
   "list": {
     "title": "Pipelines",
-    "subtitle": "Scan queues built from worker blocks. Every run is a scan; a schedule repeats it within its time window.",
+    "subtitle": "Scans built from worker blocks, run on demand or on a schedule.",
     "new": "New pipeline",
     "empty": "No pipelines yet. Build one from worker blocks.",
     "columns": {
@@ -40,6 +40,8 @@
   "targets": {
     "all": "All targets",
     "tags": "Tagged {{tags}}",
+    "picked_one": "{{count}} picked target",
+    "picked_other": "{{count}} picked targets",
     "ranges_one": "within {{count}} range",
     "ranges_other": "within {{count}} ranges"
   },
@@ -71,7 +73,7 @@
   "editor": {
     "back": "All pipelines",
     "newTitle": "New pipeline",
-    "subtitle": "Pick the targets, chain worker blocks and decide when the pipeline runs. Each block's parameters become the job the worker gets.",
+    "subtitle": "Pick targets, chain worker blocks and set a schedule.",
     "save": "Save",
     "saving": "Saving…",
     "runNow": "Run now",
@@ -94,10 +96,39 @@
     },
     "targets": {
       "title": "Targets",
-      "hint": "What every run scans, taken from the target inventory. Addresses outside the inventory are never scanned.",
-      "tags": "Tags",
-      "tagsPlaceholder": "e.g. campus, dmz",
-      "tagsHint": "Targets with any of these tags, comma-separated. Empty: every target.",
+      "hint": "What this step scans on every run, taken from the target inventory. Addresses outside the inventory are never scanned.",
+      "select": "Tags and targets",
+      "selectHint": "Tick a tag to take every target that carries it, or tick single targets. Nothing ticked: every target in the inventory.",
+      "picker": {
+        "search": "Search tags, targets and notes",
+        "tags": "Tags",
+        "targets": "Targets",
+        "tagCount_one": "{{count}} target",
+        "tagCount_other": "{{count}} targets",
+        "viaTags": "via {{tags}}",
+        "nothingSelected": "Nothing selected: every target in the inventory.",
+        "removeTag": "Remove tag {{tag}}",
+        "removeTarget": "Remove {{value}}",
+        "removedTarget": "Removed target",
+        "noPermission": "Listing the inventory needs the targets:read permission. The selection above stays as it is.",
+        "emptyInventory": "The target inventory is empty, so this step would have nothing to scan.",
+        "import": "Import targets",
+        "truncated": "Showing {{shown}} of {{total}} targets. Search to find the others.",
+        "noMatches": "Nothing matches “{{query}}”.",
+        "coverage": {
+          "targets_one": "{{count}} of {{total}} targets",
+          "targets_other": "{{count}} of {{total}} targets",
+          "addresses_one": "{{value}} address",
+          "addresses_other": "{{value}} addresses",
+          "domains_one": "{{count}} domain, resolved when a run starts",
+          "domains_other": "{{count}} domains, resolved when a run starts"
+        },
+        "missingTags": "No target has these tags: {{tags}}. Tags are case-sensitive.",
+        "missingTargets_one": "{{count}} picked target is no longer in the inventory.",
+        "missingTargets_other": "{{count}} picked targets are no longer in the inventory.",
+        "nothingMatches": "No target matches this selection, so this step would have nothing to scan.",
+        "outsideRanges": "None of the selected targets lies within the addresses below, so this step would have nothing to scan."
+      },
       "ranges": "Only within these addresses",
       "rangesPlaceholder": "10.40.0.0/18, 192.0.2.10",
       "rangesHint": "IPv4 addresses and CIDRs. Empty: the whole of the selected targets.",
@@ -107,7 +138,7 @@
       "title": "Steps",
       "hint": "Blocks run in order. A later block can take the hosts and open ports the block before it found, so Nmap only probes what Masscan saw open.",
       "add": "Add block",
-      "noWorkers": "No worker is enabled. An administrator enables them on the Workers page.",
+      "noWorkers": "No worker is registered yet. Workers appear once a worker manager asks for work.",
       "empty": "Add the first block from the list above.",
       "step": "Step {{index}}",
       "moveUp": "Move up",
@@ -116,7 +147,7 @@
       "dragHandle": "Drag to reorder",
       "input": "Scans",
       "inputs": {
-        "targets": "The pipeline's targets",
+        "targets": "Its own targets",
         "previous": "Hosts and open ports from step {{index}}"
       },
       "inputUnsupported": "{{worker}} cannot take this input",
@@ -139,11 +170,10 @@
         "chunk": "Into host groups"
       },
       "maxTasks": "At most this many tasks",
-      "workerDisabled": "This worker is disabled; runs are refused until an administrator enables it.",
       "workerParams": "{{worker}} settings",
       "flow": {
         "previous": "passes on the hosts and open ports it found",
-        "targets": "the next block scans the targets itself"
+        "targets": "the next block scans its own targets"
       }
     },
     "schedule": {
@@ -202,23 +232,12 @@
   },
   "workers": {
     "title": "Workers",
-    "subtitle": "The blocks pipelines are built from. Each is a worker worker-manager can run; managers register the workers they have when they ask for work.",
+    "subtitle": "Building blocks for pipelines. They appear on their own when a manager asks for work.",
     "columns": {
-      "worker": "Worker",
-      "stage": "Stage",
-      "takes": "Takes",
+      "name": "Name",
+      "description": "Description",
       "maxRate": "Rate cap",
-      "managers": "Online managers",
-      "status": "Status",
       "actions": "Actions"
-    },
-    "builtin": "Built-in",
-    "custom": "Registered by a manager",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "inputs": {
-      "targets": "Address ranges",
-      "hosts": "Hosts from an earlier step"
     },
     "perSecond": "{{value}}/s",
     "actions": {
@@ -231,31 +250,21 @@
     },
     "delete": {
       "title": "Delete {{name}}?",
-      "description": "Only the registry entry is deleted. If a manager still offers this worker, it is registered again, disabled.",
+      "description": "Only the registry entry is deleted. If a manager still offers this worker, it is registered again.",
       "confirm": "Delete worker"
     },
     "edit": {
       "title": "Edit {{name}}",
-      "description": "Built-in workers come from code: only whether they run, their rate cap and their defaults can change.",
-      "enabled": "Enabled: pipelines may use it and managers get its jobs",
       "maxRate": "Rate cap (packets per second)",
       "maxRateHint": "No step of this worker may send more.",
-      "defaults": "Defaults for new steps",
       "displayName": "Name",
       "descriptionField": "Description",
-      "stage": "Stage",
-      "stageHint": "Order on overlapping addresses: lower runs first.",
-      "inputs": "Takes",
-      "splits": "Split strategies",
-      "fields": "Settings (JSON)",
-      "fieldsHint": "A list of fields: key, label, type (integer, boolean, enum or paths) and its limits.",
-      "fieldsInvalid": "Not a valid list of fields.",
       "save": "Save",
       "saving": "Saving…"
     },
     "managers": {
       "title": "Worker managers",
-      "subtitle": "worker-manager instances seen asking for work. A manager is online while it asked within the last two minutes.",
+      "subtitle": "Managers that asked for work. Online means active in the last 2 minutes.",
       "empty": "No manager has asked for work yet. Start one with pnpm workers:manager:poll.",
       "columns": {
         "manager": "Manager",

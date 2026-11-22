@@ -1,7 +1,7 @@
 {
   "users": {
     "title": "Users",
-    "description": "Accounts and their roles. Users are never deleted, only deactivated.",
+    "description": "Accounts and roles. Users can be deactivated, not deleted.",
     "create": "New user",
     "empty": "No users yet.",
     "you": "you",
@@ -67,7 +67,7 @@
   },
   "roles": {
     "title": "Roles",
-    "description": "The four system roles follow the task and cannot be changed. Create custom roles for any other set of permissions.",
+    "description": "System roles are fixed. Need other permissions? Create a custom role.",
     "create": "New role",
     "system": "System",
     "custom": "Custom",

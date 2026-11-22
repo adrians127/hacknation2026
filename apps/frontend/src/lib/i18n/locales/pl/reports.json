@@ -1,6 +1,6 @@
 {
   "title": "Raporty",
-  "subtitle": "Raporty do druku budowane z zapisanych wyników skanów. Każdy można zapisać jako PDF albo pobrać jego dane w formacie JSON lub CSV.",
+  "subtitle": "Raporty z wyników skanów. Zapisz jako PDF lub pobierz dane w JSON albo CSV.",
   "back": "Wszystkie raporty",
   "actions": {
     "print": "Drukuj / PDF",

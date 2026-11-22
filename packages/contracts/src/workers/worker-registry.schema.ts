@@ -6,7 +6,6 @@ import {
   WorkerInputSchema,
   WorkerNameSchema,
   WorkerParamFieldsSchema,
-  WorkerParamsSchema,
 } from "./worker-catalog";
 
 // The registry users manage (`/workers`). The machine protocol of worker-manager is in
@@ -14,19 +13,16 @@ import {
 
 const RateSchema = z.number().int().min(1).max(WORKER_MAX_RATE_LIMIT);
 
+/** A worker a manager registered. Its capabilities come from the manager; admins own the rest. */
 export const WorkerSchema = z.object({
   id: z.uuid(),
+  /** The name worker-manager runs it under (`jobs[].worker`). */
   name: WorkerNameSchema,
   displayName: z.string(),
   description: z.string(),
-  /** Defined in code: only `enabled`, `defaults` and `maxRate` can change. */
-  isBuiltin: z.boolean(),
-  enabled: z.boolean(),
-  stage: z.number().int(),
   inputs: z.array(WorkerInputSchema),
   splitStrategies: z.array(SplitStrategySchema),
   paramFields: WorkerParamFieldsSchema,
-  defaults: WorkerParamsSchema,
   /** Packets per second a step of this worker may use at most. */
   maxRate: RateSchema,
   /** Managers seen recently that offer this worker. */
@@ -55,18 +51,12 @@ export const WorkerListResponseSchema = z.object({
 
 const DisplayNameSchema = z.string().min(1).max(100).regex(/\S/, "Must not be blank");
 
-/** Custom workers may change every field; built-in ones only `enabled`, `defaults` and `maxRate`. */
+/** Admins edit only how a worker is shown and its rate cap; its capabilities come from managers. */
 export const UpdateWorkerBodySchema = z
   .object({
-    enabled: z.boolean(),
-    maxRate: RateSchema,
-    defaults: WorkerParamsSchema,
     displayName: DisplayNameSchema,
     description: z.string().max(500),
-    stage: z.number().int().min(0).max(1000),
-    inputs: z.array(WorkerInputSchema).min(1),
-    splitStrategies: z.array(SplitStrategySchema).min(1),
-    paramFields: WorkerParamFieldsSchema,
+    maxRate: RateSchema,
   })
   .partial()
   .refine((body) => Object.keys(body).length > 0, { message: "Nothing to update" });

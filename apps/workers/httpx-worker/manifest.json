@@ -1,0 +1,27 @@
+{
+  "display_name": "httpx",
+  "description": "HTTP and HTTPS probing on the hosts and ports an earlier step found: status, title, headers and TLS.",
+  "inputs": ["targets", "hosts"],
+  "split_strategies": ["none", "ranges", "chunk"],
+  "max_rate": 25,
+  "param_fields": [
+    {
+      "key": "http_timeout_ms",
+      "label": "HTTP timeout",
+      "description": "Longest wait for one response; whole seconds.",
+      "type": "integer",
+      "min": 1000,
+      "max": 10000,
+      "unit": "milliseconds",
+      "default": 10000
+    },
+    {
+      "key": "probe_paths",
+      "label": "HTTP paths to probe",
+      "description": "Paths requested besides /, e.g. /admin. Detection only, no logins.",
+      "type": "paths",
+      "maxItems": 128,
+      "default": []
+    }
+  ]
+}

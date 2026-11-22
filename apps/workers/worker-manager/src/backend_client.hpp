@@ -17,7 +17,8 @@ struct LeaseRequest {
     std::string manager_id;
     std::vector<std::string> workers;  // only workers whose binary is installed
     std::uint32_t max_parallel;
-    std::chrono::seconds wait;  // how long the backend may hold the request
+    std::chrono::seconds wait;         // how long the backend may hold the request
+    std::vector<Json> worker_specs{};  // manifests of those workers (manifest.hpp)
 };
 
 struct LeaseResponse {

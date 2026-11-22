@@ -27,13 +27,13 @@ const column = createDataTableColumns<ScanHost>();
 /** Ports colored by change: new, changed, or struck through when gone. */
 function PortChips({ services }: { services: readonly ScanService[] }) {
   return (
-    <span className="flex max-w-72 flex-wrap gap-1">
+    <span className="flex min-w-0 max-w-full flex-wrap gap-1">
       {services.slice(0, MAX_PORTS).map((service) => (
         <Badge
           key={service.id}
           variant="outline"
           className={cn(
-            "font-mono",
+            "h-auto max-w-full min-h-5 break-all whitespace-normal font-mono",
             service.change && service.change !== "unchanged" && CHANGE_CLASS[service.change],
             service.change === "gone" && "line-through",
           )}
@@ -123,6 +123,7 @@ export function HostsTable({
         column.accessor("ip", {
           header: t("columns.host"),
           enableSorting: false,
+          meta: { className: "w-[18%]" },
           cell: ({ row: { original: host } }) => (
             <div className="grid gap-0.5">
               <span className="flex items-center gap-1.5">
@@ -143,7 +144,7 @@ export function HostsTable({
                 )}
               </span>
               {host.hostnames.length > 0 && (
-                <span className="text-xs text-muted-foreground">
+                <span className="wrap-anywhere text-xs text-muted-foreground">
                   {host.hostnames.slice(0, MAX_HOSTNAMES).join(", ")}
                   {host.hostnames.length > MAX_HOSTNAMES &&
                     ` +${host.hostnames.length - MAX_HOSTNAMES}`}
@@ -169,6 +170,7 @@ export function HostsTable({
         column.accessor("services", {
           header: t("columns.services"),
           enableSorting: false,
+          meta: { className: "w-[22%]" },
           cell: ({ getValue }) => <PortChips services={getValue()} />,
         }),
         column.accessor("vulnerabilities", {
@@ -179,6 +181,7 @@ export function HostsTable({
         column.accessor("triage", {
           header: t("columns.triage"),
           enableSorting: false,
+          meta: { className: "w-[15%]" },
           cell: ({ row: { original: host } }) => (
             <TriageControl
               target={{ hostId: host.id }}
@@ -196,6 +199,7 @@ export function HostsTable({
         column.display({
           id: "actions",
           header: () => <span className="sr-only">{t("columns.actions")}</span>,
+          meta: { className: "w-20" },
           cell: ({ row: { original: host } }) => (
             <div className="flex justify-end gap-1">
               <IconAction
@@ -217,15 +221,52 @@ export function HostsTable({
   );
 
   return (
-    <DataTable
-      columns={columns}
-      data={hosts}
-      emptyLabel={t("noMatches")}
-      renderExpanded={(host) =>
-        expanded.has(host.id) ? (
-          <ServicesTable host={host} compared={compared} onEdit={onEditService} selection={selection} />
-        ) : null
-      }
-    />
+    <>
+      <div className="grid gap-3 xl:hidden">
+        {hosts.length === 0 && <p className="py-8 text-center text-muted-foreground">{t("noMatches")}</p>}
+        {hosts.map((host) => {
+          const open = expanded.has(host.id);
+          return (
+            <div key={host.id} className="min-w-0 rounded-lg border p-3 sm:p-4">
+              <div className="flex min-w-0 flex-wrap items-start gap-2">
+                {selection && <Checkbox checked={selection.hostIds.has(host.id)} onCheckedChange={() => selection.toggleHost(host.id)} aria-label={t("actions.select", { name: host.ip })} />}
+                <div className="min-w-0 flex-1">
+                  <button type="button" className="font-mono font-medium hover:underline" onClick={() => onOpen(host)}>{host.ip}</button>
+                  {host.hostnames.length > 0 && <p className="wrap-anywhere text-xs text-muted-foreground">{host.hostnames.slice(0, MAX_HOSTNAMES).join(", ")}{host.hostnames.length > MAX_HOSTNAMES && ` +${host.hostnames.length - MAX_HOSTNAMES}`}</p>}
+                </div>
+                <HostStatusBadge status={host.status} />
+                {compared && <ChangeBadge change={host.change} />}
+              </div>
+              <dl className="mt-3 grid min-w-0 gap-3 text-sm sm:grid-cols-2">
+                <div className="min-w-0"><dt className="text-xs text-muted-foreground">{t("columns.services")}</dt><dd className="mt-1"><PortChips services={host.services} /></dd></div>
+                <div className="min-w-0"><dt className="text-xs text-muted-foreground">{tv("columns.vulnerabilities")}</dt><dd className="mt-1"><VulnerabilitySummaryBadge summary={host.vulnerabilities} /></dd></div>
+                <div className="min-w-0"><dt className="text-xs text-muted-foreground">{t("columns.triage")}</dt><dd className="mt-1"><TriageControl target={{ hostId: host.id }} value={host.triage} label={t("actions.triageOf", { name: host.ip })} /></dd></div>
+                <div className="min-w-0"><dt className="text-xs text-muted-foreground">{t("columns.tags")}</dt><dd className="mt-1 wrap-anywhere"><TagList tags={host.tags} /></dd></div>
+              </dl>
+              <div className="mt-3 flex items-center gap-1 border-t pt-2">
+                <Button variant="ghost" size="sm" aria-expanded={open} aria-label={t(open ? "actions.collapse" : "actions.expand", { ip: host.ip })} onClick={() => toggle(host.id)}>{open ? <ChevronDown /> : <ChevronRight />}{t("columns.services")}</Button>
+                <div className="ml-auto flex gap-1">
+                  <IconAction label={t("actions.details", { ip: host.ip })} icon={<PanelRightOpen />} onClick={() => onOpen(host)} />
+                  <IconAction label={t("actions.editHost", { ip: host.ip })} icon={<Pencil />} permissions={["hosts:update"]} onClick={() => onEditHost(host)} />
+                </div>
+              </div>
+              {open && <ServicesTable host={host} compared={compared} onEdit={onEditService} selection={selection} />}
+            </div>
+          );
+        })}
+      </div>
+      <div className="hidden min-w-0 xl:block [&_[data-slot=table-container]]:overflow-x-hidden [&_[data-slot=table]]:table-fixed [&_[data-slot=table-cell]]:wrap-anywhere [&_[data-slot=table-cell]]:whitespace-normal [&_[data-slot=table-head]]:wrap-anywhere [&_[data-slot=table-head]]:whitespace-normal [&_[data-slot=badge]]:h-auto [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:break-all [&_[data-slot=badge]]:whitespace-normal [&_[data-slot=select-trigger]]:min-w-0 [&_[data-slot=select-trigger]]:w-full">
+        <DataTable
+          columns={columns}
+          data={hosts}
+          emptyLabel={t("noMatches")}
+          renderExpanded={(host) =>
+            expanded.has(host.id) ? (
+              <ServicesTable host={host} compared={compared} onEdit={onEditService} selection={selection} />
+            ) : null
+          }
+        />
+      </div>
+    </>
   );
 }

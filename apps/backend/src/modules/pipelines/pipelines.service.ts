@@ -15,6 +15,7 @@ import { Prisma, type Scan } from "~backend/generated/prisma/client";
 import type { AuthContext } from "~backend/lib/auth-context";
 import { HttpError } from "~backend/lib/http-error";
 import { isUniqueViolation, prisma } from "~backend/lib/prisma";
+import { sameJson } from "~backend/lib/same-json";
 import { ACTIVE_SCAN_STATUSES } from "~backend/modules/pipelines/pipeline-runs.service";
 import {
   PIPELINE_INCLUDE,
@@ -37,9 +38,6 @@ async function assertStepsValid(steps: readonly PipelineStep[]): Promise<void> {
     const label = `Step ${index + 1}`;
     const worker = byId.get(step.workerId);
     if (!worker) throw HttpError.badRequest(`${label}: unknown worker`);
-    if (!worker.enabled) {
-      throw HttpError.badRequest(`${label}: the ${worker.name} worker is disabled`, "WORKER_DISABLED");
-    }
     const input = step.input === "targets" ? "targets" : "hosts";
     if (!workerInputs(worker).includes(input)) {
       throw HttpError.badRequest(`${label}: ${worker.name} cannot take ${step.input === "targets" ? "address ranges" : "an earlier step's hosts"}`);
@@ -71,21 +69,6 @@ function nextRunAt(enabled: boolean, schedule: Schedule | null): Date | null {
   return next;
 }
 
-/** Key-order-independent equality for the stored schedule JSON. */
-function sameJson(a: unknown, b: unknown): boolean {
-  const canonical = (value: unknown): unknown =>
-    Array.isArray(value)
-      ? value.map(canonical)
-      : value !== null && typeof value === "object"
-        ? Object.fromEntries(
-            Object.entries(value)
-              .toSorted(([x], [y]) => x.localeCompare(y))
-              .map(([key, item]) => [key, canonical(item)]),
-          )
-        : value;
-  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
-}
-
 function assertCanSchedule(auth: AuthContext): void {
   if (!auth.permissions.includes("scans:run")) {
     throw HttpError.forbidden("Changing a pipeline's schedule needs scans:run");
@@ -97,6 +80,7 @@ const stepRows = (steps: readonly PipelineStep[]) =>
     position: index + 1,
     workerId: step.workerId,
     input: step.input,
+    targetSelector: step.input === "targets" && step.targets ? step.targets : Prisma.DbNull,
     ports: step.ports,
     rate: step.rate,
     batchSize: step.batchSize,
@@ -169,7 +153,6 @@ export const pipelinesService = {
           name: body.name,
           description: body.description,
           enabled: body.enabled,
-          targetSelector: body.targets,
           schedule: body.schedule ?? undefined,
           nextRunAt: nextRunAt(body.enabled, body.schedule),
           createdById: auth.user.id,
@@ -199,7 +182,6 @@ export const pipelinesService = {
       name: body.name,
       description: body.description,
       enabled: body.enabled,
-      targetSelector: body.targets,
       ...(body.schedule === undefined ? {} : { schedule: body.schedule ?? Prisma.DbNull }),
       nextRunAt: changesSchedule ? nextRunAt(enabled, schedule) : undefined,
     };

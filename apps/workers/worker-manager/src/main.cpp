@@ -24,6 +24,7 @@
 #include <string_view>
 #include <system_error>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "backend_client.hpp"
@@ -33,6 +34,7 @@
 #include "http_client.hpp"
 #include "job.hpp"
 #include "logger.hpp"
+#include "manifest.hpp"
 #include "planner.hpp"
 #include "result_uploader.hpp"
 #include "scheduler.hpp"
@@ -674,6 +676,20 @@ int run_poll(const CliOptions& options, const Config& config, const Logger& logg
     if (request.workers.empty()) {
         logger.error("config.invalid", "no worker binary is installed; nothing to ask jobs for");
         return kExitInvalidInput;
+    }
+    for (const std::string& name : request.workers) {
+        auto spec = load_worker_spec(backend.manifest_dir, name);
+        if (!spec) {
+            logger.error("config.invalid", std::format("worker manifest: {}", spec.error()));
+            return kExitInvalidInput;
+        }
+        if (*spec) {
+            request.worker_specs.push_back(std::move(**spec));
+        } else {
+            logger.warn("manifest.missing",
+                        "no manifest; the backend registers this worker for address ranges only",
+                        {{"worker", name}, {"dir", backend.manifest_dir.string()}});
+        }
     }
 
     SignalThread::block_signals();  // before libcurl or any other thread starts

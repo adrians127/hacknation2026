@@ -35,7 +35,7 @@ export async function pipelineBody(overrides: Partial<PipelineBody> = {}): Promi
     name: `Pipeline ${randomUUID()}`,
     description: "",
     enabled: false,
-    targets: { tags: [], ranges: [] },
+    targets: { tags: [], targetIds: [], ranges: [] },
     steps: [await stepBody("masscan"), await stepBody("nmap")],
     schedule: null,
     ...overrides,

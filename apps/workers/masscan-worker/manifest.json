@@ -1,0 +1,28 @@
+{
+  "display_name": "Masscan",
+  "description": "Fast TCP SYN sweep: finds live hosts and open ports in address ranges.",
+  "inputs": ["targets"],
+  "split_strategies": ["none", "shard", "ranges"],
+  "max_rate": 10000,
+  "param_fields": [
+    {
+      "key": "wait_seconds",
+      "label": "Wait for replies",
+      "description": "How long to keep listening after the last probe.",
+      "type": "integer",
+      "min": 0,
+      "max": 60,
+      "unit": "seconds",
+      "default": 3
+    },
+    {
+      "key": "retries",
+      "label": "Retries",
+      "description": "Extra probes per port.",
+      "type": "integer",
+      "min": 0,
+      "max": 5,
+      "default": 0
+    }
+  ]
+}

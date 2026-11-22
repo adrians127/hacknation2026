@@ -6,7 +6,6 @@ import type { Worker } from "@subsurf/contracts/workers/worker-registry.schema";
 
 import { DataTable } from "@/components/data-table";
 import { IconAction } from "@/components/icon-action";
-import { Badge } from "@/components/ui/badge";
 import { createDataTableColumns } from "@/lib/data-table";
 import { formatNumber } from "@/lib/format";
 
@@ -28,53 +27,24 @@ export function WorkersTable({
     () =>
       column.columns([
         column.accessor("displayName", {
-          header: t("workers.columns.worker"),
+          header: t("workers.columns.name"),
           cell: ({ row: { original: worker } }) => (
             <div className="grid gap-0.5">
-              <div className="flex flex-wrap items-center gap-2 font-medium">
-                {worker.displayName}
+              <span className="font-medium">{worker.displayName}</span>
+              {worker.displayName !== worker.name && (
                 <code className="text-xs text-muted-foreground">{worker.name}</code>
-                <Badge variant="outline">{t(worker.isBuiltin ? "workers.builtin" : "workers.custom")}</Badge>
-              </div>
-              {worker.description && (
-                <p className="max-w-md text-sm text-muted-foreground">{worker.description}</p>
               )}
             </div>
           ),
         }),
-        column.accessor("stage", {
-          header: t("workers.columns.stage"),
-          meta: { className: "text-right tabular-nums" },
-        }),
-        column.display({
-          id: "takes",
-          header: t("workers.columns.takes"),
-          cell: ({ row: { original: worker } }) => (
-            <div className="flex flex-wrap gap-1">
-              {worker.inputs.map((input) => (
-                <Badge key={input} variant="secondary">
-                  {t(`workers.inputs.${input}`)}
-                </Badge>
-              ))}
-            </div>
-          ),
+        column.accessor("description", {
+          header: t("workers.columns.description"),
+          cell: ({ getValue }) => <p className="max-w-md text-sm text-muted-foreground">{getValue()}</p>,
         }),
         column.accessor("maxRate", {
           header: t("workers.columns.maxRate"),
           meta: { className: "text-right tabular-nums" },
           cell: ({ getValue }) => t("workers.perSecond", { value: formatNumber(getValue(), locale) }),
-        }),
-        column.accessor("onlineManagers", {
-          header: t("workers.columns.managers"),
-          meta: { className: "text-right tabular-nums" },
-        }),
-        column.accessor("enabled", {
-          header: t("workers.columns.status"),
-          cell: ({ getValue }) => (
-            <Badge variant={getValue() ? "secondary" : "outline"}>
-              {t(getValue() ? "workers.enabled" : "workers.disabled")}
-            </Badge>
-          ),
         }),
         column.display({
           id: "actions",
@@ -88,15 +58,13 @@ export function WorkersTable({
                 permissions={["workers:update"]}
                 onClick={() => onEdit(worker)}
               />
-              {!worker.isBuiltin && (
-                <IconAction
-                  label={t("workers.actions.delete")}
-                  icon={<Trash2 />}
-                  permissions={["workers:delete"]}
-                  destructive
-                  onClick={() => onDelete(worker)}
-                />
-              )}
+              <IconAction
+                label={t("workers.actions.delete")}
+                icon={<Trash2 />}
+                permissions={["workers:delete"]}
+                destructive
+                onClick={() => onDelete(worker)}
+              />
             </div>
           ),
         }),

@@ -1,13 +1,13 @@
 import { z } from "zod";
 
 // The blocks a pipeline is built from. A worker's `name` is the one worker-manager runs it under
-// (`WORKER_MANAGER_WORKERS`, `jobs[].worker`). Built-in workers are defined here and synced into
-// the `Worker` table at startup; a manager announcing an unknown name registers a disabled one.
+// (`WORKER_MANAGER_WORKERS`, `jobs[].worker`). Every worker is registered by a manager's lease
+// request, with the capabilities its manifest announces (`WorkerSpecSchema` in workers.schema.ts).
 
 export const WORKER_NAME_PATTERN = /^[A-Za-z0-9._-]{1,64}$/;
 export const WorkerNameSchema = z.string().regex(WORKER_NAME_PATTERN);
 
-/** `targets`: address ranges of the pipeline. `hosts`: IPs with open ports from an earlier step. */
+/** `targets`: address ranges of a step's targets. `hosts`: IPs with open ports from an earlier step. */
 export const WorkerInputSchema = z.enum(["targets", "hosts"]);
 
 /** worker-manager's split strategies (its README, "Split strategies"). */
@@ -94,82 +94,6 @@ export type WorkerParamField = z.infer<typeof WorkerParamFieldSchema>;
 export type WorkerParamValue = z.infer<typeof WorkerParamValueSchema>;
 export type WorkerParams = z.infer<typeof WorkerParamsSchema>;
 
-export interface BuiltinWorker {
-  name: string;
-  displayName: string;
-  description: string;
-  /** Pipeline order: on overlapping addresses a later stage runs after an earlier one. */
-  stage: number;
-  inputs: readonly WorkerInput[];
-  splitStrategies: readonly SplitStrategy[];
-  paramFields: readonly WorkerParamField[];
-  /** Initial cap; admins may change it (`Worker.maxRate`). */
-  maxRate: number;
-}
-
-// Fields and limits follow apps/workers/{masscan,nmap}-worker/README.md.
-export const BUILTIN_WORKERS: readonly BuiltinWorker[] = [
-  {
-    name: "masscan",
-    displayName: "Masscan",
-    description: "Fast TCP SYN sweep: finds live hosts and open ports in address ranges.",
-    stage: 10,
-    inputs: ["targets"],
-    splitStrategies: ["none", "shard", "ranges"],
-    maxRate: 10_000,
-    paramFields: [
-      {
-        key: "wait_seconds",
-        label: "Wait for replies",
-        description: "How long to keep listening after the last probe.",
-        type: "integer",
-        min: 0,
-        max: 60,
-        unit: "seconds",
-        default: 3,
-      },
-      {
-        key: "retries",
-        label: "Retries",
-        description: "Extra probes per port.",
-        type: "integer",
-        min: 0,
-        max: 5,
-        default: 0,
-      },
-    ],
-  },
-  {
-    name: "nmap",
-    displayName: "Nmap",
-    description: "Service and version detection on the hosts and ports an earlier step found.",
-    stage: 20,
-    inputs: ["targets", "hosts"],
-    splitStrategies: ["none", "ranges", "chunk"],
-    maxRate: 100,
-    paramFields: [
-      {
-        key: "host_timeout_ms",
-        label: "Host timeout",
-        description: "Longest time spent on one host.",
-        type: "integer",
-        min: 1000,
-        max: 3_600_000,
-        unit: "milliseconds",
-        default: 120_000,
-      },
-      {
-        key: "probe_paths",
-        label: "HTTP paths to probe",
-        description: "Paths requested on web services, e.g. /admin. Detection only, no logins.",
-        type: "paths",
-        maxItems: 128,
-        default: [],
-      },
-    ],
-  },
-];
-
 // Not "too_many": i18next would read a `_many` suffix as a plural form.
 export type StepParamIssueCode = "unknown" | "type" | "range" | "option" | "too_long" | "path";
 
@@ -220,15 +144,11 @@ export function validateStepParams(
   return issues;
 }
 
-/** The fields' own defaults, overlaid with the admin's `Worker.defaults`. */
-export function defaultStepParams(
-  fields: readonly WorkerParamField[],
-  overrides: Readonly<WorkerParams> = {},
-): WorkerParams {
+/** The fields' own defaults, from the worker's manifest. */
+export function defaultStepParams(fields: readonly WorkerParamField[]): WorkerParams {
   const params: WorkerParams = {};
   for (const field of fields) {
-    const value = overrides[field.key] ?? field.default;
-    if (value !== undefined) params[field.key] = value;
+    if (field.default !== undefined) params[field.key] = field.default;
   }
   return params;
 }
