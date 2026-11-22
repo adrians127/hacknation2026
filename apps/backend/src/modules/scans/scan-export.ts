@@ -1,5 +1,7 @@
+import type { DetectionSummary } from "@subsurf/contracts/signatures/detection.schema";
 import {
   SCAN_CSV_COLUMNS,
+  SCAN_CSV_DERIVED_COLUMNS,
   scanCsvDownRow,
   scanCsvRows,
   type ScanCsvRow,
@@ -14,6 +16,7 @@ import {
 import { csvRow } from "~backend/lib/csv";
 import { toObservedHost, toScanEdits } from "~backend/modules/scans/scan-results.mapper";
 import type { ScanExport } from "~backend/modules/scans/scan-results.service";
+import { signatureMatchesService } from "~backend/modules/signatures/signature-matches.service";
 
 type DocumentHead = Omit<ScanExportDocument, "hosts" | "edits">;
 
@@ -58,15 +61,30 @@ export async function* scanExportJson(source: ScanExport, exportedAt: Date): Asy
   yield `\n],"edits":${JSON.stringify(edits)}}\n`;
 }
 
-const csvLine = (row: ScanCsvRow) => csvRow(SCAN_CSV_COLUMNS.map((column) => row[column]));
+const csvLine = (row: ScanCsvRow, detections: string | null = null) =>
+  csvRow([...SCAN_CSV_COLUMNS.map((column) => row[column]), detections]);
+
+const detectionText = (detections: readonly DetectionSummary[]) =>
+  detections
+    .map((detection) =>
+      [detection.name, detection.version, detection.severity && `[${detection.severity}]`].filter(Boolean).join(" "),
+    )
+    .join("; ") || null;
 
 /** The same hosts as CSV rows (`scan-csv.ts`); the covered blocks follow as `down` rows. */
 export async function* scanExportCsv(source: ScanExport): AsyncGenerator<string> {
-  yield csvRow(SCAN_CSV_COLUMNS);
+  yield csvRow([...SCAN_CSV_COLUMNS, ...SCAN_CSV_DERIVED_COLUMNS]);
   for await (const batch of source.batches()) {
+    const detections = await signatureMatchesService.summaries(
+      source.scan.id,
+      batch.flatMap(({ observation }) => observation.ports.map((port) => port.serviceId)),
+    );
     for (const { observation, host } of batch) {
+      const byPort = new Map(
+        observation.ports.map((port) => [port.port, detectionText(detections.get(port.serviceId) ?? [])]),
+      );
       yield scanCsvRows(toObservedHost(observation), toScanEdits(observation, host))
-        .map(csvLine)
+        .map((row) => csvLine(row, typeof row.port === "number" ? (byPort.get(row.port) ?? null) : null))
         .join("");
     }
   }
