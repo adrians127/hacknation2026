@@ -1,0 +1,427 @@
+#!/usr/bin/env python3
+"""TLS-only adapter for the common worker job/result format."""
+
+import argparse
+import ipaddress
+import json
+import os
+import re
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+VERSION = "0.1.0"
+MAX_ADDRESSES = 1024
+MAX_ATTEMPTS = 8192
+STOP = False
+CHILD = None
+
+
+def now():
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def stopped(_signum, _frame):
+    global STOP
+    STOP = True
+    if CHILD is not None and CHILD.poll() is None:
+        CHILD.terminate()
+
+
+def log(message):
+    print(f"tlsx-worker: {message}", file=sys.stderr, flush=True)
+
+
+def integer(raw, key, default, lo, hi):
+    value = raw.get(key, default)
+    if type(value) is not int or not lo <= value <= hi:
+        raise ValueError(f"'{key}' must be an integer in {lo}..{hi}")
+    return value
+
+
+def items(value, key, numbers=False):
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        raise ValueError(f"'{key}' must be a string or an array")
+    output = []
+    for item in value:
+        if numbers and type(item) is int:
+            item = str(item)
+        if not isinstance(item, str):
+            raise ValueError(f"'{key}' contains an invalid item")
+        output.extend(piece.strip() for piece in item.split(",") if piece.strip())
+    return output
+
+
+def addresses(value, limit=True):
+    if "-" in value:
+        parts = value.split("-", 1)
+        if len(parts) != 2:
+            raise ValueError(f"invalid IPv4 range '{value}'")
+        try:
+            first, last = (int(ipaddress.IPv4Address(part.strip())) for part in parts)
+        except ipaddress.AddressValueError as exc:
+            raise ValueError(f"invalid IPv4 range '{value}'") from exc
+        if first > last:
+            raise ValueError(f"reversed IPv4 range '{value}'")
+    else:
+        try:
+            block = ipaddress.IPv4Network(value, strict=False)
+        except (ipaddress.AddressValueError, ipaddress.NetmaskValueError) as exc:
+            raise ValueError(f"invalid IPv4 target '{value}'") from exc
+        first, last = int(block.network_address), int(block.broadcast_address)
+    if limit and last - first >= MAX_ADDRESSES:
+        raise ValueError("more than 1024 addresses in one target")
+    return range(first, last + 1)
+
+
+def ports(value):
+    output = set()
+    for spec in items(value, "ports", True):
+        bounds = spec.split("-", 1)
+        if not all(part.isdecimal() for part in bounds):
+            raise ValueError(f"invalid TCP port specification '{spec}'")
+        first, last = int(bounds[0]), int(bounds[-1])
+        if not 1 <= first <= last <= 65535:
+            raise ValueError(f"invalid TCP port specification '{spec}'")
+        output.update(range(first, last + 1))
+    if not output:
+        raise ValueError("'ports' must not be empty")
+    return sorted(output)
+
+
+def domain(value):
+    if not isinstance(value, str) or len(value) > 253 or not re.fullmatch(
+        r"[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?", value
+    ) or ".." in value:
+        raise ValueError("invalid domain in 'targets'")
+    return value
+
+
+def parse_job(raw):
+    if not isinstance(raw, dict):
+        raise ValueError("input must be a JSON object")
+    for key in ("job_id", "scan_id", "lease_id"):
+        if raw.get(key) is not None and not isinstance(raw[key], str):
+            raise ValueError(f"'{key}' must be a string")
+    duration = integer(raw, "max_duration_seconds", None, 1, 604800)
+    if "targets" not in raw:
+        raise ValueError("'targets' is required")
+    defaults = ports(raw.get("ports") if raw.get("ports") is not None else "1-65535")
+    target_items = raw["targets"]
+    if isinstance(target_items, str):
+        target_items = items(target_items, "targets")
+    if not isinstance(target_items, list):
+        raise ValueError("'targets' must be a string or an array")
+    by_ip = {}
+    for item in target_items:
+        if isinstance(item, str):
+            for spec in items(item, "targets"):
+                for address in addresses(spec):
+                    entry = by_ip.setdefault(address, {"ports": set(), "domains": set(), "known": False})
+                    entry["ports"].update(defaults)
+        elif isinstance(item, dict):
+            try:
+                if not isinstance(item.get("ip"), str):
+                    raise ValueError("host object needs an IPv4 'ip'")
+                address = int(ipaddress.IPv4Address(item["ip"]))
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError("host object needs an IPv4 'ip'") from exc
+            entry = by_ip.setdefault(address, {"ports": set(), "domains": set(), "known": False})
+            entry["known"] = True
+            entry["ports"].update(ports(item.get("ports") if item.get("ports") is not None else defaults))
+            names = item.get("domains") or []
+            if not isinstance(names, list) or len(names) > 128:
+                raise ValueError("'domains' must be an array of at most 128 names")
+            entry["domains"].update(domain(name) for name in names)
+            if item.get("domain") is not None:
+                entry["domains"].add(domain(item["domain"]))
+        else:
+            raise ValueError("invalid target item")
+        if len(by_ip) > MAX_ADDRESSES:
+            raise ValueError("more than 1024 addresses in job")
+        if sum(len(entry["ports"]) * (1 + len(entry["domains"])) for entry in by_ip.values()) > MAX_ATTEMPTS:
+            raise ValueError("TLS handshake plan exceeds 8192 attempts; narrow ports or split the job")
+    for spec in items(raw.get("exclude") or [], "exclude"):
+        excluded = addresses(spec, limit=False)
+        for address in list(by_ip):
+            if address in excluded:
+                by_ip.pop(address)
+    if not by_ip:
+        raise ValueError("no addresses left to scan after applying 'exclude'")
+    attempts = sum(len(entry["ports"]) * (1 + len(entry["domains"])) for entry in by_ip.values())
+    if attempts > MAX_ATTEMPTS:
+        raise ValueError("TLS handshake plan exceeds 8192 attempts; narrow ports or split the job")
+    requested_rate = integer(raw, "rate", 25, 1, 1000000)
+    max_rate = int(os.environ.get("TLSX_WORKER_MAX_RATE", "25"))
+    if max_rate < 1:
+        raise ValueError("TLSX_WORKER_MAX_RATE must be positive")
+    rate = min(requested_rate, max_rate)
+    timeout = integer(raw, "tls_timeout_ms", 5000, 1000, 3600000)
+    return {"raw": raw, "targets": by_ip, "duration": duration, "rate": rate,
+            "timeout": timeout, "attempts": attempts}
+
+
+def nullable(value):
+    return value if isinstance(value, str) and value else None
+
+
+def timestamp(value):
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            return None
+        return parsed.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    except ValueError:
+        return None
+
+
+def normalize(row, ip, port, sni):
+    if not isinstance(row, dict) or row.get("host") != ip or str(row.get("port")) != str(port):
+        return None
+    if row.get("ip") not in (None, "", ip):
+        return None
+    if sni and row.get("sni") not in (sni, None, ""):
+        return None
+    if sni is None and row.get("sni") not in (None, "", ip):
+        return None
+    if row.get("probe_status") is not True:
+        return None
+    fingerprint = row.get("fingerprint_hash") or {}
+    if not isinstance(fingerprint, dict):
+        fingerprint = {}
+    sha = nullable(fingerprint.get("sha256"))
+    if sha is not None:
+        sha = sha.lower()
+        if not re.fullmatch("[0-9a-f]{64}", sha):
+            sha = None
+    sans = row.get("subject_an")
+    if not isinstance(sans, list):
+        sans = []
+    sans = sorted({name for name in sans if isinstance(name, str) and name})
+    cert = None
+    if any(row.get(key) for key in ("subject_cn", "subject_an", "issuer_cn", "issuer_dn",
+                                    "not_before", "not_after", "serial", "fingerprint_hash")):
+        cert = dict(subjectCn=nullable(row.get("subject_cn")), san=sans,
+                    issuer=nullable(row.get("issuer_cn")) or nullable(row.get("issuer_dn")),
+                    notBefore=timestamp(row.get("not_before")), notAfter=timestamp(row.get("not_after")),
+                    serial=nullable(row.get("serial")), sha256=sha,
+                    selfSigned=True if row.get("self_signed") is True else None,
+                    keyAlgorithm=None, keyBits=None)
+    return dict(vhost=sni, version=nullable(row.get("tls_version")),
+                cipher=nullable(row.get("cipher")), alpn=None, cert=cert)
+
+
+def run_tlsx(binary, ip, port, sni, timeout_ms, deadline):
+    global CHILD
+    args = [binary, "-u", f"{ip}:{port}", "-json", "-silent", "-nc", "-duc", "-retry", "1",
+            "-c", "1", "-timeout", str(max(1, timeout_ms // 1000)),
+            "-tls-version", "-cipher", "-serial", "-hash", "sha256"]
+    if sni:
+        args += ["-sni", sni]
+    with tempfile.TemporaryDirectory(prefix="tlsx-home-") as config_home, \
+         tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+        environment = os.environ.copy()
+        environment["HOME"] = config_home
+        environment["XDG_CONFIG_HOME"] = config_home
+        CHILD = subprocess.Popen(args, stdout=out, stderr=err, start_new_session=True,
+                                 env=environment)
+        try:
+            while CHILD.poll() is None:
+                if STOP or time.monotonic() >= deadline:
+                    CHILD.terminate()
+                    try:
+                        CHILD.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        CHILD.kill()
+                        CHILD.wait()
+                    break
+                time.sleep(0.05)
+            code = CHILD.returncode
+        finally:
+            CHILD = None
+        if out.tell() > 2 * 1024 * 1024 or err.tell() > 256 * 1024:
+            return [], "scanner output exceeded limit"
+        out.seek(0)
+        err.seek(0)
+        rows = []
+        for line in out:
+            try:
+                row = json.loads(line)
+            except (ValueError, UnicodeDecodeError):
+                continue
+            observation = normalize(row, ip, port, sni)
+            if observation is not None:
+                rows.append(observation)
+        message = err.read().decode("utf-8", "replace").strip()
+        return rows[:1], (message or f"tlsx exited with status {code}") if code and not STOP and time.monotonic() < deadline else None
+
+
+def make_result(job, raw, started, elapsed_ms, findings, attempted, stopped_reason, error):
+    targets = job["targets"] if job else {}
+    union_ports = sorted({port for entry in targets.values() for port in entry["ports"]})
+    def port_spec(values):
+        parts = []
+        for value in values:
+            if parts and value == parts[-1][-1] + 1:
+                parts[-1].append(value)
+            else:
+                parts.append([value])
+        return ",".join(str(part[0]) if len(part) == 1 else f"{part[0]}-{part[-1]}" for part in parts)
+    subnet = None
+    if targets:
+        addresses = sorted(targets)
+        size = len(addresses)
+        if size & (size - 1) == 0 and addresses[-1] - addresses[0] + 1 == size and addresses[0] % size == 0:
+            subnet = f"{ipaddress.IPv4Address(addresses[0])}/{32 - (size.bit_length() - 1)}"
+    hosts = []
+    for address, entry in sorted(targets.items()):
+        ip = str(ipaddress.IPv4Address(address))
+        observed = findings.get(address, {})
+        open_ports = []
+        for port in sorted(entry["ports"]):
+            tls = [observed[(port, name)] for name in [None, *sorted(entry["domains"])]
+                   if (port, name) in observed]
+            if not tls and not entry["known"]:
+                continue
+            sha = next((item["cert"]["sha256"] for item in tls
+                        if item["cert"] and item["cert"]["sha256"]), None)
+            open_ports.append(dict(port=port, protocol="tcp", state="open", reason=None,
+                                   service=None, identity=dict(ttl=None, sshHostKeySha256=None,
+                                                               tlsCertSha256=sha),
+                                   banner=None, scripts=[], tls=tls, http=[]))
+        answered = any(key[0] in entry["ports"] for key in observed)
+        complete = all((address, port, name) in attempted for port in entry["ports"]
+                       for name in [None, *entry["domains"]])
+        status = "up" if entry["known"] or answered else "timeout" if complete else "cancelled"
+        hostnames = [dict(name=name, source="job") for name in sorted(entry["domains"])]
+        hostnames += [dict(name=name, source="tls-san") for name in sorted({
+            san for item in observed.values() if item["cert"] for san in item["cert"]["san"]
+        }) if len(name) <= 253 and name not in entry["domains"]]
+        hosts.append(dict(ip=ip, status=status, reason=None,
+                          observedAt=now() if complete or answered or entry["known"] else None,
+                          latencyMs=None, hostnames=hostnames, error=None, ports=open_ports))
+    counts = dict(addresses=len(targets) if job else None,
+                  up=sum(h["status"] == "up" for h in hosts),
+                  down=0 if job else None, timeout=sum(h["status"] == "timeout" for h in hosts),
+                  cancelled=sum(h["status"] == "cancelled" for h in hosts) if job else None, failed=0,
+                  openPorts=sum(len(h["ports"]) for h in hosts), httpEndpoints=0, httpRequests=0)
+    status = ("failed" if error and not findings else "partial" if error or stopped_reason or
+              counts["timeout"] or counts["cancelled"] else "completed")
+    raw = raw if isinstance(raw, dict) else {}
+    scan = dict(jobId=raw.get("job_id") if isinstance(raw.get("job_id"), str) else None,
+                leaseId=raw.get("lease_id") if isinstance(raw.get("lease_id"), str) else None,
+                scanId=raw.get("scan_id") if isinstance(raw.get("scan_id"), str) else None,
+                worker=dict(id="tlsx-worker", version=VERSION, nmapVersion=None),
+                status=status, stopReason=stopped_reason or ("error" if error else None),
+                startedAt=started, finishedAt=now(), durationMs=elapsed_ms,
+                phasesMs=dict(hostDiscovery=0, portScan=0, serviceDetection=elapsed_ms if job else 0, http=0),
+                params=dict(subnet=subnet, ports=port_spec(union_ports) if job else None,
+                            maxParallel=1 if job else None, maxRatePerProcess=job["rate"] if job else None,
+                            hostTimeoutMs=None, httpTimeoutMs=None, maxBodyBytes=None,
+                            maxRedirects=None, nmapArgs=[]), counts=counts,
+                error=dict(code="scanner-failed", message=error) if error else None)
+    return dict(scan=scan, hosts=hosts)
+
+
+def write_output(path, result, pretty):
+    data = json.dumps(result, indent=2 if pretty else None, ensure_ascii=False) + "\n"
+    if path == "-":
+        sys.stdout.write(data)
+        sys.stdout.flush()
+        return
+    destination = Path(path)
+    fd, temporary = tempfile.mkstemp(prefix=f".{destination.name}.", dir=destination.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, destination)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", default="-")
+    parser.add_argument("--output", default="-")
+    parser.add_argument("--pretty", action="store_true")
+    args = parser.parse_args()
+    signal.signal(signal.SIGTERM, stopped)
+    signal.signal(signal.SIGINT, stopped)
+    started = now()
+    clock = time.monotonic()
+    raw = None
+    job = None
+    findings = {}
+    attempted = set()
+    reason = None
+    error = None
+    invalid = False
+    try:
+        if args.input == "-":
+            text = sys.stdin.read(4 * 1024 * 1024 + 1)
+        else:
+            with open(args.input, encoding="utf-8") as stream:
+                text = stream.read(4 * 1024 * 1024 + 1)
+        if len(text) > 4 * 1024 * 1024:
+            raise ValueError("job exceeds 4 MiB")
+        raw = json.loads(text)
+        job = parse_job(raw)
+    except (OSError, UnicodeError, ValueError) as exc:
+        invalid = True
+        error = str(exc)
+    if job:
+        deadline = clock + job["duration"]
+        binary = os.environ.get("TLSX_BINARY", "tlsx")
+        next_start = clock
+        for address, target in sorted(job["targets"].items()):
+            ip = str(ipaddress.IPv4Address(address))
+            for port in sorted(target["ports"]):
+                for sni in [None, *sorted(target["domains"])]:
+                    while not STOP and time.monotonic() < min(deadline, next_start):
+                        time.sleep(0.01)
+                    if STOP or time.monotonic() >= deadline:
+                        break
+                    next_start = time.monotonic() + 1 / job["rate"]
+                    attempted.add((address, port, sni))
+                    try:
+                        rows, scanner_error = run_tlsx(binary, ip, port, sni, job["timeout"], deadline)
+                    except OSError as exc:
+                        rows, scanner_error = [], str(exc)
+                    if rows:
+                        findings.setdefault(address, {})[(port, sni)] = rows[0]
+                    if scanner_error:
+                        error = scanner_error
+                        break
+                if error or STOP or time.monotonic() >= deadline:
+                    break
+            if error or STOP or time.monotonic() >= deadline:
+                break
+        reason = "stop-requested" if STOP else "deadline" if time.monotonic() >= deadline else None
+    elapsed = int((time.monotonic() - clock) * 1000)
+    result = make_result(job, raw, started, elapsed, findings, attempted, reason, error)
+    if invalid:
+        result["scan"]["error"] = {"code": "invalid-input", "message": error}
+        result["scan"]["stopReason"] = "error"
+    try:
+        write_output(args.output, result, args.pretty)
+    except OSError as exc:
+        log(f"cannot write result: {exc}")
+        return 1
+    log(f"job {result['scan']['jobId']} {result['scan']['status']}: "
+        f"addresses={len(result['hosts'])} handshakes={len(attempted)} duration_ms={elapsed}")
+    return 2 if invalid else 1 if result["scan"]["status"] == "failed" else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

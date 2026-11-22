@@ -69,6 +69,7 @@ export function openPort(
     },
     banner: extra.banner ?? null,
     scripts: extra.scripts ?? [],
+    tls: [],
     http,
   };
 }

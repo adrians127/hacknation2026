@@ -81,6 +81,26 @@ export const TlsCertificateSchema = z.object({
   keyBits: z.number().int().positive().nullable(),
 });
 
+/** A TLS-only handshake may expose fewer certificate fields than an HTTP probe. */
+export const PortTlsSchema = z.object({
+  vhost: HostnameSchema.nullable(),
+  version: z.string().nullable(),
+  cipher: z.string().nullable(),
+  alpn: z.string().nullable(),
+  cert: z.object({
+    subjectCn: z.string().nullable(),
+    san: z.array(z.string()),
+    issuer: z.string().nullable(),
+    notBefore: z.iso.datetime().nullable(),
+    notAfter: z.iso.datetime().nullable(),
+    serial: z.string().nullable(),
+    sha256: Sha256HexSchema.nullable(),
+    selfSigned: z.boolean().nullable(),
+    keyAlgorithm: z.string().nullable(),
+    keyBits: z.number().int().positive().nullable(),
+  }).nullable(),
+});
+
 export const HttpEndpointSchema = z.object({
   scheme: z.enum(["http", "https"]),
   /** Host header and SNI; `null` = requested by bare IP. */
@@ -180,7 +200,12 @@ export const OpenPortSchema = z
     }),
     banner: z.string().nullable(),
     scripts: z.array(z.object({ id: z.string().min(1), output: z.string() })),
+    tls: z.array(PortTlsSchema),
     http: z.array(HttpEndpointSchema),
+  })
+  .refine((port) => isUnique(port.tls.map((entry) => entry.vhost ?? "")), {
+    message: "Each TLS vhost may appear once per port",
+    path: ["tls"],
   })
   .refine((port) => isUnique(port.http.map((entry) => `${entry.scheme} ${entry.vhost ?? ""}`)), {
     message: "Each (scheme, vhost) may appear once per port",
@@ -228,4 +253,5 @@ export type WorkerScan = z.infer<typeof WorkerScanSchema>;
 export type ObservedHost = z.infer<typeof ObservedHostSchema>;
 export type OpenPort = z.infer<typeof OpenPortSchema>;
 export type HttpEndpoint = z.infer<typeof HttpEndpointSchema>;
+export type PortTls = z.infer<typeof PortTlsSchema>;
 export type HostStatus = z.infer<typeof HostStatusSchema>;
