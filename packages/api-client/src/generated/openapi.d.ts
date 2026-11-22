@@ -293,6 +293,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scans/{id}/hosts/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a tag to, or remove it from, the scan's hosts in the given addresses and CIDRs
+         * @description Requires `scans:read` and `hosts:update`. Matches the hosts the scan lists (gone and unknown included). Tags belong to the Host assets, so the change shows in every scan and later scans keep it. Hosts that already have the maximum number of tags are skipped.
+         */
+        post: operations["tagScanHosts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/targets/import": {
         parameters: {
             query?: never;
@@ -2212,6 +2232,78 @@ export interface operations {
                             openPorts: number;
                         }[];
                     };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tagScanHosts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    action: "add" | "remove";
+                    tag: string;
+                    selectors: (string)[];
+                };
+            };
+        };
+        responses: {
+            /** @description How many hosts matched and how many changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        matched: number;
+                        changed: number;
+                        unchanged: number;
+                        limitReached: number;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Not signed in, or the session expired */
