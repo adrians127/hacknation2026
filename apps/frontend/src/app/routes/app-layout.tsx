@@ -3,6 +3,7 @@ import {
   Cpu,
   Crosshair,
   FileText,
+  Fingerprint,
   LayoutDashboard,
   Radar,
   ShieldCheck,
@@ -29,6 +30,7 @@ interface NavItem {
     | "nav.scans"
     | "nav.reports"
     | "nav.rules"
+    | "nav.signatures"
     | "nav.pipelines"
     | "nav.workers"
     | "nav.vulnerabilities"
@@ -44,6 +46,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/app/scans", label: "nav.scans", Icon: Radar, permission: "scans:read" },
   { to: "/app/reports", label: "nav.reports", Icon: FileText, permission: "scans:read" },
   { to: "/app/rules", label: "nav.rules", Icon: WandSparkles, permission: "rules:read" },
+  { to: "/app/signatures", label: "nav.signatures", Icon: Fingerprint, permission: "signatures:read" },
   { to: "/app/pipelines", label: "nav.pipelines", Icon: Workflow, permission: "pipelines:read" },
   { to: "/app/admin/workers", label: "nav.workers", Icon: Cpu, permission: "workers:read" },
   {

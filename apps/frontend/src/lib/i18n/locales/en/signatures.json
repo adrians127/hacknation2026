@@ -1,0 +1,201 @@
+{
+  "title": "Detection signatures",
+  "description": "Safe fingerprints of technologies, CMSs, admin panels and staging environments, matched on every scan.",
+  "intro": "A signature recognises something on a service from what the scanner already fetched: a header, a cookie name, the page title or HTML, the favicon hash, a banner, or how a path such as /admin answers. Paths are only requested with GET, never logged into. Built-in signatures can be switched off or duplicated; your own can be edited. Matches show on hosts in every scan, in the reports and on the dashboard.",
+  "empty": "No signatures match the filter.",
+  "builtIn": "Built-in",
+  "deleteTitle": "Delete signature",
+  "deleteDescription": "Delete “{{name}}”? Its matches disappear from every scan.",
+  "evaluation": {
+    "noScan": "No scan with results yet: counts appear after the first scan.",
+    "newest": "Counts are from the newest scan ({{date}}).",
+    "pending_one": "{{count}} scan is still being checked against the signatures.",
+    "pending_other": "{{count}} scans are still being checked against the signatures.",
+    "probePaths": "Paths requested on every HTTP service: {{paths}}"
+  },
+  "filters": {
+    "search": "Search signatures",
+    "kind": "Which signatures",
+    "kinds": {
+      "all": "All signatures",
+      "custom": "Custom",
+      "builtIn": "Built-in"
+    }
+  },
+  "columns": {
+    "name": "Signature",
+    "severity": "Severity",
+    "conditions": "Matches when",
+    "hits": "Newest scan",
+    "enabled": "On",
+    "actions": "Actions"
+  },
+  "hits": {
+    "off": "Off",
+    "pending": "Checking…",
+    "none": "No matches",
+    "value": "hosts: {{hosts}} · services: {{services}}"
+  },
+  "categories": {
+    "cms": "CMS",
+    "web-server": "Web server",
+    "language": "Language",
+    "framework": "Framework",
+    "application": "Application",
+    "device": "Device / IoT",
+    "service": "Service",
+    "admin-panel": "Admin panel",
+    "staging": "Staging / debug",
+    "default-page": "Default page",
+    "interesting-header": "Interesting header",
+    "interesting-cookie": "Interesting cookie",
+    "other": "Other"
+  },
+  "severities": {
+    "none": "Detection only",
+    "info": "Info",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
+  },
+  "confidence": {
+    "high": "High confidence",
+    "medium": "Medium confidence",
+    "low": "Low confidence"
+  },
+  "targets": {
+    "header": "Header",
+    "cookie": "Cookie name",
+    "title": "Page title",
+    "body": "Page HTML",
+    "favicon": "Favicon hash",
+    "probe": "Path",
+    "banner": "Banner",
+    "service": "Service (nmap)",
+    "port": "Port"
+  },
+  "targetHints": {
+    "header": "A response header of any HTTP page of the service. Names are compared in lowercase.",
+    "cookie": "The name of a cookie the page sets. The scanner never keeps cookie values.",
+    "title": "The title of the page.",
+    "body": "The page's HTML (its first 256 KiB), e.g. a script path or the version in the footer.",
+    "favicon": "The MurmurHash3 of the favicon, as Shodan writes it (http.favicon.hash).",
+    "probe": "How a path answers a plain GET: status code, and optionally title. The scanner requests it from the next scan on; it never follows redirects or logs in.",
+    "banner": "What a non-HTTP service sends first (SSH, FTP, SMTP).",
+    "service": "What nmap's service detection reported.",
+    "port": "Limits the other conditions to these ports; never enough on its own."
+  },
+  "ops": {
+    "equals": "equals",
+    "contains": "contains",
+    "prefix": "starts with",
+    "regex": "matches regex"
+  },
+  "fields": {
+    "name": "service name",
+    "product": "product",
+    "version": "version",
+    "extraInfo": "extra info",
+    "cpe": "CPE"
+  },
+  "match": {
+    "all": "All conditions (HTTP ones on the same page)",
+    "any": "Any condition"
+  },
+  "summary": {
+    "all": "and",
+    "any": "or",
+    "header": "header {{name}}",
+    "headerValue": "header {{name}} {{op}} “{{value}}”",
+    "cookie": "cookie {{op}} “{{value}}”",
+    "service": "nmap {{field}} {{op}} “{{value}}”",
+    "favicon": "favicon {{hashes}}",
+    "probe": "GET {{path}} → {{status}}",
+    "port": "port {{ports}}",
+    "text": "{{target}} {{op}} “{{value}}”"
+  },
+  "actions": {
+    "add": "New signature",
+    "edit": "Edit {{name}}",
+    "duplicate": "Duplicate {{name}}",
+    "delete": "Delete {{name}}",
+    "toggle": "Signature {{name}} on",
+    "import": "Import",
+    "export": "Export",
+    "builtInReadOnly": "Built-in: duplicate it to change it"
+  },
+  "toast": {
+    "created": "Signature created and checked against the newest scan",
+    "updated": "Signature saved",
+    "deleted": "Signature deleted",
+    "exported": "Signatures exported",
+    "imported": "Imported: {{created}} new, {{replaced}} replaced, {{skipped}} skipped, {{builtIn}} built-in"
+  },
+  "form": {
+    "createTitle": "New signature",
+    "editTitle": "Edit signature",
+    "copyTitle": "New signature from “{{name}}”",
+    "description": "Describe what to look for in what the scanner already fetched. Saving checks the newest scan at once and the older ones in the background.",
+    "name": "Name",
+    "nameInvalid": "Enter a name (at most 100 characters).",
+    "product": "Technology",
+    "productHint": "Optional: the technologies report lists it under this name.",
+    "category": "Category",
+    "severity": "Severity",
+    "confidence": "Confidence",
+    "ratingHint": "With a severity, a match is also a finding. Confidence is the least a match gets; matching on two kinds of evidence raises it.",
+    "notes": "Description",
+    "conditions": "Conditions",
+    "condition": "Condition {{number}}",
+    "target": "What to read",
+    "removeCondition": "Remove condition {{number}}",
+    "op": "How to compare {{field}}",
+    "caseSensitive": "Case sensitive",
+    "headerName": "Header name",
+    "headerValue": "Header value",
+    "headerValueHint": "Leave empty: the header being there is enough.",
+    "cookieName": "Cookie name",
+    "field": "Field",
+    "value": "Text",
+    "mmh3": "Favicon hashes",
+    "mmh3Hint": "Whole numbers, separated by commas.",
+    "path": "Path",
+    "pathHint": "Starts with /, without ?, #, @ or ..",
+    "status": "Status codes",
+    "listHint": "Separated by commas, e.g. 200, 401.",
+    "probeTitle": "Title of the answer",
+    "optionalHint": "Optional; leave empty for any.",
+    "ports": "Ports",
+    "portsHint": "Separated by commas, e.g. 80, 8080.",
+    "version": "Version pattern",
+    "versionHint": "Optional RE2 pattern with one group, e.g. WordPress (\\d[\\d.]*). It reads the version, it does not decide the match.",
+    "invalid": "Check this condition.",
+    "needsCondition": "Add a condition other than a port.",
+    "addCondition": "Add condition",
+    "safety": "Signatures only detect. They never send logins, form data or payloads, and regular expressions run in linear time.",
+    "save": "Save",
+    "create": "Create"
+  },
+  "preview": {
+    "title": "What it matches",
+    "scanLabel": "Scan to check",
+    "newest": "Newest scan",
+    "invalid": "Fill in the conditions to see what they match.",
+    "noScan": "No scan with results to check against yet.",
+    "counts": "Matching services: {{services}} · hosts: {{hosts}}",
+    "scan": "scan of {{date}}",
+    "unprobed": "Not requested in this scan, so it cannot match there yet: {{paths}}. Scans after saving request it.",
+    "version": "version {{version}}",
+    "patternError": "Pattern: {{message}}"
+  },
+  "import": {
+    "title": "Import signatures",
+    "description": "A file exported from SubSurf. Custom signatures are added; built-ins in the file are only switched on or off. Nothing is imported if one entry is invalid.",
+    "invalidFile": "This is not a SubSurf signatures file.",
+    "contents": "In the file: {{custom}} custom, {{builtIn}} built-in.",
+    "conflict": "When a custom signature with the same name exists",
+    "skip": "Keep the existing one",
+    "replace": "Replace it",
+    "submit": "Import"
+  }
+}
