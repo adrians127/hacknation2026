@@ -34,7 +34,7 @@ export function changesCsv(changes: ScanChangesResponse): string {
       row.after,
       row.priority,
       row.reason,
-      row.lifecycle,
+      row.lifecycle.state,
     ]),
   );
 }

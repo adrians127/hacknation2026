@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   FieldChangeKindSchema,
   FieldChangeSchema,
-  HostLifecycleStateSchema,
+  HostLifecycleSchema,
   ScanChangeSchema,
   ScanCompareQuerySchema,
 } from "./scan-results.schema";
@@ -56,7 +56,7 @@ export const ScanChangeRowSchema = z.object({
   priority: ChangePrioritySchema,
   reason: ChangeReasonSchema,
   /** The host's lifecycle as of the compared scan. */
-  lifecycle: HostLifecycleStateSchema,
+  lifecycle: HostLifecycleSchema,
 });
 
 export const ScanChangesQuerySchema = ScanCompareQuerySchema.extend({

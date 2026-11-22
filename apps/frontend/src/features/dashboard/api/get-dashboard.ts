@@ -1,15 +1,7 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
-import type { DashboardResponse } from "@subsurf/contracts/dashboard/dashboard.schema";
+import { api } from "@/api/client";
 
-import { mockResponse } from "@/api/mock";
-import { mockDashboard } from "@/features/dashboard/api/mocks";
-
-// MOCK: api.queryOptions("get", "/dashboard")
-export const dashboardQueryOptions = () =>
-  queryOptions({
-    queryKey: ["get", "/dashboard"] as const,
-    queryFn: (): Promise<DashboardResponse> => mockResponse(mockDashboard()),
-  });
+export const dashboardQueryOptions = () => api.queryOptions("get", "/dashboard");
 
 export const useDashboard = () => useQuery(dashboardQueryOptions());

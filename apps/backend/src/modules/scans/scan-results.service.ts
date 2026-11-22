@@ -271,6 +271,9 @@ const scanRef = (scan: { id: string; startedAt: Date | null }) => ({
 /** Scans that did not cover an address, or got no answer, do not count: look further back. */
 const LIFECYCLE_SCANS = LIFECYCLE_WINDOW * 3;
 
+/** Addresses per lifecycle query: each one is a bind parameter. */
+const LIFECYCLE_BATCH = 10_000;
+
 /** Each address's lifecycle as of `scan`, from its answers in that scan and earlier ones. */
 async function lifecycles(
   scan: ScanRow,
@@ -284,12 +287,15 @@ async function lifecycles(
     select: { id: true },
   });
   const age = new Map(scans.map((row, index) => [row.id, index]));
-  const rows = await prisma.$queryRaw<EffectiveRow[]>(
-    effectiveSql(
-      scans.map((row) => row.id),
-      ips,
-    ),
-  );
+  const scanIds = scans.map((row) => row.id);
+  const rows: EffectiveRow[] = [];
+  for (let start = 0; start < ips.length; start += LIFECYCLE_BATCH) {
+    rows.push(
+      ...(await prisma.$queryRaw<EffectiveRow[]>(
+        effectiveSql(scanIds, ips.slice(start, start + LIFECYCLE_BATCH)),
+      )),
+    );
+  }
   const statuses = new Map<string, HostObservationStatus[]>();
   for (const row of rows.toSorted((a, b) => (age.get(a.scanId) ?? 0) - (age.get(b.scanId) ?? 0))) {
     statuses.set(row.ip, [...(statuses.get(row.ip) ?? []), row.status]);
@@ -384,6 +390,26 @@ async function history(ip: string): Promise<HostHistoryEntry[]> {
  * base scan. Read-only; host and service edits go through `hostsService`.
  */
 export const scanResultsService = {
+  /** The newest scan with results, which the dashboard shows. */
+  latestWithResults(): Promise<{ id: string } | null> {
+    return prisma.scan.findFirst({
+      where: { results: { some: {} } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+  },
+
+  /** How many known hosts are unstable or inactive as of the scan. */
+  async lifecycleCounts(scanId: string): Promise<{ unstable: number; inactive: number }> {
+    const scan = await findScan(scanId);
+    const hosts = await prisma.host.findMany({ select: { ip: true } });
+    const states = [...(await lifecycles(scan, hosts.map((host) => host.ip))).values()];
+    return {
+      unstable: states.filter((lifecycle) => lifecycle.state === "unstable").length,
+      inactive: states.filter((lifecycle) => lifecycle.state === "inactive").length,
+    };
+  },
+
   async list(): Promise<Scan[]> {
     const scans = await prisma.scan.findMany({ orderBy: { createdAt: "desc" } });
     const summaries = await scanSummaries(scans.map((scan) => scan.id));

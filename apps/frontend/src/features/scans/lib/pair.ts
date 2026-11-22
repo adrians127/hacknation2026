@@ -1,3 +1,4 @@
+import type { ScanChangeFilter } from "@subsurf/contracts/scans/scan-results.schema";
 import type { Scan } from "@subsurf/contracts/scans/scans.schema";
 
 /** A scan that answered for at least one address: something to compare. */
@@ -11,10 +12,16 @@ export function orderPair(scans: readonly Scan[], first: string, second: string)
   return createdAt(first) <= createdAt(second) ? [first, second] : [second, first];
 }
 
-export const compareUrl = (pair: { base?: string | null; target: string; host?: string }) => {
+export const compareUrl = (pair: {
+  base?: string | null;
+  target: string;
+  host?: string;
+  change?: ScanChangeFilter;
+}) => {
   const params = new URLSearchParams();
   if (pair.base) params.set("base", pair.base);
   params.set("target", pair.target);
+  if (pair.change) params.set("change", pair.change);
   if (pair.host) params.set("host", pair.host);
   return `/app/scans/compare?${params}`;
 };

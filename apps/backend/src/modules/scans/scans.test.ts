@@ -448,7 +448,11 @@ describe("GET /scans/{id}/changes", () => {
       ["10.0.5.20", null, "gone", null, "up", "down", "low", "host-gone"],
       ["10.0.5.20", 3306, "gone", null, "mysql MySQL 8.0.36", null, "low", "service-gone"],
     ]);
-    expect(items.find((row) => row.ip === "10.0.5.20")?.lifecycle).toBe("missing");
+    expect(items.find((row) => row.ip === "10.0.5.20")?.lifecycle).toEqual({
+      state: "missing",
+      misses: 1,
+      flips: 1,
+    });
     expect(empty).toMatchObject({ baseScan: null, items: [] });
   });
 

@@ -12,25 +12,62 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "The most important findings from recent scans",
+    "subtitle": "What changed in the newest scan, and what deserves a look first.",
+    "noScans": "No scan has results yet. Import targets and start a scan.",
+    "newest": "Newest scan of {{date}}, compared with the scan of {{base}}.",
+    "newestFirst": "Newest scan of {{date}}. It is the first one, so there is nothing to compare it with yet.",
+    "compare": "Compare side by side",
     "stats": {
-      "activeHosts": "Active hosts",
-      "newServices": "New services",
-      "disappeared": "Disappeared services",
-      "changed": "Changed services"
+      "hostsUp": "Hosts up",
+      "openPorts": "Open ports",
+      "newHosts": "New hosts",
+      "goneHosts": "Hosts gone",
+      "serviceChanges": "Service changes",
+      "serviceChangesHint": "{{new}} opened · {{gone}} closed · {{changed}} changed",
+      "unstable": "Unstable hosts",
+      "inactive": "Inactive hosts",
+      "lifecycleHint": "Across every known host",
+      "sinceBase": "{{delta}} since the previous scan",
+      "trend": "{{label}} per scan",
+      "trendPoint": "{{date}}: {{value}}"
     },
-    "recent": {
-      "title": "Recent changes",
-      "kind": "Change",
+    "top": {
+      "title": "Most important changes",
+      "empty": "Nothing changed since the previous scan.",
+      "count": "{{high}} high · {{medium}} medium · {{low}} low",
+      "shown": "The {{shown}} most important of {{total}}.",
+      "priority": "Priority",
       "host": "Host",
-      "service": "Service",
-      "detail": "Detail",
-      "detected": "Detected",
-      "kinds": {
-        "new": "New",
-        "disappeared": "Disappeared",
-        "changed": "Changed"
-      }
+      "port": "Port",
+      "wholeHost": "host",
+      "change": "Change",
+      "what": "What"
+    },
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "reasons": {
+      "new-host": "new host",
+      "returning-host": "came back",
+      "risky-port": "risky port opened",
+      "new-service": "port opened",
+      "admin-panel": "admin path answers",
+      "ssh-key-changed": "SSH host key changed",
+      "self-signed": "self-signed certificate",
+      "version-change": "software changed",
+      "new-endpoint": "new HTTP endpoint",
+      "page-change": "page changed",
+      "cert-change": "certificate changed",
+      "security-header-removed": "security header removed",
+      "cookie-flags-weakened": "cookie flags weakened",
+      "technology-header": "technology header changed",
+      "host-inactive": "inactive",
+      "host-gone": "stopped answering",
+      "service-gone": "port closed",
+      "no-answer": "no answer",
+      "other": "other change"
     }
   },
   "targets": {

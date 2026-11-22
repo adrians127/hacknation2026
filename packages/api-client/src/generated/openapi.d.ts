@@ -104,6 +104,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The most important findings of the newest scan
+         * @description Requires `scans:read`. The newest scan with results compared with the previous one: host counts, the lifecycle of every known host, and the changes that deserve a look first.
+         */
+        get: operations["getDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1211,6 +1231,113 @@ export interface operations {
                 };
             };
             /** @description Current password is wrong (`INVALID_CREDENTIALS`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getDashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dashboard */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        scan: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                        } | null;
+                        baseScan: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                        } | null;
+                        hosts: {
+                            up: number;
+                            unstable: number;
+                            inactive: number;
+                        };
+                        openPorts: number;
+                        changes: {
+                            hosts: {
+                                new: number;
+                                gone: number;
+                                changed: number;
+                                unknown: number;
+                            };
+                            services: {
+                                new: number;
+                                gone: number;
+                                changed: number;
+                            };
+                        } | null;
+                        priorities: {
+                            high: number;
+                            medium: number;
+                            low: number;
+                        };
+                        topChanges: {
+                            /** Format: uuid */
+                            hostId: string;
+                            /** Format: ip */
+                            ip: string;
+                            hostnames: string[];
+                            port: number | null;
+                            /** @enum {string} */
+                            change: "new" | "gone" | "changed" | "unchanged" | "unknown";
+                            /** @enum {string} */
+                            priority: "high" | "medium" | "low";
+                            reasons: ("new-host" | "returning-host" | "risky-port" | "new-service" | "admin-panel" | "ssh-key-changed" | "self-signed" | "version-change" | "new-endpoint" | "page-change" | "cert-change" | "security-header-removed" | "cookie-flags-weakened" | "technology-header" | "host-inactive" | "host-gone" | "service-gone" | "no-answer" | "other")[];
+                            ports: number[];
+                            fields: {
+                                /** @enum {string} */
+                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname";
+                                endpoint: {
+                                    /** @enum {string} */
+                                    scheme: "http" | "https";
+                                    vhost: string | null;
+                                } | null;
+                                key: string | null;
+                                before: string | null;
+                                after: string | null;
+                            }[];
+                            lifecycle: {
+                                /** @enum {string} */
+                                state: "active" | "unstable" | "missing" | "inactive";
+                                misses: number;
+                                flips: number;
+                            };
+                        }[];
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2602,8 +2729,12 @@ export interface operations {
                             priority: "high" | "medium" | "low";
                             /** @enum {string} */
                             reason: "new-host" | "returning-host" | "risky-port" | "new-service" | "admin-panel" | "ssh-key-changed" | "self-signed" | "version-change" | "new-endpoint" | "page-change" | "cert-change" | "security-header-removed" | "cookie-flags-weakened" | "technology-header" | "host-inactive" | "host-gone" | "service-gone" | "no-answer" | "other";
-                            /** @enum {string} */
-                            lifecycle: "active" | "unstable" | "missing" | "inactive";
+                            lifecycle: {
+                                /** @enum {string} */
+                                state: "active" | "unstable" | "missing" | "inactive";
+                                misses: number;
+                                flips: number;
+                            };
                         }[];
                     };
                     "text/csv": string;

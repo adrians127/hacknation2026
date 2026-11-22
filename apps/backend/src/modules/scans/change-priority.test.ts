@@ -18,20 +18,20 @@ const base: Facts = {
   key: null,
   before: null,
   after: null,
-  lifecycle: "active",
+  lifecycle: { state: "active", misses: 0, flips: 0 },
 };
 
-const rate = (facts: Partial<Facts>) => {
-  const { priority, reason } = rateChange({ ...base, ...facts });
+const rate = (facts: Partial<Facts>, hostChange?: Facts["change"]) => {
+  const { priority, reason } = rateChange({ ...base, ...facts }, hostChange);
   return `${priority} ${reason}`;
 };
 
 describe("rateChange", () => {
   it("rates hosts by what they did and how reliably they answer", () => {
     expect(rate({ port: null, protocol: null, change: "new" })).toBe("high new-host");
-    expect(rate({ port: null, protocol: null, change: "new", lifecycle: "unstable" })).toBe("medium returning-host");
-    expect(rate({ port: null, protocol: null, change: "gone", lifecycle: "missing" })).toBe("low host-gone");
-    expect(rate({ port: null, protocol: null, change: "gone", lifecycle: "inactive" })).toBe("medium host-inactive");
+    expect(rate({ port: null, protocol: null, change: "new", lifecycle: { state: "unstable", misses: 0, flips: 2 } })).toBe("medium returning-host");
+    expect(rate({ port: null, protocol: null, change: "gone", lifecycle: { state: "missing", misses: 1, flips: 1 } })).toBe("low host-gone");
+    expect(rate({ port: null, protocol: null, change: "gone", lifecycle: { state: "inactive", misses: 3, flips: 1 } })).toBe("medium host-inactive");
     expect(rate({ port: null, protocol: null, change: "unknown" })).toBe("low no-answer");
   });
 
@@ -39,6 +39,10 @@ describe("rateChange", () => {
     expect(rate({ port: 3389, change: "new" })).toBe("high risky-port");
     expect(rate({ port: 8080, change: "new" })).toBe("medium new-service");
     expect(rate({ port: 3389, change: "gone" })).toBe("low service-gone");
+    // An unstable host that came back reopens what it had: not newly exposed.
+    const returning = { port: 445, change: "new" as const, lifecycle: { state: "unstable" as const, misses: 0, flips: 2 } };
+    expect(rate(returning, "new")).toBe("low returning-host");
+    expect(rate(returning, "changed")).toBe("high risky-port");
   });
 
   it("rates field changes", () => {

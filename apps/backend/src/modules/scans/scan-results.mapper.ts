@@ -229,7 +229,7 @@ export function toChangeRows(entry: HostInScan): ScanChangeRow[] {
     hostId: host.id,
     ip: host.ip,
     hostnames: hostnames(current.status === "up" ? current : base),
-    lifecycle: entry.lifecycle.state,
+    lifecycle: entry.lifecycle,
     endpoint: null,
     key: null,
   };
@@ -285,5 +285,5 @@ export function toChangeRows(entry: HostInScan): ScanChangeRow[] {
             after: field.after,
           }));
         });
-  return [...hostLevel, ...services].map(rateChange);
+  return [...hostLevel, ...services].map((row) => rateChange(row, hostChange));
 }

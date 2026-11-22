@@ -3,6 +3,7 @@ import type {
   ChangeReason,
   ScanChangeRow,
 } from "@subsurf/contracts/scans/scan-changes.schema";
+import type { ScanChange } from "@subsurf/contracts/scans/scan-results.schema";
 
 /** Remote access, file sharing and databases that should rarely face a network. */
 const RISKY_PORTS: ReadonlySet<number> = new Set([
@@ -27,13 +28,15 @@ const medium = (reason: ChangeReason): Rated => ({ priority: "medium", reason })
 const low = (reason: ChangeReason): Rated => ({ priority: "low", reason });
 
 function hostRow(row: RowFacts): Rated {
-  if (row.change === "new") return row.lifecycle === "unstable" ? medium("returning-host") : high("new-host");
-  if (row.change === "gone") return row.lifecycle === "inactive" ? medium("host-inactive") : low("host-gone");
+  if (row.change === "new") return row.lifecycle.state === "unstable" ? medium("returning-host") : high("new-host");
+  if (row.change === "gone") return row.lifecycle.state === "inactive" ? medium("host-inactive") : low("host-gone");
   return low("no-answer");
 }
 
-function serviceRow(row: RowFacts): Rated {
+function serviceRow(row: RowFacts, hostChange: ScanChange): Rated {
   if (row.change === "gone") return low("service-gone");
+  // A host that keeps coming and going brings back the ports it had: nothing newly exposed.
+  if (hostChange === "new" && row.lifecycle.state === "unstable") return low("returning-host");
   return row.port !== null && RISKY_PORTS.has(row.port) ? high("risky-port") : medium("new-service");
 }
 
@@ -84,9 +87,10 @@ function fieldRow(row: RowFacts): Rated {
   }
 }
 
-/** The priority of one change and why (`ChangeReasonSchema`). */
-export function rateChange(row: RowFacts): ScanChangeRow {
-  const rated = row.field !== null ? fieldRow(row) : row.port === null ? hostRow(row) : serviceRow(row);
+/** The priority of one change and why (`ChangeReasonSchema`); `hostChange` is its host's. */
+export function rateChange(row: RowFacts, hostChange: ScanChange = row.change): ScanChangeRow {
+  const rated =
+    row.field !== null ? fieldRow(row) : row.port === null ? hostRow(row) : serviceRow(row, hostChange);
   return { ...row, ...rated };
 }
 
