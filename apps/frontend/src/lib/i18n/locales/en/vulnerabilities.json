@@ -83,7 +83,7 @@
   },
   "sources": {
     "title": "Vulnerability databases",
-    "description": "Public databases mirrored into SubSurf and matched against the services the scans find.",
+    "description": "Public vulnerability databases matched against your scanned services.",
     "processInactive": "The sync process is not running: syncs and “Sync now” wait until someone starts `pnpm vulns:sync`.",
     "processActive": "The sync process is running.",
     "records": "Records",
@@ -137,7 +137,7 @@
   },
   "mappings": {
     "title": "CPE → package mappings",
-    "description": "Package databases (OSV) describe packages, not the CPE products the scanner reports. A mapping says which package a product is in an ecosystem.",
+    "description": "Mappings link CPE products from the scanner to OSV packages.",
     "add": "Add mapping",
     "empty": "No mappings.",
     "cpe": "CPE vendor:product",

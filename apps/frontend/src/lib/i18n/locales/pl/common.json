@@ -12,7 +12,7 @@
   },
   "dashboard": {
     "title": "Pulpit",
-    "subtitle": "Co zmieniło się w najnowszym skanie i czemu warto przyjrzeć się najpierw.",
+    "subtitle": "Co nowego w ostatnim skanie i od czego zacząć.",
     "noScans": "Żaden skan nie ma jeszcze wyników. Zaimportuj cele i uruchom skan.",
     "newest": "Najnowszy skan z {{date}}, porównany ze skanem z {{base}}.",
     "newestFirst": "Najnowszy skan z {{date}}. To pierwszy skan, więc nie ma go jeszcze z czym porównać.",
@@ -72,7 +72,7 @@
   },
   "targets": {
     "title": "Cele",
-    "subtitle": "Adresy IP, zakresy CIDR i domeny objęte skanowaniem",
+    "subtitle": "Adresy IP, zakresy i domeny do skanowania.",
     "add": "Dodaj cele",
     "never": "Nigdy",
     "emptyFiltered": "Żaden cel nie pasuje do tych filtrów.",
@@ -128,7 +128,7 @@
     },
     "import": {
       "title": "Dodaj cele",
-      "subtitle": "Wpisz adresy IP, zakresy CIDR (do /16), zakresy IP i domeny ręcznie albo wczytaj je z pliku CSV lub JSON.",
+      "subtitle": "Wpisz adresy, zakresy (do /16) i domeny albo wczytaj plik CSV lub JSON.",
       "back": "Wróć do celów",
       "tabs": {
         "form": "Formularz",
@@ -325,7 +325,7 @@
   },
   "scans": {
     "title": "Skany",
-    "subtitle": "Każdy przebieg skanu: otwórz go, aby zobaczyć hosty i zmiany od poprzedniego skanu.",
+    "subtitle": "Wszystkie skany. Otwórz skan, aby zobaczyć hosty i zmiany.",
     "start": "Uruchom skan",
     "columns": {
       "started": "Rozpoczęto",
@@ -350,7 +350,7 @@
       "back": "Wszystkie skany",
       "report": "Raport skanu",
       "title": "Skan z {{date}}",
-      "subtitle": "Co znalazł ten skan. Zmiany liczymy względem poprzedniego skanu, tylko dla adresów, które odpowiedziały w obu.",
+      "subtitle": "Wyniki skanu i zmiany od poprzedniego.",
       "addresses": "Adresy",
       "up": "Aktywne hosty",
       "down": "nieaktywne: {{formatted}}",
@@ -409,7 +409,7 @@
     "import": {
       "open": "Importuj wyniki",
       "title": "Import wyników skanu",
-      "subtitle": "Zamień plik z wynikami w skan. Dołączy do pozostałych skanów w porównaniach, w historii hostów i na pulpicie.",
+      "subtitle": "Wczytaj plik z wynikami jako nowy skan.",
       "hint": "JSON: plik z przycisku Eksportuj JSON na stronie skanu albo jeden lub więcej wyników workera. CSV: kolumny z Eksportuj CSV; wymagana jest tylko kolumna z adresem.",
       "samples": {
         "json": "Pobierz przykładowy JSON",
@@ -492,7 +492,7 @@
     },
     "compare": {
       "title": "Porównanie skanów",
-      "subtitle": "Dwa skany obok siebie: które hosty się pojawiły, zniknęły lub zmieniły, port po porcie. Za nowe lub zniknięte uznajemy tylko adresy, które odpowiedziały w obu skanach.",
+      "subtitle": "Dwa skany obok siebie: co się pojawiło, zniknęło lub zmieniło.",
       "open": "Porównaj",
       "openSideBySide": "Porównaj obok siebie",
       "selected_one": "Wybrano {{count}} z 2 skanów",

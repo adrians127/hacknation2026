@@ -1,7 +1,7 @@
 {
   "list": {
     "title": "Pipelines",
-    "subtitle": "Scan queues built from worker blocks. Every run is a scan; a schedule repeats it within its time window.",
+    "subtitle": "Scans built from worker blocks, run on demand or on a schedule.",
     "new": "New pipeline",
     "empty": "No pipelines yet. Build one from worker blocks.",
     "columns": {
@@ -73,7 +73,7 @@
   "editor": {
     "back": "All pipelines",
     "newTitle": "New pipeline",
-    "subtitle": "Pick the targets, chain worker blocks and decide when the pipeline runs. Each block's parameters become the job the worker gets.",
+    "subtitle": "Pick targets, chain worker blocks and set a schedule.",
     "save": "Save",
     "saving": "Saving…",
     "runNow": "Run now",
@@ -232,7 +232,7 @@
   },
   "workers": {
     "title": "Workers",
-    "subtitle": "The blocks pipelines are built from. Worker managers register the workers they have, with what each one can do, when they ask for work.",
+    "subtitle": "Building blocks for pipelines. They appear on their own when a manager asks for work.",
     "columns": {
       "name": "Name",
       "description": "Description",
@@ -264,7 +264,7 @@
     },
     "managers": {
       "title": "Worker managers",
-      "subtitle": "worker-manager instances seen asking for work. A manager is online while it asked within the last two minutes.",
+      "subtitle": "Managers that asked for work. Online means active in the last 2 minutes.",
       "empty": "No manager has asked for work yet. Start one with pnpm workers:manager:poll.",
       "columns": {
         "manager": "Manager",

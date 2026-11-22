@@ -1,6 +1,6 @@
 {
   "title": "Reports",
-  "subtitle": "Printable reports built from stored scan results. Save any of them as a PDF, or download its data as JSON or CSV.",
+  "subtitle": "Reports from your scan results. Save as PDF or download the data as JSON or CSV.",
   "back": "All reports",
   "actions": {
     "print": "Print / PDF",

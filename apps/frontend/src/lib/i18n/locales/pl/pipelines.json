@@ -1,7 +1,7 @@
 {
   "list": {
     "title": "Potoki",
-    "subtitle": "Kolejki skanów złożone z bloków workerów. Każde uruchomienie to skan; harmonogram powtarza je w wyznaczonym oknie czasowym.",
+    "subtitle": "Skany złożone z bloków workerów, uruchamiane ręcznie lub według harmonogramu.",
     "new": "Nowy potok",
     "empty": "Nie ma jeszcze potoków. Zbuduj pierwszy z bloków workerów.",
     "columns": {
@@ -85,7 +85,7 @@
   "editor": {
     "back": "Wszystkie potoki",
     "newTitle": "Nowy potok",
-    "subtitle": "Wybierz cele, połącz bloki workerów i ustal, kiedy potok ma działać. Parametry każdego bloku trafiają do zadania, które dostaje worker.",
+    "subtitle": "Wybierz cele, ułóż bloki workerów i ustaw harmonogram.",
     "save": "Zapisz",
     "saving": "Zapisywanie…",
     "runNow": "Uruchom teraz",
@@ -256,7 +256,7 @@
   },
   "workers": {
     "title": "Workery",
-    "subtitle": "Bloki, z których buduje się potoki. Menedżery workerów rejestrują posiadane workery wraz z ich możliwościami, gdy proszą o pracę.",
+    "subtitle": "Bloki do budowania potoków. Pojawiają się same, gdy menedżer zgłosi się po pracę.",
     "columns": {
       "name": "Nazwa",
       "description": "Opis",
@@ -288,7 +288,7 @@
     },
     "managers": {
       "title": "Menedżery workerów",
-      "subtitle": "Instancje worker-manager, które prosiły o pracę. Menedżer jest online, jeśli prosił w ciągu ostatnich dwóch minut.",
+      "subtitle": "Menedżery, które zgłosiły się po pracę. Online to aktywne w ciągu ostatnich 2 minut.",
       "empty": "Żaden menedżer nie prosił jeszcze o pracę. Uruchom go poleceniem pnpm workers:manager:poll.",
       "columns": {
         "manager": "Menedżer",

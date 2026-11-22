@@ -1,7 +1,7 @@
 {
   "users": {
     "title": "Użytkownicy",
-    "description": "Konta i ich role. Użytkowników się nie usuwa, tylko dezaktywuje.",
+    "description": "Konta i role. Użytkowników można dezaktywować, ale nie usuwać.",
     "create": "Nowy użytkownik",
     "empty": "Nie ma jeszcze użytkowników.",
     "you": "Ty",
@@ -67,7 +67,7 @@
   },
   "roles": {
     "title": "Role",
-    "description": "Cztery role systemowe wynikają z zadania i nie można ich zmieniać. Dla innego zestawu uprawnień utwórz własną rolę.",
+    "description": "Role systemowe są stałe. Potrzebujesz innych uprawnień? Utwórz własną rolę.",
     "create": "Nowa rola",
     "system": "Systemowa",
     "custom": "Własna",
