@@ -14,6 +14,7 @@ import { buildWorkerResult } from "@subsurf/contracts/workers/worker-result.fixt
 import { buildApiDocs } from "~backend/lib/api-docs";
 import { prisma } from "~backend/lib/prisma";
 import { createRuleRow, definition } from "~backend/modules/rules/test/rules";
+import { createSignatureRow, signatureBody } from "~backend/modules/signatures/test/signatures";
 import { serviceWithMatch } from "~backend/modules/vulnerabilities/test/matches";
 import { createUser, signInAs } from "~backend/test/auth";
 import { startTestServer, type TestServer } from "~backend/test/http";
@@ -124,6 +125,7 @@ const targetPath = async () => {
   return `/v1/targets/${target.id}`;
 };
 const rulePath = async () => `/v1/rules/${(await createRuleRow()).id}`;
+const signaturePath = async () => `/v1/signatures/${(await createSignatureRow()).id}`;
 const importTargets = (startScan: boolean) => async () => ({
   entries: [{ value: "192.0.2.10" }],
   startScan,
@@ -403,6 +405,40 @@ const ENDPOINTS: Endpoint[] = [
     body: async () => ({ enabled: false }),
   },
   { route: "DELETE /rules/{id}", requires: ["rules:delete"], path: rulePath },
+
+  // signatures
+  { route: "GET /signatures", requires: ["signatures:read"], path: async () => "/v1/signatures" },
+  {
+    route: "POST /signatures",
+    requires: ["signatures:create"],
+    path: async () => "/v1/signatures",
+    body: async () => signatureBody(),
+  },
+  { route: "GET /signatures/{id}", requires: ["signatures:read"], path: signaturePath },
+  {
+    route: "PATCH /signatures/{id}",
+    requires: ["signatures:update"],
+    path: signaturePath,
+    body: async () => ({ enabled: false }),
+  },
+  { route: "DELETE /signatures/{id}", requires: ["signatures:delete"], path: signaturePath },
+  {
+    route: "POST /signatures/preview",
+    requires: ["signatures:read"],
+    path: async () => "/v1/signatures/preview",
+    body: async () => ({ definition: signatureBody().definition }),
+  },
+  {
+    route: "GET /signatures/export",
+    requires: ["signatures:read"],
+    path: async () => "/v1/signatures/export",
+  },
+  {
+    route: "POST /signatures/import",
+    requires: ["signatures:create"],
+    path: async () => "/v1/signatures/import",
+    body: async () => ({ format: "subsurf.signatures", version: 1, signatures: [signatureBody()] }),
+  },
 
   // defectdojo
   {

@@ -30,6 +30,7 @@ model Service {
   observations         PortObservation[]
   vulnerabilityMatches VulnerabilityMatch[]
   vulnerabilityTriage  ServiceVulnerabilityTriage[]
+  signatureMatches     SignatureMatch[]
   triageRule           Rule?                        @relation(fields: [triageRuleId], references: [id], onDelete: SetNull)
 
   /// Also serves lookups by hostId.

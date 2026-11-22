@@ -12,6 +12,7 @@ export const PERMISSION_RESOURCES = [
   "workers",
   "defectdojo",
   "rules",
+  "signatures",
 ] as const;
 // `run` starts, stops and schedules scans, and starts vulnerability database syncs;
 // `import`/`export` exchange data with an external system.
@@ -71,6 +72,10 @@ export const PERMISSIONS = [
   "rules:create",
   "rules:update",
   "rules:delete",
+  "signatures:read",
+  "signatures:create",
+  "signatures:update",
+  "signatures:delete",
 ] as const satisfies readonly `${PermissionResource}:${PermissionAction}`[];
 
 export const PermissionSchema = z.enum(PERMISSIONS);
@@ -94,6 +99,7 @@ const READ = [
   "workers:read",
   "defectdojo:read",
   "rules:read",
+  "signatures:read",
 ] as const satisfies readonly Permission[];
 
 // Mapping rules: apps/backend/README.md ("Adding a permission"). Users and roles stay admin-only,
@@ -122,6 +128,9 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRoleKey, readonly Permission[
     "rules:create",
     "rules:update",
     "rules:delete",
+    "signatures:create",
+    "signatures:update",
+    "signatures:delete",
   ],
   analyst: [
     ...READ,
@@ -131,6 +140,7 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRoleKey, readonly Permission[
     "vulnerabilities:update",
     "pipelines:update",
     "rules:update",
+    "signatures:update",
   ],
   viewer: READ,
 };

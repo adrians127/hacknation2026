@@ -865,6 +865,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/signatures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the detection signatures
+         * @description Requires `signatures:read`. Built-in and custom signatures with how many hosts and services each matched in the newest scan with results, and the probe paths the enabled ones make the scanner request.
+         */
+        get: operations["listSignatures"];
+        put?: never;
+        /**
+         * Create a signature
+         * @description Requires `signatures:create`. Regular expressions use RE2 syntax (no lookarounds or backreferences); an invalid one is a 400 with the condition's path. The newest scan with results is evaluated again before the response; older scans follow in the background (`evaluation.pendingScans` on the list).
+         */
+        post: operations["createSignature"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/signatures/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One signature
+         * @description Requires `signatures:read`.
+         */
+        get: operations["getSignature"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a custom signature
+         * @description Requires `signatures:delete`. Its matches go from every scan. Built-in signatures cannot be deleted, only switched off.
+         */
+        delete: operations["deleteSignature"];
+        options?: never;
+        head?: never;
+        /**
+         * Change, enable or disable a signature
+         * @description Requires `signatures:update`. A built-in signature takes only `enabled`. Disabling removes its matches from every scan at once. The newest scan with results is evaluated again before the response; older scans follow in the background (`evaluation.pendingScans` on the list).
+         */
+        patch: operations["updateSignature"];
+        trace?: never;
+    };
+    "/signatures/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What a signature would match
+         * @description Requires `signatures:read`. Evaluates a definition on one scan without saving anything: how many services and hosts match, examples with evidence, and probe paths the scan did not request (they can only match after the next scan).
+         */
+        post: operations["previewSignature"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/signatures/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the signatures as JSON
+         * @description Requires `signatures:read`. The custom signatures (and with `builtIn=true` the built-ins, by key) in the format `POST /signatures/import` reads; see docs/signature-format.md.
+         */
+        get: operations["exportSignatures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/signatures/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import signatures from JSON
+         * @description Requires `signatures:create`. All or nothing. Custom signatures are created; one whose name is taken is skipped or, with `conflict=replace`, overwritten. An entry with a built-in's `key` only switches that built-in on or off. The newest scan with results is evaluated again before the response; older scans follow in the background (`evaluation.pendingScans` on the list).
+         */
+        post: operations["importSignatures"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/targets": {
         parameters: {
             query?: never;
@@ -1323,7 +1435,7 @@ export interface components {
                 message: string;
                 status: number;
                 /** @enum {string} */
-                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN" | "PACKAGE_MAPPING_EXISTS" | "SOURCE_DISABLED" | "BASE_SCAN_NOT_OLDER" | "PIPELINE_NAME_TAKEN" | "PIPELINE_RUN_ACTIVE" | "NO_SCANNABLE_TARGETS" | "WORKER_IN_USE" | "PORTS_NOT_ALLOWED" | "SCAN_NOT_STOPPABLE" | "DEFECTDOJO_NOT_CONFIGURED" | "DEFECTDOJO_UNAVAILABLE" | "DEFECTDOJO_SYNC_RUNNING" | "DEFECTDOJO_PUSH_RUNNING" | "NOTHING_TO_PUSH" | "SAME_SCAN" | "SCAN_IMPORT_INVALID" | "SCAN_ALREADY_IMPORTED" | "SCAN_IMPORT_RUNNING" | "SCAN_RUNNING";
+                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN" | "PACKAGE_MAPPING_EXISTS" | "SOURCE_DISABLED" | "BASE_SCAN_NOT_OLDER" | "PIPELINE_NAME_TAKEN" | "PIPELINE_RUN_ACTIVE" | "NO_SCANNABLE_TARGETS" | "WORKER_IN_USE" | "PORTS_NOT_ALLOWED" | "SCAN_NOT_STOPPABLE" | "DEFECTDOJO_NOT_CONFIGURED" | "DEFECTDOJO_UNAVAILABLE" | "DEFECTDOJO_SYNC_RUNNING" | "DEFECTDOJO_PUSH_RUNNING" | "NOTHING_TO_PUSH" | "SAME_SCAN" | "SCAN_IMPORT_INVALID" | "SCAN_ALREADY_IMPORTED" | "SCAN_IMPORT_RUNNING" | "SCAN_RUNNING" | "SIGNATURE_BUILT_IN" | "SIGNATURE_NAME_TAKEN" | "SIGNATURE_PROBE_LIMIT" | "SIGNATURE_LIMIT";
                 details?: unknown;
             };
         };
@@ -1340,7 +1452,7 @@ export interface components {
                 key: "admin" | "editor" | "analyst" | "viewer" | null;
                 name: string;
             };
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete" | "signatures:read" | "signatures:create" | "signatures:update" | "signatures:delete")[];
             mustChangePassword: boolean;
         };
         HealthResponse: {
@@ -1552,7 +1664,7 @@ export interface components {
             name: string;
             description: string;
             isSystem: boolean;
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete" | "signatures:read" | "signatures:create" | "signatures:update" | "signatures:delete")[];
             userCount: number;
             /** Format: date-time */
             createdAt: string;
@@ -1671,6 +1783,252 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        Signature: {
+            /** Format: uuid */
+            id: string;
+            key: string | null;
+            builtIn: boolean;
+            name: string;
+            description: string;
+            /** @enum {string} */
+            category: "cms" | "web-server" | "language" | "framework" | "application" | "device" | "service" | "admin-panel" | "staging" | "default-page" | "interesting-header" | "interesting-cookie" | "other";
+            product: string | null;
+            /** @enum {string|null} */
+            severity: "info" | "low" | "medium" | "high" | null;
+            /** @enum {string} */
+            confidence: "high" | "medium" | "low";
+            enabled: boolean;
+            definition: {
+                /** @enum {string} */
+                match: "all" | "any";
+                conditions: ({
+                    /** @enum {string} */
+                    target: "header";
+                    name: {
+                        /** @enum {string} */
+                        op: "equals" | "contains" | "prefix" | "regex";
+                        value: string;
+                        caseSensitive?: boolean;
+                    };
+                    value?: {
+                        /** @enum {string} */
+                        op: "equals" | "contains" | "prefix" | "regex";
+                        value: string;
+                        caseSensitive?: boolean;
+                    };
+                    version?: string;
+                } | {
+                    /** @enum {string} */
+                    target: "cookie";
+                    name: {
+                        /** @enum {string} */
+                        op: "equals" | "contains" | "prefix" | "regex";
+                        value: string;
+                        caseSensitive?: boolean;
+                    };
+                } | {
+                    /** @enum {string} */
+                    target: "title";
+                    value: {
+                        /** @enum {string} */
+                        op: "equals" | "contains" | "prefix" | "regex";
+                        value: string;
+                        caseSensitive?: boolean;
+                    };
+                    version?: string;
+                } | {
+                    /** @enum {string} */
+                    target: "body";
+                    value: {
+                        /** @enum {string} */
+                        op: "equals" | "contains" | "prefix" | "regex";
+                        value: string;
+                        caseSensitive?: boolean;
+                    };
+                    version?: string;
+                } | {
+                    /** @enum {string} */
+                    target: "favicon";
+                    mmh3: number[];
+                } | {
+                    /** @enum {string} */
+                    target: "probe";
+                    path: string;
+                    status: number[];
+                    title?: {
+                        /** @enum {string} */
+                        op: "equals" | "contains" | "prefix" | "regex";
+                        value: string;
+                        caseSensitive?: boolean;
+                    };
+                    location?: {
+                        /** @enum {string} */
+                        op: "equals" | "contains" | "prefix" | "regex";
+                        value: string;
+                        caseSensitive?: boolean;
+                    };
+                    version?: string;
+                } | {
+                    /** @enum {string} */
+                    target: "banner";
+                    value: {
+                        /** @enum {string} */
+                        op: "equals" | "contains" | "prefix" | "regex";
+                        value: string;
+                        caseSensitive?: boolean;
+                    };
+                    version?: string;
+                } | {
+                    /** @enum {string} */
+                    target: "service";
+                    /** @enum {string} */
+                    field: "name" | "product" | "version" | "extraInfo" | "cpe";
+                    value: {
+                        /** @enum {string} */
+                        op: "equals" | "contains" | "prefix" | "regex";
+                        value: string;
+                        caseSensitive?: boolean;
+                    };
+                    version?: string;
+                } | {
+                    /** @enum {string} */
+                    target: "port";
+                    ports: number[];
+                })[];
+            };
+            hits: {
+                hosts: number;
+                services: number;
+            } | null;
+            createdBy: {
+                /** Format: uuid */
+                id: string;
+                displayName: string;
+            } | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SignatureExportDocument: {
+            /** @enum {string} */
+            format: "subsurf.signatures";
+            /** @enum {number} */
+            version: 1;
+            /** Format: date-time */
+            exportedAt?: string;
+            signatures: {
+                key?: string | null;
+                name: string;
+                description?: string;
+                /** @enum {string} */
+                category: "cms" | "web-server" | "language" | "framework" | "application" | "device" | "service" | "admin-panel" | "staging" | "default-page" | "interesting-header" | "interesting-cookie" | "other";
+                product?: string | null;
+                /** @enum {string|null} */
+                severity?: "info" | "low" | "medium" | "high" | null;
+                /** @enum {string} */
+                confidence: "high" | "medium" | "low";
+                enabled?: boolean;
+                definition: {
+                    /** @enum {string} */
+                    match: "all" | "any";
+                    conditions: ({
+                        /** @enum {string} */
+                        target: "header";
+                        name: {
+                            /** @enum {string} */
+                            op: "equals" | "contains" | "prefix" | "regex";
+                            value: string;
+                            caseSensitive?: boolean;
+                        };
+                        value?: {
+                            /** @enum {string} */
+                            op: "equals" | "contains" | "prefix" | "regex";
+                            value: string;
+                            caseSensitive?: boolean;
+                        };
+                        version?: string;
+                    } | {
+                        /** @enum {string} */
+                        target: "cookie";
+                        name: {
+                            /** @enum {string} */
+                            op: "equals" | "contains" | "prefix" | "regex";
+                            value: string;
+                            caseSensitive?: boolean;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        target: "title";
+                        value: {
+                            /** @enum {string} */
+                            op: "equals" | "contains" | "prefix" | "regex";
+                            value: string;
+                            caseSensitive?: boolean;
+                        };
+                        version?: string;
+                    } | {
+                        /** @enum {string} */
+                        target: "body";
+                        value: {
+                            /** @enum {string} */
+                            op: "equals" | "contains" | "prefix" | "regex";
+                            value: string;
+                            caseSensitive?: boolean;
+                        };
+                        version?: string;
+                    } | {
+                        /** @enum {string} */
+                        target: "favicon";
+                        mmh3: number[];
+                    } | {
+                        /** @enum {string} */
+                        target: "probe";
+                        path: string;
+                        status: number[];
+                        title?: {
+                            /** @enum {string} */
+                            op: "equals" | "contains" | "prefix" | "regex";
+                            value: string;
+                            caseSensitive?: boolean;
+                        };
+                        location?: {
+                            /** @enum {string} */
+                            op: "equals" | "contains" | "prefix" | "regex";
+                            value: string;
+                            caseSensitive?: boolean;
+                        };
+                        version?: string;
+                    } | {
+                        /** @enum {string} */
+                        target: "banner";
+                        value: {
+                            /** @enum {string} */
+                            op: "equals" | "contains" | "prefix" | "regex";
+                            value: string;
+                            caseSensitive?: boolean;
+                        };
+                        version?: string;
+                    } | {
+                        /** @enum {string} */
+                        target: "service";
+                        /** @enum {string} */
+                        field: "name" | "product" | "version" | "extraInfo" | "cpe";
+                        value: {
+                            /** @enum {string} */
+                            op: "equals" | "contains" | "prefix" | "regex";
+                            value: string;
+                            caseSensitive?: boolean;
+                        };
+                        version?: string;
+                    } | {
+                        /** @enum {string} */
+                        target: "port";
+                        ports: number[];
+                    })[];
+                };
+            }[];
         };
         ImportTargetsResponse: {
             received: number;
@@ -5192,7 +5550,7 @@ export interface operations {
                             name: string;
                             description: string;
                             isSystem: boolean;
-                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
+                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete" | "signatures:read" | "signatures:create" | "signatures:update" | "signatures:delete")[];
                             userCount: number;
                             /** Format: date-time */
                             createdAt: string;
@@ -5234,7 +5592,7 @@ export interface operations {
                 "application/json": {
                     name: string;
                     description: string;
-                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
+                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete" | "signatures:read" | "signatures:create" | "signatures:update" | "signatures:delete")[];
                 };
             };
         };
@@ -5311,7 +5669,7 @@ export interface operations {
                         name: string;
                         description: string;
                         isSystem: boolean;
-                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
+                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete" | "signatures:read" | "signatures:create" | "signatures:update" | "signatures:delete")[];
                         userCount: number;
                         /** Format: date-time */
                         createdAt: string;
@@ -5429,7 +5787,7 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     description?: string;
-                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
+                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete" | "signatures:read" | "signatures:create" | "signatures:update" | "signatures:delete")[];
                 };
             };
         };
@@ -7928,6 +8286,962 @@ export interface operations {
                 };
             };
             /** @description The scan has already ended (`SCAN_NOT_STOPPABLE`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listSignatures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The signatures */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            key: string | null;
+                            builtIn: boolean;
+                            name: string;
+                            description: string;
+                            /** @enum {string} */
+                            category: "cms" | "web-server" | "language" | "framework" | "application" | "device" | "service" | "admin-panel" | "staging" | "default-page" | "interesting-header" | "interesting-cookie" | "other";
+                            product: string | null;
+                            /** @enum {string|null} */
+                            severity: "info" | "low" | "medium" | "high" | null;
+                            /** @enum {string} */
+                            confidence: "high" | "medium" | "low";
+                            enabled: boolean;
+                            definition: {
+                                /** @enum {string} */
+                                match: "all" | "any";
+                                conditions: ({
+                                    /** @enum {string} */
+                                    target: "header";
+                                    name: {
+                                        /** @enum {string} */
+                                        op: "equals" | "contains" | "prefix" | "regex";
+                                        value: string;
+                                        caseSensitive?: boolean;
+                                    };
+                                    value?: {
+                                        /** @enum {string} */
+                                        op: "equals" | "contains" | "prefix" | "regex";
+                                        value: string;
+                                        caseSensitive?: boolean;
+                                    };
+                                    version?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    target: "cookie";
+                                    name: {
+                                        /** @enum {string} */
+                                        op: "equals" | "contains" | "prefix" | "regex";
+                                        value: string;
+                                        caseSensitive?: boolean;
+                                    };
+                                } | {
+                                    /** @enum {string} */
+                                    target: "title";
+                                    value: {
+                                        /** @enum {string} */
+                                        op: "equals" | "contains" | "prefix" | "regex";
+                                        value: string;
+                                        caseSensitive?: boolean;
+                                    };
+                                    version?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    target: "body";
+                                    value: {
+                                        /** @enum {string} */
+                                        op: "equals" | "contains" | "prefix" | "regex";
+                                        value: string;
+                                        caseSensitive?: boolean;
+                                    };
+                                    version?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    target: "favicon";
+                                    mmh3: number[];
+                                } | {
+                                    /** @enum {string} */
+                                    target: "probe";
+                                    path: string;
+                                    status: number[];
+                                    title?: {
+                                        /** @enum {string} */
+                                        op: "equals" | "contains" | "prefix" | "regex";
+                                        value: string;
+                                        caseSensitive?: boolean;
+                                    };
+                                    location?: {
+                                        /** @enum {string} */
+                                        op: "equals" | "contains" | "prefix" | "regex";
+                                        value: string;
+                                        caseSensitive?: boolean;
+                                    };
+                                    version?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    target: "banner";
+                                    value: {
+                                        /** @enum {string} */
+                                        op: "equals" | "contains" | "prefix" | "regex";
+                                        value: string;
+                                        caseSensitive?: boolean;
+                                    };
+                                    version?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    target: "service";
+                                    /** @enum {string} */
+                                    field: "name" | "product" | "version" | "extraInfo" | "cpe";
+                                    value: {
+                                        /** @enum {string} */
+                                        op: "equals" | "contains" | "prefix" | "regex";
+                                        value: string;
+                                        caseSensitive?: boolean;
+                                    };
+                                    version?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    target: "port";
+                                    ports: number[];
+                                })[];
+                            };
+                            hits: {
+                                hosts: number;
+                                services: number;
+                            } | null;
+                            createdBy: {
+                                /** Format: uuid */
+                                id: string;
+                                displayName: string;
+                            } | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                        probePaths: string[];
+                        evaluation: {
+                            scan: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: date-time */
+                                startedAt: string | null;
+                            } | null;
+                            pendingScans: number;
+                        };
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string;
+                    /** @enum {string} */
+                    category: "cms" | "web-server" | "language" | "framework" | "application" | "device" | "service" | "admin-panel" | "staging" | "default-page" | "interesting-header" | "interesting-cookie" | "other";
+                    product?: string | null;
+                    /** @enum {string|null} */
+                    severity?: "info" | "low" | "medium" | "high" | null;
+                    /** @enum {string} */
+                    confidence: "high" | "medium" | "low";
+                    enabled?: boolean;
+                    definition: {
+                        /** @enum {string} */
+                        match: "all" | "any";
+                        conditions: ({
+                            /** @enum {string} */
+                            target: "header";
+                            name: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            value?: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "cookie";
+                            name: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                        } | {
+                            /** @enum {string} */
+                            target: "title";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "body";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "favicon";
+                            mmh3: number[];
+                        } | {
+                            /** @enum {string} */
+                            target: "probe";
+                            path: string;
+                            status: number[];
+                            title?: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            location?: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "banner";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "service";
+                            /** @enum {string} */
+                            field: "name" | "product" | "version" | "extraInfo" | "cpe";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "port";
+                            ports: number[];
+                        })[];
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description The signature */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Signature"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A built-in signature can only be switched on or off (`SIGNATURE_BUILT_IN`), the name is taken (`SIGNATURE_NAME_TAKEN`), the enabled signatures would need too many probe paths (`SIGNATURE_PROBE_LIMIT`) or there are too many signatures (`SIGNATURE_LIMIT`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The signature */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Signature"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A built-in signature can only be switched on or off (`SIGNATURE_BUILT_IN`), the name is taken (`SIGNATURE_NAME_TAKEN`), the enabled signatures would need too many probe paths (`SIGNATURE_PROBE_LIMIT`) or there are too many signatures (`SIGNATURE_LIMIT`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    /** @enum {string} */
+                    category?: "cms" | "web-server" | "language" | "framework" | "application" | "device" | "service" | "admin-panel" | "staging" | "default-page" | "interesting-header" | "interesting-cookie" | "other";
+                    product?: string | null;
+                    /** @enum {string|null} */
+                    severity?: "info" | "low" | "medium" | "high" | null;
+                    /** @enum {string} */
+                    confidence?: "high" | "medium" | "low";
+                    enabled?: boolean;
+                    definition?: {
+                        /** @enum {string} */
+                        match: "all" | "any";
+                        conditions: ({
+                            /** @enum {string} */
+                            target: "header";
+                            name: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            value?: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "cookie";
+                            name: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                        } | {
+                            /** @enum {string} */
+                            target: "title";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "body";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "favicon";
+                            mmh3: number[];
+                        } | {
+                            /** @enum {string} */
+                            target: "probe";
+                            path: string;
+                            status: number[];
+                            title?: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            location?: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "banner";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "service";
+                            /** @enum {string} */
+                            field: "name" | "product" | "version" | "extraInfo" | "cpe";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "port";
+                            ports: number[];
+                        })[];
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description The signature */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Signature"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A built-in signature can only be switched on or off (`SIGNATURE_BUILT_IN`), the name is taken (`SIGNATURE_NAME_TAKEN`), the enabled signatures would need too many probe paths (`SIGNATURE_PROBE_LIMIT`) or there are too many signatures (`SIGNATURE_LIMIT`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    previewSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    definition: {
+                        /** @enum {string} */
+                        match: "all" | "any";
+                        conditions: ({
+                            /** @enum {string} */
+                            target: "header";
+                            name: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            value?: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "cookie";
+                            name: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                        } | {
+                            /** @enum {string} */
+                            target: "title";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "body";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "favicon";
+                            mmh3: number[];
+                        } | {
+                            /** @enum {string} */
+                            target: "probe";
+                            path: string;
+                            status: number[];
+                            title?: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            location?: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "banner";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "service";
+                            /** @enum {string} */
+                            field: "name" | "product" | "version" | "extraInfo" | "cpe";
+                            value: {
+                                /** @enum {string} */
+                                op: "equals" | "contains" | "prefix" | "regex";
+                                value: string;
+                                caseSensitive?: boolean;
+                            };
+                            version?: string;
+                        } | {
+                            /** @enum {string} */
+                            target: "port";
+                            ports: number[];
+                        })[];
+                    };
+                    /** @enum {string} */
+                    confidence?: "high" | "medium" | "low";
+                    /** Format: uuid */
+                    scanId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        scan: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                        } | null;
+                        services: number;
+                        hosts: number;
+                        samples: {
+                            /** Format: uuid */
+                            hostId: string;
+                            /** Format: uuid */
+                            serviceId: string;
+                            /** Format: ip */
+                            ip: string;
+                            port: number;
+                            /** @enum {string} */
+                            confidence: "high" | "medium" | "low";
+                            version: string | null;
+                            evidence: {
+                                /** @enum {string} */
+                                target: "header" | "cookie" | "title" | "body" | "favicon" | "probe" | "banner" | "service" | "port";
+                                url: string | null;
+                                key: string | null;
+                                value: string;
+                            }[];
+                        }[];
+                        unprobedPaths: string[];
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    exportSignatures: {
+        parameters: {
+            query?: {
+                builtIn?: "true" | "false";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The export file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignatureExportDocument"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    importSignatures: {
+        parameters: {
+            query?: {
+                conflict?: "skip" | "replace";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SignatureExportDocument"];
+            };
+        };
+        responses: {
+            /** @description What the import did */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        created: number;
+                        replaced: number;
+                        skipped: number;
+                        builtIn: number;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A built-in signature can only be switched on or off (`SIGNATURE_BUILT_IN`), the name is taken (`SIGNATURE_NAME_TAKEN`), the enabled signatures would need too many probe paths (`SIGNATURE_PROBE_LIMIT`) or there are too many signatures (`SIGNATURE_LIMIT`) */
             409: {
                 headers: {
                     [name: string]: unknown;

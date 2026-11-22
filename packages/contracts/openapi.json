@@ -104,7 +104,11 @@
                   "SCAN_IMPORT_INVALID",
                   "SCAN_ALREADY_IMPORTED",
                   "SCAN_IMPORT_RUNNING",
-                  "SCAN_RUNNING"
+                  "SCAN_RUNNING",
+                  "SIGNATURE_BUILT_IN",
+                  "SIGNATURE_NAME_TAKEN",
+                  "SIGNATURE_PROBE_LIMIT",
+                  "SIGNATURE_LIMIT"
                 ]
               },
               "details": {}
@@ -204,7 +208,11 @@
                 "rules:read",
                 "rules:create",
                 "rules:update",
-                "rules:delete"
+                "rules:delete",
+                "signatures:read",
+                "signatures:create",
+                "signatures:update",
+                "signatures:delete"
               ]
             }
           },
@@ -1230,7 +1238,11 @@
                 "rules:read",
                 "rules:create",
                 "rules:update",
-                "rules:delete"
+                "rules:delete",
+                "signatures:read",
+                "signatures:create",
+                "signatures:update",
+                "signatures:delete"
               ]
             }
           },
@@ -1985,6 +1997,1193 @@
           "createdBy",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "Signature": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "builtIn": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "cms",
+              "web-server",
+              "language",
+              "framework",
+              "application",
+              "device",
+              "service",
+              "admin-panel",
+              "staging",
+              "default-page",
+              "interesting-header",
+              "interesting-cookie",
+              "other"
+            ]
+          },
+          "product": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "info",
+              "low",
+              "medium",
+              "high",
+              null
+            ]
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "definition": {
+            "type": "object",
+            "properties": {
+              "match": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "any"
+                ]
+              },
+              "conditions": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "enum": [
+                            "header"
+                          ]
+                        },
+                        "name": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "enum": [
+                                "equals",
+                                "contains",
+                                "prefix",
+                                "regex"
+                              ]
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "caseSensitive": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "op",
+                            "value"
+                          ]
+                        },
+                        "value": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "enum": [
+                                "equals",
+                                "contains",
+                                "prefix",
+                                "regex"
+                              ]
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "caseSensitive": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "op",
+                            "value"
+                          ]
+                        },
+                        "version": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "name"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "enum": [
+                            "cookie"
+                          ]
+                        },
+                        "name": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "enum": [
+                                "equals",
+                                "contains",
+                                "prefix",
+                                "regex"
+                              ]
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "caseSensitive": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "op",
+                            "value"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "name"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "enum": [
+                            "title"
+                          ]
+                        },
+                        "value": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "enum": [
+                                "equals",
+                                "contains",
+                                "prefix",
+                                "regex"
+                              ]
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "caseSensitive": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "op",
+                            "value"
+                          ]
+                        },
+                        "version": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "value"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "enum": [
+                            "body"
+                          ]
+                        },
+                        "value": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "enum": [
+                                "equals",
+                                "contains",
+                                "prefix",
+                                "regex"
+                              ]
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "caseSensitive": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "op",
+                            "value"
+                          ]
+                        },
+                        "version": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "value"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "enum": [
+                            "favicon"
+                          ]
+                        },
+                        "mmh3": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": -2147483648,
+                            "maximum": 2147483647
+                          },
+                          "minItems": 1,
+                          "maxItems": 50
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "mmh3"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "enum": [
+                            "probe"
+                          ]
+                        },
+                        "path": {
+                          "type": "string",
+                          "maxLength": 200,
+                          "pattern": "^\\/(?!\\/)[!-~]*$"
+                        },
+                        "status": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 100,
+                            "maximum": 599
+                          },
+                          "minItems": 1,
+                          "maxItems": 10
+                        },
+                        "title": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "enum": [
+                                "equals",
+                                "contains",
+                                "prefix",
+                                "regex"
+                              ]
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "caseSensitive": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "op",
+                            "value"
+                          ]
+                        },
+                        "location": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "enum": [
+                                "equals",
+                                "contains",
+                                "prefix",
+                                "regex"
+                              ]
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "caseSensitive": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "op",
+                            "value"
+                          ]
+                        },
+                        "version": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "path",
+                        "status"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "enum": [
+                            "banner"
+                          ]
+                        },
+                        "value": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "enum": [
+                                "equals",
+                                "contains",
+                                "prefix",
+                                "regex"
+                              ]
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "caseSensitive": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "op",
+                            "value"
+                          ]
+                        },
+                        "version": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "value"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "enum": [
+                            "service"
+                          ]
+                        },
+                        "field": {
+                          "type": "string",
+                          "enum": [
+                            "name",
+                            "product",
+                            "version",
+                            "extraInfo",
+                            "cpe"
+                          ]
+                        },
+                        "value": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "enum": [
+                                "equals",
+                                "contains",
+                                "prefix",
+                                "regex"
+                              ]
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "caseSensitive": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "op",
+                            "value"
+                          ]
+                        },
+                        "version": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "field",
+                        "value"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "enum": [
+                            "port"
+                          ]
+                        },
+                        "ports": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 65535
+                          },
+                          "minItems": 1,
+                          "maxItems": 100
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "ports"
+                      ]
+                    }
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 10
+              }
+            },
+            "required": [
+              "match",
+              "conditions"
+            ]
+          },
+          "hits": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "hosts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "services": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "hosts",
+              "services"
+            ]
+          },
+          "createdBy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "displayName"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "builtIn",
+          "name",
+          "description",
+          "category",
+          "product",
+          "severity",
+          "confidence",
+          "enabled",
+          "definition",
+          "hits",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "SignatureExportDocument": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "subsurf.signatures"
+            ]
+          },
+          "version": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "exportedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "signatures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 100
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "pattern": "\\S"
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "cms",
+                    "web-server",
+                    "language",
+                    "framework",
+                    "application",
+                    "device",
+                    "service",
+                    "admin-panel",
+                    "staging",
+                    "default-page",
+                    "interesting-header",
+                    "interesting-cookie",
+                    "other"
+                  ]
+                },
+                "product": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "pattern": "\\S"
+                },
+                "severity": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "info",
+                    "low",
+                    "medium",
+                    "high",
+                    null
+                  ]
+                },
+                "confidence": {
+                  "type": "string",
+                  "enum": [
+                    "high",
+                    "medium",
+                    "low"
+                  ]
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "definition": {
+                  "type": "object",
+                  "properties": {
+                    "match": {
+                      "type": "string",
+                      "enum": [
+                        "all",
+                        "any"
+                      ]
+                    },
+                    "conditions": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "header"
+                                ]
+                              },
+                              "name": {
+                                "type": "object",
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                    "enum": [
+                                      "equals",
+                                      "contains",
+                                      "prefix",
+                                      "regex"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  "caseSensitive": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "op",
+                                  "value"
+                                ]
+                              },
+                              "value": {
+                                "type": "object",
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                    "enum": [
+                                      "equals",
+                                      "contains",
+                                      "prefix",
+                                      "regex"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  "caseSensitive": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "op",
+                                  "value"
+                                ]
+                              },
+                              "version": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "name"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "cookie"
+                                ]
+                              },
+                              "name": {
+                                "type": "object",
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                    "enum": [
+                                      "equals",
+                                      "contains",
+                                      "prefix",
+                                      "regex"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  "caseSensitive": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "op",
+                                  "value"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "name"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "title"
+                                ]
+                              },
+                              "value": {
+                                "type": "object",
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                    "enum": [
+                                      "equals",
+                                      "contains",
+                                      "prefix",
+                                      "regex"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  "caseSensitive": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "op",
+                                  "value"
+                                ]
+                              },
+                              "version": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "value"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "body"
+                                ]
+                              },
+                              "value": {
+                                "type": "object",
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                    "enum": [
+                                      "equals",
+                                      "contains",
+                                      "prefix",
+                                      "regex"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  "caseSensitive": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "op",
+                                  "value"
+                                ]
+                              },
+                              "version": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "value"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "favicon"
+                                ]
+                              },
+                              "mmh3": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": -2147483648,
+                                  "maximum": 2147483647
+                                },
+                                "minItems": 1,
+                                "maxItems": 50
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "mmh3"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "probe"
+                                ]
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 200,
+                                "pattern": "^\\/(?!\\/)[!-~]*$"
+                              },
+                              "status": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 100,
+                                  "maximum": 599
+                                },
+                                "minItems": 1,
+                                "maxItems": 10
+                              },
+                              "title": {
+                                "type": "object",
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                    "enum": [
+                                      "equals",
+                                      "contains",
+                                      "prefix",
+                                      "regex"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  "caseSensitive": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "op",
+                                  "value"
+                                ]
+                              },
+                              "location": {
+                                "type": "object",
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                    "enum": [
+                                      "equals",
+                                      "contains",
+                                      "prefix",
+                                      "regex"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  "caseSensitive": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "op",
+                                  "value"
+                                ]
+                              },
+                              "version": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "path",
+                              "status"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "banner"
+                                ]
+                              },
+                              "value": {
+                                "type": "object",
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                    "enum": [
+                                      "equals",
+                                      "contains",
+                                      "prefix",
+                                      "regex"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  "caseSensitive": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "op",
+                                  "value"
+                                ]
+                              },
+                              "version": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "value"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "service"
+                                ]
+                              },
+                              "field": {
+                                "type": "string",
+                                "enum": [
+                                  "name",
+                                  "product",
+                                  "version",
+                                  "extraInfo",
+                                  "cpe"
+                                ]
+                              },
+                              "value": {
+                                "type": "object",
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                    "enum": [
+                                      "equals",
+                                      "contains",
+                                      "prefix",
+                                      "regex"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  "caseSensitive": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "op",
+                                  "value"
+                                ]
+                              },
+                              "version": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "field",
+                              "value"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "port"
+                                ]
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "minItems": 1,
+                                "maxItems": 100
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "ports"
+                            ]
+                          }
+                        ]
+                      },
+                      "minItems": 1,
+                      "maxItems": 10
+                    }
+                  },
+                  "required": [
+                    "match",
+                    "conditions"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "category",
+                "confidence",
+                "definition"
+              ]
+            },
+            "maxItems": 1000
+          }
+        },
+        "required": [
+          "format",
+          "version",
+          "signatures"
         ]
       },
       "ImportTargetsResponse": {
@@ -13687,7 +14886,11 @@
                                 "rules:read",
                                 "rules:create",
                                 "rules:update",
-                                "rules:delete"
+                                "rules:delete",
+                                "signatures:read",
+                                "signatures:create",
+                                "signatures:update",
+                                "signatures:delete"
                               ]
                             }
                           },
@@ -13816,10 +15019,14 @@
                         "rules:read",
                         "rules:create",
                         "rules:update",
-                        "rules:delete"
+                        "rules:delete",
+                        "signatures:read",
+                        "signatures:create",
+                        "signatures:update",
+                        "signatures:delete"
                       ]
                     },
-                    "maxItems": 37
+                    "maxItems": 41
                   }
                 },
                 "required": [
@@ -13984,7 +15191,11 @@
                           "rules:read",
                           "rules:create",
                           "rules:update",
-                          "rules:delete"
+                          "rules:delete",
+                          "signatures:read",
+                          "signatures:create",
+                          "signatures:update",
+                          "signatures:delete"
                         ]
                       }
                     },
@@ -14157,10 +15368,14 @@
                         "rules:read",
                         "rules:create",
                         "rules:update",
-                        "rules:delete"
+                        "rules:delete",
+                        "signatures:read",
+                        "signatures:create",
+                        "signatures:update",
+                        "signatures:delete"
                       ]
                     },
-                    "maxItems": 37
+                    "maxItems": 41
                   }
                 }
               }
@@ -23850,6 +25065,2997 @@
           },
           "409": {
             "description": "The scan has already ended (`SCAN_NOT_STOPPABLE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/signatures": {
+      "get": {
+        "operationId": "listSignatures",
+        "summary": "List the detection signatures",
+        "description": "Requires `signatures:read`. Built-in and custom signatures with how many hosts and services each matched in the newest scan with results, and the probe paths the enabled ones make the scanner request.",
+        "tags": [
+          "Signatures"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The signatures",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "key": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "builtIn": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "cms",
+                              "web-server",
+                              "language",
+                              "framework",
+                              "application",
+                              "device",
+                              "service",
+                              "admin-panel",
+                              "staging",
+                              "default-page",
+                              "interesting-header",
+                              "interesting-cookie",
+                              "other"
+                            ]
+                          },
+                          "product": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "severity": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "info",
+                              "low",
+                              "medium",
+                              "high",
+                              null
+                            ]
+                          },
+                          "confidence": {
+                            "type": "string",
+                            "enum": [
+                              "high",
+                              "medium",
+                              "low"
+                            ]
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "definition": {
+                            "type": "object",
+                            "properties": {
+                              "match": {
+                                "type": "string",
+                                "enum": [
+                                  "all",
+                                  "any"
+                                ]
+                              },
+                              "conditions": {
+                                "type": "array",
+                                "items": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "target": {
+                                          "type": "string",
+                                          "enum": [
+                                            "header"
+                                          ]
+                                        },
+                                        "name": {
+                                          "type": "object",
+                                          "properties": {
+                                            "op": {
+                                              "type": "string",
+                                              "enum": [
+                                                "equals",
+                                                "contains",
+                                                "prefix",
+                                                "regex"
+                                              ]
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "caseSensitive": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "op",
+                                            "value"
+                                          ]
+                                        },
+                                        "value": {
+                                          "type": "object",
+                                          "properties": {
+                                            "op": {
+                                              "type": "string",
+                                              "enum": [
+                                                "equals",
+                                                "contains",
+                                                "prefix",
+                                                "regex"
+                                              ]
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "caseSensitive": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "op",
+                                            "value"
+                                          ]
+                                        },
+                                        "version": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 200
+                                        }
+                                      },
+                                      "required": [
+                                        "target",
+                                        "name"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "target": {
+                                          "type": "string",
+                                          "enum": [
+                                            "cookie"
+                                          ]
+                                        },
+                                        "name": {
+                                          "type": "object",
+                                          "properties": {
+                                            "op": {
+                                              "type": "string",
+                                              "enum": [
+                                                "equals",
+                                                "contains",
+                                                "prefix",
+                                                "regex"
+                                              ]
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "caseSensitive": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "op",
+                                            "value"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "target",
+                                        "name"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "target": {
+                                          "type": "string",
+                                          "enum": [
+                                            "title"
+                                          ]
+                                        },
+                                        "value": {
+                                          "type": "object",
+                                          "properties": {
+                                            "op": {
+                                              "type": "string",
+                                              "enum": [
+                                                "equals",
+                                                "contains",
+                                                "prefix",
+                                                "regex"
+                                              ]
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "caseSensitive": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "op",
+                                            "value"
+                                          ]
+                                        },
+                                        "version": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 200
+                                        }
+                                      },
+                                      "required": [
+                                        "target",
+                                        "value"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "target": {
+                                          "type": "string",
+                                          "enum": [
+                                            "body"
+                                          ]
+                                        },
+                                        "value": {
+                                          "type": "object",
+                                          "properties": {
+                                            "op": {
+                                              "type": "string",
+                                              "enum": [
+                                                "equals",
+                                                "contains",
+                                                "prefix",
+                                                "regex"
+                                              ]
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "caseSensitive": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "op",
+                                            "value"
+                                          ]
+                                        },
+                                        "version": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 200
+                                        }
+                                      },
+                                      "required": [
+                                        "target",
+                                        "value"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "target": {
+                                          "type": "string",
+                                          "enum": [
+                                            "favicon"
+                                          ]
+                                        },
+                                        "mmh3": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "integer",
+                                            "minimum": -2147483648,
+                                            "maximum": 2147483647
+                                          },
+                                          "minItems": 1,
+                                          "maxItems": 50
+                                        }
+                                      },
+                                      "required": [
+                                        "target",
+                                        "mmh3"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "target": {
+                                          "type": "string",
+                                          "enum": [
+                                            "probe"
+                                          ]
+                                        },
+                                        "path": {
+                                          "type": "string",
+                                          "maxLength": 200,
+                                          "pattern": "^\\/(?!\\/)[!-~]*$"
+                                        },
+                                        "status": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "integer",
+                                            "minimum": 100,
+                                            "maximum": 599
+                                          },
+                                          "minItems": 1,
+                                          "maxItems": 10
+                                        },
+                                        "title": {
+                                          "type": "object",
+                                          "properties": {
+                                            "op": {
+                                              "type": "string",
+                                              "enum": [
+                                                "equals",
+                                                "contains",
+                                                "prefix",
+                                                "regex"
+                                              ]
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "caseSensitive": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "op",
+                                            "value"
+                                          ]
+                                        },
+                                        "location": {
+                                          "type": "object",
+                                          "properties": {
+                                            "op": {
+                                              "type": "string",
+                                              "enum": [
+                                                "equals",
+                                                "contains",
+                                                "prefix",
+                                                "regex"
+                                              ]
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "caseSensitive": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "op",
+                                            "value"
+                                          ]
+                                        },
+                                        "version": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 200
+                                        }
+                                      },
+                                      "required": [
+                                        "target",
+                                        "path",
+                                        "status"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "target": {
+                                          "type": "string",
+                                          "enum": [
+                                            "banner"
+                                          ]
+                                        },
+                                        "value": {
+                                          "type": "object",
+                                          "properties": {
+                                            "op": {
+                                              "type": "string",
+                                              "enum": [
+                                                "equals",
+                                                "contains",
+                                                "prefix",
+                                                "regex"
+                                              ]
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "caseSensitive": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "op",
+                                            "value"
+                                          ]
+                                        },
+                                        "version": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 200
+                                        }
+                                      },
+                                      "required": [
+                                        "target",
+                                        "value"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "target": {
+                                          "type": "string",
+                                          "enum": [
+                                            "service"
+                                          ]
+                                        },
+                                        "field": {
+                                          "type": "string",
+                                          "enum": [
+                                            "name",
+                                            "product",
+                                            "version",
+                                            "extraInfo",
+                                            "cpe"
+                                          ]
+                                        },
+                                        "value": {
+                                          "type": "object",
+                                          "properties": {
+                                            "op": {
+                                              "type": "string",
+                                              "enum": [
+                                                "equals",
+                                                "contains",
+                                                "prefix",
+                                                "regex"
+                                              ]
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "caseSensitive": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "op",
+                                            "value"
+                                          ]
+                                        },
+                                        "version": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 200
+                                        }
+                                      },
+                                      "required": [
+                                        "target",
+                                        "field",
+                                        "value"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "target": {
+                                          "type": "string",
+                                          "enum": [
+                                            "port"
+                                          ]
+                                        },
+                                        "ports": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 65535
+                                          },
+                                          "minItems": 1,
+                                          "maxItems": 100
+                                        }
+                                      },
+                                      "required": [
+                                        "target",
+                                        "ports"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "minItems": 1,
+                                "maxItems": 10
+                              }
+                            },
+                            "required": [
+                              "match",
+                              "conditions"
+                            ]
+                          },
+                          "hits": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "hosts": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "services": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "hosts",
+                              "services"
+                            ]
+                          },
+                          "createdBy": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "displayName"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "key",
+                          "builtIn",
+                          "name",
+                          "description",
+                          "category",
+                          "product",
+                          "severity",
+                          "confidence",
+                          "enabled",
+                          "definition",
+                          "hits",
+                          "createdBy",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    },
+                    "probePaths": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "evaluation": {
+                      "type": "object",
+                      "properties": {
+                        "scan": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "startedAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "startedAt"
+                          ]
+                        },
+                        "pendingScans": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "scan",
+                        "pendingScans"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "probePaths",
+                    "evaluation"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createSignature",
+        "summary": "Create a signature",
+        "description": "Requires `signatures:create`. Regular expressions use RE2 syntax (no lookarounds or backreferences); an invalid one is a 400 with the condition's path. The newest scan with results is evaluated again before the response; older scans follow in the background (`evaluation.pendingScans` on the list).",
+        "tags": [
+          "Signatures"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "\\S"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "cms",
+                      "web-server",
+                      "language",
+                      "framework",
+                      "application",
+                      "device",
+                      "service",
+                      "admin-panel",
+                      "staging",
+                      "default-page",
+                      "interesting-header",
+                      "interesting-cookie",
+                      "other"
+                    ]
+                  },
+                  "product": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "\\S"
+                  },
+                  "severity": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "info",
+                      "low",
+                      "medium",
+                      "high",
+                      null
+                    ]
+                  },
+                  "confidence": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low"
+                    ]
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "definition": {
+                    "type": "object",
+                    "properties": {
+                      "match": {
+                        "type": "string",
+                        "enum": [
+                          "all",
+                          "any"
+                        ]
+                      },
+                      "conditions": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "header"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "name"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "cookie"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "name"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "title"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "body"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "favicon"
+                                  ]
+                                },
+                                "mmh3": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "minimum": -2147483648,
+                                    "maximum": 2147483647
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 50
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "mmh3"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "probe"
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "pattern": "^\\/(?!\\/)[!-~]*$"
+                                },
+                                "status": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 599
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 10
+                                },
+                                "title": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "location": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "path",
+                                "status"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "banner"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "service"
+                                  ]
+                                },
+                                "field": {
+                                  "type": "string",
+                                  "enum": [
+                                    "name",
+                                    "product",
+                                    "version",
+                                    "extraInfo",
+                                    "cpe"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "field",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "port"
+                                  ]
+                                },
+                                "ports": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 65535
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 100
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "ports"
+                              ]
+                            }
+                          ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 10
+                      }
+                    },
+                    "required": [
+                      "match",
+                      "conditions"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "category",
+                  "confidence",
+                  "definition"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Signature"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A built-in signature can only be switched on or off (`SIGNATURE_BUILT_IN`), the name is taken (`SIGNATURE_NAME_TAKEN`), the enabled signatures would need too many probe paths (`SIGNATURE_PROBE_LIMIT`) or there are too many signatures (`SIGNATURE_LIMIT`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/signatures/{id}": {
+      "get": {
+        "operationId": "getSignature",
+        "summary": "One signature",
+        "description": "Requires `signatures:read`.",
+        "tags": [
+          "Signatures"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Signature"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateSignature",
+        "summary": "Change, enable or disable a signature",
+        "description": "Requires `signatures:update`. A built-in signature takes only `enabled`. Disabling removes its matches from every scan at once. The newest scan with results is evaluated again before the response; older scans follow in the background (`evaluation.pendingScans` on the list).",
+        "tags": [
+          "Signatures"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "\\S"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "cms",
+                      "web-server",
+                      "language",
+                      "framework",
+                      "application",
+                      "device",
+                      "service",
+                      "admin-panel",
+                      "staging",
+                      "default-page",
+                      "interesting-header",
+                      "interesting-cookie",
+                      "other"
+                    ]
+                  },
+                  "product": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "\\S"
+                  },
+                  "severity": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "info",
+                      "low",
+                      "medium",
+                      "high",
+                      null
+                    ]
+                  },
+                  "confidence": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low"
+                    ]
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "definition": {
+                    "type": "object",
+                    "properties": {
+                      "match": {
+                        "type": "string",
+                        "enum": [
+                          "all",
+                          "any"
+                        ]
+                      },
+                      "conditions": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "header"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "name"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "cookie"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "name"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "title"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "body"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "favicon"
+                                  ]
+                                },
+                                "mmh3": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "minimum": -2147483648,
+                                    "maximum": 2147483647
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 50
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "mmh3"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "probe"
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "pattern": "^\\/(?!\\/)[!-~]*$"
+                                },
+                                "status": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 599
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 10
+                                },
+                                "title": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "location": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "path",
+                                "status"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "banner"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "service"
+                                  ]
+                                },
+                                "field": {
+                                  "type": "string",
+                                  "enum": [
+                                    "name",
+                                    "product",
+                                    "version",
+                                    "extraInfo",
+                                    "cpe"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "field",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "port"
+                                  ]
+                                },
+                                "ports": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 65535
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 100
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "ports"
+                              ]
+                            }
+                          ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 10
+                      }
+                    },
+                    "required": [
+                      "match",
+                      "conditions"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Signature"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A built-in signature can only be switched on or off (`SIGNATURE_BUILT_IN`), the name is taken (`SIGNATURE_NAME_TAKEN`), the enabled signatures would need too many probe paths (`SIGNATURE_PROBE_LIMIT`) or there are too many signatures (`SIGNATURE_LIMIT`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSignature",
+        "summary": "Delete a custom signature",
+        "description": "Requires `signatures:delete`. Its matches go from every scan. Built-in signatures cannot be deleted, only switched off.",
+        "tags": [
+          "Signatures"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A built-in signature can only be switched on or off (`SIGNATURE_BUILT_IN`), the name is taken (`SIGNATURE_NAME_TAKEN`), the enabled signatures would need too many probe paths (`SIGNATURE_PROBE_LIMIT`) or there are too many signatures (`SIGNATURE_LIMIT`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/signatures/preview": {
+      "post": {
+        "operationId": "previewSignature",
+        "summary": "What a signature would match",
+        "description": "Requires `signatures:read`. Evaluates a definition on one scan without saving anything: how many services and hosts match, examples with evidence, and probe paths the scan did not request (they can only match after the next scan).",
+        "tags": [
+          "Signatures"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "definition": {
+                    "type": "object",
+                    "properties": {
+                      "match": {
+                        "type": "string",
+                        "enum": [
+                          "all",
+                          "any"
+                        ]
+                      },
+                      "conditions": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "header"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "name"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "cookie"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "name"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "title"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "body"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "favicon"
+                                  ]
+                                },
+                                "mmh3": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "minimum": -2147483648,
+                                    "maximum": 2147483647
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 50
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "mmh3"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "probe"
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "pattern": "^\\/(?!\\/)[!-~]*$"
+                                },
+                                "status": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 599
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 10
+                                },
+                                "title": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "location": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "path",
+                                "status"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "banner"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "service"
+                                  ]
+                                },
+                                "field": {
+                                  "type": "string",
+                                  "enum": [
+                                    "name",
+                                    "product",
+                                    "version",
+                                    "extraInfo",
+                                    "cpe"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "object",
+                                  "properties": {
+                                    "op": {
+                                      "type": "string",
+                                      "enum": [
+                                        "equals",
+                                        "contains",
+                                        "prefix",
+                                        "regex"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "caseSensitive": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "op",
+                                    "value"
+                                  ]
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "field",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "port"
+                                  ]
+                                },
+                                "ports": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 65535
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 100
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "ports"
+                              ]
+                            }
+                          ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 10
+                      }
+                    },
+                    "required": [
+                      "match",
+                      "conditions"
+                    ]
+                  },
+                  "confidence": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low"
+                    ]
+                  },
+                  "scanId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "definition"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scan": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "startedAt"
+                      ]
+                    },
+                    "services": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "hosts": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "samples": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "serviceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "port": {
+                            "type": "integer"
+                          },
+                          "confidence": {
+                            "type": "string",
+                            "enum": [
+                              "high",
+                              "medium",
+                              "low"
+                            ]
+                          },
+                          "version": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "evidence": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "target": {
+                                  "type": "string",
+                                  "enum": [
+                                    "header",
+                                    "cookie",
+                                    "title",
+                                    "body",
+                                    "favicon",
+                                    "probe",
+                                    "banner",
+                                    "service",
+                                    "port"
+                                  ]
+                                },
+                                "url": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "key": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "url",
+                                "key",
+                                "value"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "hostId",
+                          "serviceId",
+                          "ip",
+                          "port",
+                          "confidence",
+                          "version",
+                          "evidence"
+                        ]
+                      },
+                      "maxItems": 20
+                    },
+                    "unprobedPaths": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "scan",
+                    "services",
+                    "hosts",
+                    "samples",
+                    "unprobedPaths"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/signatures/export": {
+      "get": {
+        "operationId": "exportSignatures",
+        "summary": "Export the signatures as JSON",
+        "description": "Requires `signatures:read`. The custom signatures (and with `builtIn=true` the built-ins, by key) in the format `POST /signatures/import` reads; see docs/signature-format.md.",
+        "tags": [
+          "Signatures"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "builtIn",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The export file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignatureExportDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/signatures/import": {
+      "post": {
+        "operationId": "importSignatures",
+        "summary": "Import signatures from JSON",
+        "description": "Requires `signatures:create`. All or nothing. Custom signatures are created; one whose name is taken is skipped or, with `conflict=replace`, overwritten. An entry with a built-in's `key` only switches that built-in on or off. The newest scan with results is evaluated again before the response; older scans follow in the background (`evaluation.pendingScans` on the list).",
+        "tags": [
+          "Signatures"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "skip",
+                "replace"
+              ]
+            },
+            "required": false,
+            "name": "conflict",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignatureExportDocument"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What the import did",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "created": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "replaced": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "skipped": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "builtIn": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "created",
+                    "replaced",
+                    "skipped",
+                    "builtIn"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A built-in signature can only be switched on or off (`SIGNATURE_BUILT_IN`), the name is taken (`SIGNATURE_NAME_TAKEN`), the enabled signatures would need too many probe paths (`SIGNATURE_PROBE_LIMIT`) or there are too many signatures (`SIGNATURE_LIMIT`)",
             "content": {
               "application/json": {
                 "schema": {

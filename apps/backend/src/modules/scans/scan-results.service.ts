@@ -484,6 +484,15 @@ export const scanResultsService = {
     });
   },
 
+  /** The scan's `up` addresses with their merged observations, a batch at a time (signatures). */
+  async *upObservationBatches(scanId: string, size = 200): AsyncGenerator<ObservationRow[]> {
+    const rows = await prisma.$queryRaw<EffectiveRow[]>(effectiveSql([scanId]));
+    const ips = rows.filter((row) => row.status === "up").map((row) => row.ip);
+    for (let start = 0; start < ips.length; start += size) {
+      yield await effectiveObservations([scanId], ips.slice(start, start + size));
+    }
+  },
+
   /** How many known hosts are unstable or inactive as of the scan. */
   async lifecycleCounts(scanId: string): Promise<{ unstable: number; inactive: number }> {
     const scan = await findScan(scanId);

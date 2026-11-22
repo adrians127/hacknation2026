@@ -7,6 +7,8 @@ import { loadDemoVulnerabilities } from "~backend/demo/vulnerabilities/load";
 import { encryptLegacyRows } from "~backend/lib/encrypt-legacy";
 import { logger } from "~backend/lib/logger";
 import { prisma } from "~backend/lib/prisma";
+import { evaluateStaleScans } from "~backend/modules/signatures/signatures.evaluate";
+import { syncBuiltInSignatures } from "~backend/modules/signatures/signatures.sync";
 import { rematch } from "~backend/modules/vulnerabilities/matching/matching.service";
 
 const { values } = parseArgs({ options: { json: { type: "string" } } });
@@ -39,6 +41,10 @@ async function main(): Promise<void> {
       );
     },
   });
+  await syncBuiltInSignatures();
+  const evaluations = await evaluateStaleScans();
+  const matches = evaluations.reduce((sum, evaluation) => sum + evaluation.matches, 0);
+  console.log(`Signatures: ${matches} matches in ${evaluations.length} scans`);
   const seconds = ((performance.now() - started) / 1000).toFixed(1);
   console.log(
     `Results: ${summary.results.ingested} ingested, ${summary.results.duplicate} already there. ` +

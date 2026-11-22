@@ -6,6 +6,7 @@ import { Prisma } from "~backend/generated/prisma/client";
 import { prisma } from "~backend/lib/prisma";
 import { defaultSteps } from "~backend/modules/pipelines/steps";
 import { syncSystemRoles } from "~backend/modules/roles/system-roles";
+import { syncBuiltInSignatures } from "~backend/modules/signatures/signatures.sync";
 import { ensureUser } from "~backend/modules/users/bootstrap";
 
 const seedEnv = z
@@ -60,6 +61,8 @@ async function ensureDefaultPipeline(ownerEmail: string): Promise<string> {
 async function main(): Promise<void> {
   await syncSystemRoles();
   console.log("System roles: admin, editor, analyst, viewer");
+  await syncBuiltInSignatures();
+  console.log("Built-in detection signatures in sync");
 
   if (env.ADMIN_EMAIL && env.ADMIN_PASSWORD) {
     const result = await ensureUser({

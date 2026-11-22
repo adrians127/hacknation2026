@@ -1,0 +1,26 @@
+/// A signature that matched a service in one scan, on that scan's merged observations. Written
+/// only by the evaluation (signatures.evaluate.ts), which replaces a scan's rows as a whole.
+model SignatureMatch {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  scanId      String   @db.Uuid
+  serviceId   String   @db.Uuid
+  signatureId String   @db.Uuid
+  /// high | medium | low.
+  confidence  String
+  /// Taken by the signature's version pattern; plaintext like PortObservation.serviceVersion.
+  version     String?
+  /// SignatureTarget[]: which kinds of conditions matched.
+  sources     String[]
+  /// { "$enc": "v1.…" } holding SignatureEvidence[]: header values and page fragments.
+  evidence    Json
+  createdAt   DateTime @default(now())
+
+  scan      Scan      @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  service   Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  signature Signature @relation(fields: [signatureId], references: [id], onDelete: Cascade)
+
+  @@unique([scanId, serviceId, signatureId])
+  @@index([scanId, signatureId])
+  @@index([serviceId])
+  @@index([signatureId])
+}

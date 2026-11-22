@@ -48,6 +48,10 @@ export const ErrorCodeSchema = z.enum([
   "SCAN_ALREADY_IMPORTED",
   "SCAN_IMPORT_RUNNING",
   "SCAN_RUNNING",
+  "SIGNATURE_BUILT_IN",
+  "SIGNATURE_NAME_TAKEN",
+  "SIGNATURE_PROBE_LIMIT",
+  "SIGNATURE_LIMIT",
 ]);
 
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;

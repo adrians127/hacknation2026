@@ -1,0 +1,13 @@
+/// Which signature set a scan's matches were evaluated with. A scan is evaluated again when the
+/// enabled set changes (`setHash`) or it got more results (`resultCount`; results are append-only).
+model SignatureScanState {
+  scanId      String   @id @db.Uuid
+  /// sha256 of the engine version and the enabled signatures' definitions.
+  setHash     String
+  resultCount Int
+  services    Int
+  matches     Int
+  evaluatedAt DateTime
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+}

@@ -37,6 +37,8 @@ model Scan {
   results     ScanJobResult[]
   defectDojoPushes DefectDojoPush[]
   hosts       HostObservation[]
+  signatureMatches SignatureMatch[]
+  signatureState   SignatureScanState?
 
   @@index([requestedById])
   @@index([pipelineId])
