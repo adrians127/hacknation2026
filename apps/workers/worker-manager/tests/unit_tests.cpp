@@ -1,7 +1,9 @@
-// Dependency-free unit tests: range math, job list parsing, splitting, status aggregation.
+// Dependency-free unit tests: range math, job list parsing, splitting, status aggregation,
+// lease request helpers.
 
 #include <chrono>
 #include <cstdlib>
+#include <format>
 #include <nlohmann/json.hpp>
 #include <print>
 #include <source_location>
@@ -11,6 +13,7 @@
 #include <thread>
 #include <vector>
 
+#include "backend_client.hpp"
 #include "config.hpp"
 #include "footprint.hpp"
 #include "ipv4.hpp"
@@ -255,6 +258,66 @@ void test_config() {
         check(threw, std::string{"rejects rate cap "} + bad);
     }
     check(random_seed() < (std::uint64_t{1} << 53), "seed below 2^53");
+    check(parse_backend_url("http://localhost:3001/v1/") == "http://localhost:3001/v1",
+          "backend url, trailing slash dropped");
+    check(parse_backend_url("https://api.example.org") == "https://api.example.org",
+          "https backend url");
+    for (const char* bad :
+         {"localhost:3001", "ftp://host/v1", "http://", "http:///v1", "http://host/v 1", ""}) {
+        threw = false;
+        try {
+            (void)parse_backend_url(bad);
+        } catch (const std::exception&) {
+            threw = true;
+        }
+        check(threw, std::string{"rejects backend url "} + bad);
+    }
+}
+
+void test_lease() {
+    using std::chrono::milliseconds;
+    using std::chrono::seconds;
+    const Json body = lease_request_body({.manager_id = "scan-1",
+                                          .workers = {"masscan", "nmap"},
+                                          .max_parallel = 4,
+                                          .wait = seconds{30}});
+    check(body["manager_id"] == "scan-1" && body["workers"] == Json::array({"masscan", "nmap"}) &&
+              body["max_parallel"] == 4 && body["wait_seconds"] == 30 && body.contains("version"),
+          "lease request body");
+
+    check(next_poll_delay(Json::parse(R"({"jobs": []})")) == milliseconds{0}, "no next_poll_ms");
+    check(next_poll_delay(Json::parse(R"({"next_poll_ms": 2500})")) == milliseconds{2500},
+          "next_poll_ms");
+    check(next_poll_delay(Json::parse(R"({"next_poll_ms": -5})")) == milliseconds{0},
+          "negative next_poll_ms ignored");
+    check(next_poll_delay(Json::parse(R"({"next_poll_ms": "5"})")) == milliseconds{0},
+          "string next_poll_ms ignored");
+    check(next_poll_delay(Json::parse(R"({"next_poll_ms": 99999999999})")) == milliseconds{300'000},
+          "next_poll_ms capped at 5 minutes");
+
+    check(retry_delay(seconds{5}, 1) == milliseconds{5'000}, "first retry");
+    check(retry_delay(seconds{5}, 3) == milliseconds{20'000}, "retry doubles");
+    check(retry_delay(seconds{5}, 40) == milliseconds{60'000}, "retry capped at 60 s");
+    check(retry_delay(seconds{90}, 5) == milliseconds{90'000}, "a base above the cap is kept");
+}
+
+void test_upload() {
+    const Json result = Json::parse(R"({"scan": {"jobId": "j"}, "hosts": []})");
+    const Json body = upload_body(2, 3, result);
+    check(body.dump() ==
+              R"({"task_index":2,"task_count":3,"result":{"scan":{"jobId":"j"},"hosts":[]}})",
+          "upload body");
+    for (const long status : {408L, 429L, 500L, 502L, 503L}) {
+        check(is_retryable_status(status), std::format("retries HTTP {}", status));
+    }
+    for (const long status : {400L, 401L, 403L, 404L, 409L, 413L, 422L}) {
+        check(!is_retryable_status(status), std::format("does not retry HTTP {}", status));
+    }
+    std::stop_source stopped;
+    stopped.request_stop();
+    check(!sleep_unless_stopped(std::chrono::seconds{30}, stopped.get_token()),
+          "a stopped sleep returns at once");
+    check(sleep_unless_stopped(std::chrono::milliseconds{1}, std::stop_token{}), "a short sleep");
 }
 
 Footprint fp(const char* input) { return footprint_of(Json::parse(input)); }
@@ -420,6 +483,8 @@ int main() {
     test_plan_chunk();
     test_aggregate();
     test_config();
+    test_lease();
+    test_upload();
     test_ports();
     test_footprint();
     test_scheduler();

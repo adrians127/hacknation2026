@@ -1,10 +1,10 @@
 # worker-manager
 
-A **C++23** orchestrator for the scan workers. It takes a **job list** (the format the backend's lease endpoint will return), splits every job into **tasks**, runs one independent worker process per task and saves every worker result to files. Tasks on disjoint `IP:port`s run in parallel; tasks sharing one run one after another, in pipeline order (see [Scheduling](#scheduling-what-may-run-in-parallel)).
+A **C++23** orchestrator for the scan workers. It takes a **job list**, from a file (`--input`) or long-polled from the backend (`--poll`), splits every job into **tasks**, runs one independent worker process per task and saves every worker result to files. Tasks on disjoint `IP:port`s run in parallel; tasks sharing one run one after another, in pipeline order (see [Scheduling](#scheduling-what-may-run-in-parallel)).
 
 It runs **masscan-worker** (discovery) and **nmap-worker** (service detection on the hosts and ports masscan found), masscan first wherever their `IP:port`s overlap.
 
-For now it has **no backend connection**: the job list comes from a file and results go to disk. The long poll, heartbeats and forwarding results to the backend are the next step; the file layout below is already shaped for that (one `task-NNN.result.json` = one result to forward).
+With `--poll` it works against the backend: it asks for job lists, runs them and uploads every task's result (one `task-NNN.result.json` = one upload) as soon as that task finishes. Heartbeats are the next step.
 
 ## Run (Docker)
 
@@ -14,6 +14,7 @@ From the repo root:
 pnpm workers:manager                     # build the image, run examples/example.json
 pnpm workers:manager --input /jobs/my-jobs.json --output-dir /results
 WORKER_MANAGER_MAX_PARALLEL=4 MASSCAN_WORKER_LOG_LEVEL=debug pnpm workers:manager
+WORKER_TOKEN=… pnpm workers:manager:poll  # long-poll the backend (localhost:3001) until Ctrl+C
 ```
 
 `pnpm workers:manager` is `docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager` (service in the `cli` profile). Compose mounts:
@@ -30,22 +31,23 @@ The image is built from `apps/workers/` and contains `worker-manager`, `masscan-
 ## CLI
 
 ```
-worker-manager --input FILE [--output-dir DIR]
+worker-manager (--input FILE | --poll) [--output-dir DIR]
 ```
 
 | Flag | Default | Description |
 |---|---|---|
-| `--input` | required | Job list JSON, `-` for stdin |
-| `--output-dir` | `results` | Base directory. Every run creates `<DIR>/<run-id>/` (`20261121T170000Z`) |
+| `--input` | one of the two | Run one job list JSON (`-` for stdin), then exit |
+| `--poll` | one of the two | Long-poll the backend for job lists and run each one, until `SIGINT`/`SIGTERM`. See [Poll mode](#poll-mode-jobs-from-the-backend) |
+| `--output-dir` | `results` | Base directory. Every job list (run) creates `<DIR>/<run-id>/` (`20261121T170000Z`) |
 
-| Exit code | Meaning |
-|---|---|
-| `0` | Every job `completed` or `partial` |
-| `1` | At least one job `failed` |
-| `2` | Invalid input (not JSON, no `jobs[]`), invalid configuration or usage |
-| `130` | Stopped by `SIGINT`/`SIGTERM` |
+| Exit code | `--input` | `--poll` |
+|---|---|---|
+| `0` | Every job `completed` or `partial` | Stopped by `SIGINT`/`SIGTERM` (the normal way to end it) |
+| `1` | At least one job `failed` | |
+| `2` | Invalid input (not JSON, no `jobs[]`), invalid configuration or usage | Invalid configuration (no `WORKER_MANAGER_TOKEN`, no worker binary) or usage |
+| `130` | Stopped by `SIGINT`/`SIGTERM` | |
 
-`SIGINT`/`SIGTERM` (Ctrl+C, `docker stop`): running workers get `SIGTERM` and write a `partial` result, queued tasks are `cancelled`, and the summaries are still written. A second signal kills the workers.
+`SIGINT`/`SIGTERM` (Ctrl+C, `docker stop`): running workers get `SIGTERM` and write a `partial` result, queued tasks are `cancelled`, and the summaries are still written. A second signal kills the workers. In poll mode a pending lease request is abandoned within about a second.
 
 ## Input: the job list
 
@@ -76,7 +78,7 @@ worker-manager --input FILE [--output-dir DIR]
 | `jobs[].split` | no | How to split the job, below. Default `{"strategy": "none"}` |
 | `jobs[].params` | yes | The worker's job, in the [shared job format](../README.md#job-and-result-format) plus the worker's own fields. `params.rate` (packets per second) caps the whole job; see [Rate budget](#rate-budget) (for masscan: [its input table](../masscan-worker/README.md#input)). The manager reads it only where `split` needs it |
 
-Jobs run in the order of `jobs[]`; there is no priority (a `priority` field is ignored). Other fields (`lease_expires_at`, `heartbeat_interval_s`, `server_time`, `next_poll_ms`) are accepted and ignored until the backend connection exists. An invalid job does not stop the others: it is reported as `failed` with `invalid-job`.
+Jobs run in the order of `jobs[]`; there is no priority (a `priority` field is ignored). `next_poll_ms` is used by [poll mode](#poll-mode-jobs-from-the-backend); other fields (`lease_expires_at`, `heartbeat_interval_s`, `server_time`) are accepted and ignored until heartbeats exist. An invalid job does not stop the others: it is reported as `failed` with `invalid-job`.
 
 ### Split strategies
 
@@ -90,6 +92,46 @@ Jobs run in the order of `jobs[]`; there is no priority (a `priority` field is i
 - **Task count:** `ceil(items / max_items_per_task)` when `max_items_per_task` is set, otherwise `max_tasks` (default `WORKER_MANAGER_MAX_PARALLEL`). It is never above `max_tasks`, `WORKER_MANAGER_MAX_TASKS_PER_JOB` or the number of items.
 - **Rate:** the planner does not touch it. The tasks of one job share the job's `rate` (see [Rate budget](#rate-budget)), so splitting never multiplies the packet rate. On one machine a single masscan already reaches the full rate, so `shard` mainly pays off once tasks go to several hosts; `ranges` gives smaller tasks that finish (and free their `IP:port`s) sooner.
 - A job whose params already carry `shard` or `resume_index` is never split (masscan's resume point belongs to one exact job), with a warning.
+
+## Poll mode: jobs from the backend
+
+With `--poll` the manager asks the backend for work over HTTP instead of reading a file:
+
+1. `POST <WORKER_MANAGER_BACKEND_URL>/workers/manager/lease` with `Authorization: Bearer <WORKER_MANAGER_TOKEN>` and the body below. The backend may hold the request for up to `wait_seconds` until it has work (long poll).
+2. `200` with a job list in the [input format](#input-the-job-list): the manager runs it to the end, as `--input` does, into its own `<run-id>/` directory, and saves the response there as `lease.json`. `204`, or `200` with `jobs: []`, means no work.
+3. It asks again, after the response's `next_poll_ms` if the backend set one (at most 5 minutes).
+
+```json
+{ "manager_id": "scan-host-1", "version": "0.1.0", "workers": ["masscan", "nmap"], "max_parallel": 2, "wait_seconds": 30 }
+```
+
+| Field | Meaning |
+|---|---|
+| `manager_id` | `WORKER_MANAGER_ID` (default: the hostname), for the backend's `ScanJob.leasedBy` |
+| `workers` | Workers whose binary is installed; the backend should hand out jobs only for these |
+| `max_parallel` | Worker processes the manager runs at once, a hint for sizing the list |
+| `wait_seconds` | `WORKER_MANAGER_POLL_WAIT`: how long the backend may hold the request. The manager gives up 15 s after that |
+
+- **Only an idle manager asks.** The next request goes out once the whole job list has finished, so leased jobs never sit in a local queue while their lease runs out. The backend should hand out about as much as the manager can finish within one lease.
+- **Failures** (connection error, timeout, a status other than 200/204, a body that is not a job list) are logged as `lease.failed` / `lease.invalid` and retried after `WORKER_MANAGER_RETRY_DELAY` seconds, doubled per failure in a row up to 60 s. `401`/`403` are reported as a rejected token. A backend that answers `204` at once instead of holding the request is still asked at most once a second.
+- **Not done yet:** heartbeats. Until then the backend's leases simply expire, and it has to put jobs whose results never arrived back in the queue.
+- **Backend side:** the lease endpoint is not implemented yet. One `ScanJob` row becomes one `jobs[]` entry: `job_id` = `ScanJob.id`, `scan_id`, a new `lease_id` per lease, `worker` (`masscan` for `discovery` jobs, see the [open questions](../README.md#scan-jobs-in-the-database)), `deadline`, and `params` with `targets` = `ScanJob.targets`, `ports` = `Scan.ports`, `rate` = `Scan.maxRate`.
+
+### Result upload
+
+Every task that leaves a result file is uploaded on its own, as soon as it finishes, by one uploader thread (the worker pool never waits for the backend):
+
+```
+POST <WORKER_MANAGER_BACKEND_URL>/workers/manager/results      Authorization: Bearer <WORKER_MANAGER_TOKEN>
+{ "task_index": 2, "task_count": 3, "result": { "scan": {…}, "hosts": […] } }
+```
+
+- **One worker run, one result.** `result` is the worker's `task-NNN.result.json`, unchanged (the [shared result format](../README.md#job-and-result-format)). The tasks of a split job all carry the job's `job_id` and `lease_id`; `task_index` tells them apart, and the backend stores each as a separate result of the scan (`scan_id`). A resend of the same lease and task is a no-op on the backend (`"status": "duplicate"`).
+- **Retries:** connection errors, timeouts, `408`, `429` and `5xx` are retried after `WORKER_MANAGER_RETRY_DELAY` seconds, doubled per attempt up to 60 s, at most `WORKER_MANAGER_UPLOAD_ATTEMPTS` times. Any other status (`400` validation, `401` token, `404` unknown job, `413` too large) is final: the upload is `rejected`, with the backend's error message.
+- **A job list is done when its uploads are.** The next lease request waits until every result is uploaded or given up, so a down backend slows polling instead of piling up results.
+- **Given up or rejected** results stay on disk in `<run-id>/`; nothing resends them later. The task's `upload` block in `job.json` says what happened: `status` (`uploaded`, `rejected`, `failed`), `attempts`, `httpStatus`, the backend's `resultId`, `duplicate` and `error`; `counts.uploaded` / `counts.notUploaded` sum them up (also in `run.json`).
+- **Stopping:** after the first `SIGINT`/`SIGTERM` every pending result (the workers' `partial` results included) gets one more attempt without waiting; the second signal aborts uploads in flight.
+- Tasks without a result file (the worker could not start, crashed without writing one, or was cancelled) upload nothing. `--input` never uploads.
 
 ## Scheduling: what may run in parallel
 
@@ -117,10 +159,11 @@ Every worker is an independent binary with the same interface, so the manager ne
 ```
 worker-results/20261121T170000Z/
 ├── run.json                    # run summary: status, stopReason, counts, one line per job
+├── lease.json                  # --poll only: the job list as the backend sent it
 └── lan-common-ports/           # one directory per job (job_id)
     ├── job.json                # job summary: status, error, warnings, counts, tasks[]
     ├── task-001.input.json     # exactly what the worker got
-    ├── task-001.result.json    # the worker's result, unchanged (what goes to the backend later)
+    ├── task-001.result.json    # the worker's result, unchanged (what --poll uploads)
     ├── task-001.log            # the worker's stderr
     └── task-002.…
 ```
@@ -155,6 +198,12 @@ Example with a budget of 1000: job `x` without a rate starts at 1000; `y` (`rate
 | `WORKER_MANAGER_KILL_GRACE` | `30` | Seconds a task may overrun its `max_duration_seconds` before the manager stops it |
 | `WORKER_MANAGER_LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error` |
 | `WORKER_MANAGER_LOG_FORMAT` | `text` | `text` or `json` (worker lines become `worker.output` events) |
+| `WORKER_MANAGER_BACKEND_URL` | `http://localhost:3001/v1` | `--poll`: the backend's base URL, `http://` or `https://`. Compose takes it from `BACKEND_URL` |
+| `WORKER_MANAGER_TOKEN` | none | `--poll`: bearer machine token, required. Compose takes it from `WORKER_TOKEN` |
+| `WORKER_MANAGER_ID` | the hostname | `--poll`: `manager_id` of every lease request; `A-Z a-z 0-9 . _ -`, at most 128 characters |
+| `WORKER_MANAGER_POLL_WAIT` | `30` | `--poll`: seconds the backend may hold one lease request (1 to 300) |
+| `WORKER_MANAGER_RETRY_DELAY` | `5` | `--poll`: seconds before retrying a failed lease request or upload, doubled per failure in a row up to 60 (1 to 3600) |
+| `WORKER_MANAGER_UPLOAD_ATTEMPTS` | `5` | `--poll`: attempts per result before it is left on disk (1 to 100) |
 
 Workers inherit the manager's environment, so `MASSCAN_WORKER_*` and `NMAP_*` variables reach every worker. Compose sets `NMAP_SCAN_TYPE=syn` and `NMAP_PRIVILEGED=1`, as for the standalone nmap-worker.
 
@@ -164,13 +213,16 @@ Workers inherit the manager's environment, so `MASSCAN_WORKER_*` and `NMAP_*` va
 cmake --preset release && cmake --build --preset release && ctest --test-dir build/release --output-on-failure
 ```
 
-Needs GCC 14+ (`<print>`), CMake 3.28+, Ninja and nlohmann/json 3.11+. `ctest` runs the unit tests and an end-to-end test that drives the real binary with [`tests/fake-worker.sh`](tests/fake-worker.sh), so it needs neither masscan nor root.
+Needs GCC 14+ (`<print>`), CMake 3.28+, Ninja, nlohmann/json 3.11+ and libcurl (`libcurl4-openssl-dev`). `ctest` runs the unit tests and an end-to-end test that drives the real binary with [`tests/fake-worker.sh`](tests/fake-worker.sh), so it needs neither masscan nor root. When `python3` is installed it also runs `e2e-poll`: `--poll` against [`tests/fake-backend.py`](tests/fake-backend.py) (a retried `500` lease, a job list, one upload per task with a retried `503` and a rejected `400`, then a `SIGTERM` during a held request).
 
 ## Source layout
 
 | File | Responsibility |
 |---|---|
-| `src/main.cpp` | CLI, planning every job, the thread pool, signal thread, `job.json` / `run.json` |
+| `src/main.cpp` | CLI, the poll loop, planning every job, the thread pool, signal thread, `job.json` / `run.json` |
+| `src/backend_client.*` | Poll mode: the lease and upload requests, response statuses, `next_poll_ms`, retry backoff |
+| `src/result_uploader.*` | The uploader thread: a queue of finished tasks' results, retries, the `upload` outcome per task |
+| `src/http_client.*` | libcurl JSON POST that a stop request cuts short |
 | `src/job.*` | Parses and validates the job list |
 | `src/planner.*` | Splits a job into tasks (`none`, `shard`, `ranges`, `chunk`) |
 | `src/footprint.*` | The `IP:port` pairs a task touches, port specs, overlap test |

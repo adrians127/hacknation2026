@@ -20,6 +20,14 @@ export type IngestOutcome =
   | { status: "ingested"; resultId: string; hostsWritten: number }
   | { status: "duplicate"; resultId: string };
 
+/** Which worker run of a leased job a result is: worker-manager may split a job into tasks. */
+export interface ResultPart {
+  taskIndex: number;
+  taskCount: number;
+}
+
+const WHOLE_JOB: ResultPart = { taskIndex: 1, taskCount: 1 };
+
 // One result holds at most 1024 hosts; nested writes for the `up` ones take a while.
 const TRANSACTION_TIMEOUT_MS = 60_000;
 const MAX_REPORTED_OFFENDERS = 10;
@@ -141,6 +149,7 @@ async function writeUpHost(
 async function ingestInTransaction(
   tx: Prisma.TransactionClient,
   result: WorkerResult,
+  part: ResultPart,
 ): Promise<IngestOutcome> {
   const { scan } = result;
   await assertWithinJob(tx, result);
@@ -150,6 +159,8 @@ async function ingestInTransaction(
       scanId: scan.scanId,
       scanJobId: scan.jobId,
       leaseId: scan.leaseId,
+      taskIndex: part.taskIndex,
+      taskCount: part.taskCount,
       workerId: scan.worker.id,
       workerVersion: scan.worker.version,
       nmapVersion: scan.worker.nmapVersion,
@@ -186,28 +197,32 @@ async function ingestInTransaction(
   };
 }
 
-async function findByLease(leaseId: string): Promise<IngestOutcome | null> {
-  const stored = await prisma.scanJobResult.findUnique({ where: { leaseId }, select: { id: true } });
+async function findStored(leaseId: string, taskIndex: number): Promise<IngestOutcome | null> {
+  const stored = await prisma.scanJobResult.findUnique({
+    where: { leaseId_taskIndex: { leaseId, taskIndex } },
+    select: { id: true },
+  });
   return stored ? { status: "duplicate", resultId: stored.id } : null;
 }
 
 /**
  * Turns a validated worker result (docs/worker-result-format.md) into observation rows and
- * Host/Service assets, in one transaction. A result resent under the same lease is a no-op.
+ * Host/Service assets, in one transaction. A result resent under the same lease and task is a
+ * no-op.
  */
 export const resultsService = {
-  async ingest(result: WorkerResult): Promise<IngestOutcome> {
-    const duplicate = await findByLease(result.scan.leaseId);
+  async ingest(result: WorkerResult, part: ResultPart = WHOLE_JOB): Promise<IngestOutcome> {
+    const duplicate = await findStored(result.scan.leaseId, part.taskIndex);
     if (duplicate) return duplicate;
 
     try {
-      return await prisma.$transaction((tx) => ingestInTransaction(tx, result), {
+      return await prisma.$transaction((tx) => ingestInTransaction(tx, result, part), {
         timeout: TRANSACTION_TIMEOUT_MS,
       });
     } catch (error) {
       // Two copies of one result raced past the check above.
       if (isUniqueViolation(error)) {
-        const raced = await findByLease(result.scan.leaseId);
+        const raced = await findStored(result.scan.leaseId, part.taskIndex);
         if (raced) return raced;
       }
       throw error;

@@ -1,9 +1,50 @@
 import { registry } from "../../scripts/registry";
+import { errorResponse, notFound, validationFailed } from "../common/common.openapi";
 import { WorkerResultSchema } from "./worker-result.schema";
-import { NmapHeartbeatSchema, NmapJobSchema, NmapLeaseRequestSchema } from "./workers.schema";
+import {
+  ManagerResultUploadResponseSchema,
+  ManagerResultUploadSchema,
+  NmapHeartbeatSchema,
+  NmapJobSchema,
+  NmapLeaseRequestSchema,
+} from "./workers.schema";
 
 registry.register("NmapJob", NmapJobSchema);
 registry.register("WorkerResult", WorkerResultSchema);
+const ManagerResultUpload = registry.register("ManagerResultUpload", ManagerResultUploadSchema);
+const ManagerResultUploadResponse = registry.register(
+  "ManagerResultUploadResponse",
+  ManagerResultUploadResponseSchema,
+);
+
+registry.registerPath({
+  method: "post",
+  path: "/workers/manager/results",
+  operationId: "submitManagerResult",
+  summary: "Upload one worker run's result",
+  description: [
+    "Called by worker-manager with `Authorization: Bearer <WORKER_TOKEN>` after each task.",
+    "`result` is the locked format of docs/worker-result-format.md. A leased job split into",
+    "tasks comes back as one upload per task, all with the job's `jobId` and `leaseId`;",
+    "`task_index` tells them apart. Resending the same lease and task is a no-op. Every",
+    "address must be inside the job's targets and every open port inside the scan's ports.",
+    "The body may be up to 64 MB and gzip-compressed (`Content-Encoding: gzip`).",
+  ].join(" "),
+  tags: ["Workers"],
+  security: [{ workerToken: [] }],
+  request: { body: { content: { "application/json": { schema: ManagerResultUpload } } } },
+  responses: {
+    200: {
+      description: "Result stored, or already stored for this lease and task",
+      content: { "application/json": { schema: ManagerResultUploadResponse } },
+    },
+    400: validationFailed,
+    401: errorResponse("Missing or wrong worker token"),
+    404: notFound,
+    413: errorResponse("Body larger than 64 MB"),
+    503: errorResponse("Worker endpoints are disabled: the backend has no WORKER_TOKEN"),
+  },
+});
 
 registry.registerPath({
   method: "post",

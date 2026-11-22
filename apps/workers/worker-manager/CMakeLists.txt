@@ -16,22 +16,27 @@ endif()
 
 find_package(nlohmann_json 3.11 REQUIRED)
 find_package(Threads REQUIRED)
+find_package(CURL REQUIRED)
 
 # Everything but main.cpp, so the tests link the same code.
 add_library(worker-manager-core STATIC
+  src/backend_client.cpp
   src/config.cpp
   src/files.cpp
   src/footprint.cpp
+  src/http_client.cpp
   src/ipv4.cpp
   src/job.cpp
   src/logger.cpp
   src/planner.cpp
   src/process.cpp
+  src/result_uploader.cpp
   src/scheduler.cpp
   src/task_runner.cpp
 )
 target_include_directories(worker-manager-core PUBLIC src)
-target_link_libraries(worker-manager-core PUBLIC nlohmann_json::nlohmann_json Threads::Threads)
+target_link_libraries(worker-manager-core PUBLIC
+  nlohmann_json::nlohmann_json Threads::Threads CURL::libcurl)
 target_compile_definitions(worker-manager-core PUBLIC
   WORKER_MANAGER_VERSION="${PROJECT_VERSION}"
 )
@@ -54,4 +59,13 @@ if(BUILD_TESTING)
   add_test(NAME e2e
     COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/e2e_test.sh
             $<TARGET_FILE:worker-manager> ${CMAKE_CURRENT_SOURCE_DIR}/tests/fake-worker.sh)
+
+  # --poll against a fake backend (a Python HTTP server).
+  find_package(Python3 COMPONENTS Interpreter)
+  if(Python3_Interpreter_FOUND)
+    add_test(NAME e2e-poll
+      COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/poll_test.sh
+              $<TARGET_FILE:worker-manager> ${CMAKE_CURRENT_SOURCE_DIR}/tests/fake-worker.sh
+              ${CMAKE_CURRENT_SOURCE_DIR}/tests/fake-backend.py ${Python3_EXECUTABLE})
+  endif()
 endif()

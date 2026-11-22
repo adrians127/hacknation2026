@@ -70,7 +70,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
   - Workers work towards producing exactly that structure.
   - The backend builds every scan-data feature on it: storing observations, diffs, dashboard, signatures/detections, export/import, DefectDojo.
   - **Read it before designing any such feature.** Change the document first (with the user's agreement), then the code. The contract (`WorkerResultSchema`) matches it; the `nmap-worker` output does not yet (the document lists the gap).
-- **Worker results → database:** `resultsService.ingest()` writes observations per scan (`ScanJobResult`, `HostObservation`, `HostnameObservation`, `PortObservation` with protocol details as JSONB in `details`) and the `Host`/`Service` assets that live across scans and hold user edits. Details: [`apps/backend/README.md`](apps/backend/README.md#scan-results).
+- **Worker results → database:** `POST /workers/manager/results` (worker-manager, `WORKER_TOKEN` bearer) hands each worker run's result to `resultsService.ingest()`; a job split into tasks gives several results under one lease, kept apart by task index. Ingest writes observations per scan (`ScanJobResult`, `HostObservation`, `HostnameObservation`, `PortObservation` with protocol details as JSONB in `details`) and the `Host`/`Service` assets that live across scans and hold user edits. Details: [`apps/backend/README.md`](apps/backend/README.md#scan-results).
 - **Scan results → users:** hosts are browsed per scan (`GET /scans/{id}/hosts`), with new/gone/changed/unknown computed against the base scan (the previous scan with results) by `modules/scans/scan-diff.ts`. Edits (`PATCH /hosts/...`: note, tags, triage, service corrections) go to the `Host`/`Service` assets, so they show in every scan and survive later ones. `POST /scans/{id}/hosts/tags` adds or removes one tag on the scan's hosts by IP/CIDR. Details: [`apps/backend/README.md`](apps/backend/README.md#browsing-scan-results).
 - **Demo data:** `pnpm db:seed:hosts` seeds realistic results in the locked format (`apps/backend/src/demo/`). Build and try scan-data features on it. Details: [`apps/backend/README.md`](apps/backend/README.md#demo-data).
 - **Targets → scan jobs:** the import (`POST /targets/import`; manual, CSV and JSON all go through the shared parser in `contracts/src/targets/target-input.ts`) fills the `Target` inventory and can queue a `Scan` split into `ScanJob` batches. Workers lease those rows; the lease endpoints are not implemented yet. Details: [`apps/backend/README.md`](apps/backend/README.md#targets-and-scan-jobs).
@@ -106,6 +106,7 @@ pnpm infra:up       # all infrastructure compose services, DefectDojo included (
 pnpm dojo:up        # DefectDojo only, :8080 (dojo:logs, dojo:smoke)
 pnpm workers:build  # build the masscan-worker image (run a sweep: pnpm workers:masscan < job.json)
 pnpm workers:manager  # build + run worker-manager on its example job list; results in worker-results/
+pnpm workers:manager:poll  # worker-manager long-polls the backend for job lists (needs WORKER_TOKEN), until Ctrl+C
 ```
 
 ## Conventions

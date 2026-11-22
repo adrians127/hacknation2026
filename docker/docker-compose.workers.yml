@@ -63,10 +63,11 @@ services:
       - NET_RAW
       - NET_ADMIN
 
-  # One-shot CLI (profile `cli`): reads a job list, splits it into tasks, runs masscan-worker and
+  # CLI (profile `cli`): reads a job list, splits it into tasks, runs masscan-worker and
   # nmap-worker for them and writes everything to worker-results/<run-id>/. See its README.
   #   docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager
   #   ... run --rm worker-manager --input /jobs/other.json --output-dir /results
+  #   ... run --rm worker-manager --poll --output-dir /results   (long-polls the backend)
   worker-manager:
     profiles: ["cli"]
     build:
@@ -93,6 +94,13 @@ services:
       WORKER_MANAGER_MAX_TASKS_PER_JOB: ${WORKER_MANAGER_MAX_TASKS_PER_JOB:-16}
       WORKER_MANAGER_DEADLINE_MARGIN: ${WORKER_MANAGER_DEADLINE_MARGIN:-10}
       WORKER_MANAGER_KILL_GRACE: ${WORKER_MANAGER_KILL_GRACE:-30}
+      # --poll only. Host networking, so localhost is the backend from `pnpm dev`.
+      WORKER_MANAGER_BACKEND_URL: ${BACKEND_URL:-http://localhost:3001/v1}
+      WORKER_MANAGER_TOKEN: ${WORKER_TOKEN:-}
+      WORKER_MANAGER_ID: ${WORKER_MANAGER_ID:-}
+      WORKER_MANAGER_POLL_WAIT: ${WORKER_MANAGER_POLL_WAIT:-30}
+      WORKER_MANAGER_RETRY_DELAY: ${WORKER_MANAGER_RETRY_DELAY:-5}
+      WORKER_MANAGER_UPLOAD_ATTEMPTS: ${WORKER_MANAGER_UPLOAD_ATTEMPTS:-5}
       # Inherited by every masscan-worker the manager starts.
       MASSCAN_WORKER_LOG_LEVEL: ${MASSCAN_WORKER_LOG_LEVEL:-info}
       MASSCAN_WORKER_DEFAULT_RATE: ${MASSCAN_WORKER_DEFAULT_RATE:-10000}

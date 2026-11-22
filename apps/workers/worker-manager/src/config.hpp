@@ -23,6 +23,16 @@ struct WorkerRateCap {
     std::uint64_t rate;
 };
 
+// Poll mode (--poll) only; file mode reads but never uses it.
+struct BackendConfig {
+    std::string url;         // base URL, e.g. http://localhost:3001/v1
+    std::string token;       // bearer machine token; --poll refuses to start without it
+    std::string manager_id;  // sent with every lease request (the backend's ScanJob.leasedBy)
+    std::chrono::seconds poll_wait;    // how long the backend may hold one lease request
+    std::chrono::seconds retry_delay;  // first delay after a failed lease or upload, then doubled
+    std::uint32_t upload_attempts;     // per result, before it is left on disk
+};
+
 struct Config {
     std::vector<WorkerBinary> workers;
     std::vector<WorkerRateCap> worker_rate_caps;
@@ -36,7 +46,11 @@ struct Config {
     std::chrono::seconds kill_grace;
     LogLevel log_level;
     LogFormat log_format;
+    BackendConfig backend;
 };
+
+// "http(s)://host[:port]/path", trailing '/' removed. Throws std::runtime_error otherwise.
+[[nodiscard]] std::string parse_backend_url(std::string_view text);
 
 // "masscan=masscan-worker,nmap=/opt/bin/nmap-worker". Throws std::runtime_error when malformed.
 [[nodiscard]] std::vector<WorkerBinary> parse_worker_binaries(std::string_view text);
