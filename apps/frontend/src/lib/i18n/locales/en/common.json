@@ -50,7 +50,8 @@
     "kinds": {
       "ip": "IP",
       "cidr": "CIDR",
-      "domain": "Domain"
+      "domain": "Domain",
+      "range": "Range"
     },
     "actions": {
       "edit": "Edit {{value}}",
@@ -78,17 +79,71 @@
     },
     "import": {
       "title": "Add targets",
-      "subtitle": "Enter IP addresses, CIDR ranges (up to /16) and domains by hand, or load them from a CSV or JSON file.",
+      "subtitle": "Enter IP addresses, CIDR ranges (up to /16), IP ranges and domains by hand, or load them from a CSV or JSON file.",
       "back": "Back to targets",
       "tabs": {
-        "manual": "Manual",
+        "form": "Form",
+        "text": "Text",
         "csv": "CSV file",
         "json": "JSON file"
       },
-      "manual": {
+      "entry": {
+        "valueLabel": "Target",
+        "valuePlaceholder": "IP, CIDR, range or domain",
+        "valueHint": "Enter adds it to the list, Shift+Enter starts a new line. Paste a list to add many at once; text after a comma becomes the note.",
+        "noteLabel": "Note",
+        "notePlaceholder": "Optional, e.g. Campus network",
+        "add": "Add",
+        "empty": "Type an IP address (192.0.2.15), a CIDR range (10.0.0.0/24), an IP range (10.0.0.1-200) or a domain (example.com).",
+        "detected": {
+          "addresses_one": "{{count, number}} address",
+          "addresses_other": "{{count, number}} addresses",
+          "blocks_one": "saved as {{count, number}} CIDR block",
+          "blocks_other": "saved as {{count, number}} CIDR blocks",
+          "domain": "resolved to IPv4 addresses when the scan is queued",
+          "lineNote": "Note: {{note}}",
+          "alreadyListed": "Already on the list"
+        },
+        "linesReady_one": "{{count, number}} line ready to add",
+        "linesReady_other": "{{count, number}} lines ready to add",
+        "added_one": "Added {{added, number}} of {{count, number}}.",
+        "added_other": "Added {{added, number}} of {{count, number}}.",
+        "alreadyListed_one": "{{count, number}} was already on the list.",
+        "alreadyListed_other": "{{count, number}} were already on the list.",
+        "toFix": "Still in the field, to fix:",
+        "moreProblems_one": "…and {{count, number}} more",
+        "moreProblems_other": "…and {{count, number}} more",
+        "list": {
+          "title": "Targets to import",
+          "empty": "Nothing on the list yet.",
+          "addresses": "Addresses",
+          "note": "Note for {{value}}",
+          "remove": "Remove {{value}}",
+          "expand": "Show the blocks of {{value}}",
+          "collapse": "Hide the blocks of {{value}}",
+          "blocks_one": "Saved as {{count, number}} target:",
+          "blocks_other": "Saved as {{count, number}} targets:",
+          "clear": "Clear the list",
+          "summary_one": "{{count, number}} entry on the list",
+          "summary_other": "{{count, number}} entries on the list"
+        },
+        "clearDialog": {
+          "title": "Clear the list?",
+          "description_one": "{{count, number}} entry will be removed.",
+          "description_other": "{{count, number}} entries will be removed.",
+          "confirm": "Clear"
+        },
+        "leave": {
+          "title": "Leave without importing?",
+          "description_one": "{{count, number}} entry on the list has not been imported and will be lost.",
+          "description_other": "{{count, number}} entries on the list have not been imported and will be lost.",
+          "confirm": "Leave"
+        }
+      },
+      "text": {
         "label": "Targets",
-        "placeholder": "10.0.0.0/24, Campus network\n192.0.2.15\nexample.com",
-        "hint": "One target per line, optionally followed by a comma and a note. Lines starting with # are skipped."
+        "placeholder": "10.0.0.0/24, Campus network\n192.0.2.15\n198.51.100.20-198.51.100.40, Lab\nexample.com",
+        "hint": "One target per line (an IP, CIDR, range such as 10.0.0.1-10.0.0.50, or domain), optionally followed by a comma and a note. Lines starting with # are skipped."
       },
       "csv": {
         "hint": "One target per row with an optional note in the next column. A header row (target, note) is optional; columns may be separated by a comma, semicolon or tab.",
@@ -121,20 +176,25 @@
         "problem": "Problem",
         "changed": "Changed",
         "rejected": "Skipped",
+        "overlap": "Overlap",
         "more_one": "…and {{count, number}} more",
         "more_other": "…and {{count, number}} more"
       },
       "issues": {
-        "invalid_format": "Not an IPv4 address, CIDR range or domain",
+        "invalid_format": "Not an IPv4 address, CIDR, IP range or domain",
         "ipv6_unsupported": "IPv6 is not supported",
         "reserved_range": "Reserved range (loopback, link-local, multicast or broadcast)",
         "cidr_too_large": "Range larger than /16",
+        "invalid_range": "The range ends before it starts",
+        "range_too_large": "Range of more than 65,536 addresses (a /16)",
         "value_too_long": "Too long",
         "note_too_long": "Note longer than 500 characters",
         "duplicate": "Repeats an earlier entry",
         "cidr_normalized": "Host bits cleared to the network address",
         "single_host_cidr": "A /32 range is imported as a single address",
-        "url_stripped": "URL reduced to its host name"
+        "url_stripped": "URL reduced to its host name",
+        "range_split": "IP range saved as CIDR blocks",
+        "covered_by": "Overlaps {{detail}} from this import"
       },
       "listErrors": {
         "empty": "There is nothing to import.",
@@ -143,6 +203,12 @@
         "too_many_entries": "More than 100,000 targets in one import.",
         "too_many_addresses": "More than 1,048,576 IP addresses in one import.",
         "too_many_domains": "More than 1,000 domains in one import."
+      },
+      "tags": {
+        "label": "Tags",
+        "placeholder": "comma, separated",
+        "hint": "Optional. Given to the targets this import adds; targets already on the list keep their tags.",
+        "invalid": "Up to 20 tags, each at most 50 characters."
       },
       "startScan": {
         "label": "Start a scan right away",

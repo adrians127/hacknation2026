@@ -60,6 +60,7 @@ export const targetsService = {
               kind: entry.kind,
               value: entry.value,
               note: entry.note,
+              tags: body.tags ?? [],
               createdById: auth.user.id,
             })),
             skipDuplicates: true,

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { collectTargets, parseTargetJson, parseTargetText, parseTargetValue } from "./target-input";
+import {
+  collectTargets,
+  parseTargetJson,
+  parseTargetText,
+  parseTargetValue,
+  splitTargetText,
+} from "./target-input";
 import { ImportTargetsBodySchema } from "./targets.schema";
 
 const ok = (raw: string) => {
@@ -46,6 +52,98 @@ describe("parseTargetValue", () => {
     for (const raw of ["", "localhost", "10.0.0.256", "10.0.0", "10.0.0.0/33", "a_b.example.com", "*.example.com"]) {
       expect(rejection(raw), raw).toBe("invalid_format");
     }
+  });
+});
+
+const blocks = (raw: string) => {
+  const parsed = ok(raw);
+  if (parsed.kind !== "range") throw new Error(`${raw} is not a range`);
+  return parsed.blocks.map((block) => `${block.kind}:${block.value}`);
+};
+
+describe("IP ranges", () => {
+  it("splits a range into the fewest CIDR blocks", () => {
+    expect(ok("10.0.0.1-10.0.0.200")).toMatchObject({
+      kind: "range",
+      value: "10.0.0.1-10.0.0.200",
+      warnings: ["range_split"],
+    });
+    expect(blocks("10.0.0.1-10.0.0.200")).toEqual([
+      "ip:10.0.0.1",
+      "cidr:10.0.0.2/31",
+      "cidr:10.0.0.4/30",
+      "cidr:10.0.0.8/29",
+      "cidr:10.0.0.16/28",
+      "cidr:10.0.0.32/27",
+      "cidr:10.0.0.64/26",
+      "cidr:10.0.0.128/26",
+      "cidr:10.0.0.192/29",
+      "ip:10.0.0.200",
+    ]);
+    expect(blocks("10.0.0.0-10.0.0.255")).toEqual(["cidr:10.0.0.0/24"]);
+    expect(blocks("10.0.0.0-10.0.255.255")).toEqual(["cidr:10.0.0.0/16"]);
+  });
+
+  it("accepts nmap's last-octet form, spaces and an en dash", () => {
+    for (const raw of ["10.0.0.1-200", "10.0.0.1 - 10.0.0.200", "10.0.0.1–10.0.0.200", "http://10.0.0.1-200/"]) {
+      expect(ok(raw).value, raw).toBe("10.0.0.1-10.0.0.200");
+    }
+  });
+
+  it("rejects ranges it cannot scan", () => {
+    expect(rejection("10.0.0.200-10.0.0.1")).toBe("invalid_range");
+    expect(rejection("10.0.0.200-1")).toBe("invalid_range");
+    expect(rejection("10.0.0.0-10.1.0.0")).toBe("range_too_large");
+    expect(rejection("126.255.255.0-127.0.0.5")).toBe("reserved_range");
+    expect(rejection("10.0.0.1-256")).toBe("invalid_format");
+    expect(rejection("10.0.0.1-10.0.0.300")).toBe("invalid_format");
+  });
+
+  it("leaves hyphenated domains alone", () => {
+    expect(ok("my-host.example.com")).toMatchObject({ kind: "domain" });
+  });
+
+  it("imports a range as its blocks, each with the note", () => {
+    const result = parseTargetText("192.0.2.0-192.0.2.129, Lab");
+    expect(result.entries.map((entry) => [entry.kind, entry.value, entry.note, entry.position])).toEqual([
+      ["cidr", "192.0.2.0/25", "Lab", 1],
+      ["cidr", "192.0.2.128/31", "Lab", 1],
+    ]);
+    expect(result.stats).toEqual({ ip: 0, cidr: 2, domain: 0, addresses: 130 });
+    expect(result.issues).toEqual([{ position: 1, raw: "192.0.2.0-192.0.2.129", code: "range_split" }]);
+  });
+
+  it("drops blocks already listed and a range that adds nothing", () => {
+    const result = parseTargetText("192.0.2.128/31\n192.0.2.0-192.0.2.129\n192.0.2.0-192.0.2.129\n192.0.2.0/25");
+    expect(result.entries.map((entry) => entry.value)).toEqual(["192.0.2.128/31", "192.0.2.0/25"]);
+    expect(result.issues.filter((issue) => issue.code === "duplicate").map((issue) => issue.position)).toEqual([3, 4]);
+  });
+});
+
+const covered = (text: string) =>
+  parseTargetText(text)
+    .issues.filter((issue) => issue.code === "covered_by")
+    .map((issue) => [issue.position, issue.detail]);
+
+describe("overlapping targets", () => {
+  it("warns about an entry inside another one, whichever comes first", () => {
+    expect(covered("10.0.0.5\n10.0.0.0/24\n10.0.0.128/25\n10.0.1.1")).toEqual([
+      [1, "10.0.0.0/24"],
+      [3, "10.0.0.0/24"],
+    ]);
+  });
+
+  it("names the range as the user wrote it, once per pair", () => {
+    expect(covered("10.0.0.1-10.0.0.200\n10.0.0.100-10.0.0.120\n10.0.0.150")).toEqual([
+      [2, "10.0.0.1-10.0.0.200"],
+      [3, "10.0.0.1-10.0.0.200"],
+    ]);
+  });
+
+  it("keeps the overlapping entries", () => {
+    const result = parseTargetText("10.0.0.0/24\n10.0.0.7, Web server");
+    expect(result.entries.map((entry) => entry.value)).toEqual(["10.0.0.0/24", "10.0.0.7"]);
+    expect(result.stats.addresses).toBe(256);
   });
 });
 
@@ -146,9 +244,18 @@ describe("collectTargets", () => {
     ];
     const result = collectTargets(rows);
     expect(result.entries).toEqual([
-      { kind: "ip", value: "192.0.2.1", note: "gw", range: { start: 3221225985, end: 3221225985 } },
+      { kind: "ip", value: "192.0.2.1", note: "gw", range: { start: 3221225985, end: 3221225985 }, position: 0 },
     ]);
     expect(result.issues).toEqual([{ position: 1, raw: "::1", code: "ipv6_unsupported" }]);
+  });
+});
+
+describe("splitTargetText", () => {
+  it("returns the rows with their line numbers, before any validation", () => {
+    expect(splitTargetText("target,note\n\n# skip\nnot a target,x\n10.0.0.0/24")).toEqual([
+      { position: 4, value: "not a target", note: "x" },
+      { position: 5, value: "10.0.0.0/24", note: "" },
+    ]);
   });
 });
 
@@ -156,6 +263,12 @@ describe("ImportTargetsBodySchema", () => {
   it("accepts raw values the backend will normalize", () => {
     const body = { entries: [{ value: "10.0.0.5/24" }, { value: "10.0.0.0/24" }], startScan: true };
     expect(ImportTargetsBodySchema.safeParse(body).success).toBe(true);
+  });
+
+  it("accepts IP ranges", () => {
+    expect(ImportTargetsBodySchema.safeParse({ entries: [{ value: "10.0.0.1-200" }], startScan: false }).success).toBe(
+      true,
+    );
   });
 
   it("rejects entries the parser rejects, pointing at them", () => {

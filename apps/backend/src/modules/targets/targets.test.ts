@@ -94,6 +94,47 @@ describe("POST /v1/targets/import", () => {
     expect((await prisma.target.findUniqueOrThrow({ where: { value: "192.0.2.10" } })).note).toBe("first");
   });
 
+  it("tags the targets it creates and leaves existing ones alone", async () => {
+    await importAs("editor", { entries: [{ value: "192.0.2.10" }], startScan: false, tags: ["old"] });
+
+    const res = await importAs("editor", {
+      entries: [{ value: "192.0.2.10" }, { value: "192.0.2.11" }],
+      startScan: false,
+      tags: ["campus", "dmz"],
+    });
+
+    expect(ImportTargetsResponseSchema.parse(await res.json())).toMatchObject({ created: 1, skipped: 1 });
+    const targets = await prisma.target.findMany({
+      orderBy: { value: "asc" },
+      select: { value: true, tags: true },
+    });
+    expect(targets).toEqual([
+      { value: "192.0.2.10", tags: ["old"] },
+      { value: "192.0.2.11", tags: ["campus", "dmz"] },
+    ]);
+  });
+
+  it("stores an IP range as the CIDR blocks that cover it", async () => {
+    const res = await importAs("editor", {
+      entries: [{ value: "192.0.2.0-192.0.2.129", note: "Lab" }],
+      startScan: true,
+    });
+
+    expect(ImportTargetsResponseSchema.parse(await res.json())).toMatchObject({
+      received: 2,
+      created: 2,
+      scan: { targetCount: 2, addressCount: 130 },
+    });
+    const targets = await prisma.target.findMany({
+      orderBy: { value: "asc" },
+      select: { kind: true, value: true, note: true },
+    });
+    expect(targets).toEqual([
+      { kind: "cidr", value: "192.0.2.0/25", note: "Lab" },
+      { kind: "cidr", value: "192.0.2.128/31", note: "Lab" },
+    ]);
+  });
+
   it("only stores targets without startScan", async () => {
     const res = await importAs("editor", { entries: [{ value: "app.example.com" }], startScan: false });
 
@@ -134,6 +175,7 @@ describe("POST /v1/targets/import", () => {
   it.each([
     ["IPv6", "2001:db8::1"],
     ["a CIDR larger than /16", "10.0.0.0/15"],
+    ["an IP range larger than a /16", "10.0.0.0-10.1.0.0"],
     ["a reserved range", "127.0.0.1"],
     ["garbage", "not a target"],
   ])("rejects %s", async (_name, value) => {
