@@ -7,6 +7,7 @@ import {
   type ScanHostListResponse,
 } from "@subsurf/contracts/scans/scan-results.schema";
 import type { Scan, ScanHostCounts, ScanJobStatus } from "@subsurf/contracts/scans/scans.schema";
+import type { Ipv4Range } from "@subsurf/contracts/targets/ipv4";
 
 import {
   Prisma,
@@ -143,6 +144,21 @@ async function diffWithBase(scan: ScanRow, base: BaseScan | null): Promise<HostD
       ? []
       : observations.filter((host) => host.scanId === scan.id && missing.has(host.ip));
   return diffScan([...upNow, ...answeredOtherwise], upBefore);
+}
+
+/** `ranges` sorted and merged (`mergeRanges`). */
+function inRanges(ranges: readonly Ipv4Range[], address: number): boolean {
+  let low = 0;
+  let high = ranges.length - 1;
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    const range = ranges[middle];
+    if (!range) return false;
+    if (address < range.start) high = middle - 1;
+    else if (address > range.end) low = middle + 1;
+    else return true;
+  }
+  return false;
 }
 
 /** LIKE wildcards in user input match literally. */
@@ -352,6 +368,15 @@ export const scanResultsService = {
       page: query.page,
       pageSize: query.pageSize,
     };
+  },
+
+  /** Host assets the scan lists (gone and unknown included) inside `ranges` (sorted, merged). */
+  async hostIdsIn(scanId: string, ranges: readonly Ipv4Range[]): Promise<string[]> {
+    const scan = await findScan(scanId);
+    const entries = await diffWithBase(scan, await findBaseScan(scan));
+    return entries
+      .filter((entry) => inRanges(ranges, Number(entry.ipNumber)))
+      .map((entry) => entry.hostId);
   },
 
   async getHost(scanId: string, hostId: string): Promise<ScanHostDetail> {

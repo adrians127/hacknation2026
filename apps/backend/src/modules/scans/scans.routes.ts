@@ -4,6 +4,7 @@ import { IdParamsSchema } from "@subsurf/contracts/common/common.schema";
 import {
   ScanHostListQuerySchema,
   ScanHostParamsSchema,
+  TagScanHostsBodySchema,
 } from "@subsurf/contracts/scans/scan-results.schema";
 
 import { requireAuth } from "~backend/middleware/authenticate";
@@ -23,3 +24,9 @@ scansRoutes.get(
   c.listHosts,
 );
 scansRoutes.get("/:id/hosts/:hostId", validate({ params: ScanHostParamsSchema }), c.getHost);
+scansRoutes.post(
+  "/:id/hosts/tags",
+  requirePermission("hosts:update"),
+  validate({ params: IdParamsSchema, body: TagScanHostsBodySchema }),
+  c.tagHosts,
+);

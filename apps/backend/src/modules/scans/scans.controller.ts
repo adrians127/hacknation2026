@@ -7,9 +7,12 @@ import {
   type ScanHostDetail,
   type ScanHostListResponse,
   type ScanHostParams,
+  type TagScanHostsBody,
+  type TagScanHostsResponse,
 } from "@subsurf/contracts/scans/scan-results.schema";
 import type { ScanListResponse } from "@subsurf/contracts/scans/scans.schema";
 
+import { hostsService } from "~backend/modules/hosts/hosts.service";
 import { scanResultsService } from "~backend/modules/scans/scan-results.service";
 
 export const scansController = {
@@ -29,5 +32,12 @@ export const scansController = {
 
   getHost: async (req: Request<ScanHostParams>, res: Response<ScanHostDetail>) => {
     res.status(200).json(await scanResultsService.getHost(req.params.id, req.params.hostId));
+  },
+
+  tagHosts: async (
+    req: Request<IdParams, unknown, TagScanHostsBody>,
+    res: Response<TagScanHostsResponse>,
+  ) => {
+    res.status(200).json(await hostsService.tagScanHosts(req.params.id, req.body));
   },
 };
