@@ -7,7 +7,7 @@ This directory is **not a pnpm workspace** (it has no `package.json`), so turbo 
 | Worker | Description |
 |---|---|
 | [`nmap-worker`](nmap-worker/README.md) | TCP service and version detection on address ranges or on Masscan hits (host objects with their own ports) |
-| [`worker-manager`](worker-manager/README.md) | Orchestrator, not a worker: splits a job list into tasks, runs the workers (in parallel where their IP:ports do not overlap, in pipeline order where they do), saves their results to files (no backend connection yet) |
+| [`worker-manager`](worker-manager/README.md) | Orchestrator, not a worker: takes a job list from a file or long-polled from the backend (`--poll`), splits it into tasks, runs the workers (in parallel where their IP:ports do not overlap, in pipeline order where they do), saves their results to files and, with `--poll`, uploads each one to the backend |
 | [`masscan-worker`](masscan-worker/README.md) | High-speed TCP SYN sweep across subnets or all 65,535 ports via masscan. JSON job in, JSON list of live hosts out |
 
 ## Job and result format
@@ -44,6 +44,8 @@ Workers have no database access. Only the backend writes to it (Prisma). Each wo
 4. **Heartbeat** extends the lease. A lease without a heartbeat expires and the batch returns to the pool.
 
 The Nmap worker sends `WORKER_TOKEN` as a bearer machine token to JSON endpoints described in `packages/contracts` (tag `Workers`). Machine-token validation is separate from user authentication and still needs to be implemented with the backend lease, heartbeat, and result handlers.
+
+worker-manager in `--poll` mode leases whole job lists instead: it long-polls `POST /workers/manager/lease` with the same kind of bearer token, runs what it gets and uploads every worker run's result to `POST /workers/manager/results` (see [its README](worker-manager/README.md#poll-mode-jobs-from-the-backend)). The backend implements the results endpoint (`WORKER_TOKEN`, [backend README](../backend/README.md#scan-results)); the lease and heartbeat endpoints are still missing.
 
 ## Result format (locked)
 

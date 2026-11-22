@@ -1,6 +1,9 @@
 #include "config.hpp"
 
+#include <unistd.h>
+
 #include <algorithm>
+#include <array>
 #include <charconv>
 #include <cstdlib>
 #include <format>
@@ -8,6 +11,8 @@
 #include <stdexcept>
 #include <string_view>
 #include <system_error>
+
+#include "job.hpp"
 
 namespace worker_manager {
 
@@ -51,7 +56,33 @@ std::string_view trim(std::string_view text) {
     return text;
 }
 
+std::string manager_id() {
+    std::string id = env_or("WORKER_MANAGER_ID", "");
+    if (id.empty()) {
+        std::array<char, 256> host{};
+        id = ::gethostname(host.data(), host.size() - 1) == 0 ? std::string{host.data()}
+                                                              : std::string{"worker-manager"};
+    }
+    if (!is_safe_id(id)) {
+        throw std::runtime_error(std::format(
+            "WORKER_MANAGER_ID may only contain A-Z a-z 0-9 . _ - (max 128), got '{}'", id));
+    }
+    return id;
+}
+
 }  // namespace
+
+std::string parse_backend_url(std::string_view text) {
+    const bool has_scheme = text.starts_with("http://") || text.starts_with("https://");
+    const auto host_start = text.find("://") + 3;
+    if (!has_scheme || host_start >= text.size() || text[host_start] == '/' ||
+        text.find_first_of(" \t\r\n") != std::string_view::npos) {
+        throw std::runtime_error(std::format(
+            "WORKER_MANAGER_BACKEND_URL must be an http:// or https:// URL, got '{}'", text));
+    }
+    while (text.ends_with('/')) text.remove_suffix(1);
+    return std::string{text};
+}
 
 std::vector<WorkerBinary> parse_worker_binaries(std::string_view text) {
     std::vector<WorkerBinary> workers;
@@ -141,6 +172,18 @@ Config read_config() {
         .kill_grace = std::chrono::seconds{env_number("WORKER_MANAGER_KILL_GRACE", 30, 1, 3600)},
         .log_level = env_enum<LogLevel>("WORKER_MANAGER_LOG_LEVEL", "info", parse_log_level),
         .log_format = env_enum<LogFormat>("WORKER_MANAGER_LOG_FORMAT", "text", parse_log_format),
+        .backend =
+            {
+                .url = parse_backend_url(
+                    env_or("WORKER_MANAGER_BACKEND_URL", "http://localhost:3001/v1")),
+                .token = env_or("WORKER_MANAGER_TOKEN", ""),
+                .manager_id = manager_id(),
+                .poll_wait =
+                    std::chrono::seconds{env_number("WORKER_MANAGER_POLL_WAIT", 30, 1, 300)},
+                .retry_delay =
+                    std::chrono::seconds{env_number("WORKER_MANAGER_RETRY_DELAY", 5, 1, 3600)},
+                .upload_attempts = env_number("WORKER_MANAGER_UPLOAD_ATTEMPTS", 5, 1, 100),
+            },
     };
 }
 

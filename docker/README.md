@@ -12,7 +12,7 @@ Docker Compose files. You run the backend and frontend with `pnpm dev`; only wha
 | `postgres` | `docker-compose.yml` | PostgreSQL 19 (alpine), port bound to `127.0.0.1:5432` only |
 | `defectdojo-*` | `docker-compose.yml` | DefectDojo 3.5 (7 containers), UI and API on `127.0.0.1:8080` only. See [DefectDojo](#defectdojo) |
 | `masscan-worker` | `docker-compose.workers.yml` | One-shot C++ masscan sweep from `apps/workers/masscan-worker`, a job on stdin |
-| `worker-manager` | `docker-compose.workers.yml` (profile `cli`) | One-shot C++ orchestrator from `apps/workers/worker-manager`: job list in, masscan-worker and nmap-worker tasks, results in `worker-results/` |
+| `worker-manager` | `docker-compose.workers.yml` (profile `cli`) | C++ orchestrator from `apps/workers/worker-manager`: job list in (a file, or long-polled from the backend), masscan-worker and nmap-worker tasks, results in `worker-results/` |
 | `nmap-worker` | `docker-compose.workers.yml` (profile `nmap`) | Long-running C++ worker from `apps/workers/nmap-worker`. Opt-in, no pnpm script |
 
 ## Commands (from the repo root)
@@ -32,6 +32,7 @@ pnpm dojo:seed      # fictional demo data (people, assets, two scan runs, triage
 pnpm workers:build                # build the masscan-worker image
 pnpm workers:masscan < job.json   # one masscan sweep, result JSON on stdout
 pnpm workers:manager              # build + run worker-manager on its example.json -> worker-results/
+pnpm workers:manager:poll         # worker-manager long-polls the backend for jobs until Ctrl+C
 pnpm workers:nmap:build           # build nmap-worker and run its tests
 pnpm workers:nmap < apps/workers/nmap-worker/examples/job-local.json > result.json
 ```
@@ -60,7 +61,7 @@ A one-shot CLI rather than a long-running service. Build it with `pnpm workers:b
 
 ## worker-manager
 
-A one-shot CLI like masscan-worker, in the `cli` profile. `pnpm workers:manager` (`docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager`) builds the image from `apps/workers/` (it contains masscan-worker and nmap-worker too) and runs `apps/workers/worker-manager/examples/example.json`. The examples directory is mounted at `/jobs` and the repo-root `worker-results/` at `/results`, and the container runs as `${WORKER_UID:-1000}:${WORKER_GID:-1000}`; the pnpm script creates `worker-results/` and sets both to your uid/gid, so the result files are yours. Network setup and capabilities are the same as masscan-worker. Details are in [`apps/workers/worker-manager/README.md`](../apps/workers/worker-manager/README.md).
+A one-shot CLI like masscan-worker, in the `cli` profile. `pnpm workers:manager` (`docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager`) builds the image from `apps/workers/` (it contains masscan-worker and nmap-worker too) and runs `apps/workers/worker-manager/examples/example.json`. The examples directory is mounted at `/jobs` and the repo-root `worker-results/` at `/results`, and the container runs as `${WORKER_UID:-1000}:${WORKER_GID:-1000}`; the pnpm script creates `worker-results/` and sets both to your uid/gid, so the result files are yours. Network setup and capabilities are the same as masscan-worker. `pnpm workers:manager:poll` runs the same container with `--poll` instead: it long-polls the backend at `BACKEND_URL` (default `http://localhost:3001/v1`, reachable thanks to host networking) with `WORKER_TOKEN` as its bearer token, runs every job list it gets, uploads each task's result and keeps going until Ctrl+C. Set `WORKER_TOKEN` to the backend's `WORKER_TOKEN`. The backend has the results endpoint but not the lease endpoint yet. Details are in [`apps/workers/worker-manager/README.md`](../apps/workers/worker-manager/README.md).
 
 ## DefectDojo
 

@@ -19,6 +19,7 @@ const blankAsAbsent = <T extends z.ZodType>(schema: T) =>
 const EXAMPLE_JWT_SECRET = "dev-only-jwt-secret-change-me-in-production";
 const EXAMPLE_ADMIN_PASSWORD = "admin-change-me-now";
 const EXAMPLE_DATA_ENCRYPTION_KEY = "ZGV2LW9ubHktZGF0YS1rZXktY2hhbmdlLW1lLTAwMDA=";
+const EXAMPLE_WORKER_TOKEN = "dev-only-worker-token-change-me";
 
 // Must match .env.example.
 const DEFAULT_SCAN_PORTS =
@@ -57,6 +58,12 @@ const envSchema = z
       .refine((value) => Buffer.from(value, "base64").length === 32, {
         message: "DATA_ENCRYPTION_KEY must be 32 bytes, base64-encoded",
       }),
+
+    // Bearer token of the scan workers on /workers/* (src/middleware/worker-token.ts). Unset:
+    // those endpoints answer 503.
+    WORKER_TOKEN: blankAsAbsent(
+      z.string().min(16, "WORKER_TOKEN must be at least 16 characters").optional(),
+    ),
 
     // First admin, created at startup while there are no users (and by the seed).
     ADMIN_EMAIL: blankAsAbsent(z.email().optional()),
@@ -103,6 +110,13 @@ const envSchema = z
     {
       path: ["DATA_ENCRYPTION_KEY"],
       message: "Set a real DATA_ENCRYPTION_KEY in production (the .env.example value is public)",
+    },
+  )
+  .refine(
+    (value) => value.NODE_ENV !== "production" || value.WORKER_TOKEN !== EXAMPLE_WORKER_TOKEN,
+    {
+      path: ["WORKER_TOKEN"],
+      message: "Set a real WORKER_TOKEN in production (the .env.example value is public)",
     },
   )
   .refine(

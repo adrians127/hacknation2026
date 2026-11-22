@@ -585,6 +585,26 @@ export interface paths {
         patch: operations["updateServiceVulnerability"];
         trace?: never;
     };
+    "/workers/manager/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload one worker run's result
+         * @description Called by worker-manager with `Authorization: Bearer <WORKER_TOKEN>` after each task. `result` is the locked format of docs/worker-result-format.md. A leased job split into tasks comes back as one upload per task, all with the job's `jobId` and `leaseId`; `task_index` tells them apart. Resending the same lease and task is a no-op. Every address must be inside the job's targets and every open port inside the scan's ports. The body may be up to 64 MB and gzip-compressed (`Content-Encoding: gzip`).
+         */
+        post: operations["submitManagerResult"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workers/nmap/lease": {
         parameters: {
             query?: never;
@@ -1019,6 +1039,200 @@ export interface components {
                     }[];
                 }[];
             }[];
+        };
+        ManagerResultUpload: {
+            task_index: number;
+            task_count: number;
+            result: {
+                scan: {
+                    /** Format: uuid */
+                    jobId: string;
+                    leaseId: string;
+                    /** Format: uuid */
+                    scanId: string;
+                    worker: {
+                        id: string;
+                        version: string;
+                        nmapVersion: string | null;
+                    };
+                    /** @enum {string} */
+                    status: "completed" | "partial" | "failed";
+                    /** @enum {string|null} */
+                    stopReason: "deadline" | "stop-requested" | "lease-lost" | "error" | null;
+                    /** Format: date-time */
+                    startedAt: string;
+                    /** Format: date-time */
+                    finishedAt: string;
+                    durationMs: number;
+                    phasesMs: {
+                        hostDiscovery: number;
+                        portScan: number;
+                        serviceDetection: number;
+                        http: number;
+                    };
+                    params: {
+                        /** Format: ipv4-cidr */
+                        subnet: string;
+                        ports: string;
+                        maxParallel: number;
+                        maxRatePerProcess: number;
+                        hostTimeoutMs: number;
+                        httpTimeoutMs: number;
+                        maxBodyBytes: number;
+                        maxRedirects: number;
+                        nmapArgs: string[];
+                    };
+                    counts: {
+                        addresses: number;
+                        up: number;
+                        down: number;
+                        timeout: number;
+                        cancelled: number;
+                        failed: number;
+                        openPorts: number;
+                        httpEndpoints: number;
+                        httpRequests: number;
+                    };
+                    error: {
+                        code: string;
+                        message: string;
+                    } | null;
+                };
+                hosts: {
+                    /** Format: ip */
+                    ip: string;
+                    /** @enum {string} */
+                    status: "up" | "down" | "timeout" | "cancelled" | "failed";
+                    reason: string | null;
+                    /** Format: date-time */
+                    observedAt: string | null;
+                    latencyMs: number | null;
+                    hostnames: {
+                        name: string;
+                        /** @enum {string} */
+                        source: "job" | "ptr" | "tls-san";
+                    }[];
+                    error: {
+                        code: string;
+                        message: string;
+                    } | null;
+                    ports: {
+                        port: number;
+                        /** @enum {string} */
+                        protocol: "tcp";
+                        /** @enum {string} */
+                        state: "open";
+                        reason: string | null;
+                        service: {
+                            name: string;
+                            product: string | null;
+                            version: string | null;
+                            extraInfo: string | null;
+                            cpe: string[];
+                            /** @enum {string} */
+                            method: "probed" | "table";
+                            confidence: number;
+                        } | null;
+                        identity: {
+                            ttl: number | null;
+                            sshHostKeySha256: string | null;
+                            tlsCertSha256: string | null;
+                        };
+                        banner: string | null;
+                        scripts: {
+                            id: string;
+                            output: string;
+                        }[];
+                        http: {
+                            /** @enum {string} */
+                            scheme: "http" | "https";
+                            vhost: string | null;
+                            /** Format: uri */
+                            url: string;
+                            /** Format: uri */
+                            finalUrl: string;
+                            statusCode: number | null;
+                            title: string | null;
+                            headers: {
+                                name: string;
+                                value: string;
+                            }[];
+                            cookies: {
+                                name: string;
+                                valueSha256: string;
+                                secure: boolean;
+                                httpOnly: boolean;
+                                /** @enum {string|null} */
+                                sameSite: "Strict" | "Lax" | "None" | null;
+                                domain: string | null;
+                                path: string | null;
+                                expires: string | null;
+                            }[];
+                            redirects: {
+                                /** Format: uri */
+                                url: string;
+                                statusCode: number;
+                                location: string;
+                                followed: boolean;
+                            }[];
+                            body: {
+                                sha256: string;
+                                size: number;
+                                contentType: string | null;
+                                content: string | null;
+                                truncated: boolean;
+                            } | null;
+                            favicon: {
+                                /** Format: uri */
+                                url: string;
+                                mmh3: number;
+                                sha256: string;
+                            } | null;
+                            tls: {
+                                version: string;
+                                cipher: string;
+                                alpn: string | null;
+                                cert: {
+                                    subjectCn: string | null;
+                                    san: string[];
+                                    issuer: string | null;
+                                    /** Format: date-time */
+                                    notBefore: string;
+                                    /** Format: date-time */
+                                    notAfter: string;
+                                    serial: string;
+                                    sha256: string;
+                                    selfSigned: boolean;
+                                    keyAlgorithm: string;
+                                    keyBits: number | null;
+                                };
+                            } | null;
+                            probes: {
+                                path: string;
+                                statusCode: number | null;
+                                location: string | null;
+                                title: string | null;
+                                size: number | null;
+                                bodySha256: string | null;
+                                error: {
+                                    code: string;
+                                    message: string;
+                                } | null;
+                            }[];
+                            error: {
+                                code: string;
+                                message: string;
+                            } | null;
+                        }[];
+                    }[];
+                }[];
+            };
+        };
+        ManagerResultUploadResponse: {
+            /** @enum {string} */
+            status: "ingested" | "duplicate";
+            /** Format: uuid */
+            resultId: string;
         };
     };
     responses: never;
@@ -3401,6 +3615,75 @@ export interface operations {
             };
             /** @description No such service, or it never matched this vulnerability */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    submitManagerResult: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ManagerResultUpload"];
+            };
+        };
+        responses: {
+            /** @description Result stored, or already stored for this lease and task */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagerResultUploadResponse"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or wrong worker token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Body larger than 64 MB */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Worker endpoints are disabled: the backend has no WORKER_TOKEN */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

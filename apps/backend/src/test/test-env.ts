@@ -14,4 +14,5 @@ export const TEST_ENV = {
   DB_NAME: TEST_DATABASE_NAME,
   JWT_SECRET: "test-only-jwt-secret-at-least-32-characters-long",
   DATA_ENCRYPTION_KEY: "dGVzdC1vbmx5LWRhdGEta2V5LTAxMjM0NTY3ODlhYmM=",
+  WORKER_TOKEN: "test-only-worker-token-0123456789",
 } as const;
