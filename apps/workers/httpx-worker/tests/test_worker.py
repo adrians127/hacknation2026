@@ -66,11 +66,15 @@ missing = subprocess.run([str(worker)], input=json.dumps(job), text=True,
 assert missing.returncode == 1
 assert json.loads(missing.stdout)["scan"]["error"]["code"] == "scanner-unavailable"
 
+slow_job = {
+    **job,
+    "targets": [job["targets"][0], {"ip": "127.0.0.2", "ports": [8080]}],
+}
 slow = subprocess.Popen([str(worker)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE, text=True,
                         env=dict(env, FAKE_HTTPX_SLEEP="3"))
 assert slow.stdin is not None
-slow.stdin.write(json.dumps(job))
+slow.stdin.write(json.dumps(slow_job))
 slow.stdin.close()
 time.sleep(0.2)
 slow.send_signal(signal.SIGTERM)
@@ -81,3 +85,4 @@ partial = json.loads(slow.stdout.read())
 assert partial["scan"]["status"] == "partial"
 assert partial["scan"]["stopReason"] == "stop-requested"
 assert partial["hosts"][1]["status"] == "cancelled"
+assert partial["hosts"][1]["ports"] == []

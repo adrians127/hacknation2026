@@ -70,14 +70,22 @@ The common result schema currently has fields named `maxRatePerProcess` and
 The manager image includes `httpx-worker` and the pinned httpx binary. Its default
 pipeline is `masscan,nmap,httpx`, and its default per-worker cap includes
 `httpx=25`. A job with `worker: "httpx"` works with `split: {"strategy":"chunk"}`
-for host objects. The manager orders overlapping work, but currently reads a
-static job list; another component must construct the HTTP job from discovery
-results. No backend lease or result submission is implemented here.
+for host objects. The manager orders overlapping work and can upload each task
+result with `task_index` and `task_count` in `--poll` mode. The backend must
+construct the HTTP job from discovery results. Its `/workers/manager/lease`
+endpoint is not implemented yet; file mode works without it.
 
-When the backend ingests both Nmap and httpx results for one scan, it must merge
-HTTP enrichment by `(scan, ip, port)` instead of replacing Nmap's service/version
-metadata with this worker's `service: null`. It must assign a distinct job and
-lease to the HTTP stage. The worker reports `worker.id: "httpx-worker"`.
+The backend currently stores each worker result as a separate `HostObservation`.
+Its scan read path selects one observation per IP and prefers Nmap for an `up`
+host. Thus both results persist, but the selected Nmap observation hides httpx's
+`http[]` data. Backend integration should combine observations by
+`(scanId, ip, protocol, port)` when reading a scan: retain Nmap service/version,
+scripts and port identity, and attach httpx endpoints (keyed by scheme and
+vhost). It should keep observations and result IDs intact for audit/history,
+then calculate the effective fingerprint from the combined port. Ingest must
+also keep HTTP tasks in a distinct lease or task index: `(leaseId, taskIndex)`
+is the backend's deduplication key. The worker reports
+`worker.id: "httpx-worker"`.
 
 ## Test
 

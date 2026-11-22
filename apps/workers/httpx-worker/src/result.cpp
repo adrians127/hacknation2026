@@ -318,7 +318,8 @@ OrderedJson make_result(const Job& job, const std::vector<GroupResult>& groups,
             ++endpoints;
         }
         OrderedJson ports = OrderedJson::array();
-        if (target.known_open) {
+        const bool processed = index < processed_targets;
+        if (processed && target.known_open) {
             for (const auto& range : target.ports) {
                 for (int port = range.first; port <= range.last; ++port) {
                     auto it = port_http.find(port);
@@ -326,11 +327,10 @@ OrderedJson make_result(const Job& job, const std::vector<GroupResult>& groups,
                         ? OrderedJson::array() : std::move(it->second)));
                 }
             }
-        } else {
+        } else if (processed) {
             for (auto& [port, http] : port_http)
                 ports.push_back(port_json(port, std::move(http)));
         }
-        const bool processed = index < processed_targets;
         const std::string host_status = !processed ? "cancelled"
             : target.known_open || has_response ? "up" : "down";
         up += host_status == "up";
