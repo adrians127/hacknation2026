@@ -65,7 +65,8 @@ function userFields(body: { note?: string; tags?: string[]; triage?: TriageStatu
   return {
     ...(body.note !== undefined && { note: encryptText(body.note.trim()) ?? Prisma.DbNull }),
     ...(body.tags !== undefined && { tags: normalizeTags(body.tags) }),
-    ...(body.triage !== undefined && { triage: body.triage }),
+    // The user's verdict replaces a rule's for good: rules never touch it again.
+    ...(body.triage !== undefined && { triage: body.triage, triageRuleId: null }),
   };
 }
 

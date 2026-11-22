@@ -1,35 +1,40 @@
 /// A port that has been open on a host in at least one scan; it lives across scans. Ingest only
 /// moves `firstSeenAt`/`lastSeenAt`. `note`, `tags`, `triage` and the `*Override` corrections
-/// belong to users and ingest never writes them (PDF item 14).
+/// belong to users and ingest never writes them (PDF item 14); rules (modules/rules) may set
+/// `triage` and tags users left alone.
 model Service {
-  id              String            @id @default(uuid(7)) @db.Uuid
-  hostId          String            @db.Uuid
-  protocol        TransportProtocol
-  port            Int
-  firstSeenAt     DateTime
-  lastSeenAt      DateTime
+  id                   String            @id @default(uuid(7)) @db.Uuid
+  hostId               String            @db.Uuid
+  protocol             TransportProtocol
+  port                 Int
+  firstSeenAt          DateTime
+  lastSeenAt           DateTime
   /// { "$enc": "v1.…" } (src/lib/crypto.ts); null = no note.
-  note            Json?
-  tags            String[]          @default([])
-  triage          TriageStatus      @default(unreviewed)
+  note                 Json?
+  tags                 String[]          @default([])
+  triage               TriageStatus      @default(unreviewed)
+  /// The rule that set `triage`; null = a user did (or nobody). A user's edit clears it.
+  triageRuleId         String?           @db.Uuid
   /// User corrections of what service detection reported; null = show the observed value.
-  nameOverride    String?
-  productOverride String?
-  versionOverride String?
+  nameOverride         String?
+  productOverride      String?
+  versionOverride      String?
   /// Imported from DefectDojo (modules/defectdojo); every sync replaces them, users do not edit them.
-  remediationPlannedOn DateTime? @db.Date
-  slaDueOn             DateTime? @db.Date
-  riskAcceptedUntil    DateTime? @db.Date
-  createdAt      DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  remediationPlannedOn DateTime?         @db.Date
+  slaDueOn             DateTime?         @db.Date
+  riskAcceptedUntil    DateTime?         @db.Date
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   host                 Host                         @relation(fields: [hostId], references: [id], onDelete: Cascade)
   observations         PortObservation[]
   vulnerabilityMatches VulnerabilityMatch[]
   vulnerabilityTriage  ServiceVulnerabilityTriage[]
+  triageRule           Rule?                        @relation(fields: [triageRuleId], references: [id], onDelete: SetNull)
 
   /// Also serves lookups by hostId.
   @@unique([hostId, protocol, port])
+  @@index([triageRuleId])
 }
 
 enum TransportProtocol {

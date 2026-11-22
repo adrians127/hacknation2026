@@ -2,11 +2,13 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { TriageStatusSchema, type TriageStatus } from "@subsurf/contracts/hosts/hosts.schema";
+import type { RuleRef } from "@subsurf/contracts/rules/rule-ref.schema";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUpdateHost } from "@/features/hosts/api/update-host";
 import { useUpdateService } from "@/features/hosts/api/update-service";
 import { TriageBadge } from "@/features/hosts/components/triage-badge";
+import { RuleBadge } from "@/features/rules/components/rule-badge";
 import { useErrorMessage } from "@/hooks/use-error-message";
 import { useCan } from "@/lib/auth/use-can";
 
@@ -16,10 +18,13 @@ type TriageTarget = { hostId: string; serviceId?: string };
 export function TriageControl({
   target,
   value,
+  rule = null,
   label,
 }: {
   target: TriageTarget;
   value: TriageStatus;
+  /** The rule that set the value; a user's change takes it over. */
+  rule?: RuleRef | null;
   /** Accessible name, e.g. "Triage of 10.40.1.10". */
   label: string;
 }) {
@@ -30,7 +35,14 @@ export function TriageControl({
   const updateService = useUpdateService();
   const pending = updateHost.isPending || updateService.isPending;
 
-  if (!canEdit) return <TriageBadge status={value} />;
+  if (!canEdit) {
+    return (
+      <span className="flex items-center gap-1">
+        <TriageBadge status={value} />
+        <RuleBadge rule={rule} compact />
+      </span>
+    );
+  }
 
   function change(raw: string) {
     const triage = TriageStatusSchema.parse(raw);
@@ -49,6 +61,7 @@ export function TriageControl({
   }
 
   return (
+    <span className="flex items-center gap-1">
     <Select value={value} onValueChange={change} disabled={pending}>
       <SelectTrigger size="sm" aria-label={label} className="min-w-32">
         <SelectValue />
@@ -61,5 +74,7 @@ export function TriageControl({
         ))}
       </SelectContent>
     </Select>
+    <RuleBadge rule={rule} compact />
+    </span>
   );
 }

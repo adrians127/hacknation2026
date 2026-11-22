@@ -2,6 +2,7 @@ import type { Logger } from "pino";
 
 import { env } from "~backend/config/env";
 import { pipelineRuns } from "~backend/modules/pipelines/pipeline-runs.service";
+import { rulesTick } from "~backend/modules/rules/rules.scheduler";
 
 /**
  * One scheduler pass. Every step is a conditional update, so API instances running it at the
@@ -14,6 +15,7 @@ export async function tick(log: Logger, now = new Date()): Promise<void> {
   const paused = await pipelineRuns.pauseClosedWindows(now);
   if (paused > 0) log.info({ scans: paused }, "Paused scans whose time window closed");
   await pipelineRuns.fireDuePipelines(now, log);
+  await rulesTick(log, now);
 }
 
 /** Runs `tick` every `PIPELINE_SCHEDULER_TICK_SECONDS`, never two at once. Returns the stop function. */

@@ -25,6 +25,7 @@ import { RemediationDates } from "@/features/hosts/components/remediation-dates"
 import { ServiceIdentity } from "@/features/hosts/components/service-identity";
 import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageBadge } from "@/features/hosts/components/triage-badge";
+import { RuleBadge } from "@/features/rules/components/rule-badge";
 import { compareUrl } from "@/features/scans/lib/pair";
 import { ServiceVulnerabilities } from "@/features/vulnerabilities/components/service-vulnerabilities";
 import { VulnerabilitySummaryBadge } from "@/features/vulnerabilities/components/vulnerability-summary";
@@ -66,6 +67,7 @@ function ServiceSection({
         <ServiceIdentity service={service} />
         <ChangeBadge change={service.change} />
         <TriageBadge status={service.triage} />
+        <RuleBadge rule={service.triageRule} />
         <VulnerabilitySummaryBadge summary={service.vulnerabilities} />
         <span className="ml-auto">
           <IconAction
@@ -170,6 +172,7 @@ function HostDetails({
           <ChangeBadge change={host.change} />
           <LifecycleBadge lifecycle={host.lifecycle} />
           <TriageBadge status={host.triage} />
+          <RuleBadge rule={host.triageRule} />
           <VulnerabilitySummaryBadge summary={host.vulnerabilities} />
           <TagList tags={host.tags} />
           <span className="ml-auto flex gap-2">

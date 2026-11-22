@@ -7,6 +7,7 @@ import {
   Radar,
   ShieldCheck,
   Users,
+  WandSparkles,
   Workflow,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ interface NavItem {
     | "nav.targets"
     | "nav.scans"
     | "nav.reports"
+    | "nav.rules"
     | "nav.pipelines"
     | "nav.workers"
     | "nav.vulnerabilities"
@@ -41,6 +43,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/app/targets", label: "nav.targets", Icon: Crosshair, permission: "targets:read" },
   { to: "/app/scans", label: "nav.scans", Icon: Radar, permission: "scans:read" },
   { to: "/app/reports", label: "nav.reports", Icon: FileText, permission: "scans:read" },
+  { to: "/app/rules", label: "nav.rules", Icon: WandSparkles, permission: "rules:read" },
   { to: "/app/pipelines", label: "nav.pipelines", Icon: Workflow, permission: "pipelines:read" },
   { to: "/app/admin/workers", label: "nav.workers", Icon: Cpu, permission: "workers:read" },
   {
@@ -73,7 +76,7 @@ export function AppLayout() {
               end={to === "/app"}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground",
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm md:-ml-3 text-muted-foreground transition-colors hover:text-foreground",
                   isActive && "bg-brand/15 text-brand hover:text-brand",
                 )
               }

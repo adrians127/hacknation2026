@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChangeBadge } from "@/features/hosts/components/change-badge";
 import { FieldChangeList } from "@/features/hosts/components/field-change-list";
 import { LifecycleBadge } from "@/features/hosts/components/lifecycle-badge";
+import { RuleBadge } from "@/features/rules/components/rule-badge";
 import { compareUrl } from "@/features/scans/lib/pair";
 import { createDataTableColumns } from "@/lib/data-table";
 
@@ -41,10 +42,13 @@ export function TopChangesTable({
         column.accessor("priority", {
           header: t("dashboard.top.priority"),
           enableSorting: false,
-          cell: ({ getValue }) => (
-            <Badge variant="outline" className={PRIORITY_CLASS[getValue()]}>
-              {t(`dashboard.priority.${getValue()}`)}
-            </Badge>
+          cell: ({ row: { original: change } }) => (
+            <span className="flex items-center gap-1">
+              <Badge variant="outline" className={PRIORITY_CLASS[change.priority]}>
+                {t(`dashboard.priority.${change.priority}`)}
+              </Badge>
+              <RuleBadge rule={change.rule} compact />
+            </span>
           ),
         }),
         column.accessor("ip", {

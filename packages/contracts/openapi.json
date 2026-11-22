@@ -200,7 +200,11 @@
                 "workers:delete",
                 "defectdojo:read",
                 "defectdojo:import",
-                "defectdojo:export"
+                "defectdojo:export",
+                "rules:read",
+                "rules:create",
+                "rules:update",
+                "rules:delete"
               ]
             }
           },
@@ -1222,7 +1226,11 @@
                 "workers:delete",
                 "defectdojo:read",
                 "defectdojo:import",
-                "defectdojo:export"
+                "defectdojo:export",
+                "rules:read",
+                "rules:create",
+                "rules:update",
+                "rules:delete"
               ]
             }
           },
@@ -1247,6 +1255,734 @@
           "isSystem",
           "permissions",
           "userCount",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Rule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "expired": {
+            "type": "boolean"
+          },
+          "definition": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "vulnerability"
+                    ]
+                  },
+                  "scope": {
+                    "type": "object",
+                    "properties": {
+                      "ranges": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "ip"
+                            },
+                            {
+                              "type": "string",
+                              "format": "ipv4-cidr"
+                            }
+                          ]
+                        },
+                        "maxItems": 100
+                      },
+                      "hostTags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 50,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 20
+                      },
+                      "ports": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 65535
+                        },
+                        "maxItems": 100
+                      },
+                      "products": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 20
+                      }
+                    },
+                    "required": [
+                      "ranges",
+                      "hostTags",
+                      "ports",
+                      "products"
+                    ]
+                  },
+                  "condition": {
+                    "type": "object",
+                    "properties": {
+                      "vulnerabilityIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9:_.-]{1,100}$"
+                        },
+                        "maxItems": 500
+                      },
+                      "severities": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "critical",
+                            "high",
+                            "medium",
+                            "low",
+                            "none",
+                            "unknown"
+                          ]
+                        }
+                      },
+                      "cvssAtLeast": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 10
+                      },
+                      "cvssBelow": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 10
+                      },
+                      "kev": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "confidence": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "confirmed",
+                          "potential",
+                          null
+                        ]
+                      },
+                      "reasons": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "version_unknown",
+                            "distro_backport_possible",
+                            "fixed_by_backport",
+                            "platform_condition"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "vulnerabilityIds",
+                      "severities",
+                      "cvssAtLeast",
+                      "cvssBelow",
+                      "kev",
+                      "confidence",
+                      "reasons"
+                    ]
+                  },
+                  "action": {
+                    "type": "object",
+                    "properties": {
+                      "triage": {
+                        "type": "string",
+                        "enum": [
+                          "important",
+                          "accepted_risk",
+                          "false_positive"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "triage"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "scope",
+                  "condition",
+                  "action"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "service"
+                    ]
+                  },
+                  "scope": {
+                    "type": "object",
+                    "properties": {
+                      "ranges": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "ip"
+                            },
+                            {
+                              "type": "string",
+                              "format": "ipv4-cidr"
+                            }
+                          ]
+                        },
+                        "maxItems": 100
+                      },
+                      "hostTags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 50,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 20
+                      },
+                      "ports": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 65535
+                        },
+                        "maxItems": 100
+                      },
+                      "products": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 20
+                      }
+                    },
+                    "required": [
+                      "ranges",
+                      "hostTags",
+                      "ports",
+                      "products"
+                    ]
+                  },
+                  "condition": {
+                    "type": "object",
+                    "properties": {
+                      "target": {
+                        "type": "string",
+                        "enum": [
+                          "service",
+                          "host"
+                        ]
+                      },
+                      "titles": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 20
+                      }
+                    },
+                    "required": [
+                      "target",
+                      "titles"
+                    ]
+                  },
+                  "action": {
+                    "type": "object",
+                    "properties": {
+                      "triage": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "reviewed",
+                          "important",
+                          "false_positive",
+                          null
+                        ]
+                      },
+                      "tag": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "minLength": 1,
+                        "maxLength": 50,
+                        "pattern": "\\S"
+                      }
+                    },
+                    "required": [
+                      "triage",
+                      "tag"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "scope",
+                  "condition",
+                  "action"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "unchanged"
+                    ]
+                  },
+                  "scope": {
+                    "type": "object",
+                    "properties": {
+                      "ranges": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "ip"
+                            },
+                            {
+                              "type": "string",
+                              "format": "ipv4-cidr"
+                            }
+                          ]
+                        },
+                        "maxItems": 100
+                      },
+                      "hostTags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 50,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 20
+                      },
+                      "ports": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 65535
+                        },
+                        "maxItems": 100
+                      },
+                      "products": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 20
+                      }
+                    },
+                    "required": [
+                      "ranges",
+                      "hostTags",
+                      "ports",
+                      "products"
+                    ]
+                  },
+                  "condition": {
+                    "type": "object",
+                    "properties": {
+                      "target": {
+                        "type": "string",
+                        "enum": [
+                          "service",
+                          "host"
+                        ]
+                      },
+                      "scans": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5
+                      }
+                    },
+                    "required": [
+                      "target",
+                      "scans"
+                    ]
+                  },
+                  "action": {
+                    "type": "object",
+                    "properties": {
+                      "triage": {
+                        "type": "string",
+                        "enum": [
+                          "reviewed",
+                          "important",
+                          "false_positive"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "triage"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "scope",
+                  "condition",
+                  "action"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "change_priority"
+                    ]
+                  },
+                  "scope": {
+                    "type": "object",
+                    "properties": {
+                      "ranges": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "ip"
+                            },
+                            {
+                              "type": "string",
+                              "format": "ipv4-cidr"
+                            }
+                          ]
+                        },
+                        "maxItems": 100
+                      },
+                      "hostTags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 50,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 20
+                      },
+                      "ports": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 65535
+                        },
+                        "maxItems": 100
+                      },
+                      "products": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 20
+                      }
+                    },
+                    "required": [
+                      "ranges",
+                      "hostTags",
+                      "ports",
+                      "products"
+                    ]
+                  },
+                  "condition": {
+                    "type": "object",
+                    "properties": {
+                      "rows": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "host",
+                            "service",
+                            "field"
+                          ]
+                        }
+                      },
+                      "changes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "new",
+                            "gone",
+                            "changed",
+                            "unknown"
+                          ]
+                        }
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "service.name",
+                            "service.product",
+                            "service.version",
+                            "service.extraInfo",
+                            "service.cpe",
+                            "ssh.hostKey",
+                            "http.endpoint",
+                            "http.status",
+                            "http.title",
+                            "http.redirect",
+                            "http.header",
+                            "http.securityHeader",
+                            "http.cookie",
+                            "http.cookieFlags",
+                            "tls.cert",
+                            "tls.issuer",
+                            "tls.expiry",
+                            "tls.selfSigned",
+                            "tls.version",
+                            "tls.cipher",
+                            "tls.endpoint",
+                            "http.favicon",
+                            "http.probe",
+                            "host.hostname"
+                          ]
+                        }
+                      },
+                      "keys": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 100
+                      },
+                      "lifecycles": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "unstable",
+                            "missing",
+                            "inactive"
+                          ]
+                        }
+                      },
+                      "priorities": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "high",
+                            "medium",
+                            "low"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "rows",
+                      "changes",
+                      "fields",
+                      "keys",
+                      "lifecycles",
+                      "priorities"
+                    ]
+                  },
+                  "action": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "priority"
+                            ]
+                          },
+                          "priority": {
+                            "type": "string",
+                            "enum": [
+                              "high",
+                              "medium",
+                              "low"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "priority"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "mute"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "type"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "scope",
+                  "condition",
+                  "action"
+                ]
+              }
+            ]
+          },
+          "affected": {
+            "type": "object",
+            "properties": {
+              "hosts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "services": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "vulnerabilities": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "tags": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "hosts",
+              "services",
+              "vulnerabilities",
+              "tags"
+            ]
+          },
+          "createdBy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "displayName"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "note",
+          "enabled",
+          "position",
+          "expiresAt",
+          "expired",
+          "definition",
+          "affected",
+          "createdBy",
           "createdAt",
           "updatedAt"
         ]
@@ -5146,6 +5882,10 @@
                         "low"
                       ]
                     },
+                    "muted": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
                     "topChanges": {
                       "type": "array",
                       "items": {
@@ -5215,6 +5955,25 @@
                                 "other"
                               ]
                             }
+                          },
+                          "rule": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ]
                           },
                           "ports": {
                             "type": "array",
@@ -5347,6 +6106,7 @@
                           "change",
                           "priority",
                           "reasons",
+                          "rule",
                           "ports",
                           "fields",
                           "lifecycle"
@@ -5362,6 +6122,7 @@
                     "openPorts",
                     "changes",
                     "priorities",
+                    "muted",
                     "topChanges"
                   ]
                 }
@@ -12922,7 +13683,11 @@
                                 "workers:delete",
                                 "defectdojo:read",
                                 "defectdojo:import",
-                                "defectdojo:export"
+                                "defectdojo:export",
+                                "rules:read",
+                                "rules:create",
+                                "rules:update",
+                                "rules:delete"
                               ]
                             }
                           },
@@ -13047,10 +13812,14 @@
                         "workers:delete",
                         "defectdojo:read",
                         "defectdojo:import",
-                        "defectdojo:export"
+                        "defectdojo:export",
+                        "rules:read",
+                        "rules:create",
+                        "rules:update",
+                        "rules:delete"
                       ]
                     },
-                    "maxItems": 33
+                    "maxItems": 37
                   }
                 },
                 "required": [
@@ -13211,7 +13980,11 @@
                           "workers:delete",
                           "defectdojo:read",
                           "defectdojo:import",
-                          "defectdojo:export"
+                          "defectdojo:export",
+                          "rules:read",
+                          "rules:create",
+                          "rules:update",
+                          "rules:delete"
                         ]
                       }
                     },
@@ -13380,10 +14153,14 @@
                         "workers:delete",
                         "defectdojo:read",
                         "defectdojo:import",
-                        "defectdojo:export"
+                        "defectdojo:export",
+                        "rules:read",
+                        "rules:create",
+                        "rules:update",
+                        "rules:delete"
                       ]
                     },
-                    "maxItems": 33
+                    "maxItems": 37
                   }
                 }
               }
@@ -13521,6 +14298,3281 @@
           },
           "409": {
             "description": "Users still have this role (`ROLE_IN_USE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rules": {
+      "get": {
+        "operationId": "listRules",
+        "summary": "List the rules",
+        "description": "Requires `rules:read`. Every rule in order (the first matching rule sets a value), with what it holds now: hosts, services and vulnerabilities whose triage it set, and tags it added.",
+        "tags": [
+          "Rules"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "note": {
+                            "type": "string"
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "expiresAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "expired": {
+                            "type": "boolean"
+                          },
+                          "definition": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "vulnerability"
+                                    ]
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "ranges": {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "ip"
+                                            },
+                                            {
+                                              "type": "string",
+                                              "format": "ipv4-cidr"
+                                            }
+                                          ]
+                                        },
+                                        "maxItems": 100
+                                      },
+                                      "hostTags": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 50,
+                                          "pattern": "\\S"
+                                        },
+                                        "maxItems": 20
+                                      },
+                                      "ports": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 65535
+                                        },
+                                        "maxItems": 100
+                                      },
+                                      "products": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 100,
+                                          "pattern": "\\S"
+                                        },
+                                        "maxItems": 20
+                                      }
+                                    },
+                                    "required": [
+                                      "ranges",
+                                      "hostTags",
+                                      "ports",
+                                      "products"
+                                    ]
+                                  },
+                                  "condition": {
+                                    "type": "object",
+                                    "properties": {
+                                      "vulnerabilityIds": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^[A-Za-z0-9:_.-]{1,100}$"
+                                        },
+                                        "maxItems": 500
+                                      },
+                                      "severities": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "enum": [
+                                            "critical",
+                                            "high",
+                                            "medium",
+                                            "low",
+                                            "none",
+                                            "unknown"
+                                          ]
+                                        }
+                                      },
+                                      "cvssAtLeast": {
+                                        "type": [
+                                          "number",
+                                          "null"
+                                        ],
+                                        "minimum": 0,
+                                        "maximum": 10
+                                      },
+                                      "cvssBelow": {
+                                        "type": [
+                                          "number",
+                                          "null"
+                                        ],
+                                        "minimum": 0,
+                                        "maximum": 10
+                                      },
+                                      "kev": {
+                                        "type": [
+                                          "boolean",
+                                          "null"
+                                        ]
+                                      },
+                                      "confidence": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ],
+                                        "enum": [
+                                          "confirmed",
+                                          "potential",
+                                          null
+                                        ]
+                                      },
+                                      "reasons": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "enum": [
+                                            "version_unknown",
+                                            "distro_backport_possible",
+                                            "fixed_by_backport",
+                                            "platform_condition"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "vulnerabilityIds",
+                                      "severities",
+                                      "cvssAtLeast",
+                                      "cvssBelow",
+                                      "kev",
+                                      "confidence",
+                                      "reasons"
+                                    ]
+                                  },
+                                  "action": {
+                                    "type": "object",
+                                    "properties": {
+                                      "triage": {
+                                        "type": "string",
+                                        "enum": [
+                                          "important",
+                                          "accepted_risk",
+                                          "false_positive"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "triage"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "scope",
+                                  "condition",
+                                  "action"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "service"
+                                    ]
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "ranges": {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "ip"
+                                            },
+                                            {
+                                              "type": "string",
+                                              "format": "ipv4-cidr"
+                                            }
+                                          ]
+                                        },
+                                        "maxItems": 100
+                                      },
+                                      "hostTags": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 50,
+                                          "pattern": "\\S"
+                                        },
+                                        "maxItems": 20
+                                      },
+                                      "ports": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 65535
+                                        },
+                                        "maxItems": 100
+                                      },
+                                      "products": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 100,
+                                          "pattern": "\\S"
+                                        },
+                                        "maxItems": 20
+                                      }
+                                    },
+                                    "required": [
+                                      "ranges",
+                                      "hostTags",
+                                      "ports",
+                                      "products"
+                                    ]
+                                  },
+                                  "condition": {
+                                    "type": "object",
+                                    "properties": {
+                                      "target": {
+                                        "type": "string",
+                                        "enum": [
+                                          "service",
+                                          "host"
+                                        ]
+                                      },
+                                      "titles": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 100,
+                                          "pattern": "\\S"
+                                        },
+                                        "maxItems": 20
+                                      }
+                                    },
+                                    "required": [
+                                      "target",
+                                      "titles"
+                                    ]
+                                  },
+                                  "action": {
+                                    "type": "object",
+                                    "properties": {
+                                      "triage": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ],
+                                        "enum": [
+                                          "reviewed",
+                                          "important",
+                                          "false_positive",
+                                          null
+                                        ]
+                                      },
+                                      "tag": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ],
+                                        "minLength": 1,
+                                        "maxLength": 50,
+                                        "pattern": "\\S"
+                                      }
+                                    },
+                                    "required": [
+                                      "triage",
+                                      "tag"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "scope",
+                                  "condition",
+                                  "action"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "unchanged"
+                                    ]
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "ranges": {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "ip"
+                                            },
+                                            {
+                                              "type": "string",
+                                              "format": "ipv4-cidr"
+                                            }
+                                          ]
+                                        },
+                                        "maxItems": 100
+                                      },
+                                      "hostTags": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 50,
+                                          "pattern": "\\S"
+                                        },
+                                        "maxItems": 20
+                                      },
+                                      "ports": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 65535
+                                        },
+                                        "maxItems": 100
+                                      },
+                                      "products": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 100,
+                                          "pattern": "\\S"
+                                        },
+                                        "maxItems": 20
+                                      }
+                                    },
+                                    "required": [
+                                      "ranges",
+                                      "hostTags",
+                                      "ports",
+                                      "products"
+                                    ]
+                                  },
+                                  "condition": {
+                                    "type": "object",
+                                    "properties": {
+                                      "target": {
+                                        "type": "string",
+                                        "enum": [
+                                          "service",
+                                          "host"
+                                        ]
+                                      },
+                                      "scans": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 5
+                                      }
+                                    },
+                                    "required": [
+                                      "target",
+                                      "scans"
+                                    ]
+                                  },
+                                  "action": {
+                                    "type": "object",
+                                    "properties": {
+                                      "triage": {
+                                        "type": "string",
+                                        "enum": [
+                                          "reviewed",
+                                          "important",
+                                          "false_positive"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "triage"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "scope",
+                                  "condition",
+                                  "action"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "change_priority"
+                                    ]
+                                  },
+                                  "scope": {
+                                    "type": "object",
+                                    "properties": {
+                                      "ranges": {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "ip"
+                                            },
+                                            {
+                                              "type": "string",
+                                              "format": "ipv4-cidr"
+                                            }
+                                          ]
+                                        },
+                                        "maxItems": 100
+                                      },
+                                      "hostTags": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 50,
+                                          "pattern": "\\S"
+                                        },
+                                        "maxItems": 20
+                                      },
+                                      "ports": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 65535
+                                        },
+                                        "maxItems": 100
+                                      },
+                                      "products": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 100,
+                                          "pattern": "\\S"
+                                        },
+                                        "maxItems": 20
+                                      }
+                                    },
+                                    "required": [
+                                      "ranges",
+                                      "hostTags",
+                                      "ports",
+                                      "products"
+                                    ]
+                                  },
+                                  "condition": {
+                                    "type": "object",
+                                    "properties": {
+                                      "rows": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "enum": [
+                                            "host",
+                                            "service",
+                                            "field"
+                                          ]
+                                        }
+                                      },
+                                      "changes": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "enum": [
+                                            "new",
+                                            "gone",
+                                            "changed",
+                                            "unknown"
+                                          ]
+                                        }
+                                      },
+                                      "fields": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "enum": [
+                                            "service.name",
+                                            "service.product",
+                                            "service.version",
+                                            "service.extraInfo",
+                                            "service.cpe",
+                                            "ssh.hostKey",
+                                            "http.endpoint",
+                                            "http.status",
+                                            "http.title",
+                                            "http.redirect",
+                                            "http.header",
+                                            "http.securityHeader",
+                                            "http.cookie",
+                                            "http.cookieFlags",
+                                            "tls.cert",
+                                            "tls.issuer",
+                                            "tls.expiry",
+                                            "tls.selfSigned",
+                                            "tls.version",
+                                            "tls.cipher",
+                                            "tls.endpoint",
+                                            "http.favicon",
+                                            "http.probe",
+                                            "host.hostname"
+                                          ]
+                                        }
+                                      },
+                                      "keys": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 100,
+                                          "pattern": "\\S"
+                                        },
+                                        "maxItems": 100
+                                      },
+                                      "lifecycles": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "enum": [
+                                            "active",
+                                            "unstable",
+                                            "missing",
+                                            "inactive"
+                                          ]
+                                        }
+                                      },
+                                      "priorities": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "enum": [
+                                            "high",
+                                            "medium",
+                                            "low"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "rows",
+                                      "changes",
+                                      "fields",
+                                      "keys",
+                                      "lifecycles",
+                                      "priorities"
+                                    ]
+                                  },
+                                  "action": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "type": {
+                                            "type": "string",
+                                            "enum": [
+                                              "priority"
+                                            ]
+                                          },
+                                          "priority": {
+                                            "type": "string",
+                                            "enum": [
+                                              "high",
+                                              "medium",
+                                              "low"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "type",
+                                          "priority"
+                                        ]
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "type": {
+                                            "type": "string",
+                                            "enum": [
+                                              "mute"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "type"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "scope",
+                                  "condition",
+                                  "action"
+                                ]
+                              }
+                            ]
+                          },
+                          "affected": {
+                            "type": "object",
+                            "properties": {
+                              "hosts": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "services": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "vulnerabilities": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "tags": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "hosts",
+                              "services",
+                              "vulnerabilities",
+                              "tags"
+                            ]
+                          },
+                          "createdBy": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "displayName"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "note",
+                          "enabled",
+                          "position",
+                          "expiresAt",
+                          "expired",
+                          "definition",
+                          "affected",
+                          "createdBy",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createRule",
+        "summary": "Create a rule",
+        "description": "Requires `rules:create`. The rule goes last in the order and applies to every scan, past and future. The rules are applied again right away: values the rule set where it no longer matches go back to `unreviewed` (or to the next matching rule), and it never overwrites a value a user set.",
+        "tags": [
+          "Rules"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "\\S"
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "expiresAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "definition": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "vulnerability"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "vulnerabilityIds": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "pattern": "^[A-Za-z0-9:_.-]{1,100}$"
+                                },
+                                "maxItems": 500
+                              },
+                              "severities": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "critical",
+                                    "high",
+                                    "medium",
+                                    "low",
+                                    "none",
+                                    "unknown"
+                                  ]
+                                }
+                              },
+                              "cvssAtLeast": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 10
+                              },
+                              "cvssBelow": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 10
+                              },
+                              "kev": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "confidence": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "confirmed",
+                                  "potential",
+                                  null
+                                ]
+                              },
+                              "reasons": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "version_unknown",
+                                    "distro_backport_possible",
+                                    "fixed_by_backport",
+                                    "platform_condition"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "vulnerabilityIds",
+                              "severities",
+                              "cvssAtLeast",
+                              "cvssBelow",
+                              "kev",
+                              "confidence",
+                              "reasons"
+                            ]
+                          },
+                          "action": {
+                            "type": "object",
+                            "properties": {
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "important",
+                                  "accepted_risk",
+                                  "false_positive"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "triage"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "service"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "service",
+                                  "host"
+                                ]
+                              },
+                              "titles": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "titles"
+                            ]
+                          },
+                          "action": {
+                            "type": "object",
+                            "properties": {
+                              "triage": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "reviewed",
+                                  "important",
+                                  "false_positive",
+                                  null
+                                ]
+                              },
+                              "tag": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1,
+                                "maxLength": 50,
+                                "pattern": "\\S"
+                              }
+                            },
+                            "required": [
+                              "triage",
+                              "tag"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "unchanged"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "service",
+                                  "host"
+                                ]
+                              },
+                              "scans": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 5
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "scans"
+                            ]
+                          },
+                          "action": {
+                            "type": "object",
+                            "properties": {
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "reviewed",
+                                  "important",
+                                  "false_positive"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "triage"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "change_priority"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "rows": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "host",
+                                    "service",
+                                    "field"
+                                  ]
+                                }
+                              },
+                              "changes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "new",
+                                    "gone",
+                                    "changed",
+                                    "unknown"
+                                  ]
+                                }
+                              },
+                              "fields": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "service.name",
+                                    "service.product",
+                                    "service.version",
+                                    "service.extraInfo",
+                                    "service.cpe",
+                                    "ssh.hostKey",
+                                    "http.endpoint",
+                                    "http.status",
+                                    "http.title",
+                                    "http.redirect",
+                                    "http.header",
+                                    "http.securityHeader",
+                                    "http.cookie",
+                                    "http.cookieFlags",
+                                    "tls.cert",
+                                    "tls.issuer",
+                                    "tls.expiry",
+                                    "tls.selfSigned",
+                                    "tls.version",
+                                    "tls.cipher",
+                                    "tls.endpoint",
+                                    "http.favicon",
+                                    "http.probe",
+                                    "host.hostname"
+                                  ]
+                                }
+                              },
+                              "keys": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 100
+                              },
+                              "lifecycles": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "active",
+                                    "unstable",
+                                    "missing",
+                                    "inactive"
+                                  ]
+                                }
+                              },
+                              "priorities": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "high",
+                                    "medium",
+                                    "low"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "rows",
+                              "changes",
+                              "fields",
+                              "keys",
+                              "lifecycles",
+                              "priorities"
+                            ]
+                          },
+                          "action": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "priority"
+                                    ]
+                                  },
+                                  "priority": {
+                                    "type": "string",
+                                    "enum": [
+                                      "high",
+                                      "medium",
+                                      "low"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "priority"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "mute"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "definition"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rule"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rules/{id}": {
+      "patch": {
+        "operationId": "updateRule",
+        "summary": "Change, enable, disable or move a rule",
+        "description": "Requires `rules:update`. The rules are applied again right away: values the rule set where it no longer matches go back to `unreviewed` (or to the next matching rule), and it never overwrites a value a user set.",
+        "tags": [
+          "Rules"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "\\S"
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "expiresAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "definition": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "vulnerability"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "vulnerabilityIds": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "pattern": "^[A-Za-z0-9:_.-]{1,100}$"
+                                },
+                                "maxItems": 500
+                              },
+                              "severities": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "critical",
+                                    "high",
+                                    "medium",
+                                    "low",
+                                    "none",
+                                    "unknown"
+                                  ]
+                                }
+                              },
+                              "cvssAtLeast": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 10
+                              },
+                              "cvssBelow": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 10
+                              },
+                              "kev": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "confidence": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "confirmed",
+                                  "potential",
+                                  null
+                                ]
+                              },
+                              "reasons": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "version_unknown",
+                                    "distro_backport_possible",
+                                    "fixed_by_backport",
+                                    "platform_condition"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "vulnerabilityIds",
+                              "severities",
+                              "cvssAtLeast",
+                              "cvssBelow",
+                              "kev",
+                              "confidence",
+                              "reasons"
+                            ]
+                          },
+                          "action": {
+                            "type": "object",
+                            "properties": {
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "important",
+                                  "accepted_risk",
+                                  "false_positive"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "triage"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "service"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "service",
+                                  "host"
+                                ]
+                              },
+                              "titles": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "titles"
+                            ]
+                          },
+                          "action": {
+                            "type": "object",
+                            "properties": {
+                              "triage": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "reviewed",
+                                  "important",
+                                  "false_positive",
+                                  null
+                                ]
+                              },
+                              "tag": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1,
+                                "maxLength": 50,
+                                "pattern": "\\S"
+                              }
+                            },
+                            "required": [
+                              "triage",
+                              "tag"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "unchanged"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "service",
+                                  "host"
+                                ]
+                              },
+                              "scans": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 5
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "scans"
+                            ]
+                          },
+                          "action": {
+                            "type": "object",
+                            "properties": {
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "reviewed",
+                                  "important",
+                                  "false_positive"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "triage"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "change_priority"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "rows": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "host",
+                                    "service",
+                                    "field"
+                                  ]
+                                }
+                              },
+                              "changes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "new",
+                                    "gone",
+                                    "changed",
+                                    "unknown"
+                                  ]
+                                }
+                              },
+                              "fields": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "service.name",
+                                    "service.product",
+                                    "service.version",
+                                    "service.extraInfo",
+                                    "service.cpe",
+                                    "ssh.hostKey",
+                                    "http.endpoint",
+                                    "http.status",
+                                    "http.title",
+                                    "http.redirect",
+                                    "http.header",
+                                    "http.securityHeader",
+                                    "http.cookie",
+                                    "http.cookieFlags",
+                                    "tls.cert",
+                                    "tls.issuer",
+                                    "tls.expiry",
+                                    "tls.selfSigned",
+                                    "tls.version",
+                                    "tls.cipher",
+                                    "tls.endpoint",
+                                    "http.favicon",
+                                    "http.probe",
+                                    "host.hostname"
+                                  ]
+                                }
+                              },
+                              "keys": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 100
+                              },
+                              "lifecycles": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "active",
+                                    "unstable",
+                                    "missing",
+                                    "inactive"
+                                  ]
+                                }
+                              },
+                              "priorities": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "high",
+                                    "medium",
+                                    "low"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "rows",
+                              "changes",
+                              "fields",
+                              "keys",
+                              "lifecycles",
+                              "priorities"
+                            ]
+                          },
+                          "action": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "priority"
+                                    ]
+                                  },
+                                  "priority": {
+                                    "type": "string",
+                                    "enum": [
+                                      "high",
+                                      "medium",
+                                      "low"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "priority"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "mute"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      }
+                    ]
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rule"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteRule",
+        "summary": "Delete a rule",
+        "description": "Requires `rules:delete`. What the rule set goes back to `unreviewed` (or to the next matching rule) and the tags it added are removed; values users set stay.",
+        "tags": [
+          "Rules"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rules/preview": {
+      "post": {
+        "operationId": "previewRule",
+        "summary": "What a rule would do now",
+        "description": "Requires `rules:read`. Evaluates a rule definition without saving it: how many targets it matches, how many it would change, how many it leaves because a user (or an earlier rule) set them, and examples. Change rules are checked on the newest scan with results.",
+        "tags": [
+          "Rules"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "definition": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "vulnerability"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "vulnerabilityIds": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "pattern": "^[A-Za-z0-9:_.-]{1,100}$"
+                                },
+                                "maxItems": 500
+                              },
+                              "severities": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "critical",
+                                    "high",
+                                    "medium",
+                                    "low",
+                                    "none",
+                                    "unknown"
+                                  ]
+                                }
+                              },
+                              "cvssAtLeast": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 10
+                              },
+                              "cvssBelow": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 10
+                              },
+                              "kev": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "confidence": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "confirmed",
+                                  "potential",
+                                  null
+                                ]
+                              },
+                              "reasons": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "version_unknown",
+                                    "distro_backport_possible",
+                                    "fixed_by_backport",
+                                    "platform_condition"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "vulnerabilityIds",
+                              "severities",
+                              "cvssAtLeast",
+                              "cvssBelow",
+                              "kev",
+                              "confidence",
+                              "reasons"
+                            ]
+                          },
+                          "action": {
+                            "type": "object",
+                            "properties": {
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "important",
+                                  "accepted_risk",
+                                  "false_positive"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "triage"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "service"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "service",
+                                  "host"
+                                ]
+                              },
+                              "titles": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "titles"
+                            ]
+                          },
+                          "action": {
+                            "type": "object",
+                            "properties": {
+                              "triage": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "reviewed",
+                                  "important",
+                                  "false_positive",
+                                  null
+                                ]
+                              },
+                              "tag": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1,
+                                "maxLength": 50,
+                                "pattern": "\\S"
+                              }
+                            },
+                            "required": [
+                              "triage",
+                              "tag"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "unchanged"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "target": {
+                                "type": "string",
+                                "enum": [
+                                  "service",
+                                  "host"
+                                ]
+                              },
+                              "scans": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 5
+                              }
+                            },
+                            "required": [
+                              "target",
+                              "scans"
+                            ]
+                          },
+                          "action": {
+                            "type": "object",
+                            "properties": {
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "reviewed",
+                                  "important",
+                                  "false_positive"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "triage"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "change_priority"
+                            ]
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 100
+                              },
+                              "hostTags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ports": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "maxItems": 100
+                              },
+                              "products": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              }
+                            },
+                            "required": [
+                              "ranges",
+                              "hostTags",
+                              "ports",
+                              "products"
+                            ]
+                          },
+                          "condition": {
+                            "type": "object",
+                            "properties": {
+                              "rows": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "host",
+                                    "service",
+                                    "field"
+                                  ]
+                                }
+                              },
+                              "changes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "new",
+                                    "gone",
+                                    "changed",
+                                    "unknown"
+                                  ]
+                                }
+                              },
+                              "fields": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "service.name",
+                                    "service.product",
+                                    "service.version",
+                                    "service.extraInfo",
+                                    "service.cpe",
+                                    "ssh.hostKey",
+                                    "http.endpoint",
+                                    "http.status",
+                                    "http.title",
+                                    "http.redirect",
+                                    "http.header",
+                                    "http.securityHeader",
+                                    "http.cookie",
+                                    "http.cookieFlags",
+                                    "tls.cert",
+                                    "tls.issuer",
+                                    "tls.expiry",
+                                    "tls.selfSigned",
+                                    "tls.version",
+                                    "tls.cipher",
+                                    "tls.endpoint",
+                                    "http.favicon",
+                                    "http.probe",
+                                    "host.hostname"
+                                  ]
+                                }
+                              },
+                              "keys": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 100,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 100
+                              },
+                              "lifecycles": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "active",
+                                    "unstable",
+                                    "missing",
+                                    "inactive"
+                                  ]
+                                }
+                              },
+                              "priorities": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "high",
+                                    "medium",
+                                    "low"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "rows",
+                              "changes",
+                              "fields",
+                              "keys",
+                              "lifecycles",
+                              "priorities"
+                            ]
+                          },
+                          "action": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "priority"
+                                    ]
+                                  },
+                                  "priority": {
+                                    "type": "string",
+                                    "enum": [
+                                      "high",
+                                      "medium",
+                                      "low"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "priority"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "mute"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "scope",
+                          "condition",
+                          "action"
+                        ]
+                      }
+                    ]
+                  },
+                  "ruleId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "definition"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "matched": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "changes": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "unchanged": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "skipped": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "samples": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "serviceId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "uuid"
+                          },
+                          "port": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "vulnerabilityId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "change": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "new",
+                              "gone",
+                              "changed",
+                              "unchanged",
+                              "unknown",
+                              null
+                            ]
+                          },
+                          "field": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "service.name",
+                              "service.product",
+                              "service.version",
+                              "service.extraInfo",
+                              "service.cpe",
+                              "ssh.hostKey",
+                              "http.endpoint",
+                              "http.status",
+                              "http.title",
+                              "http.redirect",
+                              "http.header",
+                              "http.securityHeader",
+                              "http.cookie",
+                              "http.cookieFlags",
+                              "tls.cert",
+                              "tls.issuer",
+                              "tls.expiry",
+                              "tls.selfSigned",
+                              "tls.version",
+                              "tls.cipher",
+                              "tls.endpoint",
+                              "http.favicon",
+                              "http.probe",
+                              "host.hostname",
+                              null
+                            ]
+                          },
+                          "key": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "triage": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "before": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "unreviewed",
+                                      "reviewed",
+                                      "important",
+                                      "false_positive"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "unreviewed",
+                                      "important",
+                                      "accepted_risk",
+                                      "false_positive"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "after": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "unreviewed",
+                                      "reviewed",
+                                      "important",
+                                      "false_positive"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "unreviewed",
+                                      "important",
+                                      "accepted_risk",
+                                      "false_positive"
+                                    ]
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "before",
+                              "after"
+                            ]
+                          },
+                          "tag": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "priority": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "before": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "after": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "high",
+                                      "medium",
+                                      "low"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "muted"
+                                    ]
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "before",
+                              "after"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostId",
+                          "ip",
+                          "serviceId",
+                          "port",
+                          "vulnerabilityId",
+                          "change",
+                          "field",
+                          "key",
+                          "triage",
+                          "tag",
+                          "priority"
+                        ]
+                      },
+                      "maxItems": 20
+                    },
+                    "scan": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "startedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "matched",
+                    "changes",
+                    "unchanged",
+                    "skipped",
+                    "samples",
+                    "scan"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -14609,6 +18661,25 @@
                               "false_positive"
                             ]
                           },
+                          "triageRule": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ]
+                          },
                           "tags": {
                             "type": "array",
                             "items": {
@@ -14899,6 +18970,25 @@
                                     "false_positive"
                                   ]
                                 },
+                                "triageRule": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ]
+                                },
                                 "tags": {
                                   "type": "array",
                                   "items": {
@@ -14991,6 +19081,7 @@
                                 "http",
                                 "before",
                                 "triage",
+                                "triageRule",
                                 "tags",
                                 "note",
                                 "vulnerabilities",
@@ -15010,6 +19101,7 @@
                           "change",
                           "lifecycle",
                           "triage",
+                          "triageRule",
                           "tags",
                           "note",
                           "vulnerabilities",
@@ -15336,6 +19428,25 @@
                         "reviewed",
                         "important",
                         "false_positive"
+                      ]
+                    },
+                    "triageRule": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
                       ]
                     },
                     "tags": {
@@ -16575,6 +20686,25 @@
                               "false_positive"
                             ]
                           },
+                          "triageRule": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ]
+                          },
                           "tags": {
                             "type": "array",
                             "items": {
@@ -17153,6 +21283,25 @@
                                     "false_positive"
                                   ]
                                 },
+                                "triageRule": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ]
+                                },
                                 "note": {
                                   "type": "string"
                                 }
@@ -17177,6 +21326,7 @@
                                 "evidence",
                                 "references",
                                 "triage",
+                                "triageRule",
                                 "note"
                               ]
                             }
@@ -17192,6 +21342,7 @@
                           "http",
                           "before",
                           "triage",
+                          "triageRule",
                           "tags",
                           "note",
                           "vulnerabilities",
@@ -17372,6 +21523,7 @@
                     "change",
                     "lifecycle",
                     "triage",
+                    "triageRule",
                     "tags",
                     "note",
                     "vulnerabilities",
@@ -17827,6 +21979,28 @@
                               "other"
                             ]
                           },
+                          "rule": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ]
+                          },
+                          "muted": {
+                            "type": "boolean"
+                          },
                           "lifecycle": {
                             "type": "object",
                             "properties": {
@@ -17869,6 +22043,8 @@
                           "after",
                           "priority",
                           "reason",
+                          "rule",
+                          "muted",
                           "lifecycle"
                         ]
                       }

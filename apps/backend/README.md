@@ -66,6 +66,8 @@ modules/hosts          PATCH /hosts…: edits of the Host and Service assets (bu
                        ingest's helpers for those assets
 modules/vulnerabilities  /vulnerabilities…: sources (NVD, OSV) mirrored into the database, matching services
                        against them, triage; see "Vulnerabilities"
+modules/rules          /rules…: user rules that set triage and tags on every scan's assets and re-rate changes
+                       (rule-match.ts, rule-plan.ts pure; rules.apply.ts writes; see "Rules")
 modules/defectdojo     GET|POST /defectdojo/sync: pulls DefectDojo tags, owners, triage and remediation dates
                        into hosts and services; POST /defectdojo/push: a scan (or a selection) as Info
                        findings (client, import rules, report builder, sync and push runs)
@@ -101,7 +103,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Permissions and roles
 
-- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|create|update|delete|run`, `hosts:update`, `vulnerabilities:*`, `pipelines:*`, `workers:read|update|delete` and `defectdojo:read|import|export`. `scans:run` also covers running a pipeline, stopping a scan and changing a pipeline's schedule; `workers:update|delete` are global scanner limits (admin only). `scans:read` guards the scan results (hosts and their vulnerabilities included, and their export to a file), `scans:create` importing a results file as a scan, `scans:update` a scan's name and note, `scans:delete` deleting a scan, `hosts:update` the edits of hosts and services; `vulnerabilities:read` the databases' state and the mappings, `:update` the triage of a service's vulnerabilities, `:run` syncing and enabling sources, `:create`/`:delete` the mappings; `defectdojo:read` the sync and push history, `:import` pulling from DefectDojo, `:export` pushing to it; `targets:read` the inventory, `:create` the import, `:update` a target's note and tags, `:delete` removing one. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
+- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|create|update|delete|run`, `hosts:update`, `vulnerabilities:*`, `pipelines:*`, `workers:read|update|delete`, `defectdojo:read|import|export` and `rules:*`. `scans:run` also covers running a pipeline, stopping a scan and changing a pipeline's schedule; `workers:update|delete` are global scanner limits (admin only). `scans:read` guards the scan results (hosts and their vulnerabilities included, and their export to a file), `scans:create` importing a results file as a scan, `scans:update` a scan's name and note, `scans:delete` deleting a scan, `hosts:update` the edits of hosts and services; `vulnerabilities:read` the databases' state and the mappings, `:update` the triage of a service's vulnerabilities, `:run` syncing and enabling sources, `:create`/`:delete` the mappings; `defectdojo:read` the sync and push history, `:import` pulling from DefectDojo, `:export` pushing to it; `targets:read` the inventory, `:create` the import, `:update` a target's note and tags, `:delete` removing one; `rules:read` the rules and their preview, `:create`/`:delete` adding and removing one, `:update` changing, switching or moving one. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
 - A route checks permissions with `requirePermission("users:read")` after `requireAuth`. Services that act on other accounts or roles also call `assertHoldsAll` (below).
 - **System roles** (`admin`, `editor`, `analyst`, `viewer`) are read-only. `syncSystemRoles()` (`modules/roles/system-roles.ts`) runs at startup and in the seed: it gives them exactly `SYSTEM_ROLE_PERMISSIONS` and drops permissions that no longer exist from custom roles.
 - **Custom roles** are rows with a `permissions` array. Deleting a role that users still have needs `reassignToRoleId` (and `users:update`); the users move and the role is deleted in one transaction.
@@ -155,12 +157,14 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `s
   | `PortObservation.details`: `banner`, `scripts`, `http[].headers`, `cookies`, `body.content`, `tls.cert`, `probes` | What scanned hosts returned (see [Scan results](#scan-results)) |
   | `Host.note`, `Service.note`, `ServiceVulnerabilityTriage.note`, `Target.note`, `Scan.note` | Free text written by users (`encryptText`) |
   | `Scan.warnings` | The domains a scan could not resolve or had to leave out (`encryptJson`); nothing queries them |
+  | `Rule.note` | Why a rule exists, written by users (`encryptText`) |
 
   | Plaintext on purpose | Why |
   |---|---|
   | Addresses, hostnames, ports, service name/product/version, HTTP status and page title (`HostObservation`, `HostnameObservation`, `PortObservation` columns and the rest of `details`) | SQL filters, sorts and diffs on them. Fixed by the locked [worker result format](../../docs/worker-result-format.md) |
   | `Target.value`, `Target.rangeStart`/`rangeEnd`, `ScanJob.subnet`/`targets`/`hosts`/`params`, `PipelineStep.targetSelector` | The scan scope. `Target.value` is the inventory's dedup, search and sort key, and a scan writes the same addresses and names to `HostObservation.ip` and `HostnameObservation.name` anyway: a blind index would cost substring search and address order without hiding anything |
-  | Tags, triage, `VulnerabilityMatch` | SQL filters; a match only restates the plaintext service columns |
+  | Tags, triage (and `triageRuleId`), `VulnerabilityMatch` | SQL filters; a match only restates the plaintext service columns |
+  | `Rule.definition` | Scope configuration like `PipelineStep.targetSelector`: CIDRs, tags, ports, product names and CVE ids that the plaintext observation columns and public databases already hold |
   | The vulnerability databases | Public data |
   | The auth tables | Only hashes (passwords, refresh secrets), emails and display names |
 
@@ -284,6 +288,8 @@ use that same selection, so a retry does not duplicate a host in the scan view.
 - **medium:** software, page, certificate or technology-header changes; a removed security header; weakened cookie flags; a gone host that is `inactive`; a host that came back while `unstable`;
 - **low:** everything else. A returning unstable host's ports are `low`: they are not newly exposed.
 
+`change_priority` rules (see [Rules](#rules)) re-rate or mute rows after that rating: a row carries `rule` (the rule that decided, `reason` stays the built-in one) and `muted`; the CSV has `rule` and `muted` columns after `lifecycle`.
+
 CSV is RFC 4180 with a leading `'` on cells that start with `=`, `+`, `-` or `@`, so spreadsheets do not run them (CSV injection). The comparison page downloads both formats.
 
 **Export of a scan** (`GET /scans/{id}/export?format=json|csv`, `scans:read`): the scan's own view of every address it covered, whatever the base scan saw, with the notes, tags, triage and corrections of its hosts. The format is in [`docs/scan-export-format.md`](../../docs/scan-export-format.md).
@@ -300,11 +306,11 @@ CSV is RFC 4180 with a leading `'` on cells that start with `=`, `+`, `-` or `@`
 - **Edits** (`hostsService.mergeEdits`): only with `edits=fill`, and only where the host or service has no value yet (tags are added, triage is set while `unreviewed`, a note while empty, a correction while null). Nothing a user set is overwritten (PDF item 14).
 - At the end `ScanJobResult.receivedAt` is moved to the commit time: the vulnerability sync only looks two minutes back.
 
-**Dashboard** (`modules/dashboard`, `GET /dashboard`, `scans:read`): the newest scan with results against its base scan: hosts up and open ports, change counts, how many known hosts are `unstable` or `inactive` as of that scan, and the 20 most important changes. Rows are grouped by `top-changes.ts` into one item per new, gone or unknown host (with the ports it opened or closed) and one per changed service; an item is as important as its most important row.
+**Dashboard** (`modules/dashboard`, `GET /dashboard`, `scans:read`): the newest scan with results against its base scan: hosts up and open ports, change counts, how many known hosts are `unstable` or `inactive` as of that scan, and the 20 most important changes. Rows are grouped by `top-changes.ts` into one item per new, gone or unknown host (with the ports it opened or closed) and one per changed service; an item is as important as its most important row. Rows a rule muted are left out of the groups and counted in `muted`; an item carries the rule that rated its most important row.
 
 **DefectDojo sync** (`modules/defectdojo/`): `POST /defectdojo/sync` merges DefectDojo tags into host and service tags, sets triage on services still `unreviewed` and replaces `Service.remediationPlannedOn`/`slaDueOn`/`riskAcceptedUntil` (returned as `remediation` on every scan service). `POST /defectdojo/push` sends a scan's services (all, or the selected hosts and services) as `Generic Findings Import` findings, importing once and reimporting into the same test later (`DefectDojoPush` rows keep the test id). Rules: [`docs/defectdojo-integration.md`](../../docs/defectdojo-integration.md#sync-into-subsurf-implemented) and [push](../../docs/defectdojo-integration.md#push-from-subsurf-implemented).
 
-**Edits** (`modules/hosts/`, `hosts:update`): `PATCH /hosts/{id}` (note, tags, triage) and `PATCH /hosts/{id}/services/{serviceId}` (the same plus `nameOverride`/`productOverride`/`versionOverride`, `null` clears one). They write the `Host`/`Service` assets, which ingest never touches, so an edit made from any scan shows in every scan and survives later ones (PDF item 14). Triage is `unreviewed | reviewed | important | false_positive`.
+**Edits** (`modules/hosts/`, `hosts:update`): `PATCH /hosts/{id}` (note, tags, triage) and `PATCH /hosts/{id}/services/{serviceId}` (the same plus `nameOverride`/`productOverride`/`versionOverride`, `null` clears one). They write the `Host`/`Service` assets, which ingest never touches, so an edit made from any scan shows in every scan and survives later ones (PDF item 14). Triage is `unreviewed | reviewed | important | false_positive`. Setting a triage clears `triageRuleId`: the value is the user's from then on and no rule changes it again.
 
 **Editing and deleting a scan** (`modules/scans/scan-edits.service.ts`):
 - `PATCH /scans/{id}` (`scans:update`: admin, editor, analyst) changes the scan's `name` and `note`, in any state of the scan (PDF item 14). The note is encrypted at rest. Nothing else is editable: the results are what was observed, and ingest's scope check depends on the parameters.
@@ -364,6 +370,31 @@ The tables take about 1 GB (`Vulnerability` 592 MB, `VulnerabilityCriterion` 418
 - Many 2024–2026 CVEs have no CPE configuration in NVD yet (NVD's analysis backlog): NVD cannot match them; OSV often can.
 - Ubuntu is not in the default `OSV_ECOSYSTEMS` (820 MB): NVD hits on Ubuntu hosts are `potential`. The distribution parser already reads Ubuntu revisions, so adding `Ubuntu` to the list is enough.
 - Attribution: "This product uses data from the NVD API but is not endorsed or certified by the NVD." OSV data comes from many databases under their own licenses (GitHub Advisory Database CC-BY 4.0, Alpine SecDB CC-BY-SA 4.0, …); the admin page shows the notice.
+
+## Rules
+
+`modules/rules` holds user-defined rules applied to every scan, past and future (`/rules`, `rules:*`). Each is a **scope** (host IPs/CIDRs, host tags, ports, application: part of the service name or product, the user's correction first), a **condition** and an **action** (`RuleDefinitionSchema` in `contracts/src/rules/rules.schema.ts`), plus an optional `expiresAt`.
+
+| Kind | Condition | Action | Applied |
+|---|---|---|---|
+| `vulnerability` | CVE ids, severities, CVSS bounds, KEV, confidence, reasons of a `potential` match | the triage of the matching service × CVE (`ServiceVulnerabilityTriage`) | written |
+| `service` | target `service` or `host`, HTTP title parts | the triage of the service or host and/or a tag | written |
+| `unchanged` | target, unchanged in each of the latest 1–5 scans with results (each against its base scan) | the triage of the service or host | written |
+| `change_priority` | row kind, change, changed field and key, host lifecycle, built-in priority | mute the change row, or set its priority | when changes are read |
+
+**Written values** (`rule-plan.ts`, pure; `rules.apply.ts` loads and writes):
+- For one value the first matching enabled, unexpired rule in `position` order wins.
+- A rule sets a value only where it is `unreviewed` or set by a rule (`triageRuleId` on `Host`, `Service` and `ServiceVulnerabilityTriage`). A user's `PATCH` clears `triageRuleId`, so a user's verdict is never touched again (PDF item 14). DefectDojo sync and the results import fill only `unreviewed` values, so they never meet a rule's.
+- A value holds while its rule matches: when the rule stops matching, is disabled, expires or is deleted it goes back to `unreviewed`, or to the next matching rule. That is what makes `unchanged` a "changed since review" signal. An `unchanged` rule without a conclusive answer (the latest scans did not reach the host) keeps what it set.
+- Tags a rule added are recorded in `RuleTag`: added once (a user who removes one keeps it removed), removed again when the rule no longer matches. A tag the target already had is not the rule's. `MAX_TAGS` holds.
+- Writes are conditional on the value read, like the DefectDojo sync: a user's edit made during a pass wins.
+- A scan export lists triage a rule set as no edit (`isEdited`), since rules set it again wherever the file is imported.
+
+**When:** every `POST`/`PATCH`/`DELETE /rules` applies all rules in the same transaction, under an advisory lock (one pass at a time). The scheduler tick (`rules.scheduler.ts`, from `pipelines/scheduler.ts`) applies them again after new `ScanJobResult.receivedAt` (imports included), new or re-evaluated `VulnerabilityMatch.lastEvaluatedAt` (the vuln-sync process is unchanged) or an expired rule, at most once a minute; cursors live in `RuleState`. Only active matches are judged; a rule's verdict on a match that was retracted stays until the rule goes. `change_priority` rules are applied in `scanResultsService.changes()` on every read, so they also cover old scans and store nothing.
+
+**Preview** (`POST /rules/preview`, `rules:read`): evaluates a definition, placed in the order (last, or in place of `ruleId`), without writing: how many targets (or change rows of the newest scan) it matches, would change, already has, or must leave because a user or an earlier rule set them, with up to 20 examples.
+
+Measured on a copy of the demo network (2026-11-22): ignoring 4,573 backport matches takes 0.3 s, marking 598 unchanged services over two scan pairs 1.5 s, reverting on delete about 1 s.
 
 ## Reports
 

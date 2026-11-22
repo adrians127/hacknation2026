@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { RuleRefSchema } from "../rules/rule-ref.schema";
 import {
   FieldChangeKindSchema,
   FieldChangeSchema,
@@ -55,6 +56,10 @@ export const ScanChangeRowSchema = z.object({
   after: z.string().nullable(),
   priority: ChangePrioritySchema,
   reason: ChangeReasonSchema,
+  /** The `change_priority` rule that re-rated or muted the row; `reason` stays the built-in one. */
+  rule: RuleRefSchema.nullable(),
+  /** Muted by a rule: left out of the dashboard. */
+  muted: z.boolean(),
   /** The host's lifecycle as of the compared scan. */
   lifecycle: HostLifecycleSchema,
 });

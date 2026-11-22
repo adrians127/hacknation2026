@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { RuleRefSchema } from "../rules/rule-ref.schema";
 import { ChangePrioritySchema, ChangeReasonSchema } from "../scans/scan-changes.schema";
 import {
   FieldChangeSchema,
@@ -28,6 +29,8 @@ export const DashboardChangeSchema = z.object({
   priority: ChangePrioritySchema,
   /** Why, most important first. */
   reasons: z.array(ChangeReasonSchema),
+  /** The rule that rated the row the item takes its priority from. */
+  rule: RuleRefSchema.nullable(),
   /** The ports a new or gone host opened or closed. */
   ports: z.array(z.number().int()),
   /** What changed in a changed service (or a changed host's names). */
@@ -51,6 +54,8 @@ export const DashboardResponseSchema = z.object({
   changes: ScanChangeCountsSchema.nullable(),
   /** The grouped changes by priority, all of them (not only the listed ones). */
   priorities: z.object({ high: CountSchema, medium: CountSchema, low: CountSchema }),
+  /** Changes rules muted: left out of the groups above. */
+  muted: CountSchema,
   topChanges: z.array(DashboardChangeSchema).max(DASHBOARD_TOP_CHANGES),
 });
 

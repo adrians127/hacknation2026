@@ -10,6 +10,7 @@ const EMPTY: DashboardResponse = {
   openPorts: 0,
   changes: null,
   priorities: { high: 0, medium: 0, low: 0 },
+  muted: 0,
   topChanges: [],
 };
 
@@ -23,7 +24,8 @@ export const dashboardService = {
       scanResultsService.changes(latest.id),
       scanResultsService.lifecycleCounts(latest.id),
     ]);
-    const groups = groupChanges(changes.items);
+    const shown = changes.items.filter((row) => !row.muted);
+    const groups = groupChanges(shown);
     const count = (priority: keyof DashboardResponse["priorities"]) =>
       groups.filter((group) => group.priority === priority).length;
     return {
@@ -33,6 +35,7 @@ export const dashboardService = {
       openPorts: scan.openPorts,
       changes: scan.changes,
       priorities: { high: count("high"), medium: count("medium"), low: count("low") },
+      muted: changes.items.length - shown.length,
       topChanges: topChanges(groups),
     };
   },

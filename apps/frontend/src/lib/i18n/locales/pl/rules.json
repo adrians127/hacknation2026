@@ -1,0 +1,227 @@
+{
+  "title": "Reguły",
+  "description": "Werdykty, tagi i priorytety zmian ustawione raz i stosowane do każdego skanu, wcześniejszego i przyszłego.",
+  "intro": "Reguła ustawia wartość wszędzie tam, gdzie pasuje: ignoruje lub eskaluje podatności, nadaje triage i tagi usługom, oznacza jako przejrzane to, co się nie zmieniło, albo wycisza i zmienia priorytet zmian. Reguły nigdy nie nadpisują tego, co ustawił użytkownik, wygrywa pierwsza pasująca reguła w kolejności, a to, co reguła ustawiła, wraca, gdy przestaje ona pasować.",
+  "empty": "Nie ma jeszcze reguł. Zacznij od szablonu.",
+  "expires": "do {{date}}",
+  "expired": "wygasła {{date}}",
+  "deleteTitle": "Usuń regułę",
+  "deleteDescription": "Usunąć „{{name}}”? To, co ustawiła, wróci do stanu „nieprzejrzane” (albo przejmie to następna pasująca reguła), a dodane przez nią tagi zostaną zdjęte. Wartości ustawione przez użytkowników zostają.",
+  "badge": {
+    "setBy": "Ustawione przez regułę „{{name}}”"
+  },
+  "columns": {
+    "order": "Kolejność",
+    "name": "Reguła",
+    "definition": "Dopasowuje → robi",
+    "affected": "Obejmuje teraz",
+    "enabled": "Włączona",
+    "actions": "Akcje"
+  },
+  "affected": {
+    "vulnerabilities_one": "{{count}} podatność",
+    "vulnerabilities_few": "{{count}} podatności",
+    "vulnerabilities_many": "{{count}} podatności",
+    "vulnerabilities_other": "{{count}} podatności",
+    "services_one": "{{count}} usługa",
+    "services_few": "{{count}} usługi",
+    "services_many": "{{count}} usług",
+    "services_other": "{{count}} usługi",
+    "hosts_one": "{{count}} host",
+    "hosts_few": "{{count}} hosty",
+    "hosts_many": "{{count}} hostów",
+    "hosts_other": "{{count}} hosta",
+    "tags_one": "{{count}} tag",
+    "tags_few": "{{count}} tagi",
+    "tags_many": "{{count}} tagów",
+    "tags_other": "{{count}} tagu",
+    "none": "Na razie nic",
+    "readTime": "Stosowana przy odczycie zmian"
+  },
+  "actions": {
+    "add": "Nowa reguła",
+    "edit": "Edytuj {{name}}",
+    "delete": "Usuń {{name}}",
+    "moveUp": "Przesuń {{name}} wyżej",
+    "moveDown": "Przesuń {{name}} niżej",
+    "first": "Jest już pierwsza",
+    "last": "Jest już ostatnia",
+    "toggle": "Reguła {{name}} włączona",
+    "mute": "Wycisz"
+  },
+  "toast": {
+    "created": "Reguła utworzona i zastosowana",
+    "updated": "Reguła zapisana i zastosowana",
+    "deleted": "Reguła usunięta"
+  },
+  "kinds": {
+    "vulnerability": {
+      "name": "Podatności",
+      "description": "Ustawia triage pasujących podatności usług: ignoruje je (fałszywy alarm, zaakceptowane ryzyko) albo oznacza jako ważne."
+    },
+    "service": {
+      "name": "Usługi i aplikacje",
+      "description": "Ustawia triage pasujących usług (albo ich hostów) i/lub dodaje tag."
+    },
+    "unchanged": {
+      "name": "Bez zmian",
+      "description": "Ustawia triage usług (albo hostów), które nie zmieniły się w ostatnich skanach. Gdy któraś się zmieni, wartość wraca do „nieprzejrzane”."
+    },
+    "change_priority": {
+      "name": "Priorytet zmian",
+      "description": "Wycisza pasujące zmiany między dwoma skanami albo zmienia ich priorytet na dashboardzie i w eksporcie zmian."
+    }
+  },
+  "targets": {
+    "service": "Usługi",
+    "host": "Hosty"
+  },
+  "rows": {
+    "host": "Cały host",
+    "service": "Otwarty lub zamknięty port",
+    "field": "Pole usługi"
+  },
+  "lifecycles": {
+    "active": "Aktywny",
+    "unstable": "Niestabilny",
+    "missing": "Brakujący",
+    "inactive": "Nieaktywny"
+  },
+  "reasons": {
+    "version_unknown": "Brak wersji",
+    "distro_backport_possible": "Możliwy backport",
+    "fixed_by_backport": "Naprawione backportem",
+    "platform_condition": "Niepotwierdzona platforma"
+  },
+  "summary": {
+    "anywhere": "Wszędzie",
+    "tags": "tagi {{tags}}",
+    "ports": "porty {{ports}}",
+    "products": "aplikacje {{products}}",
+    "cvssAtLeast": "CVSS ≥ {{score}}",
+    "cvssBelow": "CVSS < {{score}}",
+    "kev": "w katalogu CISA KEV",
+    "notKev": "spoza katalogu CISA KEV",
+    "anyVulnerability": "Dowolna podatność",
+    "titles": "tytuł zawiera {{titles}}",
+    "tag": "tag {{tag}}",
+    "unchanged_one": "{{target}} bez zmian w ostatnim skanie",
+    "unchanged_few": "{{target}} bez zmian w ostatnich {{count}} skanach",
+    "unchanged_many": "{{target}} bez zmian w ostatnich {{count}} skanach",
+    "unchanged_other": "{{target}} bez zmian w ostatnich {{count}} skanach",
+    "keys": "nazwa zawiera {{keys}}",
+    "priorities": "z priorytetem {{priorities}}",
+    "anyChange": "Dowolna zmiana",
+    "priority": "Priorytet {{priority}}"
+  },
+  "preview": {
+    "title": "Co zrobiłaby teraz",
+    "invalid": "Uzupełnij regułę, żeby zobaczyć, co by zrobiła.",
+    "counts": "Pasuje {{matched}}: zmieniłaby {{changes}}, już ustawione {{unchanged}}, pozostawione bez zmian {{skipped}}.",
+    "scan": "Sprawdzone na najnowszym skanie z wynikami ({{date}}).",
+    "skippedHint": "Pozostawione bez zmian: ustawił je użytkownik albo robi to już reguła wcześniejsza w kolejności."
+  },
+  "form": {
+    "createTitle": "Nowa reguła",
+    "editTitle": "Edycja reguły",
+    "description": "Reguła obejmuje każdy skan zaraz po zapisaniu i ponownie po każdym nowym skanie.",
+    "preset": "Zacznij od szablonu",
+    "presetHint": "Wypełnia formularz; przed zapisaniem możesz wszystko zmienić.",
+    "presetPlaceholder": "Wybierz szablon",
+    "name": "Nazwa",
+    "nameInvalid": "Nadaj regule nazwę (najwyżej 100 znaków).",
+    "kind": "Rodzaj",
+    "scope": "Gdzie",
+    "scopeHint": "Każde wypełnione pole musi pasować; puste pola pasują do wszystkiego.",
+    "ranges": "Adresy i bloki CIDR",
+    "rangesHint": "np. 10.0.0.0/16, 192.0.2.10",
+    "hostTags": "Tagi hosta",
+    "listHint": "Oddzielone przecinkami; dowolny z nich",
+    "ports": "Porty",
+    "portsHint": "np. 22, 443, 3389",
+    "products": "Aplikacje",
+    "productsHint": "Fragment nazwy usługi lub produktu, np. nginx, OpenSSH",
+    "condition": "Kiedy",
+    "vulnerabilityIds": "Podatności (CVE)",
+    "vulnerabilityIdsHint": "Jeden lub więcej identyfikatorów; puste = dowolna podatność",
+    "severities": "Istotność",
+    "cvssAtLeast": "CVSS co najmniej",
+    "cvssBelow": "CVSS poniżej",
+    "kev": "CISA KEV",
+    "kevOptions": {
+      "any": "Dowolne",
+      "yes": "Tylko KEV",
+      "no": "Spoza KEV"
+    },
+    "confidence": "Dopasowanie",
+    "any": "Dowolne",
+    "reasons": "Niepewne, bo",
+    "target": "Dotyczy",
+    "titles": "Tytuł strony zawiera",
+    "scans": "Bez zmian w ostatnich skanach",
+    "scansHint": "Od 1 do {{max}}; każdy skan porównany z poprzednim",
+    "rows": "Rodzaj zmiany",
+    "changes": "Zmiana",
+    "fields": "Zmienione pole",
+    "keys": "Nagłówek, ciasteczko lub ścieżka zawiera",
+    "keysHint": "np. date, etag, /admin",
+    "lifecycles": "Cykl życia hosta",
+    "priorities": "Wbudowany priorytet",
+    "action": "Wtedy",
+    "setTriage": "Ustaw triage",
+    "noTriage": "Nie zmieniaj triage",
+    "tag": "Dodaj tag",
+    "tagHint": "Zdejmowany, gdy reguła przestaje pasować",
+    "changeAction": "Co zrobić ze zmianą",
+    "readTimeHint": "Stosowana przy każdym odczycie zmian, więc obejmuje też wcześniejsze skany; nic nie jest zapisywane.",
+    "ownershipHint": "Reguła zmienia tylko wartości „nieprzejrzane” albo ustawione przez regułę. Werdykt użytkownika zawsze zostaje.",
+    "note": "Uzasadnienie (notatka)",
+    "expiresAt": "Ważna do",
+    "expiresHint": "Opcjonalnie; potem to, co reguła ustawiła, wraca",
+    "invalid": "Sprawdź to pole",
+    "save": "Zapisz i zastosuj",
+    "create": "Utwórz i zastosuj"
+  },
+  "presets": {
+    "ignoreCve": {
+      "name": "Ignoruj CVE w aplikacji",
+      "description": "Znana podatność tego oprogramowania, której ryzyko zespół zaakceptował w sieci wewnętrznej."
+    },
+    "ignoreBackports": {
+      "name": "Ignoruj niepewne dopasowania pakietów dystrybucji",
+      "description": "Potencjalne dopasowania pakietów dystrybucji, w których poprawka mogła zostać przeniesiona bez zmiany wersji."
+    },
+    "lowSeverity": {
+      "name": "Akceptuj niskie ryzyko w laboratorium",
+      "description": "Podatności z oceną CVSS poniżej 4 na hostach z tagiem lab."
+    },
+    "escalateKev": {
+      "name": "Eskaluj aktywnie wykorzystywane podatności",
+      "description": "Wszystko z katalogu CISA KEV jest ważne."
+    },
+    "unchangedReviewed": {
+      "name": "Niezmienione usługi są przejrzane",
+      "description": "Usługa, która nie zmieniła się w dwóch ostatnich skanach, nie wymaga ponownego przeglądu; po zmianie wraca do „nieprzejrzane”."
+    },
+    "muteCertRotation": {
+      "name": "Wycisz rotację certyfikatów",
+      "description": "Odnowione certyfikaty (nowy certyfikat, wystawca lub data ważności) to rutyna."
+    },
+    "muteUnstable": {
+      "name": "Wycisz chwilowe zniknięcia niestabilnych hostów",
+      "description": "Niestabilne hosty, które ucichły albo nie odpowiedziały, to szum, a nie znalezisko."
+    },
+    "riskyPortHigh": {
+      "name": "Otwarty zdalny dostęp ma wysoki priorytet",
+      "description": "Nowy port Telnet, SMB, RDP lub VNC zawsze ma wysoki priorytet."
+    },
+    "adminPanels": {
+      "name": "Panele administracyjne są ważne",
+      "description": "Usługi, których tytuł strony wskazuje na panel administracyjny lub logowania."
+    },
+    "tagDatabases": {
+      "name": "Taguj bazy danych",
+      "description": "Porty baz danych dostają tag database."
+    }
+  }
+}

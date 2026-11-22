@@ -16,6 +16,8 @@ const HEADER = [
   "priority",
   "reason",
   "lifecycle",
+  "rule",
+  "muted",
 ] as const;
 
 export function changesCsv(changes: ScanChangesResponse): string {
@@ -35,6 +37,8 @@ export function changesCsv(changes: ScanChangesResponse): string {
       row.priority,
       row.reason,
       row.lifecycle.state,
+      row.rule?.name ?? null,
+      row.muted ? "true" : "false",
     ]),
   );
 }

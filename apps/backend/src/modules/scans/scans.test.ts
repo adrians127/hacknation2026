@@ -608,9 +608,11 @@ describe("GET /scans/{id}/changes", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/csv");
     expect(res.headers.get("content-disposition")).toMatch(/attachment; filename="?scan-changes-\w+-to-\w+\.csv"?/);
-    expect(lines[0]).toBe("ip,hostnames,protocol,port,change,field,endpoint,key,before,after,priority,reason,lifecycle");
+    expect(lines[0]).toBe(
+      "ip,hostnames,protocol,port,change,field,endpoint,key,before,after,priority,reason,lifecycle,rule,muted",
+    );
     expect(lines).toHaveLength(7);
-    expect(lines).toContain("10.0.5.8,,,,new,,,,down,up,high,new-host,active");
+    expect(lines).toContain("10.0.5.8,,,,new,,,,down,up,high,new-host,active,,false");
   });
 });
 

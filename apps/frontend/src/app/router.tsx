@@ -22,6 +22,7 @@ import { ScanReportRoute } from "@/app/routes/reports/scan-report";
 import { RequirePermission } from "@/app/routes/require-permission";
 import { RootLayout } from "@/app/routes/root-layout";
 import { RouteError } from "@/app/routes/route-error";
+import { RulesRoute } from "@/app/routes/rules";
 import { ScanCompareRoute } from "@/app/routes/scan-compare";
 import { ScanDetailRoute } from "@/app/routes/scan-detail";
 import { ScanImportRoute } from "@/app/routes/scan-import";
@@ -97,6 +98,11 @@ export const router = createBrowserRouter([
               { path: "stability", Component: StabilityReportRoute },
               { path: "time-of-day", Component: TimeOfDayReportRoute },
             ],
+          },
+          {
+            path: "rules",
+            element: <RequirePermission permission="rules:read" />,
+            children: [{ index: true, Component: RulesRoute }],
           },
           {
             path: "pipelines",

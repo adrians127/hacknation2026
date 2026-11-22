@@ -1,4 +1,4 @@
-import type { ScanChangeRow } from "@subsurf/contracts/scans/scan-changes.schema";
+import type { RuleRef } from "@subsurf/contracts/rules/rule-ref.schema";
 import type {
   HostLifecycle,
   ScanHost,
@@ -25,6 +25,7 @@ import { decryptText } from "~backend/lib/crypto";
 import { toServiceRemediation } from "~backend/modules/defectdojo/defectdojo.mapper";
 import { comparablePort } from "~backend/modules/results/comparable";
 import { httpSummaries, openPortDetails, storedOpenPort } from "~backend/modules/results/details";
+import { serviceFacts, type ChangeRowFacts } from "~backend/modules/rules/rule-match";
 import { rateChange, type ChangeFacts } from "~backend/modules/scans/change-priority";
 import { fieldChanges, hostnameChanges } from "~backend/modules/scans/field-changes";
 import type { HostDiff, ServiceDiff } from "~backend/modules/scans/scan-diff";
@@ -56,6 +57,13 @@ export interface HostInScan {
     host: VulnerabilitySummary;
     services: ReadonlyMap<string, VulnerabilitySummary>;
   };
+  /** Rule names by id, for the triage a rule set. */
+  rules: ReadonlyMap<string, string>;
+}
+
+function ruleRef(id: string | null, names: ReadonlyMap<string, string>): RuleRef | null {
+  const name = id === null ? undefined : names.get(id);
+  return id !== null && name !== undefined ? { id, name } : null;
 }
 
 /** A scan with its pipeline's name (`SCAN_INCLUDE`). */
@@ -116,8 +124,16 @@ export function toObservedHost(observation: ObservationRow): ObservedHost {
   };
 }
 
-const isEdited = (asset: { triage: string; tags: readonly string[]; note: unknown }) =>
-  asset.triage !== "unreviewed" || asset.tags.length > 0 || asset.note !== null;
+// Triage a rule set is not an edit: the rule sets it again wherever the file is imported.
+const isEdited = (asset: {
+  triage: string;
+  triageRuleId: string | null;
+  tags: readonly string[];
+  note: unknown;
+}) =>
+  (asset.triage !== "unreviewed" && asset.triageRuleId === null) ||
+  asset.tags.length > 0 ||
+  asset.note !== null;
 
 /** What users set on the host and on the services this observation saw open; defaults are left out. */
 export function toScanEdits(observation: ObservationRow, host: HostRow | undefined): ScanEdits {
@@ -182,7 +198,7 @@ const snapshotOf = (port: PortRow | undefined): ServiceSnapshot | null =>
 
 function serviceFields(
   { diff, service, port, basePort }: ResolvedService,
-  summaries: ReadonlyMap<string, VulnerabilitySummary>,
+  entry: HostInScan,
 ) {
   return {
     id: service.id,
@@ -197,9 +213,10 @@ function serviceFields(
       version: service.versionOverride,
     },
     triage: service.triage,
+    triageRule: ruleRef(service.triageRuleId, entry.rules),
     tags: service.tags,
     note: decryptText(service.note),
-    vulnerabilities: summaries.get(service.id) ?? EMPTY_SUMMARY,
+    vulnerabilities: entry.vulnerabilities.services.get(service.id) ?? EMPTY_SUMMARY,
     remediation: toServiceRemediation(service),
   };
 }
@@ -218,6 +235,7 @@ function hostFields(entry: HostInScan) {
     change: entry.diff.change,
     lifecycle: entry.lifecycle,
     triage: host.triage,
+    triageRule: ruleRef(host.triageRuleId, entry.rules),
     tags: host.tags,
     note: decryptText(host.note),
     vulnerabilities: entry.vulnerabilities.host,
@@ -229,7 +247,7 @@ export function toScanHost(entry: HostInScan): ScanHost {
     ...hostFields(entry),
     services: resolveServices(entry).map(
       (resolved): ScanService => ({
-        ...serviceFields(resolved, entry.vulnerabilities.services),
+        ...serviceFields(resolved, entry),
         http: httpSummaries(resolved.port.details),
       }),
     ),
@@ -277,7 +295,7 @@ export function toScanHostDetail(
     services: resolveServices(entry).map((resolved): ScanServiceDetail => {
       const { port, service, basePort } = resolved;
       return {
-        ...serviceFields(resolved, entry.vulnerabilities.services),
+        ...serviceFields(resolved, entry),
         ...observationOf(port),
         before: basePort ? observationOf(basePort) : null,
         fieldChanges: changesOf(resolved),
@@ -292,8 +310,11 @@ export function toScanHostDetail(
 const identityText = (port: PortRow | undefined) =>
   port ? [port.serviceName, port.serviceProduct, port.serviceVersion].filter(Boolean).join(" ") || null : null;
 
-/** The host's changes as rows for export and the dashboard (`ScanChangeRowSchema`). */
-export function toChangeRows(entry: HostInScan): ScanChangeRow[] {
+/**
+ * The host's changes as rows for export and the dashboard (`ScanChangeRowSchema`), rated by the
+ * built-in rules, with what `change_priority` rules match on.
+ */
+export function toChangeFacts(entry: HostInScan): ChangeRowFacts[] {
   const { diff, host, current, base } = entry;
   // Kept in a const: narrowing does not reach into the callbacks below.
   const hostChange = diff.change;
@@ -358,5 +379,20 @@ export function toChangeRows(entry: HostInScan): ScanChangeRow[] {
             after: field.after,
           }));
         });
-  return [...hostLevel, ...services].map((row) => rateChange(row, hostChange));
+  const hostFacts = { ipNumber: Number(diff.ipNumber), tags: host.tags };
+  const byPort = new Map(
+    resolveServices(entry).map(({ service, port }) => [
+      service.port,
+      serviceFacts(
+        service.port,
+        { name: service.nameOverride, product: service.productOverride },
+        { name: port.serviceName, product: port.serviceProduct },
+      ),
+    ]),
+  );
+  return [...hostLevel, ...services].map((row) => ({
+    row: rateChange(row, hostChange),
+    host: hostFacts,
+    service: row.port === null ? null : (byPort.get(row.port) ?? null),
+  }));
 }

@@ -186,6 +186,7 @@ export function HostsTable({
             <TriageControl
               target={{ hostId: host.id }}
               value={host.triage}
+              rule={host.triageRule}
               label={t("actions.triageOf", { name: host.ip })}
             />
           ),

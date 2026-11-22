@@ -8,6 +8,7 @@ import {
   ServiceIdentitySchema,
   TriageStatusSchema,
 } from "../hosts/hosts.schema";
+import { RuleRefSchema } from "../rules/rule-ref.schema";
 import {
   HostStatusSchema,
   HttpEndpointSchema,
@@ -163,6 +164,8 @@ export const ScanServiceSchema = z.object({
    */
   before: ServiceSnapshotSchema.nullable(),
   triage: TriageStatusSchema,
+  /** The rule that set `triage`; `null` when a user did (or nobody). */
+  triageRule: RuleRefSchema.nullable(),
   tags: z.array(z.string()),
   note: z.string(),
   /** Of the Service asset as its newest observation describes it, whatever scan is viewed. */
@@ -186,6 +189,8 @@ export const ScanHostSchema = z.object({
   /** As of this scan. */
   lifecycle: HostLifecycleSchema,
   triage: TriageStatusSchema,
+  /** The rule that set `triage`; `null` when a user did (or nobody). */
+  triageRule: RuleRefSchema.nullable(),
   tags: z.array(z.string()),
   note: z.string(),
   /** Distinct vulnerabilities across the host's services. */
