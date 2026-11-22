@@ -73,6 +73,11 @@ scansRoutes.get(
   c.listHosts,
 );
 scansRoutes.get(
+  "/:id/visualization-hosts",
+  validate({ params: IdParamsSchema }),
+  c.visualizationHosts,
+);
+scansRoutes.get(
   "/:id/hosts/:hostId",
   validate({ params: ScanHostParamsSchema, query: ScanCompareQuerySchema }),
   c.getHost,

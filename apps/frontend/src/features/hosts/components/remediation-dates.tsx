@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import type { ServiceRemediation } from "@subsurf/contracts/defectdojo/defectdojo.schema";
 
 import { formatDay } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -32,7 +31,7 @@ export function RemediationDates({ remediation }: { remediation: ServiceRemediat
   return (
     <ul className="grid gap-0.5 text-xs" title={t("remediation.source")}>
       {rows.map((row) => (
-        <li key={row.key} className={cn("whitespace-nowrap", row.className)}>
+        <li key={row.key} className={row.className}>
           <span className="text-muted-foreground">{row.label}:</span> {formatDay(row.day, locale)}
         </li>
       ))}

@@ -21,6 +21,7 @@
     "@subsurf/contracts": "workspace:*",
     "@tanstack/react-query": "^5.108.0",
     "@tanstack/react-table": "^9.3.1",
+    "@xyflow/react": "^13.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "i18next": "^27.2.2",

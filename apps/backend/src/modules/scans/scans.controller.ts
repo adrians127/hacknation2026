@@ -10,6 +10,7 @@ import {
   type ScanDetail,
   type ScanHostDetail,
   type ScanHostListResponse,
+  type ScanVisualizationHostsResponse,
   type ScanHostParams,
   type TagScanHostsBody,
   type TagScanHostsResponse,
@@ -81,6 +82,10 @@ export const scansController = {
     // validate() checked the query but cannot replace it: parse again for the numbers and defaults.
     const query = ScanHostListQuerySchema.parse(req.query);
     res.status(200).json(await scanResultsService.listHosts(req.params.id, query));
+  },
+
+  visualizationHosts: async (req: Request<IdParams>, res: Response<ScanVisualizationHostsResponse>) => {
+    res.status(200).json(await scanResultsService.visualizationHosts(req.params.id));
   },
 
   getHost: async (req: Request<ScanHostParams>, res: Response<ScanHostDetail>) => {
