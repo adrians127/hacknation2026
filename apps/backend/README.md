@@ -233,7 +233,7 @@ Measured on 2026-11-22 (MacBook, local Docker PostgreSQL 19, real downloads):
 | | NVD | OSV (7 default ecosystems) |
 |---|---|---|
 | Records | 430,357 (411,161 active, 19,196 rejected) | 122,808 (120,629 active, 2,179 withdrawn) |
-| Download | 25 year files + `modified`, ~320 MB gz | ~390 MB of zips |
+| Download | 25 year files + `modified`, ~260 MB gz | ~390 MB of zips |
 | First full sync | ~8 min | ~3 min |
 | Later full sync | ~7 min (22 records changed) | — |
 | Criteria rows | 927,367 (`cpe`) | 141,499 (`package`) |
