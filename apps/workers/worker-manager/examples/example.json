@@ -46,14 +46,12 @@
       "heartbeat_interval_s": 60,
       "deadline": null,
       "worker": "nmap",
-      "split": { "strategy": "chunk", "max_items_per_task": 64 },
+      "split": { "strategy": "ranges", "max_items_per_task": 64 },
       "params": {
+        "targets": ["192.168.1.1", "192.168.1.10"],
+        "ports": [22, 53, 80, 443, 445, 3389],
         "max_duration_seconds": 300,
-        "host_timeout_ms": 60000,
-        "targets": [
-          { "ip": "192.168.1.1", "ports": [22, 53, 80, 443] },
-          { "ip": "192.168.1.10", "ports": [22, 445, 3389] }
-        ]
+        "host_timeout_ms": 60000
       }
     }
   ]
