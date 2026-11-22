@@ -2,7 +2,7 @@
 
 A **C++23** orchestrator for the scan workers. It takes a **job list**, from a file (`--input`) or long-polled from the backend (`--poll`), splits every job into **tasks**, runs one independent worker process per task and saves every worker result to files. Tasks on disjoint `IP:port`s run in parallel; tasks sharing one run one after another, in pipeline order (see [Scheduling](#scheduling-what-may-run-in-parallel)).
 
-It runs **masscan-worker** (discovery) and **nmap-worker** (service detection on the hosts and ports masscan found), masscan first wherever their `IP:port`s overlap.
+It runs **masscan-worker** or **naabu-worker** (discovery), then **nmap-worker** (service detection) and **httpx-worker** (HTTP/HTTPS response probing), in pipeline order wherever their `IP:port`s overlap. The job list must provide each stage's targets; the manager does not derive later jobs from earlier results.
 
 With `--poll` it works against the backend: it asks for job lists, runs them and uploads every task's result (one `task-NNN.result.json` = one upload) as soon as that task finishes. Heartbeats are the next step.
 
@@ -26,7 +26,8 @@ WORKER_TOKEN=… pnpm workers:manager:poll  # long-poll the backend (localhost:3
 
 **Edit the targets in `example.json` first** (it scans `192.168.1.0/24`); scan only networks you are allowed to scan. The container runs as `${WORKER_UID:-1000}:${WORKER_GID:-1000}`; `pnpm workers:manager` creates `worker-results/` and sets both to your own uid/gid, so the result files belong to you. With plain `docker compose`, set them yourself. `Permission denied` on `/results` means the folder belongs to someone else (often root, when Docker created it): `sudo chown -R "$(id -u):$(id -g)" worker-results`. Like masscan-worker it uses `network_mode: host` and `NET_RAW`/`NET_ADMIN` (Linux hosts only).
 
-The image is built from `apps/workers/` and contains `worker-manager`, `masscan-worker`, `nmap-worker`, `masscan` and `nmap`. All three projects' tests run during the image build. The example has two masscan jobs and one nmap job.
+The image is built from `apps/workers/` and contains `worker-manager`, `masscan-worker`, `naabu-worker`, `nmap-worker`, `httpx-worker` and their scanner binaries. The four C++ projects' tests and Naabu's Python tests run during the image build. The default example has two masscan jobs and one nmap job; [`examples/httpx-local.json`](examples/httpx-local.json) exercises the HTTP worker.
+[`examples/naabu-nmap-local.json`](examples/naabu-nmap-local.json) runs Naabu followed by Nmap on loopback. Use `pnpm workers:manager --input /jobs/naabu-nmap-local.json --output-dir /results` after building. The worker-manager image also contains `naabu-worker` and Naabu.
 
 ## CLI
 
@@ -102,7 +103,7 @@ With `--poll` the manager asks the backend for work over HTTP instead of reading
 3. It asks again, after the response's `next_poll_ms` if the backend set one (at most 5 minutes).
 
 ```json
-{ "manager_id": "scan-host-1", "version": "0.1.0", "workers": ["masscan", "nmap"], "max_parallel": 2, "wait_seconds": 30 }
+{ "manager_id": "scan-host-1", "version": "0.1.0", "workers": ["masscan", "naabu", "nmap", "httpx"], "max_parallel": 2, "wait_seconds": 30 }
 ```
 
 | Field | Meaning |
@@ -139,7 +140,7 @@ Running everything in parallel is not always right. Two workers probing the same
 
 1. **Footprint.** Each task's input is read as a set of `(IPv4, TCP port)` pairs: `targets` minus `exclude`, times `ports` (default `1-65535`, as masscan). Host objects in `targets` (`{ip, ports}`, nmap-worker) give per-host ports. A task whose input cannot be read gets the footprint "everything", so it runs alone (with a warning).
 2. **Conflict.** Two tasks that share at least one `IP:port` never run at the same time. The same IP on other ports, or other IPs, run in parallel. Shards of one job are exempt: masscan already splits the probe space between them. Tasks from a `ranges` or `chunk` split are disjoint by construction.
-3. **Order.** `WORKER_MANAGER_STAGES` (default `masscan,nmap`) is the pipeline. A task of a later stage starts only after **every overlapping task of an earlier stage has finished**, even when it is ahead in the queue. Tasks with no overlap are not ordered, and a worker not listed in the stages is never ordered (only conflicts apply to it).
+3. **Order.** `WORKER_MANAGER_STAGES` (default `masscan,naabu,nmap,httpx`) is the pipeline. A task of a later stage starts only after **every overlapping task of an earlier stage has finished**, even when it is ahead in the queue. Tasks with no overlap are not ordered, and a worker not listed in the stages is never ordered (only conflicts apply to it).
 4. **Queue order.** Tasks are taken in the order of `jobs[]` (then task order). A task blocked by 2. or 3. is skipped, so work on other `IP:port`s does not wait behind it.
 
 A held-back task is logged once with the reason (`task held back task_id=svc/1 reason="waits for earlier-stage task a/1 on the same IPs and ports"`), and each task's `job.json` entry has a `schedule` block: its `stage`, its `footprint` (`exact`, `addresses`, `areas`) and `after`, the earlier-stage tasks it waited for.
@@ -187,10 +188,10 @@ Example with a budget of 1000: job `x` without a rate starts at 1000; `y` (`rate
 
 | Variable | Default | Description |
 |---|---|---|
-| `WORKER_MANAGER_WORKERS` | `masscan=masscan-worker` | `name=binary` pairs, comma-separated. A binary without `/` is looked up in `PATH`. The image sets `masscan=/usr/local/bin/masscan-worker,nmap=/usr/local/bin/nmap-worker` |
-| `WORKER_MANAGER_STAGES` | `masscan,nmap` | Pipeline order of the workers; on overlapping `IP:port`s a later one waits for the earlier ones. See [Scheduling](#scheduling-what-may-run-in-parallel) |
+| `WORKER_MANAGER_WORKERS` | `masscan=masscan-worker,naabu=naabu-worker,nmap=nmap-worker,httpx=httpx-worker` | `name=binary` pairs, comma-separated. A binary without `/` is looked up in `PATH` |
+| `WORKER_MANAGER_STAGES` | `masscan,naabu,nmap,httpx` | Pipeline order of the workers; on overlapping `IP:port`s a later one waits for the earlier ones. See [Scheduling](#scheduling-what-may-run-in-parallel) |
 | `WORKER_MANAGER_MAX_RATE` | `100000` | Packets per second for all running tasks together, see [Rate budget](#rate-budget). masscan-worker still clamps to its own `MASSCAN_WORKER_MAX_RATE` |
-| `WORKER_MANAGER_WORKER_MAX_RATE` | `nmap=100` | `name=pps` pairs: the most a worker can use, so its tasks never reserve more of the budget. For nmap-worker that is `NMAP_MAX_PARALLEL × NMAP_MAX_RATE_PER_PROCESS` (2 × 50) |
+| `WORKER_MANAGER_WORKER_MAX_RATE` | `nmap=100,httpx=25` | Per-worker rate caps. For Nmap, 100 is `NMAP_MAX_PARALLEL × NMAP_MAX_RATE_PER_PROCESS` (2 × 50); httpx interprets its grant as HTTP requests per second |
 | `WORKER_MANAGER_MIN_TASK_RATE` | `1000` | A task does not start with a smaller share (unless its job's `rate` is smaller) |
 | `WORKER_MANAGER_MAX_PARALLEL` | `2` | Worker processes running at once, across all jobs (an upper bound; overlapping tasks run one after another) |
 | `WORKER_MANAGER_MAX_TASKS_PER_JOB` | `16` | Hard cap on how far one job is split |

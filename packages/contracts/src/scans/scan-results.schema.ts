@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { TagSchema } from "../common/common.schema";
+import { ServiceRemediationSchema } from "../defectdojo/defectdojo.schema";
 import { HOST_SELECTORS_MAX, HostSelectorSchema } from "../hosts/host-selectors";
 import {
   HttpSummarySchema,
@@ -161,6 +162,8 @@ export const ScanServiceSchema = z.object({
   note: z.string(),
   /** Of the Service asset as its newest observation describes it, whatever scan is viewed. */
   vulnerabilities: VulnerabilitySummarySchema,
+  /** From the last DefectDojo sync; `null` when no DefectDojo finding gives a date. */
+  remediation: ServiceRemediationSchema.nullable(),
 });
 
 export const ScanHostSchema = z.object({

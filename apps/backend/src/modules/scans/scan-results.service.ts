@@ -26,6 +26,7 @@ import {
 import { HttpError } from "~backend/lib/http-error";
 import { prisma } from "~backend/lib/prisma";
 import { hostLifecycle } from "~backend/modules/scans/host-lifecycle";
+import { mergeObservations } from "~backend/modules/scans/merge-observations";
 import {
   countChanges,
   countCoverage,
@@ -42,18 +43,11 @@ import {
   toScanHostDetail,
   type HostInScan,
   type ScanWithPipeline,
+  type ObservationRow,
 } from "~backend/modules/scans/scan-results.mapper";
 import { toScanJob, toScanSteps } from "~backend/modules/scans/scan-jobs.mapper";
 import { EMPTY_SUMMARY } from "~backend/modules/vulnerabilities/vulnerabilities.mapper";
 import { vulnerabilitiesService } from "~backend/modules/vulnerabilities/vulnerabilities.service";
-
-const DIFF_SELECT = {
-  ip: true,
-  ipNumber: true,
-  status: true,
-  hostId: true,
-  ports: { select: { serviceId: true, protocol: true, port: true, fingerprint: true } },
-} as const satisfies Prisma.HostObservationSelect;
 
 const NO_HOSTS: ScanHostCounts = { up: 0, down: 0, timeout: 0, cancelled: 0, failed: 0 };
 
@@ -71,8 +65,8 @@ interface EffectiveRow {
 
 /**
  * Store every worker result, but show one observation per IP in a scan.
- * Conclusive answers win; for two "up" answers Nmap's service data wins over
- * discovery data, then the latest observation wins.
+ * Conclusive answers win; for two "up" answers prefer Nmap, then httpx, then
+ * Masscan. The selected row supplies host status, not the complete set of ports.
  */
 function effectiveSql(scanIds: readonly string[], ips?: readonly string[]): Prisma.Sql {
   return Prisma.sql`
@@ -89,8 +83,33 @@ function effectiveSql(scanIds: readonly string[], ips?: readonly string[]): Pris
         WHEN 'cancelled' THEN 3
         ELSE 4
       END,
-      CASE WHEN r."workerId" LIKE 'nmap%' THEN 0 ELSE 1 END,
+      CASE WHEN r."workerId" LIKE 'nmap%' THEN 0
+           WHEN r."workerId" LIKE 'httpx%' THEN 1
+           WHEN r."workerId" LIKE 'masscan%' THEN 2 ELSE 3 END,
       h."observedAt" DESC NULLS LAST, r."receivedAt" DESC, h.id DESC
+  `;
+}
+
+/** The latest conclusive observation of each worker stage at each address. */
+function stageSql(scanIds: readonly string[], ips?: readonly string[]): Prisma.Sql {
+  return Prisma.sql`
+    WITH staged AS (
+      SELECT h.id, h."scanId", h.ip, h.status, h."observedAt", r."receivedAt",
+        CASE WHEN r."workerId" LIKE 'nmap%' THEN 'nmap'
+             WHEN r."workerId" LIKE 'httpx%' THEN 'httpx'
+             WHEN r."workerId" LIKE 'masscan%' THEN 'masscan'
+             ELSE r."workerId" END AS stage
+      FROM "HostObservation" h
+      JOIN "ScanJobResult" r ON r.id = h."resultId"
+      WHERE h."scanId" IN (${Prisma.join(scanIds)})
+        ${ips ? Prisma.sql`AND h.ip IN (${Prisma.join(ips)})` : Prisma.empty}
+    )
+    SELECT DISTINCT ON ("scanId", ip, stage) id, "scanId", ip, status
+    FROM staged
+    ORDER BY "scanId", ip, stage,
+      CASE status::text WHEN 'up' THEN 0 WHEN 'down' THEN 1
+           WHEN 'timeout' THEN 2 WHEN 'cancelled' THEN 3 ELSE 4 END,
+      "observedAt" DESC NULLS LAST, "receivedAt" DESC, id DESC
   `;
 }
 
@@ -98,6 +117,27 @@ async function effectiveIds(scanIds: readonly string[], ips?: readonly string[])
   if (scanIds.length === 0 || ips?.length === 0) return [];
   const rows = await prisma.$queryRaw<EffectiveRow[]>(effectiveSql(scanIds, ips));
   return rows.map((row) => row.id);
+}
+
+async function effectiveObservations(
+  scanIds: readonly string[],
+  ips?: readonly string[],
+): Promise<ObservationRow[]> {
+  if (scanIds.length === 0 || ips?.length === 0) return [];
+  const [selected, byStage] = await Promise.all([
+    prisma.$queryRaw<EffectiveRow[]>(effectiveSql(scanIds, ips)),
+    prisma.$queryRaw<EffectiveRow[]>(stageSql(scanIds, ips)),
+  ]);
+  const ids = [...new Set([...selected, ...byStage].map((row) => row.id))];
+  const rows = await prisma.hostObservation.findMany({
+    where: { id: { in: ids } },
+    include: OBSERVATION_INCLUDE,
+  });
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return mergeObservations(
+    selected.flatMap((row) => (byId.has(row.id) ? [byId.get(row.id)!] : [])),
+    byStage.flatMap((row) => (byId.has(row.id) ? [byId.get(row.id)!] : [])),
+  );
 }
 
 interface BaseScan {
@@ -140,11 +180,19 @@ async function scanSummaries(scanIds: readonly string[]): Promise<Map<string, Sc
   const rows = await prisma.$queryRaw<
     { scanId: string; status: HostObservationStatus; hosts: number; openPorts: number }[]
   >`
-    WITH effective AS (${effectiveSql(scanIds)})
-    SELECT e."scanId", e.status, count(DISTINCT e.id)::int AS hosts,
-           count(p.id)::int AS "openPorts"
+    WITH effective AS (${effectiveSql(scanIds)}),
+    stages AS (${stageSql(scanIds)}),
+    port_counts AS (
+      SELECT s."scanId", s.ip, count(DISTINCT (p.protocol, p.port))::int AS ports
+      FROM stages s
+      JOIN "PortObservation" p ON p."hostObservationId" = s.id
+      WHERE s.status = 'up'
+      GROUP BY s."scanId", s.ip
+    )
+    SELECT e."scanId", e.status, count(*)::int AS hosts,
+           coalesce(sum(pc.ports), 0)::int AS "openPorts"
     FROM effective e
-    LEFT JOIN "PortObservation" p ON p."hostObservationId" = e.id
+    LEFT JOIN port_counts pc ON pc."scanId" = e."scanId" AND pc.ip = e.ip
     GROUP BY e."scanId", e.status
   `;
   for (const row of rows) {
@@ -163,11 +211,7 @@ interface ScanComparison {
 }
 
 async function diffWithBase(scan: ScanRow, base: BaseScan | null): Promise<ScanComparison> {
-  const ids = await effectiveIds(base ? [scan.id, base.id] : [scan.id]);
-  const observations = await prisma.hostObservation.findMany({
-    where: { id: { in: ids } },
-    select: { ...DIFF_SELECT, scanId: true },
-  });
+  const observations = await effectiveObservations(base ? [scan.id, base.id] : [scan.id]);
   const now = observations.filter((host) => host.scanId === scan.id);
   const upNow = now.filter((host) => host.status === "up");
   if (!base) return { entries: diffScan(upNow, null), coverage: null };
@@ -213,11 +257,11 @@ async function hostIdsMatching(term: string, scanIds: readonly string[]): Promis
   const contains = `%${escapeLike(term)}%`;
   const port = /^\d{1,5}$/.test(term) ? Prisma.sql`OR po.port = ${Number(term)}` : Prisma.empty;
   const rows = await prisma.$queryRaw<{ id: string }[]>`
-    WITH effective AS (${effectiveSql(scanIds)}),
+    WITH stages AS (${stageSql(scanIds)}),
     observed AS (
       SELECT ho.id, ho."hostId"
-      FROM effective e JOIN "HostObservation" ho ON ho.id = e.id
-      WHERE ho."hostId" IS NOT NULL
+      FROM stages s JOIN "HostObservation" ho ON ho.id = s.id
+      WHERE s.status = 'up' AND ho."hostId" IS NOT NULL
     )
     SELECT h.id FROM "Host" h
     WHERE h.ip LIKE ${`${escapeLike(term)}%`} OR ${term} = ANY(h.tags)
@@ -319,25 +363,22 @@ async function hostsInScan(
   const scanId = scan.id;
   const ips = entries.map((entry) => entry.ip);
   if (ips.length === 0) return [];
-  const ids = await effectiveIds(base ? [scanId, base.id] : [scanId], ips);
   const shownServices = new Map(
     entries.map((entry) => [entry.hostId, entry.services.map((service) => service.serviceId)]),
   );
-  const [hosts, current, before, summaries, lifecycleByIp] = await Promise.all([
+  const [hosts, observations, summaries, lifecycleByIp] = await Promise.all([
     prisma.host.findMany({
       where: { id: { in: entries.map((entry) => entry.hostId) } },
       include: { services: true },
     }),
-    prisma.hostObservation.findMany({ where: { scanId, id: { in: ids } }, include: OBSERVATION_INCLUDE }),
-    base
-      ? prisma.hostObservation.findMany({
-          where: { scanId: base.id, id: { in: ids }, status: "up" },
-          include: OBSERVATION_INCLUDE,
-        })
-      : [],
+    effectiveObservations(base ? [scanId, base.id] : [scanId], ips),
     vulnerabilitiesService.summaries(shownServices),
     lifecycles(scan, ips),
   ]);
+  const current = observations.filter((row) => row.scanId === scanId);
+  const before = base
+    ? observations.filter((row) => row.scanId === base.id && row.status === "up")
+    : [];
   const hostById = new Map(hosts.map((host) => [host.id, host]));
   const currentByIp = new Map(current.map((row) => [row.ip, row]));
   const baseByIp = new Map(before.map((row) => [row.ip, row]));
@@ -379,16 +420,17 @@ async function history(ip: string): Promise<HostHistoryEntry[]> {
       observedAt: true,
       latencyMs: true,
       scan: { select: { createdAt: true, startedAt: true } },
-      _count: { select: { ports: true } },
     },
   });
+  const merged = await effectiveObservations(rows.map((row) => row.scanId), [ip]);
+  const portsByScan = new Map(merged.map((row) => [row.scanId, row.ports.length]));
   return rows.map((row) => ({
     scanId: row.scanId,
     scannedAt: (row.scan.startedAt ?? row.scan.createdAt).toISOString(),
     status: row.status,
     observedAt: row.observedAt?.toISOString() ?? null,
     latencyMs: row.latencyMs,
-    openPorts: row._count.ports,
+    openPorts: portsByScan.get(row.scanId) ?? 0,
   }));
 }
 
@@ -501,6 +543,18 @@ export const scanResultsService = {
     };
   },
 
+  /** Every host of the scan (unpaged) with both scans' observations, for an export. */
+  async hostsForExport(scanId: string): Promise<{ scan: ScanRow; hosts: HostInScan[] }> {
+    const scan = await findScan(scanId);
+    const base = await resolveBase(scan, undefined);
+    const { entries } = await diffWithBase(scan, base);
+    const hosts: HostInScan[] = [];
+    for (let start = 0; start < entries.length; start += CHANGES_BATCH) {
+      hosts.push(...(await hostsInScan(scan, base, entries.slice(start, start + CHANGES_BATCH))));
+    }
+    return { scan, hosts };
+  },
+
   /** Every change since the base scan, one row each, rated (export and dashboard). */
   async changes(scanId: string, baseId?: string): Promise<ScanChangesResponse> {
     const scan = await findScan(scanId);
@@ -531,11 +585,7 @@ export const scanResultsService = {
     const host = await prisma.host.findUnique({ where: { id: hostId }, select: { ip: true } });
     if (!host) throw HttpError.notFound("Host not found");
 
-    const ids = await effectiveIds(base ? [scan.id, base.id] : [scan.id], [host.ip]);
-    const observations = await prisma.hostObservation.findMany({
-      where: { id: { in: ids } },
-      select: { ...DIFF_SELECT, scanId: true },
-    });
+    const observations = await effectiveObservations(base ? [scan.id, base.id] : [scan.id], [host.ip]);
     const current = observations.find((row) => row.scanId === scan.id);
     const before = observations.find((row) => row.scanId === base?.id);
     const [diff] = current ? diffScan([current], base ? (before ? [before] : []) : null) : [];

@@ -4,6 +4,13 @@ export function formatDateTime(value: string, locale: string | undefined): strin
   );
 }
 
+/** A calendar day (`YYYY-MM-DD`), shown the same in every time zone. */
+export function formatDay(value: string, locale: string | undefined): string {
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(
+    new Date(`${value}T00:00:00Z`),
+  );
+}
+
 export function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);

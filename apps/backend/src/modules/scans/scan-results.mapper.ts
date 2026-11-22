@@ -17,6 +17,7 @@ import type {
 
 import type { Prisma, Scan as ScanRow } from "~backend/generated/prisma/client";
 import { decryptText } from "~backend/lib/crypto";
+import { toServiceRemediation } from "~backend/modules/defectdojo/defectdojo.mapper";
 import { comparablePort } from "~backend/modules/results/comparable";
 import { httpSummaries, openPortDetails, storedOpenPort } from "~backend/modules/results/details";
 import { rateChange, type ChangeFacts } from "~backend/modules/scans/change-priority";
@@ -27,6 +28,7 @@ import { EMPTY_SUMMARY } from "~backend/modules/vulnerabilities/vulnerabilities.
 export const OBSERVATION_INCLUDE = {
   hostnames: { select: { name: true, source: true } },
   ports: true,
+  result: { select: { workerId: true } },
 } as const satisfies Prisma.HostObservationInclude;
 
 export type ObservationRow = Prisma.HostObservationGetPayload<{ include: typeof OBSERVATION_INCLUDE }>;
@@ -80,14 +82,14 @@ export function toScan(scan: ScanWithPipeline, hosts: ScanHostCounts, openPorts:
 
 const HOSTNAME_ORDER = { job: 0, tls_san: 1, ptr: 2 } as const;
 
-function hostnames(observation: ObservationRow | undefined): string[] {
+export function hostnames(observation: ObservationRow | undefined): string[] {
   const sorted = (observation?.hostnames ?? []).toSorted(
     (a, b) => HOSTNAME_ORDER[a.source] - HOSTNAME_ORDER[b.source] || a.name.localeCompare(b.name),
   );
   return [...new Set(sorted.map((hostname) => hostname.name))];
 }
 
-interface ResolvedService {
+export interface ResolvedService {
   diff: ServiceDiff;
   service: ServiceRow;
   port: PortRow;
@@ -96,7 +98,7 @@ interface ResolvedService {
 }
 
 /** Pairs each service of the diff with its asset and the observation that describes it. */
-function resolveServices(entry: HostInScan): ResolvedService[] {
+export function resolveServices(entry: HostInScan): ResolvedService[] {
   return entry.diff.services.flatMap((diff) => {
     const basePort = entry.base?.ports.find((candidate) => candidate.serviceId === diff.serviceId);
     const port =
@@ -137,6 +139,7 @@ function serviceFields(
     tags: service.tags,
     note: decryptText(service.note),
     vulnerabilities: summaries.get(service.id) ?? EMPTY_SUMMARY,
+    remediation: toServiceRemediation(service),
   };
 }
 

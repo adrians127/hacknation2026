@@ -144,6 +144,35 @@ DefectDojo sets `is_mitigated=true` and `active=false` on false positives and ou
 
 A finding that is missing from a reimport gets `is_mitigated=true` automatically, which is how a fixed service shows up without anyone touching DefectDojo.
 
+## Sync into SubSurf (implemented)
+
+`POST /v1/defectdojo/sync` (`defectdojo:import`: admin, editor) pulls the current state and `GET /v1/defectdojo/sync` (`defectdojo:read`) shows the last run. The frontend's **Sync from DefectDojo** card on the scans page calls them. Code: `apps/backend/src/modules/defectdojo/`.
+
+- **Reads:** `/products/`, then `/findings/?test__engagement__product=<id>&prefetch=endpoints` per product, and `/users/` for owner names (skipped if the token may not list users). Offset paging, 20 s timeout per request. DefectDojo is never written to.
+- **Full pull, every time.** There is no usable "changed since" filter: `updated` matches exact timestamps only, `o=-updated` is rejected, and tag edits do not move `last_status_update`.
+- **Matching a finding to a service** (host:port), first hit wins: `unique_id_from_tool` `subsurf:<ip>:<port>:<id>`, then the `<ip>:<port>/tcp` description prefix, then the finding's locations (IPv4 hosts only; `http`/`https` default ports). A finding for an address or port SubSurf has never seen open is counted as unmatched; nothing is created from DefectDojo.
+
+| Imported | Onto | Rule |
+|---|---|---|
+| Finding tags | `Service.tags` | Merged into the user tags (case-insensitive, `subsurf` skipped, capped at 20 like a user edit). Tags of false positive / out-of-scope findings are skipped |
+| Product tags, `product_manager`, `technical_contact` | `Host.tags` | Same merge; owners as `owner:<username>`, `contact:<username>` |
+| Triage | `Service.triage`, only while `unreviewed` | Any finding active and verified → `important`; any still open → unchanged; all false positives → `false_positive`; any false positive, risk acceptance or out of scope → `reviewed`; only fixed (`is_mitigated`) → unchanged, because a reimport closes findings the same way. Our own pushed observations (`subsurf:<ip>:<port>:service`) count only once someone verified, accepted or ruled them out |
+| Remediation dates | `Service.remediationPlannedOn`, `slaDueOn`, `riskAcceptedUntil` | Earliest `planned_remediation_date` / `sla_expiration_date` of open findings, earliest risk-acceptance `expiration_date`. Owned by DefectDojo: replaced on every sync, cleared when the findings are gone |
+
+Merged tags are ordinary user tags afterwards: removing a tag in DefectDojo does not remove it here. Updates are conditional on the values read in the sync's transaction, so a user edit made meanwhile wins. Every run is a `DefectDojoSync` row with its counts or error; one runs at a time (409 `DEFECTDOJO_SYNC_RUNNING`).
+
+## Push from SubSurf (implemented)
+
+`POST /v1/defectdojo/push` (`defectdojo:export`: admin, editor), body `{ scanId, hostIds?, serviceIds? }`. The scan page has **Push scan to DefectDojo** and, after ticking hosts or services in the table, **Push N selected**. Code: `defectdojo.push.ts` (selection, upload) and `defectdojo.report.ts` (the report).
+
+- **One finding per service**, `Generic Findings Import`, severity `Info` (PDF section 3: observations as informational findings). Title `Exposed <product version> on <port>/tcp`; the description starts with `<ip>:<port>/tcp` and lists hostnames, service name, extra info, CPE, and per HTTP endpoint the status, title, final URL, software headers (`Server`, `X-Powered-By`, …) and TLS certificate. It holds only fingerprint-level data, so an unchanged service keeps its hash and a changed one (upgrade, new certificate) becomes a new finding while the old one is closed. `unique_id_from_tool` is `subsurf:<ip>:<port>:service`, which the pull matches back.
+- **Triage and edits:** `false_positive` → `false_p: true, active: false`; `important` → `verified: true`; service tags → finding tags (spaces and commas become `-`), plus `subsurf`; the note goes to `impact` (outside the hash); product and version (with the user's corrections) → `component_name`/`component_version`, grouped with `group_by=component_name`.
+- **Where:** product `SubSurf discovery` (type `SubSurf`), engagement `SubSurf continuous discovery`, test `SubSurf scan results`, created by the first push (`auto_create_context`). Later pushes reimport into the test id stored on the last successful `DefectDojoPush`; if that test was deleted, the next push imports anew.
+- **Whole scan:** `close_old_findings=true`, so services the scan no longer sees are closed. `gone` services are left out; an `unknown` host (timeout, cancelled at the deadline) sends its services from the base scan, so a timeout never closes anything. Push scans in order: pushing an older scan after a newer one closes the newer findings.
+- **Selection:** a host stands for all its services. `close_old_findings=false`: a partial report must not close the rest.
+- Checked on the local instance with the demo scans: run 1 → 616 created; run 2 → 43 created, 45 closed, 3 reactivated, 571 untouched; the same push again → all untouched.
+- **Limits found:** a location's protocol is `varchar(10)` (`ms-wbt-server` fails the whole import with HTTP 500), so longer service names become `tcp://`. A failed import is not atomic: DefectDojo may keep a half-filled test, which then has to be deleted by hand.
+
 ## Triage from SubSurf (writes)
 
 | Action | Call |
@@ -166,4 +195,4 @@ A finding that is missing from a reimport gets `is_mitigated=true` automatically
 
 ## Demo data
 
-`pnpm dojo:seed` (`docker/defectdojo/seed-demo.mjs`) fills the instance through the same import path: 5 people, 3 organizations, 3 assets with owners, access and an SLA, two scan runs per asset (the second one closes 2 findings and adds 1) and triage on 10 findings. See [`docker/README.md`](../docker/README.md#demo-data).
+The findings sit on hosts from `pnpm db:seed:hosts` (10.40.0.0/18), so a sync matches all 27 of them. `pnpm dojo:seed` (`docker/defectdojo/seed-demo.mjs`) fills the instance through the same import path: 5 people, 3 organizations, 3 assets with owners, access and an SLA, two scan runs per asset (the second one closes 2 findings and adds 1) and triage on 10 findings. See [`docker/README.md`](../docker/README.md#demo-data).

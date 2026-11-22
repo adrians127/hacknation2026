@@ -23,6 +23,8 @@ model User {
   vulnerabilityTriage      ServiceVulnerabilityTriage[]
   packageMappings          PackageMapping[]
   pipelines                Pipeline[]
+  defectDojoSyncs          DefectDojoSync[]
+  defectDojoPushes         DefectDojoPush[]
 
   @@index([roleId])
 }

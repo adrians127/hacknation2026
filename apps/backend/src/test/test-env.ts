@@ -18,4 +18,7 @@ export const TEST_ENV = {
   // Below 65535, so a step outside the allowed ports can be tested.
   SCAN_ALLOWED_PORTS: "1-60000",
   PIPELINE_SCHEDULER_ENABLED: "false",
+  // Never reached: defectdojo.test.ts answers these requests from a fetch stub.
+  DEFECTDOJO_URL: "http://defectdojo.test",
+  DEFECTDOJO_API_TOKEN: "test-only-defectdojo-token",
 } as const;

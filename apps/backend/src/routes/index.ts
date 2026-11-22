@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import { authRoutes } from "~backend/modules/auth/auth.routes";
 import { dashboardRoutes } from "~backend/modules/dashboard/dashboard.routes";
+import { defectDojoRoutes } from "~backend/modules/defectdojo/defectdojo.routes";
 import { healthRoutes } from "~backend/modules/health/health.routes";
 import { hostsRoutes } from "~backend/modules/hosts/hosts.routes";
 import { pipelinesRoutes } from "~backend/modules/pipelines/pipelines.routes";
@@ -21,6 +22,7 @@ export const apiRouter = Router();
 
 apiRouter.use("/auth", authRoutes);
 apiRouter.use("/dashboard", dashboardRoutes);
+apiRouter.use("/defectdojo", defectDojoRoutes);
 apiRouter.use("/health", healthRoutes);
 apiRouter.use("/hosts", hostsRoutes);
 apiRouter.use("/pipelines", pipelinesRoutes);

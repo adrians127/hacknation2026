@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execSync } from "node:child_process";
 
 import pg from "pg";
 
@@ -35,7 +35,8 @@ export default async function globalSetup(): Promise<void> {
   }
 
   // prisma.config.ts builds the URL from DB_*; real env vars win over .env.
-  execFileSync("prisma", ["migrate", "deploy"], {
+  // A shell command, so Windows finds `prisma.cmd`; the string is constant.
+  execSync("prisma migrate deploy", {
     env: { ...process.env, ...TEST_ENV },
     stdio: "ignore",
   });

@@ -40,6 +40,11 @@ export const ErrorCodeSchema = z.enum([
   "WORKER_BUILTIN",
   "PORTS_NOT_ALLOWED",
   "SCAN_NOT_STOPPABLE",
+  "DEFECTDOJO_NOT_CONFIGURED",
+  "DEFECTDOJO_UNAVAILABLE",
+  "DEFECTDOJO_SYNC_RUNNING",
+  "DEFECTDOJO_PUSH_RUNNING",
+  "NOTHING_TO_PUSH",
 ]);
 
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;

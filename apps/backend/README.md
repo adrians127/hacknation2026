@@ -61,6 +61,9 @@ modules/hosts          PATCH /hosts…: edits of the Host and Service assets (bu
                        ingest's helpers for those assets
 modules/vulnerabilities  /vulnerabilities…: sources (NVD, OSV) mirrored into the database, matching services
                        against them, triage; see "Vulnerabilities"
+modules/defectdojo     GET|POST /defectdojo/sync: pulls DefectDojo tags, owners, triage and remediation dates
+                       into hosts and services; POST /defectdojo/push: a scan (or a selection) as Info
+                       findings (client, import rules, report builder, sync and push runs)
 demo/                  deterministic demo scan data for `db:seed:hosts` (not part of the API build)
 test/                  integration test setup: test database, TestClient (fetch + cookie jar), sign-in helpers,
                        ingestScan() (scans.ts)
@@ -93,7 +96,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Permissions and roles
 
-- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|run`, `hosts:update`, `vulnerabilities:*`, `pipelines:*` and `workers:read|update|delete`. `scans:run` also covers running a pipeline, stopping a scan and changing a pipeline's schedule; `workers:update|delete` are global scanner limits (admin only). `scans:read` guards the scan results (hosts and their vulnerabilities included), `hosts:update` the edits of hosts and services; `vulnerabilities:read` the databases' state and the mappings, `:update` the triage of a service's vulnerabilities, `:run` syncing and enabling sources, `:create`/`:delete` the mappings; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
+- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|run`, `hosts:update`, `vulnerabilities:*`, `pipelines:*`, `workers:read|update|delete` and `defectdojo:read|import|export`. `scans:run` also covers running a pipeline, stopping a scan and changing a pipeline's schedule; `workers:update|delete` are global scanner limits (admin only). `scans:read` guards the scan results (hosts and their vulnerabilities included), `hosts:update` the edits of hosts and services; `vulnerabilities:read` the databases' state and the mappings, `:update` the triage of a service's vulnerabilities, `:run` syncing and enabling sources, `:create`/`:delete` the mappings; `defectdojo:read` the sync and push history, `:import` pulling from DefectDojo, `:export` pushing to it; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
 - A route checks permissions with `requirePermission("users:read")` after `requireAuth`. Services that act on other accounts or roles also call `assertHoldsAll` (below).
 - **System roles** (`admin`, `editor`, `analyst`, `viewer`) are read-only. `syncSystemRoles()` (`modules/roles/system-roles.ts`) runs at startup and in the seed: it gives them exactly `SYSTEM_ROLE_PERMISSIONS` and drops permissions that no longer exist from custom roles.
 - **Custom roles** are rows with a `permissions` array. Deleting a role that users still have needs `reassignToRoleId` (and `users:update`); the users move and the role is deleted in one transaction.
@@ -116,7 +119,8 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
    | create and delete, including import | ✓ | ✓ | | |
    | run, stop and schedule scans (`scans:run`) | ✓ | ✓ | | |
    | export to a CSV/JSON file | ✓ | ✓ | ✓ | ✓ |
-   | export to DefectDojo | ✓ | ✓ | | |
+   | export to DefectDojo (`defectdojo:export`) | ✓ | ✓ | | |
+| import from DefectDojo (`defectdojo:import`) | ✓ | ✓ | | |
    | global scanner limits (`settings:manage`: rate, ports, ranges, time windows) | ✓ | | | |
    | users and roles | ✓ | | | |
 
@@ -241,6 +245,8 @@ CSV is RFC 4180 with a leading `'` on cells that start with `=`, `+`, `-` or `@`
 
 **Dashboard** (`modules/dashboard`, `GET /dashboard`, `scans:read`): the newest scan with results against its base scan: hosts up and open ports, change counts, how many known hosts are `unstable` or `inactive` as of that scan, and the 20 most important changes. Rows are grouped by `top-changes.ts` into one item per new, gone or unknown host (with the ports it opened or closed) and one per changed service; an item is as important as its most important row.
 
+**DefectDojo sync** (`modules/defectdojo/`): `POST /defectdojo/sync` merges DefectDojo tags into host and service tags, sets triage on services still `unreviewed` and replaces `Service.remediationPlannedOn`/`slaDueOn`/`riskAcceptedUntil` (returned as `remediation` on every scan service). `POST /defectdojo/push` sends a scan's services (all, or the selected hosts and services) as `Generic Findings Import` findings, importing once and reimporting into the same test later (`DefectDojoPush` rows keep the test id). Rules: [`docs/defectdojo-integration.md`](../../docs/defectdojo-integration.md#sync-into-subsurf-implemented) and [push](../../docs/defectdojo-integration.md#push-from-subsurf-implemented).
+
 **Edits** (`modules/hosts/`, `hosts:update`): `PATCH /hosts/{id}` (note, tags, triage) and `PATCH /hosts/{id}/services/{serviceId}` (the same plus `nameOverride`/`productOverride`/`versionOverride`, `null` clears one). They write the `Host`/`Service` assets, which ingest never touches, so an edit made from any scan shows in every scan and survives later ones (PDF item 14). Triage is `unreviewed | reviewed | important | false_positive`.
 
 **Bulk tags** (`POST /scans/{id}/hosts/tags`, `scans:read` + `hosts:update`): adds or removes one tag on the scan's hosts inside the given IPv4 addresses and CIDRs (`parseHostSelectors`/`selectorRanges` in `contracts/src/hosts/host-selectors.ts`, shared with the dialog). It matches the hosts the scan lists, gone and unknown included, whatever filters the table has. One raw SQL statement updates every matched `Host`; hosts already at `MAX_TAGS` (20) are skipped, so their edit dialog still validates. The response counts `matched`, `changed`, `unchanged` (already had it / never had it) and `limitReached`.
@@ -347,6 +353,7 @@ The tables take about 1 GB (`Vulnerability` 592 MB, `VulnerabilityCriterion` 418
 | `OSV_ECOSYSTEMS` | `Maven,Go,Packagist,PyPI,Debian,Alpine,npm` | OSV ecosystems to mirror (each is a zip; Ubuntu alone is 820 MB) |
 | `OSV_SKIP_PREFIXES` | `MAL-,DSA-,DLA-,DTSA-` | Record ids left out: malicious-package reports, Debian advisories that bundle CVEs |
 | `OSV_INCREMENTAL_MAX_RECORDS` | `2000` | More changes than this since the last sync: read the ecosystem's whole zip instead |
+| `DEFECTDOJO_URL` `DEFECTDOJO_API_TOKEN` | — | DefectDojo API for the sync (local: `http://localhost:8080` and the dev token from `docker/README.md`). Unset = the sync answers 503 `DEFECTDOJO_NOT_CONFIGURED` |
 
 ## Docker
 

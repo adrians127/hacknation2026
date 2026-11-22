@@ -111,6 +111,9 @@ const envSchema = z
     VULN_SWEEP_MAX_RATIO: blankAsAbsent(z.coerce.number().min(0).max(1).default(0.05)),
     // Downloads land here, in the sources' own layout: the directory doubles as an offline mirror.
     VULN_CACHE_DIR: blankAsAbsent(z.string().min(1).default(".cache/vulnerabilities")),
+    // DefectDojo API (src/modules/defectdojo); both unset = the integration is off.
+    DEFECTDOJO_URL: blankAsAbsent(z.url().optional()),
+    DEFECTDOJO_API_TOKEN: blankAsAbsent(z.string().min(1).optional()),
   })
   .refine((value) => isPortSpecWithin(value.SCAN_DEFAULT_PORTS, value.SCAN_ALLOWED_PORTS), {
     path: ["SCAN_DEFAULT_PORTS"],
