@@ -56,6 +56,7 @@ docker compose -f docker/docker-compose.workers.yml --profile nmap down
 - Default credentials: `hacknation` / `hacknation`, database `hacknation`. They match `apps/backend/.env.example`. Override them with `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT` (in your shell or in `docker/.env`).
 - The volume is mounted at `/var/lib/postgresql`, not `.../data`. Since Postgres 18 the image keeps its data in a version-numbered subdirectory.
 - Wiping the data: `docker compose -f docker/docker-compose.yml down -v`. This also wipes DefectDojo's volumes.
+- **Encryption at rest:** the backend encrypts what scanned hosts returned and what users wrote before it reaches the database, but the columns SQL filters and sorts on (addresses, ports, service names, target values) are plaintext ([which and why](../apps/backend/README.md#prisma)). Outside a developer's laptop, keep this volume and every database backup on an encrypted disk (LUKS/dm-crypt, or the cloud provider's disk encryption), and connect with `DB_SSLMODE=require`.
 
 ## nmap-worker
 
