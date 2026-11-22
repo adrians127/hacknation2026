@@ -130,12 +130,24 @@ describe("resolveMatches", () => {
       DEBIAN_12,
       ["nvd", "osv"],
     );
-    expect(match.best.sourceId).toBe("nvd");
+    expect(match.best).toMatchObject({ sourceId: "nvd", title: "nvd title" });
     expect(match.kev).toBe(true);
     expect(match.evidence.map((entry) => [entry.sourceId, entry.verdict])).toEqual([
       ["nvd", "affected"],
       ["osv", "affected"],
     ]);
+  });
+
+  it("borrows another source's title when the shown record has none", () => {
+    const [match] = resolveMatches(
+      [
+        evaluated({ ...NVD, title: null }, "cpe", affected("confirmed")),
+        evaluated({ ...DEBIAN, title: "Terrapin" }, "package", affected("potential")),
+      ],
+      NO_DISTRO,
+      ["nvd", "osv"],
+    );
+    expect(match.best).toMatchObject({ sourceId: "nvd", title: "Terrapin" });
   });
 
   it("counts a package source's hit as more than upstream evidence", () => {

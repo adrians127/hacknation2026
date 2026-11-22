@@ -99,13 +99,16 @@ function bestRecord(records: readonly RecordInfo[], sourceOrder: readonly string
     const index = sourceOrder.indexOf(record.sourceId);
     return index === -1 ? sourceOrder.length : index;
   };
-  return records.toSorted(
+  const sorted = records.toSorted(
     (a, b) =>
       Number(b.severity !== "unknown") - Number(a.severity !== "unknown") ||
       priority(a) - priority(b) ||
       (b.cvssScore ?? -1) - (a.cvssScore ?? -1) ||
       SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity],
-  )[0];
+  );
+  // NVD records have no title; another source's summary is better than none.
+  const title = sorted.find((record) => record.title !== null)?.title ?? null;
+  return { ...sorted[0], title };
 }
 
 /**
