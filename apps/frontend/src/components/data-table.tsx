@@ -19,6 +19,7 @@ export function DataTable<TData extends RowData>({
   emptyLabel,
   rowClassName,
   renderExpanded,
+  tableClassName,
 }: {
   columns: DataTableColumns<TData>;
   data: TData[];
@@ -26,13 +27,14 @@ export function DataTable<TData extends RowData>({
   rowClassName?: (row: TData) => string | undefined;
   /** Content of a full-width row under the row, or `null` while it is collapsed. */
   renderExpanded?: (row: TData) => ReactNode;
+  tableClassName?: string;
 }) {
   const { t } = useTranslation();
   const table = useTable({ features: dataTableFeatures, columns, data });
   const rows = table.getRowModel().rows;
 
   return (
-    <Table>
+    <Table className={tableClassName}>
       <TableHeader>
         {table.getHeaderGroups().map((group) => (
           <TableRow key={group.id}>
