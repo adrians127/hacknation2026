@@ -180,10 +180,10 @@ Change this file first, with the team's agreement, and only then the code. When 
 
 | Field | Meaning |
 |---|---|
-| `subnet` | The job's subnet (CIDR) |
+| `subnet` | The job's subnet (CIDR), or `null` when the addresses do not form one aligned block |
 | `ports` | TCP port spec that was scanned, e.g. `22,80,8000-8100` |
-| `maxParallel`, `maxRatePerProcess` | Concurrent Nmap processes and packets per second per process; the total rate is their product |
-| `hostTimeoutMs`, `httpTimeoutMs` | Per-host Nmap timeout and per-request HTTP timeout |
+| `maxParallel`, `maxRatePerProcess` | Worker concurrency and rate limit; Nmap reports processes/packets per second, httpx reports threads/HTTP requests per second |
+| `hostTimeoutMs`, `httpTimeoutMs` | Per-host Nmap timeout (`null` for other workers) and per-request HTTP timeout |
 | `maxBodyBytes`, `maxRedirects` | Limits for `http[].body.content` and `http[].redirects` |
 | `nmapArgs` | The Nmap argument vector **without the target addresses**; `[]` for workers without Nmap |
 
@@ -287,3 +287,7 @@ The worker result does not contain these. The backend computes them from stored 
 ## Current nmap-worker coverage
 
 `nmap-worker` produces the `{ scan, hosts }` structure above, including all required keys, host and port statuses, service metadata, counts, and job timing. It accepts multiple domains per IP, probe paths, and HTTP limits in the job. It currently runs Nmap service detection only: `http[]`, banners, and cryptographic identity fields are empty or `null`; probe paths are not requested yet. The HTTP/TLS collection phase still needs implementation. Because Nmap scans each host's assigned port list, `scan.params.ports` is the union of those lists and `nmapArgs` contains the common arguments; each invocation adds its own `-p`, output path and target IP.
+
+## Current httpx-worker coverage
+
+`httpx-worker` probes assigned IPs, ports and vhosts with ProjectDiscovery httpx. It fills HTTP status, title, headers, hashed cookie values, bounded body, unfollowed redirects and explicit path probes. It leaves Nmap service metadata, favicon and TLS certificate details `null` because those values are not produced by its current invocation. For a host-object target, its ports are already known open; for an address/range target, only a responding HTTP port is reported open. The backend must merge HTTP observations with Nmap observations without discarding Nmap's service metadata.

@@ -1037,7 +1037,10 @@
                 "type": "object",
                 "properties": {
                   "subnet": {
-                    "type": "string",
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "format": "ipv4-cidr"
                   },
                   "ports": {
@@ -1053,7 +1056,10 @@
                     "exclusiveMinimum": 0
                   },
                   "hostTimeoutMs": {
-                    "type": "integer",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "exclusiveMinimum": 0
                   },
                   "httpTimeoutMs": {
@@ -10527,7 +10533,10 @@
                         "type": "object",
                         "properties": {
                           "subnet": {
-                            "type": "string",
+                            "type": [
+                              "string",
+                              "null"
+                            ],
                             "format": "ipv4-cidr"
                           },
                           "ports": {
@@ -10543,7 +10552,10 @@
                             "exclusiveMinimum": 0
                           },
                           "hostTimeoutMs": {
-                            "type": "integer",
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
                             "exclusiveMinimum": 0
                           },
                           "httpTimeoutMs": {
