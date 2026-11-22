@@ -12,6 +12,7 @@ import {
   ScanHostParamsSchema,
   TagScanHostsBodySchema,
 } from "@subsurf/contracts/scans/scan-results.schema";
+import { UpdateScanBodySchema } from "@subsurf/contracts/scans/scans.schema";
 
 import { requireAuth } from "~backend/middleware/authenticate";
 import { requirePermission } from "~backend/middleware/authorize";
@@ -33,6 +34,18 @@ scansRoutes.post(
   c.importScan,
 );
 scansRoutes.get("/:id", validate({ params: IdParamsSchema, query: ScanCompareQuerySchema }), c.get);
+scansRoutes.patch(
+  "/:id",
+  requirePermission("scans:update"),
+  validate({ params: IdParamsSchema, body: UpdateScanBodySchema }),
+  c.update,
+);
+scansRoutes.delete(
+  "/:id",
+  requirePermission("scans:delete"),
+  validate({ params: IdParamsSchema }),
+  c.remove,
+);
 scansRoutes.get(
   "/:id/changes",
   validate({ params: IdParamsSchema, query: ScanChangesQuerySchema }),

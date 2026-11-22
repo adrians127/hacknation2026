@@ -29,6 +29,7 @@ import {
   type HostObservationStatus,
   type Scan as ScanRow,
 } from "~backend/generated/prisma/client";
+import { decryptText } from "~backend/lib/crypto";
 import { HttpError } from "~backend/lib/http-error";
 import { prisma } from "~backend/lib/prisma";
 import { hostLifecycle } from "~backend/modules/scans/host-lifecycle";
@@ -519,6 +520,7 @@ export const scanResultsService = {
 
     return {
       ...toScan(scan, summaries.get(scan.id)?.hosts ?? NO_HOSTS, summaries.get(scan.id)?.openPorts ?? 0),
+      note: decryptText(scan.note),
       ports: scan.ports,
       maxRate: scan.maxRate,
       batchSize: scan.batchSize,

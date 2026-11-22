@@ -370,6 +370,25 @@
         "jobs": "Zadania"
       }
     },
+    "edit": {
+      "open": "Nazwa i notatka",
+      "title": "Nazwa i notatka skanu",
+      "description": "Żeby odróżniać skany i zapisać to, co zespół powinien o tym skanie wiedzieć. Wyniki skanu się nie zmieniają.",
+      "name": "Nazwa",
+      "nameHint": "Widoczna na liście skanów obok daty.",
+      "note": "Notatka",
+      "noteHint": "Przechowywana w postaci zaszyfrowanej.",
+      "submit": "Zapisz",
+      "submitting": "Zapisywanie…",
+      "saved": "Skan zapisany."
+    },
+    "remove": {
+      "open": "Usuń",
+      "title": "Usunąć skan z {{scan}}?",
+      "description": "Jego wyniki zostaną trwale usunięte. Hosty zachowają notatki, tagi i ocenę, a pozostałe skany będą odtąd porównywane między sobą.",
+      "confirm": "Usuń skan",
+      "deleted": "Skan usunięty."
+    },
     "export": {
       "button": "Eksportuj {{format}}",
       "failed": "Eksport nie powiódł się: {{message}}"
@@ -681,6 +700,7 @@
     "SAME_SCAN": "Wybierz dwa różne skany do porównania.",
     "SCAN_IMPORT_INVALID": "Plik nie jest eksportem skanu, wynikiem workera ani plikiem CSV z wynikami w formacie, który ta wersja potrafi odczytać.",
     "SCAN_ALREADY_IMPORTED": "Ten plik został już zaimportowany.",
-    "SCAN_IMPORT_RUNNING": "Trwa inny import. Spróbuj ponownie, gdy się zakończy."
+    "SCAN_IMPORT_RUNNING": "Trwa inny import. Spróbuj ponownie, gdy się zakończy.",
+    "SCAN_RUNNING": "Nie można usunąć trwającego skanu. Najpierw go zatrzymaj."
   }
 }

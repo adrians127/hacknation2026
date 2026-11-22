@@ -336,6 +336,25 @@
         "jobs": "Jobs"
       }
     },
+    "edit": {
+      "open": "Name and note",
+      "title": "Name and note of the scan",
+      "description": "For telling scans apart and for what the team should know about this one. What the scan found does not change.",
+      "name": "Name",
+      "nameHint": "Shown in the scan list next to the date.",
+      "note": "Note",
+      "noteHint": "Stored encrypted.",
+      "submit": "Save",
+      "submitting": "Saving…",
+      "saved": "Scan saved."
+    },
+    "remove": {
+      "open": "Delete",
+      "title": "Delete the scan of {{scan}}?",
+      "description": "Its results are removed for good. Hosts keep their notes, tags and triage, and the other scans are compared with each other from now on.",
+      "confirm": "Delete the scan",
+      "deleted": "Scan deleted."
+    },
     "export": {
       "button": "Export {{format}}",
       "failed": "The export failed: {{message}}"
@@ -633,6 +652,7 @@
     "SAME_SCAN": "Pick two different scans to compare.",
     "SCAN_IMPORT_INVALID": "The file is not a scan export, a worker result or a results CSV this version can read.",
     "SCAN_ALREADY_IMPORTED": "This file was imported before.",
-    "SCAN_IMPORT_RUNNING": "Another import is running. Try again when it finishes."
+    "SCAN_IMPORT_RUNNING": "Another import is running. Try again when it finishes.",
+    "SCAN_RUNNING": "A running scan cannot be deleted. Stop it first."
   }
 }

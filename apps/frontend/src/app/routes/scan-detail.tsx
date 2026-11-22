@@ -35,6 +35,7 @@ import { HostSheet } from "@/features/hosts/components/host-sheet";
 import { HostsTable } from "@/features/hosts/components/hosts-table";
 import { ServiceEditDialog } from "@/features/hosts/components/service-edit-dialog";
 import { useScan } from "@/features/scans/api/get-scan";
+import { ScanActions } from "@/features/scans/components/scan-actions";
 import { ScanExportButtons } from "@/features/scans/components/scan-export-buttons";
 import { useStopScan } from "@/features/scans/api/stop-scan";
 import { ScanJobsPanel } from "@/features/scans/components/scan-jobs-panel";
@@ -213,6 +214,10 @@ export function ScanDetailRoute() {
               </Link>
             </Button>
             <ScanExportButtons scan={scanData} />
+            <ScanActions
+              scan={scanData}
+              label={formatDateTime(scanData.startedAt ?? scanData.createdAt, locale)}
+            />
             <GuardedButton
               variant="outline"
               permissions={["hosts:update"]}
@@ -229,6 +234,10 @@ export function ScanDetailRoute() {
           </>
         }
       />
+
+      {scanData.note && (
+        <p className="max-w-3xl text-sm whitespace-pre-wrap text-muted-foreground">{scanData.note}</p>
+      )}
 
       <ScanSummary
         scan={scanData}

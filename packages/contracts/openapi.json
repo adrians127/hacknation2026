@@ -105,7 +105,8 @@
                   "SAME_SCAN",
                   "SCAN_IMPORT_INVALID",
                   "SCAN_ALREADY_IMPORTED",
-                  "SCAN_IMPORT_RUNNING"
+                  "SCAN_IMPORT_RUNNING",
+                  "SCAN_RUNNING"
                 ]
               },
               "details": {}
@@ -183,6 +184,8 @@
                 "targets:delete",
                 "scans:read",
                 "scans:create",
+                "scans:update",
+                "scans:delete",
                 "scans:run",
                 "hosts:update",
                 "vulnerabilities:read",
@@ -1187,6 +1190,8 @@
                 "targets:delete",
                 "scans:read",
                 "scans:create",
+                "scans:update",
+                "scans:delete",
                 "scans:run",
                 "hosts:update",
                 "vulnerabilities:read",
@@ -7876,6 +7881,9 @@
                           ],
                           "format": "date-time"
                         },
+                        "note": {
+                          "type": "string"
+                        },
                         "ports": {
                           "type": "string"
                         },
@@ -8112,6 +8120,7 @@
                         "pipeline",
                         "trigger",
                         "windowEndsAt",
+                        "note",
                         "ports",
                         "maxRate",
                         "batchSize",
@@ -12592,6 +12601,8 @@
                                 "targets:delete",
                                 "scans:read",
                                 "scans:create",
+                                "scans:update",
+                                "scans:delete",
                                 "scans:run",
                                 "hosts:update",
                                 "vulnerabilities:read",
@@ -12715,6 +12726,8 @@
                         "targets:delete",
                         "scans:read",
                         "scans:create",
+                        "scans:update",
+                        "scans:delete",
                         "scans:run",
                         "hosts:update",
                         "vulnerabilities:read",
@@ -12734,7 +12747,7 @@
                         "defectdojo:export"
                       ]
                     },
-                    "maxItems": 31
+                    "maxItems": 33
                   }
                 },
                 "required": [
@@ -12877,6 +12890,8 @@
                           "targets:delete",
                           "scans:read",
                           "scans:create",
+                          "scans:update",
+                          "scans:delete",
                           "scans:run",
                           "hosts:update",
                           "vulnerabilities:read",
@@ -13044,6 +13059,8 @@
                         "targets:delete",
                         "scans:read",
                         "scans:create",
+                        "scans:update",
+                        "scans:delete",
                         "scans:run",
                         "hosts:update",
                         "vulnerabilities:read",
@@ -13063,7 +13080,7 @@
                         "defectdojo:export"
                       ]
                     },
-                    "maxItems": 31
+                    "maxItems": 33
                   }
                 }
               }
@@ -13582,6 +13599,9 @@
                       ],
                       "format": "date-time"
                     },
+                    "note": {
+                      "type": "string"
+                    },
                     "ports": {
                       "type": "string"
                     },
@@ -13818,6 +13838,7 @@
                     "pipeline",
                     "trigger",
                     "windowEndsAt",
+                    "note",
                     "ports",
                     "maxRate",
                     "batchSize",
@@ -13863,6 +13884,197 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateScan",
+        "summary": "Change a scan's name and note",
+        "description": "Requires `scans:read` and `scans:update`. Works in any state of the scan. Only the name and the note change: what the scan found and the parameters it ran with are never edited. The note is encrypted at rest.",
+        "tags": [
+          "Scans"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The scan's name and note",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "note"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteScan",
+        "summary": "Delete a scan with everything it observed",
+        "description": "Requires `scans:read` and `scans:delete`. Removes the scan, its jobs and its observations. Hosts and services stay, with their notes, tags and triage, and the other scans are then compared with each other. A running scan answers `409 SCAN_RUNNING`.",
+        "tags": [
+          "Scans"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The scan is running",
             "content": {
               "application/json": {
                 "schema": {
