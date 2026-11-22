@@ -7,12 +7,13 @@ This directory is **not a pnpm workspace** (it has no `package.json`), so turbo 
 | Worker | Description |
 |---|---|
 | [`nmap-worker`](nmap-worker/README.md) | TCP service and version detection on address ranges or on Masscan hits (host objects with their own ports) |
+| [`httpx-worker`](httpx-worker/README.md) | HTTP/HTTPS probing on assigned IPv4 addresses, ports and domains; enriches the shared result with web response data |
 | [`worker-manager`](worker-manager/README.md) | Orchestrator, not a worker: takes a job list from a file or long-polled from the backend (`--poll`), splits it into tasks, runs the workers (in parallel where their IP:ports do not overlap, in pipeline order where they do), saves their results to files and, with `--poll`, uploads each one to the backend |
 | [`masscan-worker`](masscan-worker/README.md) | High-speed TCP SYN sweep across subnets or all 65,535 ports via masscan. JSON job in, JSON list of live hosts out |
 
 ## Job and result format
 
-Every worker reads the same job JSON and writes the same result JSON, so worker-manager (and later the backend) handles them alike. A new worker follows this section.
+Every worker reads the same job JSON and writes the same result JSON, so worker-manager and the backend handle them alike. A new worker follows this section.
 
 **Job (input):** one object, snake_case keys; unknown keys are ignored (worker-manager adds `task_id`, `task_index`, `task_count`).
 
@@ -49,7 +50,7 @@ worker-manager in `--poll` mode leases whole job lists instead: it long-polls `P
 
 ## Result format (locked)
 
-What a worker returns for a job is fixed in [`docs/worker-result-format.md`](../../docs/worker-result-format.md): a `{ scan, hosts[] }` document with every address of the job, its open ports and service detection. The backend builds scan-data features on it. The current `nmap-worker` emits this structure; HTTP/TLS fingerprint collection is still pending.
+What a worker returns for a job is fixed in [`docs/worker-result-format.md`](../../docs/worker-result-format.md): a `{ scan, hosts[] }` document with every address of the job, its open ports and service detection where available. The backend builds scan-data features on it. `nmap-worker` fills port and service observations; `httpx-worker` fills HTTP response observations. TLS certificate and favicon mapping are still pending.
 
 ## Scan jobs in the database
 

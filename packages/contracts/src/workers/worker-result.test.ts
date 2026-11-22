@@ -8,6 +8,16 @@ describe("WorkerResultSchema", () => {
     expect(WorkerResultSchema.safeParse(buildWorkerResult()).error).toBeUndefined();
   });
 
+  it("accepts HTTP-only worker params without an aligned subnet or Nmap timeout", () => {
+    const result = buildWorkerResult();
+    result.scan.worker.id = "httpx-worker";
+    result.scan.worker.nmapVersion = null;
+    result.scan.params.subnet = null;
+    result.scan.params.hostTimeoutMs = null;
+    result.scan.params.nmapArgs = [];
+    expect(WorkerResultSchema.safeParse(result).error).toBeUndefined();
+  });
+
   it("rejects an address reported twice", () => {
     const result = buildWorkerResult();
     result.hosts.push({ ...result.hosts[1] });

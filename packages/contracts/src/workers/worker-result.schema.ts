@@ -44,11 +44,11 @@ export const WorkerScanSchema = z.object({
     http: DurationMsSchema,
   }),
   params: z.object({
-    subnet: z.cidrv4(),
+    subnet: z.cidrv4().nullable(),
     ports: PortSpecSchema,
     maxParallel: z.number().int().positive(),
     maxRatePerProcess: z.number().int().positive(),
-    hostTimeoutMs: z.number().int().positive(),
+    hostTimeoutMs: z.number().int().positive().nullable(),
     httpTimeoutMs: z.number().int().positive(),
     maxBodyBytes: z.number().int().positive(),
     maxRedirects: NonNegativeIntSchema,

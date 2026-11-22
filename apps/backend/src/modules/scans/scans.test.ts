@@ -70,7 +70,117 @@ async function getJson(client: TestClient, path: string): Promise<unknown> {
   return res.json();
 }
 
+async function ingestHttpx(scanId: string, title: string): Promise<void> {
+  const job = await prisma.scanJob.findFirstOrThrow({ where: { scanId }, select: { id: true } });
+  const result = buildWorkerResult({ scanId, jobId: job.id, leaseId: randomUUID() });
+  const wiki = result.hosts[0];
+  const https = wiki.ports.find((port) => port.port === 443);
+  if (!https?.http[0]) throw new Error("The example needs an HTTPS endpoint");
+  result.scan.worker = { id: "httpx-worker", version: "0.1.0", nmapVersion: null };
+  result.hosts = [{
+    ...wiki,
+    ports: [{
+      ...https,
+      service: null,
+      banner: null,
+      scripts: [],
+      http: [{ ...https.http[0], title }],
+    }],
+  }];
+  await resultsService.ingest(result);
+}
+
+const withoutHttp = (hosts: ObservedHost[]) => hosts.map((host) => ({
+  ...host,
+  ports: host.ports.map((port) => ({ ...port, http: [] })),
+}));
+
+const masscanOnly = (hosts: ObservedHost[]) => hosts.map((host) => ({
+  ...host,
+  ports: host.ports.filter((port) => port.port === 443).map((port) => ({
+    ...port,
+    service: null,
+    banner: null,
+    scripts: [],
+    http: [],
+  })),
+}));
+
 describe("GET /scans", () => {
+  it("keeps Nmap service detection with Masscan when httpx is absent", async () => {
+    const scanId = await ingestScan(masscanOnly, "masscan-worker");
+    const job = await prisma.scanJob.findFirstOrThrow({ where: { scanId }, select: { id: true } });
+    const nmap = buildWorkerResult({ scanId, jobId: job.id, leaseId: randomUUID() });
+    nmap.hosts = [{
+      ...nmap.hosts[0],
+      ports: nmap.hosts[0].ports.filter((port) => port.port === 443)
+        .map((port) => ({ ...port, http: [] })),
+    }];
+    await resultsService.ingest(nmap);
+    const { client } = await signInAs(server, { role: "viewer" });
+
+    const page = ScanHostListResponseSchema.parse(
+      await getJson(client, `/v1/scans/${scanId}/hosts`),
+    );
+    expect(page.items[0].services).toMatchObject([
+      { port: 443, observed: { product: "nginx" }, http: [] },
+    ]);
+    const { items } = ScanListResponseSchema.parse(await getJson(client, "/v1/scans"));
+    expect(items[0].openPorts).toBe(1);
+  });
+
+  it("combines Nmap service data with httpx responses and searches their titles", async () => {
+    const scanId = await ingestScan(withoutHttp);
+    await ingestHttpx(scanId, "HTTPX only title");
+    const { client } = await signInAs(server, { role: "viewer" });
+
+    const page = ScanHostListResponseSchema.parse(
+      await getJson(client, `/v1/scans/${scanId}/hosts?q=HTTPX only title`),
+    );
+    expect(page.total).toBe(1);
+    expect(page.items[0].services.find((service) => service.port === 443)).toMatchObject({
+      observed: { name: "https", product: "nginx" },
+      http: [{ title: "HTTPX only title" }],
+    });
+    const detail = ScanHostDetailSchema.parse(
+      await getJson(client, `/v1/scans/${scanId}/hosts/${await hostIdOf("10.0.5.7")}`),
+    );
+    expect(detail.services.find((service) => service.port === 443)).toMatchObject({
+      observed: { product: "nginx" },
+      http: [{ title: "HTTPX only title" }],
+    });
+    const { items } = ScanListResponseSchema.parse(await getJson(client, "/v1/scans"));
+    expect(items[0].openPorts).toBe(2);
+  });
+
+  it("shows Masscan plus httpx without Nmap and detects HTTP changes", async () => {
+    const first = await ingestScan(masscanOnly, "masscan-worker");
+    await ingestHttpx(first, "Before title");
+    const second = await ingestScan(masscanOnly, "masscan-worker");
+    await ingestHttpx(second, "After title");
+    const { client } = await signInAs(server, { role: "viewer" });
+
+    const detail = ScanHostDetailSchema.parse(
+      await getJson(client, `/v1/scans/${second}/hosts/${await hostIdOf("10.0.5.7")}`),
+    );
+    expect(detail.services).toHaveLength(1);
+    expect(detail.services[0]).toMatchObject({
+      port: 443,
+      change: "changed",
+      observed: { name: null, product: null, version: null },
+      http: [{ title: "After title" }],
+      before: { http: [{ title: "Before title" }] },
+    });
+    expect(detail.services[0].fieldChanges).toContainEqual(expect.objectContaining({
+      field: "http.title",
+      before: "Before title",
+      after: "After title",
+    }));
+    const scan = ScanDetailSchema.parse(await getJson(client, `/v1/scans/${second}`));
+    expect(scan.changes?.services.changed).toBe(1);
+    expect(scan.openPorts).toBe(1);
+  });
+
   it("lists scans newest first with what their workers found", async () => {
     const { first, second } = await twoScans();
     const { client } = await signInAs(server, { role: "viewer" });
