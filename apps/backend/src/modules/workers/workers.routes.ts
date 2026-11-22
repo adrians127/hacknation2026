@@ -1,23 +1,28 @@
-import express, { Router } from "express";
+import { Router } from "express";
 
-import { ManagerResultUploadSchema } from "@subsurf/contracts/workers/workers.schema";
+import { IdParamsSchema } from "@subsurf/contracts/common/common.schema";
+import { UpdateWorkerBodySchema } from "@subsurf/contracts/workers/worker-registry.schema";
 
+import { requireAuth } from "~backend/middleware/authenticate";
+import { requirePermission } from "~backend/middleware/authorize";
 import { validate } from "~backend/middleware/validate";
-import { requireWorkerToken } from "~backend/middleware/worker-token";
 import { workersController as c } from "~backend/modules/workers/workers.controller";
 
-// A result carries up to 1024 hosts, each with HTTP bodies cut at maxBodyBytes.
-const RESULT_UPLOAD_LIMIT = "64mb";
-
+/** The worker registry users manage (`/workers`); worker-manager's endpoints are manager.routes.ts. */
 export const workersRoutes = Router();
 
-workersRoutes.use(requireWorkerToken);
+workersRoutes.use(requireAuth);
 
-// Its own body parser, after the token check: app.ts skips this path in the global 1 MB one.
-// express.json inflates gzip bodies; the limit applies to the inflated size.
-workersRoutes.post(
-  "/manager/results",
-  express.json({ limit: RESULT_UPLOAD_LIMIT }),
-  validate({ body: ManagerResultUploadSchema }),
-  c.submitManagerResult,
+workersRoutes.get("/", requirePermission("workers:read"), c.list);
+workersRoutes.patch(
+  "/:id",
+  requirePermission("workers:update"),
+  validate({ params: IdParamsSchema, body: UpdateWorkerBodySchema }),
+  c.update,
+);
+workersRoutes.delete(
+  "/:id",
+  requirePermission("workers:delete"),
+  validate({ params: IdParamsSchema }),
+  c.delete,
 );

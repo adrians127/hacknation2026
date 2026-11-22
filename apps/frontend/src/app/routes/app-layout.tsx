@@ -1,10 +1,12 @@
 import {
   Bug,
+  Cpu,
   Crosshair,
   LayoutDashboard,
   Radar,
   ShieldCheck,
   Users,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -23,6 +25,8 @@ interface NavItem {
     | "nav.dashboard"
     | "nav.targets"
     | "nav.scans"
+    | "nav.pipelines"
+    | "nav.workers"
     | "nav.vulnerabilities"
     | "nav.users"
     | "nav.roles";
@@ -34,6 +38,8 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/app", label: "nav.dashboard", Icon: LayoutDashboard },
   { to: "/app/targets", label: "nav.targets", Icon: Crosshair, permission: "targets:read" },
   { to: "/app/scans", label: "nav.scans", Icon: Radar, permission: "scans:read" },
+  { to: "/app/pipelines", label: "nav.pipelines", Icon: Workflow, permission: "pipelines:read" },
+  { to: "/app/admin/workers", label: "nav.workers", Icon: Cpu, permission: "workers:read" },
   {
     to: "/app/admin/vulnerabilities",
     label: "nav.vulnerabilities",

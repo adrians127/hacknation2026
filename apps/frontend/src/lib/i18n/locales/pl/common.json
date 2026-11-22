@@ -327,14 +327,17 @@
       "up": "Aktywne hosty",
       "noAnswer": "Bez odpowiedzi",
       "openPorts": "Otwarte porty",
-      "duration": "Czas trwania"
+      "duration": "Czas trwania",
+      "pipeline": "Potok",
+      "trigger": "Uruchomiony przez"
     },
     "statuses": {
       "queued": "W kolejce",
       "running": "W toku",
       "completed": "Zakończony",
       "stopped": "Zatrzymany",
-      "failed": "Błąd"
+      "failed": "Błąd",
+      "paused": "Wstrzymany"
     },
     "detail": {
       "back": "Wszystkie skany",
@@ -345,8 +348,8 @@
       "down": "nieaktywne: {{formatted}}",
       "noAnswer": "Bez odpowiedzi",
       "openPorts": "Otwarte porty",
-      "jobs": "Zakończone joby",
-      "stoppedJobs": "zatrzymane na końcu okna czasowego: {{formatted}}",
+      "jobs": "Zakończone zadania",
+      "stoppedJobs": "zatrzymane: {{formatted}}",
       "duration": "Czas trwania",
       "rate": "Limit tempa",
       "ports": "Skanowane porty",
@@ -358,7 +361,19 @@
         "changed": "zmienione hosty",
         "unknown": "hosty bez danych do porównania"
       },
-      "serviceChanges": "Usługi: nowe {{new}}, zniknięte {{gone}}, zmienione {{changed}}."
+      "serviceChanges": "Usługi: nowe {{new}}, zniknięte {{gone}}, zmienione {{changed}}.",
+      "pipeline": "Potok",
+      "noPipeline": "Uruchomiony przez import celów",
+      "windowEnds": "Okno czasowe kończy się {{date}}",
+      "pausedHint": "Okno czasowe zamknęło się przed końcem pracy. Pozostałe zadania ruszą w kolejnym terminie potoku.",
+      "stop": "Zatrzymaj skan",
+      "stopTitle": "Zatrzymać ten skan?",
+      "stopDescription": "Zadania w kolejce zostaną anulowane. Zadania, które worker już wykonuje, najpierw się zakończą, a potem skan się zakończy.",
+      "stopped": "Skan jest zatrzymywany",
+      "tabs": {
+        "hosts": "Hosty",
+        "jobs": "Zadania"
+      }
     },
     "compare": {
       "title": "Porównanie skanów",
@@ -394,6 +409,50 @@
       },
       "export": "Eksportuj zmiany jako {{format}}",
       "exportFailed": "Eksport się nie powiódł: {{message}}"
+    },
+    "triggers": {
+      "import": "Import celów",
+      "manual": "Uruchom teraz",
+      "schedule": "Harmonogram"
+    },
+    "jobs": {
+      "steps": "Kroki",
+      "step": "Krok {{index}}: {{worker}}",
+      "stepInput": {
+        "targets": "skanuje cele",
+        "previous": "skanuje to, co znalazł krok {{index}}"
+      },
+      "progress": "Zakończone zadania: {{done}} z {{total}}",
+      "waiting": "Czeka na poprzedni krok",
+      "filters": {
+        "step": "Krok",
+        "allSteps": "Wszystkie kroki",
+        "status": "Stan",
+        "allStatuses": "Wszystkie stany"
+      },
+      "columns": {
+        "sequence": "#",
+        "step": "Krok",
+        "subnet": "Adresy",
+        "status": "Stan",
+        "attempts": "Próby",
+        "leasedBy": "Menedżer workerów",
+        "duration": "Czas trwania",
+        "results": "Wyniki",
+        "error": "Ostatni błąd"
+      },
+      "statuses": {
+        "queued": "W kolejce",
+        "leased": "W toku",
+        "completed": "Zakończone",
+        "failed": "Błąd",
+        "stopped": "Zatrzymane"
+      },
+      "addresses_one": "{{count}} adres",
+      "addresses_few": "{{count}} adresy",
+      "addresses_many": "{{count}} adresów",
+      "addresses_other": "{{count}} adresu",
+      "empty": "Brak pasujących zadań."
     }
   },
   "language": {
@@ -426,7 +485,9 @@
     "scans": "Skany",
     "users": "Użytkownicy",
     "roles": "Role",
-    "vulnerabilities": "Podatności"
+    "vulnerabilities": "Podatności",
+    "pipelines": "Potoki",
+    "workers": "Workery"
   },
   "notFound": {
     "title": "Nie znaleziono strony",
@@ -479,6 +540,14 @@
     "ROLE_NAME_TAKEN": "Rola o tej nazwie już istnieje.",
     "PACKAGE_MAPPING_EXISTS": "Takie mapowanie już istnieje.",
     "SOURCE_DISABLED": "Źródło jest wyłączone. Najpierw je włącz.",
-    "BASE_SCAN_NOT_OLDER": "Skan, z którym porównujesz, musi być starszy od porównywanego skanu."
+    "BASE_SCAN_NOT_OLDER": "Skan, z którym porównujesz, musi być starszy od porównywanego skanu.",
+    "PIPELINE_NAME_TAKEN": "Potok o tej nazwie już istnieje.",
+    "PIPELINE_RUN_ACTIVE": "Uruchomienie tego potoku jeszcze trwa. Poczekaj na nie albo najpierw je zatrzymaj.",
+    "NO_SCANNABLE_TARGETS": "Żadnego z celów potoku nie da się przeskanować. Sprawdź jego tagi i zakresy.",
+    "WORKER_DISABLED": "Krok używa wyłączonego workera. Najpierw musi go włączyć administrator.",
+    "WORKER_IN_USE": "Ten worker jest nadal używany przez potok. Najpierw usuń go z potoku.",
+    "WORKER_BUILTIN": "Wbudowane workery pochodzą z kodu: zmienić można tylko to, czy działają, ich limit tempa i wartości domyślne.",
+    "PORTS_NOT_ALLOWED": "Te porty są poza portami, które skaner może sprawdzać.",
+    "SCAN_NOT_STOPPABLE": "Skan już się zakończył."
   }
 }

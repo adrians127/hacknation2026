@@ -4,11 +4,13 @@ import { authRoutes } from "~backend/modules/auth/auth.routes";
 import { dashboardRoutes } from "~backend/modules/dashboard/dashboard.routes";
 import { healthRoutes } from "~backend/modules/health/health.routes";
 import { hostsRoutes } from "~backend/modules/hosts/hosts.routes";
+import { pipelinesRoutes } from "~backend/modules/pipelines/pipelines.routes";
 import { rolesRoutes } from "~backend/modules/roles/roles.routes";
 import { scansRoutes } from "~backend/modules/scans/scans.routes";
 import { targetsRoutes } from "~backend/modules/targets/targets.routes";
 import { usersRoutes } from "~backend/modules/users/users.routes";
 import { vulnerabilitiesRoutes } from "~backend/modules/vulnerabilities/vulnerabilities.routes";
+import { managerRoutes } from "~backend/modules/workers/manager.routes";
 import { workersRoutes } from "~backend/modules/workers/workers.routes";
 
 /**
@@ -21,9 +23,12 @@ apiRouter.use("/auth", authRoutes);
 apiRouter.use("/dashboard", dashboardRoutes);
 apiRouter.use("/health", healthRoutes);
 apiRouter.use("/hosts", hostsRoutes);
+apiRouter.use("/pipelines", pipelinesRoutes);
 apiRouter.use("/roles", rolesRoutes);
 apiRouter.use("/scans", scansRoutes);
 apiRouter.use("/targets", targetsRoutes);
 apiRouter.use("/users", usersRoutes);
 apiRouter.use("/vulnerabilities", vulnerabilitiesRoutes);
+// Machine routes first: the user-facing /workers router requires a session for everything.
+apiRouter.use("/workers/manager", managerRoutes);
 apiRouter.use("/workers", workersRoutes);

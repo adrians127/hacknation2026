@@ -45,7 +45,7 @@ Workers have no database access. Only the backend writes to it (Prisma). Each wo
 
 The Nmap worker sends `WORKER_TOKEN` as a bearer machine token to JSON endpoints described in `packages/contracts` (tag `Workers`). Machine-token validation is separate from user authentication and still needs to be implemented with the backend lease, heartbeat, and result handlers.
 
-worker-manager in `--poll` mode leases whole job lists instead: it long-polls `POST /workers/manager/lease` with the same kind of bearer token, runs what it gets and uploads every worker run's result to `POST /workers/manager/results` (see [its README](worker-manager/README.md#poll-mode-jobs-from-the-backend)). The backend implements the results endpoint (`WORKER_TOKEN`, [backend README](../backend/README.md#scan-results)); the lease and heartbeat endpoints are still missing.
+worker-manager in `--poll` mode leases whole job lists instead: it long-polls `POST /workers/manager/lease` with the same kind of bearer token, runs what it gets and uploads every worker run's result to `POST /workers/manager/results` (see [its README](worker-manager/README.md#poll-mode-jobs-from-the-backend)). The backend implements both (`WORKER_TOKEN`, [backend README](../backend/README.md#pipelines-scheduling-and-leasing)): the lease registers the manager and the workers it offers, and hands out jobs of pipeline runs for those workers. There is no heartbeat endpoint; a lease lasts until the job's deadline plus a grace period.
 
 ## Result format (locked)
 
@@ -53,12 +53,14 @@ What a worker returns for a job is fixed in [`docs/worker-result-format.md`](../
 
 ## Scan jobs in the database
 
-The work a lease hands out already exists: `POST /targets/import` with `startScan` (see [the backend README](../backend/README.md#targets-and-scan-jobs)) queues a `Scan` and splits its addresses into `ScanJob` rows (`apps/backend/prisma/schema/scans/`). The lease, heartbeat and result handlers read and update those rows.
+A lease hands out `ScanJob` rows (`apps/backend/prisma/schema/scans/`) of pipeline runs: a pipeline (or a target import with `startScan`, which runs the default steps masscan → nmap) queues a `Scan` and the jobs of its first step; each completed job queues the next step's job from its hits (see [the backend README](../backend/README.md#pipelines-scheduling-and-leasing)). The lease and result handlers read and update those rows.
 
 | `ScanJob` field | Meaning |
 |---|---|
-| `scanId`, `sequence` | The run it belongs to and its position (1..`Scan.jobCount`, in address order) |
-| `kind` | `discovery` (created by the import) or `service`; see the open questions below |
+| `scanId`, `sequence` | The run it belongs to and its position (1..`Scan.jobCount`; later steps' jobs are numbered as they are created) |
+| `stepIndex`, `worker` | The pipeline step that created it, and the worker-manager worker that runs it (`jobs[].worker`) |
+| `kind` | `discovery` (a step over the targets) or `service` (a step over the previous step's hits) |
+| `params` | The worker's job as sent in `jobs[].params`: `targets` (CIDRs/IPs, or `{ip, ports, domains}` host objects), `ports`, `rate` and the worker's own fields; `max_duration_seconds` is added at lease time |
 | `status` | `queued` → `leased` → `completed` / `failed`, or `stopped`; an expired lease goes back to `queued` |
 | `subnet` | The smallest aligned IPv4 CIDR containing the whole batch, ready for `NmapJob.subnet` |
 | `targets` | IPv4 addresses and CIDRs inside `subnet`, at most `Scan.batchSize` addresses in total (256 by default, never above 1024, the `NmapJob` limit) |
@@ -66,11 +68,11 @@ The work a lease hands out already exists: `POST /targets/import` with `startSca
 | `attempts`, `leaseId`, `leasedBy`, `leaseExpiresAt`, `heartbeatAt` | Lease bookkeeping; the `(status, leaseExpiresAt)` index serves the lease query |
 | `startedAt`, `finishedAt`, `durationMs`, `error` | Timing for adaptive batch sizing, and the last failure |
 
-Scan parameters live on the parent `Scan`, snapshotted from the backend's env when it was queued: `ports` (a TCP port spec such as `22,80,8000-8100`), `maxRate` (packets per second) and `batchSize`.
+The parent `Scan` snapshots the run's steps (`steps`), its time window (`windowEndsAt`) and, for ingest's checks, the union of the steps' ports (`ports`) and their highest rate (`maxRate`).
 
-Open questions for the lease implementation:
+Settled questions:
 
-- Which worker consumes the `discovery` jobs: Masscan over `targets` with `Scan.ports`, followed by `service` jobs built from its hits, or Nmap directly (every address of `targets` × `Scan.ports`)?
+- ~~Which worker consumes the `discovery` jobs?~~ The pipeline decides; the default steps (target import) are Masscan over `targets`, then Nmap on the host objects built from its hits.
 - ~~`NmapJob.targets` rejects duplicate IPs, but `hosts` can list one IP under two domains.~~ Settled by the [result format](../../docs/worker-result-format.md#what-the-job-must-provide): the job lists each IP once with all its domains, and the worker fingerprints HTTP once per domain.
 
 ## Scan safety (PDF requirement)

@@ -11,6 +11,10 @@ import {
   type ScanCoverage,
 } from "@subsurf/contracts/scans/scan-results.schema";
 import type { ScanChangesResponse } from "@subsurf/contracts/scans/scan-changes.schema";
+import type {
+  ScanJobListQuery,
+  ScanJobListResponse,
+} from "@subsurf/contracts/scans/scan-jobs.schema";
 import type { Scan, ScanHostCounts, ScanJobStatus } from "@subsurf/contracts/scans/scans.schema";
 import type { Ipv4Range } from "@subsurf/contracts/targets/ipv4";
 
@@ -31,12 +35,15 @@ import {
 } from "~backend/modules/scans/scan-diff";
 import {
   OBSERVATION_INCLUDE,
+  SCAN_INCLUDE,
   toChangeRows,
   toScan,
   toScanHost,
   toScanHostDetail,
   type HostInScan,
+  type ScanWithPipeline,
 } from "~backend/modules/scans/scan-results.mapper";
+import { toScanJob, toScanSteps } from "~backend/modules/scans/scan-jobs.mapper";
 import { EMPTY_SUMMARY } from "~backend/modules/vulnerabilities/vulnerabilities.mapper";
 import { vulnerabilitiesService } from "~backend/modules/vulnerabilities/vulnerabilities.service";
 
@@ -98,8 +105,8 @@ interface BaseScan {
   startedAt: Date | null;
 }
 
-async function findScan(id: string): Promise<ScanRow> {
-  const scan = await prisma.scan.findUnique({ where: { id } });
+async function findScan(id: string): Promise<ScanWithPipeline> {
+  const scan = await prisma.scan.findUnique({ where: { id }, include: SCAN_INCLUDE });
   if (!scan) throw HttpError.notFound("Scan not found");
   return scan;
 }
@@ -411,7 +418,7 @@ export const scanResultsService = {
   },
 
   async list(): Promise<Scan[]> {
-    const scans = await prisma.scan.findMany({ orderBy: { createdAt: "desc" } });
+    const scans = await prisma.scan.findMany({ orderBy: { createdAt: "desc" }, include: SCAN_INCLUDE });
     const summaries = await scanSummaries(scans.map((scan) => scan.id));
     return scans.map((scan) => {
       const summary = summaries.get(scan.id);
@@ -422,9 +429,14 @@ export const scanResultsService = {
   async get(id: string, baseId?: string): Promise<ScanDetail> {
     const scan = await findScan(id);
     const base = await resolveBase(scan, baseId);
-    const [summaries, jobs, { entries, coverage }] = await Promise.all([
+    const [summaries, jobs, stepJobs, { entries, coverage }] = await Promise.all([
       scanSummaries([scan.id]),
       prisma.scanJob.groupBy({ by: ["status"], where: { scanId: scan.id }, _count: { status: true } }),
+      prisma.scanJob.groupBy({
+        by: ["stepIndex", "worker", "status"],
+        where: { scanId: scan.id },
+        _count: { status: true },
+      }),
       diffWithBase(scan, base),
     ]);
     const jobCount = (status: ScanJobStatus) =>
@@ -443,10 +455,31 @@ export const scanResultsService = {
       maxRate: scan.maxRate,
       batchSize: scan.batchSize,
       jobs: jobCounts,
+      steps: toScanSteps(scan, stepJobs),
       baseScan: base && { id: base.id, startedAt: base.startedAt?.toISOString() ?? null },
       changes: base ? countChanges(entries) : null,
       coverage,
     };
+  },
+
+  async listJobs(scanId: string, query: ScanJobListQuery): Promise<ScanJobListResponse> {
+    await findScan(scanId);
+    const where = {
+      scanId,
+      ...(query.step === undefined ? {} : { stepIndex: query.step }),
+      ...(query.status === undefined ? {} : { status: query.status }),
+    };
+    const [total, rows] = await Promise.all([
+      prisma.scanJob.count({ where }),
+      prisma.scanJob.findMany({
+        where,
+        orderBy: [{ stepIndex: "asc" }, { sequence: "asc" }],
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+        include: { _count: { select: { results: true } } },
+      }),
+    ]);
+    return { items: rows.map(toScanJob), page: query.page, pageSize: query.pageSize, total };
   },
 
   async listHosts(scanId: string, query: ScanHostListQuery): Promise<ScanHostListResponse> {

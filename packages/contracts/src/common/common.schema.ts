@@ -32,6 +32,14 @@ export const ErrorCodeSchema = z.enum([
   "PACKAGE_MAPPING_EXISTS",
   "SOURCE_DISABLED",
   "BASE_SCAN_NOT_OLDER",
+  "PIPELINE_NAME_TAKEN",
+  "PIPELINE_RUN_ACTIVE",
+  "NO_SCANNABLE_TARGETS",
+  "WORKER_DISABLED",
+  "WORKER_IN_USE",
+  "WORKER_BUILTIN",
+  "PORTS_NOT_ALLOWED",
+  "SCAN_NOT_STOPPABLE",
 ]);
 
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;

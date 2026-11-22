@@ -88,7 +88,15 @@
                   "ROLE_NAME_TAKEN",
                   "PACKAGE_MAPPING_EXISTS",
                   "SOURCE_DISABLED",
-                  "BASE_SCAN_NOT_OLDER"
+                  "BASE_SCAN_NOT_OLDER",
+                  "PIPELINE_NAME_TAKEN",
+                  "PIPELINE_RUN_ACTIVE",
+                  "NO_SCANNABLE_TARGETS",
+                  "WORKER_DISABLED",
+                  "WORKER_IN_USE",
+                  "WORKER_BUILTIN",
+                  "PORTS_NOT_ALLOWED",
+                  "SCAN_NOT_STOPPABLE"
                 ]
               },
               "details": {}
@@ -171,7 +179,14 @@
                 "vulnerabilities:update",
                 "vulnerabilities:create",
                 "vulnerabilities:delete",
-                "vulnerabilities:run"
+                "vulnerabilities:run",
+                "pipelines:read",
+                "pipelines:create",
+                "pipelines:update",
+                "pipelines:delete",
+                "workers:read",
+                "workers:update",
+                "workers:delete"
               ]
             }
           },
@@ -223,6 +238,887 @@
           "version",
           "uptime",
           "timestamp"
+        ]
+      },
+      "Pipeline": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "targets": {
+            "type": "object",
+            "properties": {
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 50,
+                  "pattern": "\\S"
+                },
+                "maxItems": 20
+              },
+              "ranges": {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "ip"
+                    },
+                    {
+                      "type": "string",
+                      "format": "ipv4-cidr"
+                    }
+                  ]
+                },
+                "maxItems": 1000
+              }
+            },
+            "required": [
+              "tags",
+              "ranges"
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "workerId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "input": {
+                  "type": "string",
+                  "enum": [
+                    "targets",
+                    "previous"
+                  ]
+                },
+                "ports": {
+                  "type": "string",
+                  "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+                },
+                "rate": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100000
+                },
+                "batchSize": {
+                  "type": "integer"
+                },
+                "maxDurationSeconds": {
+                  "type": "integer",
+                  "minimum": 60,
+                  "maximum": 604800
+                },
+                "split": {
+                  "type": "object",
+                  "properties": {
+                    "strategy": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "shard",
+                        "ranges",
+                        "chunk"
+                      ]
+                    },
+                    "maxTasks": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 64
+                    },
+                    "maxItemsPerTask": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 65536
+                    }
+                  },
+                  "required": [
+                    "strategy"
+                  ]
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "string",
+                        "maxLength": 2048
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        "maxItems": 128
+                      }
+                    ]
+                  }
+                },
+                "position": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "worker": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "displayName",
+                    "enabled"
+                  ]
+                }
+              },
+              "required": [
+                "workerId",
+                "input",
+                "ports",
+                "rate",
+                "batchSize",
+                "maxDurationSeconds",
+                "split",
+                "params",
+                "position",
+                "worker"
+              ]
+            }
+          },
+          "schedule": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "every": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 365
+              },
+              "unit": {
+                "type": "string",
+                "enum": [
+                  "hour",
+                  "day",
+                  "week"
+                ]
+              },
+              "startsAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$"
+              },
+              "daysOfWeek": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 7
+                },
+                "maxItems": 7
+              },
+              "windowMinutes": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 5,
+                "maximum": 10080
+              },
+              "timezone": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
+            "required": [
+              "every",
+              "unit",
+              "startsAt",
+              "daysOfWeek",
+              "windowMinutes",
+              "timezone"
+            ]
+          },
+          "nextRunAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastRun": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "running",
+                  "paused",
+                  "completed",
+                  "stopped",
+                  "failed"
+                ]
+              },
+              "trigger": {
+                "type": "string",
+                "enum": [
+                  "import",
+                  "manual",
+                  "schedule"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "windowEndsAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "jobCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "trigger",
+              "createdAt",
+              "startedAt",
+              "finishedAt",
+              "windowEndsAt",
+              "jobCount"
+            ]
+          },
+          "activeRun": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "running",
+                  "paused",
+                  "completed",
+                  "stopped",
+                  "failed"
+                ]
+              },
+              "trigger": {
+                "type": "string",
+                "enum": [
+                  "import",
+                  "manual",
+                  "schedule"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "windowEndsAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "jobCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "trigger",
+              "createdAt",
+              "startedAt",
+              "finishedAt",
+              "windowEndsAt",
+              "jobCount"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "enabled",
+          "targets",
+          "steps",
+          "schedule",
+          "nextRunAt",
+          "lastRun",
+          "activeRun",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PipelineDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "targets": {
+            "type": "object",
+            "properties": {
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 50,
+                  "pattern": "\\S"
+                },
+                "maxItems": 20
+              },
+              "ranges": {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "ip"
+                    },
+                    {
+                      "type": "string",
+                      "format": "ipv4-cidr"
+                    }
+                  ]
+                },
+                "maxItems": 1000
+              }
+            },
+            "required": [
+              "tags",
+              "ranges"
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "workerId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "input": {
+                  "type": "string",
+                  "enum": [
+                    "targets",
+                    "previous"
+                  ]
+                },
+                "ports": {
+                  "type": "string",
+                  "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+                },
+                "rate": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100000
+                },
+                "batchSize": {
+                  "type": "integer"
+                },
+                "maxDurationSeconds": {
+                  "type": "integer",
+                  "minimum": 60,
+                  "maximum": 604800
+                },
+                "split": {
+                  "type": "object",
+                  "properties": {
+                    "strategy": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "shard",
+                        "ranges",
+                        "chunk"
+                      ]
+                    },
+                    "maxTasks": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 64
+                    },
+                    "maxItemsPerTask": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 65536
+                    }
+                  },
+                  "required": [
+                    "strategy"
+                  ]
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "string",
+                        "maxLength": 2048
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        "maxItems": 128
+                      }
+                    ]
+                  }
+                },
+                "position": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "worker": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "displayName",
+                    "enabled"
+                  ]
+                }
+              },
+              "required": [
+                "workerId",
+                "input",
+                "ports",
+                "rate",
+                "batchSize",
+                "maxDurationSeconds",
+                "split",
+                "params",
+                "position",
+                "worker"
+              ]
+            }
+          },
+          "schedule": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "every": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 365
+              },
+              "unit": {
+                "type": "string",
+                "enum": [
+                  "hour",
+                  "day",
+                  "week"
+                ]
+              },
+              "startsAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$"
+              },
+              "daysOfWeek": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 7
+                },
+                "maxItems": 7
+              },
+              "windowMinutes": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 5,
+                "maximum": 10080
+              },
+              "timezone": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
+            "required": [
+              "every",
+              "unit",
+              "startsAt",
+              "daysOfWeek",
+              "windowMinutes",
+              "timezone"
+            ]
+          },
+          "nextRunAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastRun": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "running",
+                  "paused",
+                  "completed",
+                  "stopped",
+                  "failed"
+                ]
+              },
+              "trigger": {
+                "type": "string",
+                "enum": [
+                  "import",
+                  "manual",
+                  "schedule"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "windowEndsAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "jobCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "trigger",
+              "createdAt",
+              "startedAt",
+              "finishedAt",
+              "windowEndsAt",
+              "jobCount"
+            ]
+          },
+          "activeRun": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "running",
+                  "paused",
+                  "completed",
+                  "stopped",
+                  "failed"
+                ]
+              },
+              "trigger": {
+                "type": "string",
+                "enum": [
+                  "import",
+                  "manual",
+                  "schedule"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "windowEndsAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "jobCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "trigger",
+              "createdAt",
+              "startedAt",
+              "finishedAt",
+              "windowEndsAt",
+              "jobCount"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "queued",
+                    "running",
+                    "paused",
+                    "completed",
+                    "stopped",
+                    "failed"
+                  ]
+                },
+                "trigger": {
+                  "type": "string",
+                  "enum": [
+                    "import",
+                    "manual",
+                    "schedule"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "startedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "finishedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "windowEndsAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "jobCount": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "trigger",
+                "createdAt",
+                "startedAt",
+                "finishedAt",
+                "windowEndsAt",
+                "jobCount"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "enabled",
+          "targets",
+          "steps",
+          "schedule",
+          "nextRunAt",
+          "lastRun",
+          "activeRun",
+          "createdAt",
+          "updatedAt",
+          "runs"
         ]
       },
       "Role": {
@@ -278,7 +1174,14 @@
                 "vulnerabilities:update",
                 "vulnerabilities:create",
                 "vulnerabilities:delete",
-                "vulnerabilities:run"
+                "vulnerabilities:run",
+                "pipelines:read",
+                "pipelines:create",
+                "pipelines:update",
+                "pipelines:delete",
+                "workers:read",
+                "workers:update",
+                "workers:delete"
               ]
             }
           },
@@ -337,6 +1240,7 @@
                 "enum": [
                   "queued",
                   "running",
+                  "paused",
                   "completed",
                   "stopped",
                   "failed"
@@ -808,6 +1712,286 @@
           "packageName",
           "createdAt",
           "createdBy"
+        ]
+      },
+      "Worker": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]{1,64}$"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isBuiltin": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "stage": {
+            "type": "integer"
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "targets",
+                "hosts"
+              ]
+            }
+          },
+          "splitStrategies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "none",
+                "shard",
+                "ranges",
+                "chunk"
+              ]
+            }
+          },
+          "paramFields": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "integer"
+                      ]
+                    },
+                    "min": {
+                      "type": "integer"
+                    },
+                    "max": {
+                      "type": "integer"
+                    },
+                    "unit": {
+                      "type": "string",
+                      "enum": [
+                        "seconds",
+                        "milliseconds"
+                      ]
+                    },
+                    "default": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "type",
+                    "min",
+                    "max"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "boolean"
+                      ]
+                    },
+                    "default": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "enum"
+                      ]
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "minItems": 1,
+                      "maxItems": 32
+                    },
+                    "default": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "type",
+                    "options"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "paths"
+                      ]
+                    },
+                    "maxItems": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 128
+                    },
+                    "default": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "type",
+                    "maxItems"
+                  ]
+                }
+              ]
+            },
+            "maxItems": 32
+          },
+          "defaults": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string",
+                  "maxLength": 2048
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 2048
+                  },
+                  "maxItems": 128
+                }
+              ]
+            }
+          },
+          "maxRate": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "onlineManagers": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "displayName",
+          "description",
+          "isBuiltin",
+          "enabled",
+          "stage",
+          "inputs",
+          "splitStrategies",
+          "paramFields",
+          "defaults",
+          "maxRate",
+          "onlineManagers",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "NmapJob": {
@@ -1849,6 +3033,139 @@
         "required": [
           "scan",
           "hosts"
+        ]
+      },
+      "ManagerLeaseRequest": {
+        "type": "object",
+        "properties": {
+          "manager_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]{1,128}$"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "workers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{1,64}$"
+            },
+            "maxItems": 64
+          },
+          "max_parallel": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1024
+          },
+          "wait_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 300
+          }
+        },
+        "required": [
+          "manager_id",
+          "version",
+          "workers",
+          "max_parallel"
+        ]
+      },
+      "ManagerJobList": {
+        "type": "object",
+        "properties": {
+          "schema_version": {
+            "type": "number",
+            "enum": [
+              1
+            ]
+          },
+          "server_time": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+          },
+          "next_poll_ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "job_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "scan_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "lease_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "lease_expires_at": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+                },
+                "deadline": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+                },
+                "worker": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9._-]{1,64}$"
+                },
+                "split": {
+                  "type": "object",
+                  "properties": {
+                    "strategy": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "shard",
+                        "ranges",
+                        "chunk"
+                      ]
+                    },
+                    "max_tasks": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "max_items_per_task": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "strategy"
+                  ]
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "job_id",
+                "scan_id",
+                "lease_id",
+                "lease_expires_at",
+                "deadline",
+                "worker",
+                "split",
+                "params"
+              ]
+            }
+          }
+        },
+        "required": [
+          "schema_version",
+          "server_time",
+          "next_poll_ms",
+          "jobs"
         ]
       },
       "ManagerResultUpload": {
@@ -3828,6 +5145,1479 @@
         }
       }
     },
+    "/pipelines": {
+      "get": {
+        "operationId": "listPipelines",
+        "summary": "List scan pipelines",
+        "description": "Requires `pipelines:read`. By name, with their steps, schedule, next and last run.",
+        "tags": [
+          "Pipelines"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All pipelines",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "targets": {
+                            "type": "object",
+                            "properties": {
+                              "tags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "ranges": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "ip"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "format": "ipv4-cidr"
+                                    }
+                                  ]
+                                },
+                                "maxItems": 1000
+                              }
+                            },
+                            "required": [
+                              "tags",
+                              "ranges"
+                            ]
+                          },
+                          "steps": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "workerId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "input": {
+                                  "type": "string",
+                                  "enum": [
+                                    "targets",
+                                    "previous"
+                                  ]
+                                },
+                                "ports": {
+                                  "type": "string",
+                                  "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+                                },
+                                "rate": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 100000
+                                },
+                                "batchSize": {
+                                  "type": "integer"
+                                },
+                                "maxDurationSeconds": {
+                                  "type": "integer",
+                                  "minimum": 60,
+                                  "maximum": 604800
+                                },
+                                "split": {
+                                  "type": "object",
+                                  "properties": {
+                                    "strategy": {
+                                      "type": "string",
+                                      "enum": [
+                                        "none",
+                                        "shard",
+                                        "ranges",
+                                        "chunk"
+                                      ]
+                                    },
+                                    "maxTasks": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 64
+                                    },
+                                    "maxItemsPerTask": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 65536
+                                    }
+                                  },
+                                  "required": [
+                                    "strategy"
+                                  ]
+                                },
+                                "params": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "type": "string",
+                                        "maxLength": 2048
+                                      },
+                                      {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "maxLength": 2048
+                                        },
+                                        "maxItems": 128
+                                      }
+                                    ]
+                                  }
+                                },
+                                "position": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "worker": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "displayName": {
+                                      "type": "string"
+                                    },
+                                    "enabled": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "displayName",
+                                    "enabled"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "workerId",
+                                "input",
+                                "ports",
+                                "rate",
+                                "batchSize",
+                                "maxDurationSeconds",
+                                "split",
+                                "params",
+                                "position",
+                                "worker"
+                              ]
+                            }
+                          },
+                          "schedule": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "every": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 365
+                              },
+                              "unit": {
+                                "type": "string",
+                                "enum": [
+                                  "hour",
+                                  "day",
+                                  "week"
+                                ]
+                              },
+                              "startsAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$"
+                              },
+                              "daysOfWeek": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 7
+                                },
+                                "maxItems": 7
+                              },
+                              "windowMinutes": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 5,
+                                "maximum": 10080
+                              },
+                              "timezone": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              }
+                            },
+                            "required": [
+                              "every",
+                              "unit",
+                              "startsAt",
+                              "daysOfWeek",
+                              "windowMinutes",
+                              "timezone"
+                            ]
+                          },
+                          "nextRunAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "lastRun": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "queued",
+                                  "running",
+                                  "paused",
+                                  "completed",
+                                  "stopped",
+                                  "failed"
+                                ]
+                              },
+                              "trigger": {
+                                "type": "string",
+                                "enum": [
+                                  "import",
+                                  "manual",
+                                  "schedule"
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "startedAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              },
+                              "finishedAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              },
+                              "windowEndsAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              },
+                              "jobCount": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "status",
+                              "trigger",
+                              "createdAt",
+                              "startedAt",
+                              "finishedAt",
+                              "windowEndsAt",
+                              "jobCount"
+                            ]
+                          },
+                          "activeRun": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "queued",
+                                  "running",
+                                  "paused",
+                                  "completed",
+                                  "stopped",
+                                  "failed"
+                                ]
+                              },
+                              "trigger": {
+                                "type": "string",
+                                "enum": [
+                                  "import",
+                                  "manual",
+                                  "schedule"
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "startedAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              },
+                              "finishedAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              },
+                              "windowEndsAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              },
+                              "jobCount": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "status",
+                              "trigger",
+                              "createdAt",
+                              "startedAt",
+                              "finishedAt",
+                              "windowEndsAt",
+                              "jobCount"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "enabled",
+                          "targets",
+                          "steps",
+                          "schedule",
+                          "nextRunAt",
+                          "lastRun",
+                          "activeRun",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPipeline",
+        "summary": "Create a pipeline from worker steps",
+        "description": "Requires `pipelines:create`, and `scans:run` to create it enabled (a schedule that fires). The first step scans the pipeline's targets; a later one may take the previous step's up hosts and open ports instead (`input: previous`).",
+        "tags": [
+          "Pipelines"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "\\S"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "targets": {
+                    "type": "object",
+                    "properties": {
+                      "tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 50,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 20
+                      },
+                      "ranges": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "ip"
+                            },
+                            {
+                              "type": "string",
+                              "format": "ipv4-cidr"
+                            }
+                          ]
+                        },
+                        "maxItems": 1000
+                      }
+                    },
+                    "required": [
+                      "tags",
+                      "ranges"
+                    ]
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "workerId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "input": {
+                          "type": "string",
+                          "enum": [
+                            "targets",
+                            "previous"
+                          ]
+                        },
+                        "ports": {
+                          "type": "string",
+                          "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+                        },
+                        "rate": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100000
+                        },
+                        "batchSize": {
+                          "type": "integer"
+                        },
+                        "maxDurationSeconds": {
+                          "type": "integer",
+                          "minimum": 60,
+                          "maximum": 604800
+                        },
+                        "split": {
+                          "type": "object",
+                          "properties": {
+                            "strategy": {
+                              "type": "string",
+                              "enum": [
+                                "none",
+                                "shard",
+                                "ranges",
+                                "chunk"
+                              ]
+                            },
+                            "maxTasks": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 64
+                            },
+                            "maxItemsPerTask": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 65536
+                            }
+                          },
+                          "required": [
+                            "strategy"
+                          ]
+                        },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "string",
+                                "maxLength": 2048
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 2048
+                                },
+                                "maxItems": 128
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "workerId",
+                        "input",
+                        "ports",
+                        "rate",
+                        "batchSize",
+                        "maxDurationSeconds",
+                        "split",
+                        "params"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 8
+                  },
+                  "schedule": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "every": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 365
+                      },
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "hour",
+                          "day",
+                          "week"
+                        ]
+                      },
+                      "startsAt": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$"
+                      },
+                      "daysOfWeek": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 7
+                        },
+                        "maxItems": 7
+                      },
+                      "windowMinutes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 5,
+                        "maximum": 10080
+                      },
+                      "timezone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      }
+                    },
+                    "required": [
+                      "every",
+                      "unit",
+                      "startsAt",
+                      "daysOfWeek",
+                      "windowMinutes",
+                      "timezone"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "description",
+                  "enabled",
+                  "targets",
+                  "steps",
+                  "schedule"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new pipeline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pipeline"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed: also a disabled worker (`WORKER_DISABLED`), a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another pipeline has this name (`PIPELINE_NAME_TAKEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pipelines/schedule/preview": {
+      "post": {
+        "operationId": "previewPipelineSchedule",
+        "summary": "The next run times of a schedule",
+        "description": "Requires `pipelines:read`. Computed as the scheduler does, from now on.",
+        "tags": [
+          "Pipelines"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "schedule": {
+                    "type": "object",
+                    "properties": {
+                      "every": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 365
+                      },
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "hour",
+                          "day",
+                          "week"
+                        ]
+                      },
+                      "startsAt": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$"
+                      },
+                      "daysOfWeek": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 7
+                        },
+                        "maxItems": 7
+                      },
+                      "windowMinutes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 5,
+                        "maximum": 10080
+                      },
+                      "timezone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      }
+                    },
+                    "required": [
+                      "every",
+                      "unit",
+                      "startsAt",
+                      "daysOfWeek",
+                      "windowMinutes",
+                      "timezone"
+                    ]
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                  }
+                },
+                "required": [
+                  "schedule"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Up to `count` (default 5) run times, in UTC",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "times": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  },
+                  "required": [
+                    "times"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pipelines/{id}": {
+      "get": {
+        "operationId": "getPipeline",
+        "summary": "Get a pipeline with its recent runs",
+        "description": "Requires `pipelines:read`.",
+        "tags": [
+          "Pipelines"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The pipeline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updatePipeline",
+        "summary": "Change a pipeline",
+        "description": "Requires `pipelines:update`, and `scans:run` to change `schedule` or `enabled`. `steps`, when given, replaces every step. Runs already queued keep the steps they started with.",
+        "tags": [
+          "Pipelines"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "\\S"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "targets": {
+                    "type": "object",
+                    "properties": {
+                      "tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 50,
+                          "pattern": "\\S"
+                        },
+                        "maxItems": 20
+                      },
+                      "ranges": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "ip"
+                            },
+                            {
+                              "type": "string",
+                              "format": "ipv4-cidr"
+                            }
+                          ]
+                        },
+                        "maxItems": 1000
+                      }
+                    },
+                    "required": [
+                      "tags",
+                      "ranges"
+                    ]
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "workerId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "input": {
+                          "type": "string",
+                          "enum": [
+                            "targets",
+                            "previous"
+                          ]
+                        },
+                        "ports": {
+                          "type": "string",
+                          "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+                        },
+                        "rate": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100000
+                        },
+                        "batchSize": {
+                          "type": "integer"
+                        },
+                        "maxDurationSeconds": {
+                          "type": "integer",
+                          "minimum": 60,
+                          "maximum": 604800
+                        },
+                        "split": {
+                          "type": "object",
+                          "properties": {
+                            "strategy": {
+                              "type": "string",
+                              "enum": [
+                                "none",
+                                "shard",
+                                "ranges",
+                                "chunk"
+                              ]
+                            },
+                            "maxTasks": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 64
+                            },
+                            "maxItemsPerTask": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 65536
+                            }
+                          },
+                          "required": [
+                            "strategy"
+                          ]
+                        },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "string",
+                                "maxLength": 2048
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 2048
+                                },
+                                "maxItems": 128
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "workerId",
+                        "input",
+                        "ports",
+                        "rate",
+                        "batchSize",
+                        "maxDurationSeconds",
+                        "split",
+                        "params"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 8
+                  },
+                  "schedule": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "every": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 365
+                      },
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "hour",
+                          "day",
+                          "week"
+                        ]
+                      },
+                      "startsAt": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$"
+                      },
+                      "daysOfWeek": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 7
+                        },
+                        "maxItems": 7
+                      },
+                      "windowMinutes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 5,
+                        "maximum": 10080
+                      },
+                      "timezone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      }
+                    },
+                    "required": [
+                      "every",
+                      "unit",
+                      "startsAt",
+                      "daysOfWeek",
+                      "windowMinutes",
+                      "timezone"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated pipeline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pipeline"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed: also a disabled worker (`WORKER_DISABLED`), a step input or param the worker does not take, a rate above its cap, or ports outside `SCAN_ALLOWED_PORTS` (`PORTS_NOT_ALLOWED`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another pipeline has this name (`PIPELINE_NAME_TAKEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deletePipeline",
+        "summary": "Delete a pipeline",
+        "description": "Requires `pipelines:delete`. Its scans and their results stay.",
+        "tags": [
+          "Pipelines"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pipelines/{id}/runs": {
+      "post": {
+        "operationId": "runPipeline",
+        "summary": "Run a pipeline now",
+        "description": "Requires `scans:run`. Queues a scan of the pipeline's targets with its current steps; a schedule's time window does not apply to a manual run.",
+        "tags": [
+          "Pipelines"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The queued scan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scan": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "paused",
+                            "completed",
+                            "stopped",
+                            "failed"
+                          ]
+                        },
+                        "targetCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "addressCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "jobCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "ports": {
+                          "type": "string",
+                          "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+                        },
+                        "maxRate": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "targetCount",
+                        "addressCount",
+                        "jobCount",
+                        "ports",
+                        "maxRate"
+                      ]
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "dns_not_found",
+                              "dns_no_addresses",
+                              "dns_timeout",
+                              "dns_failed",
+                              "resolves_to_reserved",
+                              "no_scannable_targets"
+                            ]
+                          },
+                          "value": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "value"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "scan",
+                    "warnings"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A run is still active (`PIPELINE_RUN_ACTIVE`), nothing to scan (`NO_SCANNABLE_TARGETS`), or a disabled worker (`WORKER_DISABLED`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/roles": {
       "get": {
         "operationId": "listRoles",
@@ -3904,7 +6694,14 @@
                                 "vulnerabilities:update",
                                 "vulnerabilities:create",
                                 "vulnerabilities:delete",
-                                "vulnerabilities:run"
+                                "vulnerabilities:run",
+                                "pipelines:read",
+                                "pipelines:create",
+                                "pipelines:update",
+                                "pipelines:delete",
+                                "workers:read",
+                                "workers:update",
+                                "workers:delete"
                               ]
                             }
                           },
@@ -4016,10 +6813,17 @@
                         "vulnerabilities:update",
                         "vulnerabilities:create",
                         "vulnerabilities:delete",
-                        "vulnerabilities:run"
+                        "vulnerabilities:run",
+                        "pipelines:read",
+                        "pipelines:create",
+                        "pipelines:update",
+                        "pipelines:delete",
+                        "workers:read",
+                        "workers:update",
+                        "workers:delete"
                       ]
                     },
-                    "maxItems": 20
+                    "maxItems": 27
                   }
                 },
                 "required": [
@@ -4167,7 +6971,14 @@
                           "vulnerabilities:update",
                           "vulnerabilities:create",
                           "vulnerabilities:delete",
-                          "vulnerabilities:run"
+                          "vulnerabilities:run",
+                          "pipelines:read",
+                          "pipelines:create",
+                          "pipelines:update",
+                          "pipelines:delete",
+                          "workers:read",
+                          "workers:update",
+                          "workers:delete"
                         ]
                       }
                     },
@@ -4323,10 +7134,17 @@
                         "vulnerabilities:update",
                         "vulnerabilities:create",
                         "vulnerabilities:delete",
-                        "vulnerabilities:run"
+                        "vulnerabilities:run",
+                        "pipelines:read",
+                        "pipelines:create",
+                        "pipelines:update",
+                        "pipelines:delete",
+                        "workers:read",
+                        "workers:update",
+                        "workers:delete"
                       ]
                     },
-                    "maxItems": 20
+                    "maxItems": 27
                   }
                 }
               }
@@ -4510,6 +7328,7 @@
                             "enum": [
                               "queued",
                               "running",
+                              "paused",
                               "completed",
                               "stopped",
                               "failed"
@@ -4587,6 +7406,40 @@
                           "openPorts": {
                             "type": "integer",
                             "minimum": 0
+                          },
+                          "pipeline": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ]
+                          },
+                          "trigger": {
+                            "type": "string",
+                            "enum": [
+                              "import",
+                              "manual",
+                              "schedule"
+                            ]
+                          },
+                          "windowEndsAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
                           }
                         },
                         "required": [
@@ -4600,7 +7453,10 @@
                           "addressCount",
                           "jobCount",
                           "hosts",
-                          "openPorts"
+                          "openPorts",
+                          "pipeline",
+                          "trigger",
+                          "windowEndsAt"
                         ]
                       }
                     }
@@ -4685,6 +7541,7 @@
                       "enum": [
                         "queued",
                         "running",
+                        "paused",
                         "completed",
                         "stopped",
                         "failed"
@@ -4763,6 +7620,40 @@
                       "type": "integer",
                       "minimum": 0
                     },
+                    "pipeline": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ]
+                    },
+                    "trigger": {
+                      "type": "string",
+                      "enum": [
+                        "import",
+                        "manual",
+                        "schedule"
+                      ]
+                    },
+                    "windowEndsAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
                     "ports": {
                       "type": "string"
                     },
@@ -4803,6 +7694,75 @@
                         "failed",
                         "stopped"
                       ]
+                    },
+                    "steps": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "index": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "worker": {
+                            "type": "string"
+                          },
+                          "input": {
+                            "type": "string",
+                            "enum": [
+                              "targets",
+                              "previous"
+                            ]
+                          },
+                          "ports": {
+                            "type": "string"
+                          },
+                          "rate": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "jobs": {
+                            "type": "object",
+                            "properties": {
+                              "queued": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "leased": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "completed": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "failed": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "stopped": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "queued",
+                              "leased",
+                              "completed",
+                              "failed",
+                              "stopped"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "index",
+                          "worker",
+                          "input",
+                          "ports",
+                          "rate",
+                          "jobs"
+                        ]
+                      }
                     },
                     "baseScan": {
                       "type": [
@@ -4926,10 +7886,14 @@
                     "jobCount",
                     "hosts",
                     "openPorts",
+                    "pipeline",
+                    "trigger",
+                    "windowEndsAt",
                     "ports",
                     "maxRate",
                     "batchSize",
                     "jobs",
+                    "steps",
                     "baseScan",
                     "changes",
                     "coverage"
@@ -8091,6 +11055,345 @@
         }
       }
     },
+    "/scans/{id}/jobs": {
+      "get": {
+        "operationId": "listScanJobs",
+        "summary": "List a scan's jobs",
+        "description": "Requires `scans:read`. In step order, then sequence; `step` and `status` filter. A step that takes the previous step's hosts gets a job each time one of the previous step's jobs completes.",
+        "tags": [
+          "Scans"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false,
+            "name": "pageSize",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "name": "step",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "leased",
+                "completed",
+                "failed",
+                "stopped"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of jobs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "sequence": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "stepIndex": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "worker": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "discovery",
+                              "service"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "queued",
+                              "leased",
+                              "completed",
+                              "failed",
+                              "stopped"
+                            ]
+                          },
+                          "subnet": {
+                            "type": "string"
+                          },
+                          "addressCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "attempts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "leasedBy": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "leaseExpiresAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "startedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "finishedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "durationMs": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "resultCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "error": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "code": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "code",
+                              "message"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "sequence",
+                          "stepIndex",
+                          "worker",
+                          "kind",
+                          "status",
+                          "subnet",
+                          "addressCount",
+                          "attempts",
+                          "leasedBy",
+                          "leaseExpiresAt",
+                          "startedAt",
+                          "finishedAt",
+                          "durationMs",
+                          "resultCount",
+                          "error"
+                        ]
+                      }
+                    },
+                    "page": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "page",
+                    "pageSize",
+                    "total"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scans/{id}/stop": {
+      "post": {
+        "operationId": "stopScan",
+        "summary": "Stop a scan",
+        "description": "Requires `scans:read` and `scans:run`. Queued jobs are stopped; leased ones finish their current run (worker-manager has no cancel channel), and the scan ends once they do.",
+        "tags": [
+          "Scans"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Stopped, or stopping once the leased jobs end"
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The scan has already ended (`SCAN_NOT_STOPPABLE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/targets/import": {
       "post": {
         "operationId": "importTargets",
@@ -10110,6 +13413,871 @@
           },
           "404": {
             "description": "No such service, or it never matched this vulnerability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workers": {
+      "get": {
+        "operationId": "listWorkers",
+        "summary": "List the workers pipelines are built from, and the worker managers seen",
+        "description": "Requires `workers:read`. Built-in workers come from the code catalog; a name a manager offers that the catalog lacks is registered as a disabled custom worker.",
+        "tags": [
+          "Worker registry"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workers by stage, then managers by last seen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9._-]{1,64}$"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "isBuiltin": {
+                            "type": "boolean"
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "stage": {
+                            "type": "integer"
+                          },
+                          "inputs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "targets",
+                                "hosts"
+                              ]
+                            }
+                          },
+                          "splitStrategies": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "none",
+                                "shard",
+                                "ranges",
+                                "chunk"
+                              ]
+                            }
+                          },
+                          "paramFields": {
+                            "type": "array",
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "key": {
+                                      "type": "string",
+                                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                    },
+                                    "label": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100
+                                    },
+                                    "description": {
+                                      "type": "string",
+                                      "maxLength": 500
+                                    },
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "integer"
+                                      ]
+                                    },
+                                    "min": {
+                                      "type": "integer"
+                                    },
+                                    "max": {
+                                      "type": "integer"
+                                    },
+                                    "unit": {
+                                      "type": "string",
+                                      "enum": [
+                                        "seconds",
+                                        "milliseconds"
+                                      ]
+                                    },
+                                    "default": {
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "label",
+                                    "type",
+                                    "min",
+                                    "max"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "key": {
+                                      "type": "string",
+                                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                    },
+                                    "label": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100
+                                    },
+                                    "description": {
+                                      "type": "string",
+                                      "maxLength": 500
+                                    },
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "boolean"
+                                      ]
+                                    },
+                                    "default": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "label",
+                                    "type"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "key": {
+                                      "type": "string",
+                                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                    },
+                                    "label": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100
+                                    },
+                                    "description": {
+                                      "type": "string",
+                                      "maxLength": 500
+                                    },
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "enum"
+                                      ]
+                                    },
+                                    "options": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 64
+                                      },
+                                      "minItems": 1,
+                                      "maxItems": 32
+                                    },
+                                    "default": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "label",
+                                    "type",
+                                    "options"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "key": {
+                                      "type": "string",
+                                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                    },
+                                    "label": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 100
+                                    },
+                                    "description": {
+                                      "type": "string",
+                                      "maxLength": 500
+                                    },
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "paths"
+                                      ]
+                                    },
+                                    "maxItems": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 128
+                                    },
+                                    "default": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "label",
+                                    "type",
+                                    "maxItems"
+                                  ]
+                                }
+                              ]
+                            },
+                            "maxItems": 32
+                          },
+                          "defaults": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "string",
+                                  "maxLength": 2048
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "maxLength": 2048
+                                  },
+                                  "maxItems": 128
+                                }
+                              ]
+                            }
+                          },
+                          "maxRate": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100000
+                          },
+                          "onlineManagers": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "displayName",
+                          "description",
+                          "isBuiltin",
+                          "enabled",
+                          "stage",
+                          "inputs",
+                          "splitStrategies",
+                          "paramFields",
+                          "defaults",
+                          "maxRate",
+                          "onlineManagers",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    },
+                    "managers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "managerId": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "string"
+                          },
+                          "workers": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "maxParallel": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "firstSeenAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "lastSeenAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "isOnline": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "managerId",
+                          "version",
+                          "workers",
+                          "maxParallel",
+                          "firstSeenAt",
+                          "lastSeenAt",
+                          "isOnline"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "managers"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workers/{id}": {
+      "patch": {
+        "operationId": "updateWorker",
+        "summary": "Enable or disable a worker, or change its rate cap and defaults",
+        "description": "Requires `workers:update`. A built-in worker accepts only `enabled`, `maxRate` and `defaults`; a custom one also its description, stage, inputs, split strategies and fields. `defaults` must match the worker's fields.",
+        "tags": [
+          "Worker registry"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "maxRate": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000
+                  },
+                  "defaults": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 2048
+                          },
+                          "maxItems": 128
+                        }
+                      ]
+                    }
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "\\S"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "stage": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000
+                  },
+                  "inputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "targets",
+                        "hosts"
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "splitStrategies": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "shard",
+                        "ranges",
+                        "chunk"
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "paramFields": {
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                            },
+                            "label": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "description": {
+                              "type": "string",
+                              "maxLength": 500
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "integer"
+                              ]
+                            },
+                            "min": {
+                              "type": "integer"
+                            },
+                            "max": {
+                              "type": "integer"
+                            },
+                            "unit": {
+                              "type": "string",
+                              "enum": [
+                                "seconds",
+                                "milliseconds"
+                              ]
+                            },
+                            "default": {
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "label",
+                            "type",
+                            "min",
+                            "max"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                            },
+                            "label": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "description": {
+                              "type": "string",
+                              "maxLength": 500
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "boolean"
+                              ]
+                            },
+                            "default": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "label",
+                            "type"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                            },
+                            "label": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "description": {
+                              "type": "string",
+                              "maxLength": 500
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "enum"
+                              ]
+                            },
+                            "options": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              },
+                              "minItems": 1,
+                              "maxItems": 32
+                            },
+                            "default": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "label",
+                            "type",
+                            "options"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                            },
+                            "label": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "description": {
+                              "type": "string",
+                              "maxLength": 500
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "paths"
+                              ]
+                            },
+                            "maxItems": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 128
+                            },
+                            "default": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "label",
+                            "type",
+                            "maxItems"
+                          ]
+                        }
+                      ]
+                    },
+                    "maxItems": 32
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated worker",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Worker"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A built-in worker's definition cannot change (`WORKER_BUILTIN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteWorker",
+        "summary": "Delete a custom worker no pipeline uses",
+        "description": "Requires `workers:delete`.",
+        "tags": [
+          "Worker registry"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Built-in (`WORKER_BUILTIN`) or used by a pipeline (`WORKER_IN_USE`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workers/manager/lease": {
+      "post": {
+        "operationId": "leaseManagerJobs",
+        "summary": "Lease queued scan jobs to a worker-manager (long poll)",
+        "description": "Called by worker-manager in `--poll` mode with `Authorization: Bearer <WORKER_TOKEN>`. Records the manager and the workers it offers (unknown names become disabled custom workers), then leases up to `max_parallel` × `WORKER_LEASE_JOBS_PER_SLOT` queued jobs of running scans whose worker is enabled and offered. Without work it holds the request for up to `wait_seconds` (at most 60) and answers 204. Each job's `deadline` is capped by the scan's time window; its lease lasts until the deadline plus `WORKER_LEASE_GRACE_SECONDS`.",
+        "tags": [
+          "Workers"
+        ],
+        "security": [
+          {
+            "workerToken": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagerLeaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Leased jobs, in worker-manager's job list format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerJobList"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No work within `wait_seconds`"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong worker token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Worker endpoints are disabled: the backend has no WORKER_TOKEN",
             "content": {
               "application/json": {
                 "schema": {

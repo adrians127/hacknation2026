@@ -8,6 +8,8 @@ export const PERMISSION_RESOURCES = [
   "scans",
   "hosts",
   "vulnerabilities",
+  "pipelines",
+  "workers",
 ] as const;
 // `run` starts, stops and schedules scans, and starts vulnerability database syncs.
 export const PERMISSION_ACTIONS = ["read", "create", "update", "delete", "run"] as const;
@@ -41,6 +43,13 @@ export const PERMISSIONS = [
   "vulnerabilities:create",
   "vulnerabilities:delete",
   "vulnerabilities:run",
+  "pipelines:read",
+  "pipelines:create",
+  "pipelines:update",
+  "pipelines:delete",
+  "workers:read",
+  "workers:update",
+  "workers:delete",
 ] as const satisfies readonly `${PermissionResource}:${PermissionAction}`[];
 
 export const PermissionSchema = z.enum(PERMISSIONS);
@@ -60,9 +69,12 @@ const READ = [
   "targets:read",
   "scans:read",
   "vulnerabilities:read",
+  "pipelines:read",
+  "workers:read",
 ] as const satisfies readonly Permission[];
 
-// Mapping rules: apps/backend/README.md ("Adding a permission"). Users and roles stay admin-only.
+// Mapping rules: apps/backend/README.md ("Adding a permission"). Users and roles stay admin-only,
+// and so do workers:update/delete (global scanner limits).
 export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRoleKey, readonly Permission[]> = {
   admin: PERMISSIONS,
   editor: [
@@ -76,7 +88,16 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRoleKey, readonly Permission[
     "vulnerabilities:create",
     "vulnerabilities:delete",
     "vulnerabilities:run",
+    "pipelines:create",
+    "pipelines:update",
+    "pipelines:delete",
   ],
-  analyst: [...READ, "targets:update", "hosts:update", "vulnerabilities:update"],
+  analyst: [
+    ...READ,
+    "targets:update",
+    "hosts:update",
+    "vulnerabilities:update",
+    "pipelines:update",
+  ],
   viewer: READ,
 };
