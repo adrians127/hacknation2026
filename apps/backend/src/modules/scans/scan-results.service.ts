@@ -10,6 +10,7 @@ import {
   type ScanHostListResponse,
   type ScanCoverage,
 } from "@subsurf/contracts/scans/scan-results.schema";
+import type { ScanChangesResponse } from "@subsurf/contracts/scans/scan-changes.schema";
 import type { Scan, ScanHostCounts, ScanJobStatus } from "@subsurf/contracts/scans/scans.schema";
 import type { Ipv4Range } from "@subsurf/contracts/targets/ipv4";
 
@@ -30,6 +31,7 @@ import {
 } from "~backend/modules/scans/scan-diff";
 import {
   OBSERVATION_INCLUDE,
+  toChangeRows,
   toScan,
   toScanHost,
   toScanHostDetail,
@@ -258,8 +260,19 @@ async function filteredHostIds(
   return new Set(first.filter((id) => others.every((ids) => ids.has(id))));
 }
 
+/** Hosts loaded per query when every change is needed: keeps the IP lists well under the bind limit. */
+const CHANGES_BATCH = 500;
+
+const scanRef = (scan: { id: string; startedAt: Date | null }) => ({
+  id: scan.id,
+  startedAt: scan.startedAt?.toISOString() ?? null,
+});
+
 /** Scans that did not cover an address, or got no answer, do not count: look further back. */
 const LIFECYCLE_SCANS = LIFECYCLE_WINDOW * 3;
+
+/** Addresses per lifecycle query: each one is a bind parameter. */
+const LIFECYCLE_BATCH = 10_000;
 
 /** Each address's lifecycle as of `scan`, from its answers in that scan and earlier ones. */
 async function lifecycles(
@@ -274,12 +287,15 @@ async function lifecycles(
     select: { id: true },
   });
   const age = new Map(scans.map((row, index) => [row.id, index]));
-  const rows = await prisma.$queryRaw<EffectiveRow[]>(
-    effectiveSql(
-      scans.map((row) => row.id),
-      ips,
-    ),
-  );
+  const scanIds = scans.map((row) => row.id);
+  const rows: EffectiveRow[] = [];
+  for (let start = 0; start < ips.length; start += LIFECYCLE_BATCH) {
+    rows.push(
+      ...(await prisma.$queryRaw<EffectiveRow[]>(
+        effectiveSql(scanIds, ips.slice(start, start + LIFECYCLE_BATCH)),
+      )),
+    );
+  }
   const statuses = new Map<string, HostObservationStatus[]>();
   for (const row of rows.toSorted((a, b) => (age.get(a.scanId) ?? 0) - (age.get(b.scanId) ?? 0))) {
     statuses.set(row.ip, [...(statuses.get(row.ip) ?? []), row.status]);
@@ -374,6 +390,26 @@ async function history(ip: string): Promise<HostHistoryEntry[]> {
  * base scan. Read-only; host and service edits go through `hostsService`.
  */
 export const scanResultsService = {
+  /** The newest scan with results, which the dashboard shows. */
+  latestWithResults(): Promise<{ id: string } | null> {
+    return prisma.scan.findFirst({
+      where: { results: { some: {} } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+  },
+
+  /** How many known hosts are unstable or inactive as of the scan. */
+  async lifecycleCounts(scanId: string): Promise<{ unstable: number; inactive: number }> {
+    const scan = await findScan(scanId);
+    const hosts = await prisma.host.findMany({ select: { ip: true } });
+    const states = [...(await lifecycles(scan, hosts.map((host) => host.ip))).values()];
+    return {
+      unstable: states.filter((lifecycle) => lifecycle.state === "unstable").length,
+      inactive: states.filter((lifecycle) => lifecycle.state === "inactive").length,
+    };
+  },
+
   async list(): Promise<Scan[]> {
     const scans = await prisma.scan.findMany({ orderBy: { createdAt: "desc" } });
     const summaries = await scanSummaries(scans.map((scan) => scan.id));
@@ -430,6 +466,21 @@ export const scanResultsService = {
       page: query.page,
       pageSize: query.pageSize,
     };
+  },
+
+  /** Every change since the base scan, one row each, rated (export and dashboard). */
+  async changes(scanId: string, baseId?: string): Promise<ScanChangesResponse> {
+    const scan = await findScan(scanId);
+    const base = await resolveBase(scan, baseId);
+    if (!base) return { scan: scanRef(scan), baseScan: null, items: [] };
+    const { entries } = await diffWithBase(scan, base);
+    const changed = entries.filter((entry) => entry.change !== null && entry.change !== "unchanged");
+    const items = [];
+    for (let start = 0; start < changed.length; start += CHANGES_BATCH) {
+      const page = await hostsInScan(scan, base, changed.slice(start, start + CHANGES_BATCH));
+      items.push(...page.flatMap(toChangeRows));
+    }
+    return { scan: scanRef(scan), baseScan: scanRef(base), items };
   },
 
   /** Host assets the scan lists (gone and unknown included) inside `ranges` (sorted, merged). */

@@ -17,6 +17,10 @@
       "description": "Sign-in, session and the current user"
     },
     {
+      "name": "Dashboard",
+      "description": "The most important findings of the newest scan"
+    },
+    {
       "name": "Health",
       "description": "Service health checks"
     },
@@ -2059,6 +2063,425 @@
           },
           "403": {
             "description": "Current password is wrong (`INVALID_CREDENTIALS`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "operationId": "getDashboard",
+        "summary": "The most important findings of the newest scan",
+        "description": "Requires `scans:read`. The newest scan with results compared with the previous one: host counts, the lifecycle of every known host, and the changes that deserve a look first.",
+        "tags": [
+          "Dashboard"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scan": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "startedAt"
+                      ]
+                    },
+                    "baseScan": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "startedAt"
+                      ]
+                    },
+                    "hosts": {
+                      "type": "object",
+                      "properties": {
+                        "up": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "unstable": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "inactive": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "up",
+                        "unstable",
+                        "inactive"
+                      ]
+                    },
+                    "openPorts": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "changes": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "hosts": {
+                          "type": "object",
+                          "properties": {
+                            "new": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "gone": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "changed": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "unknown": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "new",
+                            "gone",
+                            "changed",
+                            "unknown"
+                          ]
+                        },
+                        "services": {
+                          "type": "object",
+                          "properties": {
+                            "new": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "gone": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "changed": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "new",
+                            "gone",
+                            "changed"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "hosts",
+                        "services"
+                      ]
+                    },
+                    "priorities": {
+                      "type": "object",
+                      "properties": {
+                        "high": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "medium": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "low": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "high",
+                        "medium",
+                        "low"
+                      ]
+                    },
+                    "topChanges": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "hostnames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "port": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "change": {
+                            "type": "string",
+                            "enum": [
+                              "new",
+                              "gone",
+                              "changed",
+                              "unchanged",
+                              "unknown"
+                            ]
+                          },
+                          "priority": {
+                            "type": "string",
+                            "enum": [
+                              "high",
+                              "medium",
+                              "low"
+                            ]
+                          },
+                          "reasons": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "new-host",
+                                "returning-host",
+                                "risky-port",
+                                "new-service",
+                                "admin-panel",
+                                "ssh-key-changed",
+                                "self-signed",
+                                "version-change",
+                                "new-endpoint",
+                                "page-change",
+                                "cert-change",
+                                "security-header-removed",
+                                "cookie-flags-weakened",
+                                "technology-header",
+                                "host-inactive",
+                                "host-gone",
+                                "service-gone",
+                                "no-answer",
+                                "other"
+                              ]
+                            }
+                          },
+                          "ports": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          },
+                          "fields": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "enum": [
+                                    "service.name",
+                                    "service.product",
+                                    "service.version",
+                                    "service.extraInfo",
+                                    "service.cpe",
+                                    "ssh.hostKey",
+                                    "http.endpoint",
+                                    "http.status",
+                                    "http.title",
+                                    "http.redirect",
+                                    "http.header",
+                                    "http.securityHeader",
+                                    "http.cookie",
+                                    "http.cookieFlags",
+                                    "tls.cert",
+                                    "tls.issuer",
+                                    "tls.expiry",
+                                    "tls.selfSigned",
+                                    "tls.version",
+                                    "http.favicon",
+                                    "http.probe",
+                                    "host.hostname"
+                                  ]
+                                },
+                                "endpoint": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "scheme": {
+                                      "type": "string",
+                                      "enum": [
+                                        "http",
+                                        "https"
+                                      ]
+                                    },
+                                    "vhost": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "minLength": 1,
+                                      "maxLength": 253
+                                    }
+                                  },
+                                  "required": [
+                                    "scheme",
+                                    "vhost"
+                                  ]
+                                },
+                                "key": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "before": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "after": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "endpoint",
+                                "key",
+                                "before",
+                                "after"
+                              ]
+                            }
+                          },
+                          "lifecycle": {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "active",
+                                  "unstable",
+                                  "missing",
+                                  "inactive"
+                                ]
+                              },
+                              "misses": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "flips": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "misses",
+                              "flips"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostId",
+                          "ip",
+                          "hostnames",
+                          "port",
+                          "change",
+                          "priority",
+                          "reasons",
+                          "ports",
+                          "fields",
+                          "lifecycle"
+                        ]
+                      },
+                      "maxItems": 20
+                    }
+                  },
+                  "required": [
+                    "scan",
+                    "baseScan",
+                    "hosts",
+                    "openPorts",
+                    "changes",
+                    "priorities",
+                    "topChanges"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
             "content": {
               "application/json": {
                 "schema": {
@@ -6303,6 +6726,359 @@
                     "unchanged",
                     "limitReached"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scans/{id}/changes": {
+      "get": {
+        "operationId": "exportScanChanges",
+        "summary": "Export the changes since the base scan, one row per change, as JSON or CSV",
+        "description": "Requires `scans:read`. Compared with `base` (older) or the previous scan with results. Rows for new, gone and unknown hosts, opened and closed ports, and each changed field, with a priority and its reason. CSV cells that start with `=`, `+`, `-` or `@` get a leading `'` so spreadsheets do not run them as formulas.",
+        "tags": [
+          "Scans"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "base",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            },
+            "required": false,
+            "name": "format",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scan": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "startedAt"
+                      ]
+                    },
+                    "baseScan": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "startedAt"
+                      ]
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "hostnames": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "protocol": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "tcp"
+                            ]
+                          },
+                          "port": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "change": {
+                            "type": "string",
+                            "enum": [
+                              "new",
+                              "gone",
+                              "changed",
+                              "unchanged",
+                              "unknown"
+                            ]
+                          },
+                          "field": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "service.name",
+                              "service.product",
+                              "service.version",
+                              "service.extraInfo",
+                              "service.cpe",
+                              "ssh.hostKey",
+                              "http.endpoint",
+                              "http.status",
+                              "http.title",
+                              "http.redirect",
+                              "http.header",
+                              "http.securityHeader",
+                              "http.cookie",
+                              "http.cookieFlags",
+                              "tls.cert",
+                              "tls.issuer",
+                              "tls.expiry",
+                              "tls.selfSigned",
+                              "tls.version",
+                              "http.favicon",
+                              "http.probe",
+                              "host.hostname",
+                              null
+                            ]
+                          },
+                          "endpoint": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "scheme": {
+                                "type": "string",
+                                "enum": [
+                                  "http",
+                                  "https"
+                                ]
+                              },
+                              "vhost": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1,
+                                "maxLength": 253
+                              }
+                            },
+                            "required": [
+                              "scheme",
+                              "vhost"
+                            ]
+                          },
+                          "key": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "before": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "after": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "priority": {
+                            "type": "string",
+                            "enum": [
+                              "high",
+                              "medium",
+                              "low"
+                            ]
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "new-host",
+                              "returning-host",
+                              "risky-port",
+                              "new-service",
+                              "admin-panel",
+                              "ssh-key-changed",
+                              "self-signed",
+                              "version-change",
+                              "new-endpoint",
+                              "page-change",
+                              "cert-change",
+                              "security-header-removed",
+                              "cookie-flags-weakened",
+                              "technology-header",
+                              "host-inactive",
+                              "host-gone",
+                              "service-gone",
+                              "no-answer",
+                              "other"
+                            ]
+                          },
+                          "lifecycle": {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "active",
+                                  "unstable",
+                                  "missing",
+                                  "inactive"
+                                ]
+                              },
+                              "misses": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "flips": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "misses",
+                              "flips"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostId",
+                          "ip",
+                          "hostnames",
+                          "protocol",
+                          "port",
+                          "change",
+                          "field",
+                          "endpoint",
+                          "key",
+                          "before",
+                          "after",
+                          "priority",
+                          "reason",
+                          "lifecycle"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "scan",
+                    "baseScan",
+                    "items"
+                  ]
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }

@@ -35,6 +35,7 @@ async function main(): Promise<void> {
     servers: [{ url: "http://localhost:3001/v1", description: "Local development" }],
     tags: [
       { name: "Auth", description: "Sign-in, session and the current user" },
+      { name: "Dashboard", description: "The most important findings of the newest scan" },
       { name: "Health", description: "Service health checks" },
       { name: "Roles", description: "System and custom roles (RBAC)" },
       { name: "Targets", description: "IP addresses, CIDR ranges and domains to scan" },

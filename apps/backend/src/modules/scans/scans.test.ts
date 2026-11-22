@@ -10,6 +10,7 @@ import {
   TagScanHostsResponseSchema,
   type TagScanHostsBody,
 } from "@subsurf/contracts/scans/scan-results.schema";
+import { ScanChangesResponseSchema } from "@subsurf/contracts/scans/scan-changes.schema";
 import { ScanListResponseSchema } from "@subsurf/contracts/scans/scans.schema";
 import type { ObservedHost } from "@subsurf/contracts/workers/worker-result.schema";
 import { buildWorkerResult } from "@subsurf/contracts/workers/worker-result.fixture";
@@ -423,6 +424,51 @@ describe("GET /scans/{id}/hosts/{hostId}", () => {
     // 10.0.5.8 was down in the first scan and is up only in the second.
     expect((await client.get(`/v1/scans/${first}/hosts/${await hostIdOf("10.0.5.8")}`)).status).toBe(404);
     expect((await client.get(`/v1/scans/${first}/hosts/${randomUUID()}`)).status).toBe(404);
+  });
+});
+
+describe("GET /scans/{id}/changes", () => {
+  it("lists every change, one row each, with its priority", async () => {
+    const { first, second } = await twoScans();
+    const { client } = await signInAs(server, { role: "viewer" });
+
+    const { baseScan, items } = ScanChangesResponseSchema.parse(
+      await getJson(client, `/v1/scans/${second}/changes`),
+    );
+    const empty = ScanChangesResponseSchema.parse(await getJson(client, `/v1/scans/${first}/changes`));
+
+    expect(baseScan?.id).toBe(first);
+    expect(
+      items.map((row) => [row.ip, row.port, row.change, row.field, row.before, row.after, row.priority, row.reason]),
+    ).toEqual([
+      ["10.0.5.7", 22, "changed", "service.version", "9.6p1", "9.7p1", "medium", "version-change"],
+      ["10.0.5.7", 8080, "new", null, null, null, "medium", "new-service"],
+      ["10.0.5.8", null, "new", null, "down", "up", "high", "new-host"],
+      ["10.0.5.8", 22, "new", null, null, "ssh OpenSSH 9.6p1", "medium", "new-service"],
+      ["10.0.5.20", null, "gone", null, "up", "down", "low", "host-gone"],
+      ["10.0.5.20", 3306, "gone", null, "mysql MySQL 8.0.36", null, "low", "service-gone"],
+    ]);
+    expect(items.find((row) => row.ip === "10.0.5.20")?.lifecycle).toEqual({
+      state: "missing",
+      misses: 1,
+      flips: 1,
+    });
+    expect(empty).toMatchObject({ baseScan: null, items: [] });
+  });
+
+  it("exports the same rows as CSV, as a download", async () => {
+    const { second } = await twoScans();
+    const { client } = await signInAs(server, { role: "viewer" });
+
+    const res = await client.get(`/v1/scans/${second}/changes?format=csv`);
+    const lines = (await res.text()).trimEnd().split("\r\n");
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/csv");
+    expect(res.headers.get("content-disposition")).toMatch(/attachment; filename="?scan-changes-\w+-to-\w+\.csv"?/);
+    expect(lines[0]).toBe("ip,hostnames,protocol,port,change,field,endpoint,key,before,after,priority,reason,lifecycle");
+    expect(lines).toHaveLength(7);
+    expect(lines).toContain("10.0.5.8,,,,new,,,,down,up,high,new-host,active");
   });
 });
 
