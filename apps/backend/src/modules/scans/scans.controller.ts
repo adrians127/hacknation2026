@@ -15,9 +15,14 @@ import {
   ScanChangesQuerySchema,
   type ScanChangesResponse,
 } from "@subsurf/contracts/scans/scan-changes.schema";
+import {
+  ScanJobListQuerySchema,
+  type ScanJobListResponse,
+} from "@subsurf/contracts/scans/scan-jobs.schema";
 import type { ScanListResponse } from "@subsurf/contracts/scans/scans.schema";
 
 import { hostsService } from "~backend/modules/hosts/hosts.service";
+import { pipelineRuns } from "~backend/modules/pipelines/pipeline-runs.service";
 import { changesCsv, changesFileName } from "~backend/modules/scans/scan-changes-csv";
 import { scanResultsService } from "~backend/modules/scans/scan-results.service";
 
@@ -29,6 +34,16 @@ export const scansController = {
   get: async (req: Request<IdParams>, res: Response<ScanDetail>) => {
     const { base } = ScanCompareQuerySchema.parse(req.query);
     res.status(200).json(await scanResultsService.get(req.params.id, base));
+  },
+
+  listJobs: async (req: Request<IdParams>, res: Response<ScanJobListResponse>) => {
+    const query = ScanJobListQuerySchema.parse(req.query);
+    res.status(200).json(await scanResultsService.listJobs(req.params.id, query));
+  },
+
+  stop: async (req: Request<IdParams>, res: Response) => {
+    await pipelineRuns.stop(req.params.id);
+    res.status(204).end();
   },
 
   listHosts: async (req: Request<IdParams>, res: Response<ScanHostListResponse>) => {

@@ -209,6 +209,7 @@ OrderedJson port_json(int number, OrderedJson http) {
                        {"identity", OrderedJson{{"ttl", nullptr},
                            {"sshHostKeySha256", nullptr}, {"tlsCertSha256", nullptr}}},
                        {"banner", nullptr}, {"scripts", OrderedJson::array()},
+                       {"tls", OrderedJson::array()},
                        {"http", std::move(http)}};
 }
 

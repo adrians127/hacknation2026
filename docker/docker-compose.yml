@@ -4,11 +4,45 @@
 #   pnpm infra:up       every service (PostgreSQL + DefectDojo)
 #   pnpm dojo:up        DefectDojo only (UI + API on http://localhost:8080)
 #
+# The whole app in Docker (profile `app`: migrations, backend, frontend on :3000) needs
+# docker/.env with real secrets; see "Everything in Docker" in docker/README.md:
+#   docker compose -f docker/docker-compose.yml --profile app up -d --build
+#
 # Scan workers live in docker-compose.workers.yml.
 #
 # Defaults match apps/backend/.env.example. Override them via the shell
 # environment or an optional docker/.env. Every DefectDojo default is dev-only.
 name: hacknation
+
+# The backend image's settings in Docker (apps/backend/README.md, "Environment variables").
+# Secrets come from docker/.env. No `:?` guards: compose interpolates the whole file, so they
+# would break `pnpm db:up` too; a missing secret stops the backend with a clear error instead.
+x-backend-env: &backend-env
+  NODE_ENV: production
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  CORS_ORIGIN: ${PUBLIC_URL:-http://localhost:3000}
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: ${POSTGRES_DB:-hacknation}
+  DB_USER: ${POSTGRES_USER:-hacknation}
+  DB_PASSWORD: ${POSTGRES_PASSWORD:-hacknation}
+  DB_SSLMODE: disable
+  JWT_SECRET: ${JWT_SECRET:-}
+  DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-}
+  WORKER_TOKEN: ${WORKER_TOKEN:-}
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@hacknation.local}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+  # Plain http: Secure cookies would only work on localhost. Set true behind HTTPS.
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  SCAN_ALLOWED_PORTS: ${SCAN_ALLOWED_PORTS:-1-65535}
+  DEFECTDOJO_URL: http://defectdojo-nginx:8080
+  DEFECTDOJO_API_TOKEN: ${DD_API_TOKEN:-943acbe9baff8da06895e4349f3d06ee293189e8}
+
+x-backend-image: &backend-image
+  build:
+    context: ..
+    dockerfile: apps/backend/Dockerfile
+  image: hacknation/backend:local
 
 # Shared by the DefectDojo Django containers (initializer, uwsgi, celery).
 x-defectdojo-env: &defectdojo-env
@@ -146,6 +180,77 @@ services:
       - "127.0.0.1:${DD_PORT:-8080}:8080"
     volumes:
       - defectdojo-media:/usr/share/nginx/html/media
+
+  # ---- The app (profile `app`): docker compose ... --profile app up -d --build ----
+
+  # One-shot: applies prisma/migrations, then exits; the backend waits for it.
+  backend-migrate:
+    <<: *backend-image
+    profiles: ["app"]
+    container_name: hacknation-backend-migrate
+    command: ["node_modules/.bin/prisma", "migrate", "deploy"]
+    environment: *backend-env
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # REST API, the pipeline scheduler and the worker endpoints. The first start creates the
+  # admin from ADMIN_EMAIL / ADMIN_PASSWORD.
+  backend:
+    <<: *backend-image
+    profiles: ["app"]
+    container_name: hacknation-backend
+    restart: unless-stopped
+    environment: *backend-env
+    depends_on:
+      backend-migrate:
+        condition: service_completed_successfully
+    ports:
+      # Loopback: worker-manager (host networking) reaches it at localhost:3001; browsers go
+      # through the frontend's /v1 proxy.
+      - "127.0.0.1:${BACKEND_PORT:-3001}:3001"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3001/v1/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # The UI (nginx), proxying /v1 to the backend.
+  frontend:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: apps/frontend/Dockerfile
+    image: hacknation/frontend:local
+    container_name: hacknation-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      # APP_BIND=0.0.0.0 opens it to other machines (then set PUBLIC_URL to that address).
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3000}:80"
+
+  # Optional (profile `vulns`): mirrors NVD and OSV (~650 MB of downloads on the first run).
+  vuln-sync:
+    <<: *backend-image
+    profiles: ["vulns"]
+    container_name: hacknation-vuln-sync
+    command: ["node", "dist/vuln-sync.mjs"]
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      # Writable by the image's `node` user; a recreated container downloads again.
+      VULN_CACHE_DIR: /tmp/vulnerabilities
+    depends_on:
+      backend-migrate:
+        condition: service_completed_successfully
 
 volumes:
   hacknation-postgres-data:

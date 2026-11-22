@@ -63,6 +63,27 @@ export function ScanSummary({
               <dt className="text-xs text-muted-foreground">{t("scans.detail.ports")}</dt>
               <dd className="font-mono text-xs break-all">{scan.ports}</dd>
             </div>
+            <div className="col-span-full grid gap-0.5">
+              <dt className="text-xs text-muted-foreground">{t("scans.detail.pipeline")}</dt>
+              <dd className="text-sm">
+                {scan.pipeline ? (
+                  <Link to={`/app/pipelines/${scan.pipeline.id}`} className="font-medium hover:underline">
+                    {scan.pipeline.name}
+                  </Link>
+                ) : (
+                  t("scans.detail.noPipeline")
+                )}
+                <span className="text-muted-foreground"> · {t(`scans.triggers.${scan.trigger}`)}</span>
+                {scan.windowEndsAt && (
+                  <span className="block text-xs text-muted-foreground">
+                    {t("scans.detail.windowEnds", { date: formatDateTime(scan.windowEndsAt, locale) })}
+                  </span>
+                )}
+                {scan.status === "paused" && (
+                  <span className="block text-xs text-amber-400">{t("scans.detail.pausedHint")}</span>
+                )}
+              </dd>
+            </div>
           </dl>
         </CardContent>
       </Card>

@@ -1,0 +1,28 @@
+/// One step of a pipeline: a worker and its job parameters. A save replaces all steps.
+model PipelineStep {
+  id                 String            @id @default(uuid(7)) @db.Uuid
+  pipelineId         String            @db.Uuid
+  /// 1..n, in run order.
+  position           Int
+  workerId           String            @db.Uuid
+  input              PipelineStepInput
+  ports              String
+  rate               Int
+  batchSize          Int
+  maxDurationSeconds Int
+  /// PipelineSplit: { strategy, maxTasks?, maxItemsPerTask? }.
+  split              Json
+  /// The worker's own fields by key.
+  params             Json              @default("{}")
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  worker   Worker   @relation(fields: [workerId], references: [id], onDelete: Restrict)
+
+  @@unique([pipelineId, position])
+  @@index([workerId])
+}
+
+enum PipelineStepInput {
+  targets
+  previous
+}

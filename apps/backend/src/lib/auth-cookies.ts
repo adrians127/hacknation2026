@@ -9,8 +9,12 @@ export const REFRESH_COOKIE = "subsurf_refresh";
 // Only the refresh/logout endpoints ever see the refresh token.
 const REFRESH_COOKIE_PATH = "/v1/auth";
 
-// Plain http on localhost: browsers drop Secure cookies there.
-const base: CookieOptions = { httpOnly: true, secure: env.NODE_ENV === "production" };
+// Secure in production unless COOKIE_SECURE=false: browsers drop Secure cookies sent over plain
+// http to anything but localhost, so a lab install opened by IP could not sign in.
+const base: CookieOptions = {
+  httpOnly: true,
+  secure: env.COOKIE_SECURE ?? env.NODE_ENV === "production",
+};
 const accessOptions: CookieOptions = { ...base, sameSite: "lax", path: "/" };
 const refreshOptions: CookieOptions = { ...base, sameSite: "strict", path: REFRESH_COOKIE_PATH };
 

@@ -134,6 +134,7 @@ json TopologyBuilder::hosts_json() const {
                   {"tlsCertSha256", nullptr}}},
                 {"banner", nullptr},
                 {"scripts", json::array()},
+                {"tls", json::array()},
                 {"http", json::array()},
             });
         }

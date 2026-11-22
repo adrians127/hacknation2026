@@ -1,10 +1,13 @@
 import {
   Bug,
+  Cpu,
   Crosshair,
+  FileText,
   LayoutDashboard,
   Radar,
   ShieldCheck,
   Users,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -23,6 +26,9 @@ interface NavItem {
     | "nav.dashboard"
     | "nav.targets"
     | "nav.scans"
+    | "nav.reports"
+    | "nav.pipelines"
+    | "nav.workers"
     | "nav.vulnerabilities"
     | "nav.users"
     | "nav.roles";
@@ -34,6 +40,9 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/app", label: "nav.dashboard", Icon: LayoutDashboard },
   { to: "/app/targets", label: "nav.targets", Icon: Crosshair, permission: "targets:read" },
   { to: "/app/scans", label: "nav.scans", Icon: Radar, permission: "scans:read" },
+  { to: "/app/reports", label: "nav.reports", Icon: FileText, permission: "scans:read" },
+  { to: "/app/pipelines", label: "nav.pipelines", Icon: Workflow, permission: "pipelines:read" },
+  { to: "/app/admin/workers", label: "nav.workers", Icon: Cpu, permission: "workers:read" },
   {
     to: "/app/admin/vulnerabilities",
     label: "nav.vulnerabilities",
@@ -52,7 +61,7 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-svh flex-col md:flex-row">
-      <aside className="flex shrink-0 flex-col gap-6 border-b p-4 md:sticky md:top-0 md:h-svh md:w-60 md:border-r md:border-b-0">
+      <aside className="print:hidden flex shrink-0 flex-col gap-6 border-b p-4 md:sticky md:top-0 md:h-svh md:w-60 md:border-r md:border-b-0">
         <Link to="/" className="w-fit">
           <Logo variant="icon" label={t("appName")} className="w-14" />
         </Link>
@@ -79,8 +88,8 @@ export function AppLayout() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 p-4 sm:p-8">
-        <div className="mx-auto max-w-6xl">
+      <main className="min-w-0 flex-1 p-4 sm:p-8 print:p-0">
+        <div className="mx-auto max-w-6xl print:max-w-none">
           <Outlet />
         </div>
       </main>

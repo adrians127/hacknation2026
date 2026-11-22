@@ -1,7 +1,8 @@
-import { ArrowLeft, Search, Tags } from "lucide-react";
+import { ArrowLeft, FileText, Search, Square, Tags } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router";
+import { toast } from "sonner";
 
 import type { HostEdits, ServiceEdits, ServiceIdentity } from "@subsurf/contracts/hosts/hosts.schema";
 import { TriageStatusSchema, type TriageStatus } from "@subsurf/contracts/hosts/hosts.schema";
@@ -9,19 +10,23 @@ import {
   ScanChangeFilterSchema,
   type ScanChangeFilter,
 } from "@subsurf/contracts/scans/scan-results.schema";
+import { ScanJobStatusSchema, type ScanJobStatus } from "@subsurf/contracts/scans/scans.schema";
 import {
   VulnerabilityFilterSchema,
   type VulnerabilityFilter,
 } from "@subsurf/contracts/vulnerabilities/vulnerabilities.schema";
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DataTablePagination } from "@/components/data-table-pagination";
 import { GuardedButton } from "@/components/guarded-button";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DefectDojoPushActions } from "@/features/defectdojo/components/defectdojo-push-actions";
 import { useScanHosts } from "@/features/hosts/api/get-scan-hosts";
 import { BulkTagDialog } from "@/features/hosts/components/bulk-tag-dialog";
@@ -30,8 +35,10 @@ import { HostSheet } from "@/features/hosts/components/host-sheet";
 import { HostsTable } from "@/features/hosts/components/hosts-table";
 import { ServiceEditDialog } from "@/features/hosts/components/service-edit-dialog";
 import { useScan } from "@/features/scans/api/get-scan";
+import { useStopScan } from "@/features/scans/api/stop-scan";
+import { ScanJobsPanel } from "@/features/scans/components/scan-jobs-panel";
 import { ScanSummary } from "@/features/scans/components/scan-summary";
-import { SCAN_STATUS_VARIANT } from "@/features/scans/lib/status";
+import { isScanActive, SCAN_STATUS_VARIANT } from "@/features/scans/lib/status";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useErrorMessage } from "@/hooks/use-error-message";
 import { useCan } from "@/lib/auth/use-can";
@@ -45,7 +52,8 @@ type ServiceRef = ServiceEdits & { port: number; protocol: string; observed: Ser
 type Dialog =
   | { kind: "host"; host: HostRef }
   | { kind: "service"; host: HostRef; service: ServiceRef }
-  | { kind: "bulkTag" };
+  | { kind: "bulkTag" }
+  | { kind: "stop" };
 
 type IdSet = ReadonlySet<string>;
 
@@ -86,6 +94,11 @@ export function ScanDetailRoute() {
     params.get("vulnerability"),
   );
   const openHostId = params.get("host");
+  const tab = params.get("tab") === "jobs" ? "jobs" : "hosts";
+  const jobsPage = parsePage(params.get("jobsPage"));
+  const jobStep = Number(params.get("step")) || undefined;
+  const jobStatus: ScanJobStatus | undefined = parseOr(ScanJobStatusSchema, params.get("jobStatus"));
+  const stopScan = useStopScan();
 
   const [search, setSearch] = useState(q);
   const debouncedSearch = useDebouncedValue(search.trim());
@@ -178,6 +191,22 @@ export function ScanDetailRoute() {
         description={t("scans.detail.subtitle")}
         actions={
           <>
+            {isScanActive(scanData.status) && (
+              <GuardedButton
+                variant="outline"
+                permissions={["scans:run"]}
+                onClick={() => setDialog({ kind: "stop" })}
+              >
+                <Square />
+                {t("scans.detail.stop")}
+              </GuardedButton>
+            )}
+            <Button asChild variant="outline">
+              <Link to={`/app/reports/scans/${scanId}/summary`}>
+                <FileText />
+                {t("scans.detail.report")}
+              </Link>
+            </Button>
             <GuardedButton
               variant="outline"
               permissions={["hosts:update"]}
@@ -201,98 +230,117 @@ export function ScanDetailRoute() {
         onChangeFilter={(next) => update({ change: next ?? null, page: null })}
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-64 flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={th("search.placeholder")}
-            aria-label={th("search.label")}
-            className="pl-8"
+      <Tabs value={tab} onValueChange={(value) => update({ tab: value === "jobs" ? "jobs" : null })}>
+        <TabsList>
+          <TabsTrigger value="hosts">{t("scans.detail.tabs.hosts")}</TabsTrigger>
+          <TabsTrigger value="jobs">{t("scans.detail.tabs.jobs")}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="jobs" className="mt-4">
+          <ScanJobsPanel
+            scanId={scanId}
+            steps={scanData.steps}
+            live={isScanActive(scanData.status)}
+            page={jobsPage}
+            step={jobStep}
+            status={jobStatus}
+            onChange={update}
           />
-        </div>
-        {scanData.changes && (
-          <Select
-            value={change ?? ANY}
-            onValueChange={(value) => update({ change: value === ANY ? null : value, page: null })}
-          >
-            <SelectTrigger aria-label={th("filters.change")} className="min-w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ANY}>{th("filters.allHosts")}</SelectItem>
-              {ScanChangeFilterSchema.options.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {th(`filters.changes.${option}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <Select
-          value={triage ?? ANY}
-          onValueChange={(value) => update({ triage: value === ANY ? null : value, page: null })}
-        >
-          <SelectTrigger aria-label={th("filters.triage")} className="min-w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ANY}>{th("filters.anyTriage")}</SelectItem>
-            {TriageStatusSchema.options.map((status) => (
-              <SelectItem key={status} value={status}>
-                {th(`triage.${status}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={vulnerability ?? ANY}
-          onValueChange={(value) =>
-            update({ vulnerability: value === ANY ? null : value, page: null })
-          }
-        >
-          <SelectTrigger aria-label={tv("filter.label")} className="min-w-52">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ANY}>{tv("filter.all")}</SelectItem>
-            {VulnerabilityFilterSchema.options.map((option) => (
-              <SelectItem key={option} value={option}>
-                {tv(`filter.options.${option}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        </TabsContent>
+        <TabsContent value="hosts" className="mt-4 grid gap-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-64 flex-1">
+              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={th("search.placeholder")}
+                aria-label={th("search.label")}
+                className="pl-8"
+              />
+            </div>
+            {scanData.changes && (
+              <Select
+                value={change ?? ANY}
+                onValueChange={(value) => update({ change: value === ANY ? null : value, page: null })}
+              >
+                <SelectTrigger aria-label={th("filters.change")} className="min-w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ANY}>{th("filters.allHosts")}</SelectItem>
+                  {ScanChangeFilterSchema.options.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {th(`filters.changes.${option}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select
+              value={triage ?? ANY}
+              onValueChange={(value) => update({ triage: value === ANY ? null : value, page: null })}
+            >
+              <SelectTrigger aria-label={th("filters.triage")} className="min-w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ANY}>{th("filters.anyTriage")}</SelectItem>
+                {TriageStatusSchema.options.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {th(`triage.${status}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={vulnerability ?? ANY}
+              onValueChange={(value) =>
+                update({ vulnerability: value === ANY ? null : value, page: null })
+              }
+            >
+              <SelectTrigger aria-label={tv("filter.label")} className="min-w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ANY}>{tv("filter.all")}</SelectItem>
+                {VulnerabilityFilterSchema.options.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {tv(`filter.options.${option}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {hosts.isPending ? (
-        <Skeleton className="h-96 w-full" />
-      ) : hosts.isError ? (
-        <p role="alert" className="text-destructive">
-          {errorMessage(hosts.error)}
-        </p>
-      ) : (
-        <Card>
-          <CardContent>
-            <HostsTable
-              hosts={hosts.data.items}
-              compared={scanData.changes !== null}
-              onOpen={openHost}
-              onEditHost={editHost}
-              onEditService={editService}
-              selection={canExport ? selection : undefined}
-            />
-            <DataTablePagination
-              page={hosts.data.page}
-              pageSize={hosts.data.pageSize}
-              total={hosts.data.total}
-              onPageChange={(next) => update({ page: next === 1 ? null : String(next) })}
-            />
-          </CardContent>
-        </Card>
-      )}
+          {hosts.isPending ? (
+            <Skeleton className="h-96 w-full" />
+          ) : hosts.isError ? (
+            <p role="alert" className="text-destructive">
+              {errorMessage(hosts.error)}
+            </p>
+          ) : (
+            <Card>
+              <CardContent>
+                <HostsTable
+                  hosts={hosts.data.items}
+                  compared={scanData.changes !== null}
+                  onOpen={openHost}
+                  onEditHost={editHost}
+                  onEditService={editService}
+                  selection={canExport ? selection : undefined}
+                />
+                <DataTablePagination
+                  page={hosts.data.page}
+                  pageSize={hosts.data.pageSize}
+                  total={hosts.data.total}
+                  onPageChange={(next) => update({ page: next === 1 ? null : String(next) })}
+                />
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {openHostId && (
         <HostSheet
@@ -307,6 +355,31 @@ export function ScanDetailRoute() {
 
       {dialog?.kind === "host" && (
         <HostEditDialog key={dialog.host.id} host={dialog.host} onClose={() => setDialog(null)} />
+      )}
+      {dialog?.kind === "stop" && (
+        <ConfirmDialog
+          title={t("scans.detail.stopTitle")}
+          description={t("scans.detail.stopDescription")}
+          confirmLabel={t("scans.detail.stop")}
+          destructive
+          pending={stopScan.isPending}
+          error={stopScan.isError ? errorMessage(stopScan.error) : null}
+          onCancel={() => {
+            stopScan.reset();
+            setDialog(null);
+          }}
+          onConfirm={() =>
+            stopScan.mutate(
+              { params: { path: { id: scanId } } },
+              {
+                onSuccess: () => {
+                  toast.success(t("scans.detail.stopped"));
+                  setDialog(null);
+                },
+              },
+            )
+          }
+        />
       )}
       {dialog?.kind === "bulkTag" && (
         <BulkTagDialog scanId={scanId} onClose={() => setDialog(null)} />

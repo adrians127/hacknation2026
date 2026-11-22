@@ -1,6 +1,6 @@
 # Worker result format
 
-**Status: locked.** This document is the source of truth for the JSON a scanning worker returns to the backend for one job.
+**Status: locked.** This document is the source of truth for the JSON a scanning worker returns to the backend for one job. The port-level `tls[]` extension below allows TLS-only observations; stored observations from before this extension are read as `[]`.
 
 - **Workers** work towards producing exactly this structure.
 - **The backend** treats it as the only input for everything built on scan data: storing observations, diffs between scans, the dashboard, signatures and detections, JSON/CSV export and import, and DefectDojo.
@@ -81,6 +81,7 @@ Change this file first, with the team's agreement, and only then the code. When 
           "identity": { "ttl": 64, "sshHostKeySha256": "…", "tlsCertSha256": null },
           "banner": "SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13",
           "scripts": [{ "id": "ssh-hostkey", "output": "…" }],
+          "tls": [],
           "http": []
         },
         {
@@ -90,6 +91,13 @@ Change this file first, with the team's agreement, and only then the code. When 
           "identity": { "ttl": 64, "sshHostKeySha256": null, "tlsCertSha256": "…" },
           "banner": null,
           "scripts": [],
+          "tls": [
+            { "vhost": "wiki.example.org", "version": "TLSv1.3", "cipher": "TLS_AES_256_GCM_SHA384",
+              "alpn": null, "cert": { "subjectCn": "wiki.example.org", "san": ["wiki.example.org"],
+                "issuer": "R11", "notBefore": "2026-01-01T00:00:00Z", "notAfter": "2027-01-01T00:00:00Z",
+                "serial": "…", "sha256": "…", "selfSigned": null, "keyAlgorithm": null,
+                "keyBits": null } }
+          ],
           "http": [
             {
               "scheme": "https",
@@ -182,7 +190,7 @@ Change this file first, with the team's agreement, and only then the code. When 
 |---|---|
 | `subnet` | The job's subnet (CIDR), or `null` when the addresses do not form one aligned block |
 | `ports` | TCP port spec that was scanned, e.g. `22,80,8000-8100`; `null` when the job failed before parsing |
-| `maxParallel`, `maxRatePerProcess` | Worker concurrency and rate limit; Nmap reports processes/packets per second, httpx reports threads/HTTP requests per second. `null` when the job failed before parsing |
+| `maxParallel`, `maxRatePerProcess` | Worker concurrency and rate limit; Nmap reports processes/packets per second, httpx reports threads/HTTP requests per second, and tlsx reports concurrent invocations/invocation starts per second. `null` when the job failed before parsing |
 | `hostTimeoutMs`, `httpTimeoutMs` | Per-host Nmap timeout (`null` for other workers) and per-request HTTP timeout |
 | `maxBodyBytes`, `maxRedirects` | Limits for `http[].body.content` and `http[].redirects`; `null` for workers without HTTP probing |
 | `nmapArgs` | The Nmap argument vector **without the target addresses**; `[]` for workers without Nmap |
@@ -213,7 +221,10 @@ Change this file first, with the team's agreement, and only then the code. When 
 | `identity` | `{ ttl, sshHostKeySha256, tlsCertSha256 }` | Signals that tell machines behind one IP apart (NAT, port forwarding); each may be `null` |
 | `banner` | string \| `null` | Raw service banner, for non-HTTP services |
 | `scripts` | `[{ id, output }]` | Raw output of NSE scripts that is not mapped to the fields above |
+| `tls` | tls[] | One TLS handshake observation per SNI on this port, including bare IP (`vhost: null`). `[]` when TLS was not probed or did not respond. TLS-only workers leave `http: []`. Existing stored results without this field are interpreted as `[]`. |
 | `http` | http[] | One entry per HTTP endpoint on this port; `[]` if the port does not speak HTTP |
+
+`tls[]` has `vhost` (assigned SNI or `null` for bare IP), nullable negotiated `version`, `cipher`, `alpn`, and nullable `cert`. Certificate fields are `subjectCn`, `san[]`, `issuer`, `notBefore`, `notAfter`, `serial`, `sha256`, `selfSigned`, `keyAlgorithm`, `keyBits`; fields unavailable from the TLS scanner are `null` (except `san`, which is `[]`). A port's `identity.tlsCertSha256` is set only when an observed certificate fingerprint exists. Each `vhost` occurs at most once per port. This data is independent of `http[].tls`; no HTTP endpoint is created by a TLS-only observation.
 
 ### `hosts[].ports[].http[]`
 
@@ -254,7 +265,7 @@ One entry per `(scheme, vhost)`: once by bare IP (`vhost: null`) and once for ea
 **Sensitive data**
 
 - Cookie values never leave the worker; only `valueSha256` does.
-- The backend encrypts at rest (PDF item 16): `headers`, `cookies`, `body.content`, `tls.cert`, `banner`, `scripts` and `probes`. Fields used for filtering and diffs (`ip`, `port`, `service`, `statusCode`, `title`) stay in plaintext.
+- The backend encrypts at rest (PDF item 16): `headers`, `cookies`, `body.content`, both HTTP and port-level `tls.cert`, `banner`, `scripts` and `probes`. Fields used for filtering and diffs (`ip`, `port`, `service`, `statusCode`, `title`) stay in plaintext.
 - A result can be large (up to `maxBodyBytes` per endpoint). The backend's result endpoint must accept large, gzip-compressed bodies.
 
 ## What the job must provide
@@ -275,7 +286,7 @@ The worker result does not contain these. The backend computes them from stored 
 | Detections (CMS, framework, application server, IoT, admin panel, staging, interesting headers and cookies, custom signatures) | Signatures evaluated on `headers`, `cookies`, `body.content`, `favicon`, `probes`, `banner` and `service`. Built-in fingerprints and custom signatures run on the same engine, each with a `confidence` |
 | Coverage of a scan | `up`/`down` hosts of its jobs |
 | New, gone and changed hosts/services/endpoints | Comparison of two scans (by default the previous scan with results), only where both have a conclusive answer: an address that either scan did not cover or got no `up`/`down` for is `unknown`. Keys: host `ip`, service `ip + protocol + port`, endpoint `ip + port + scheme + vhost` |
-| What changed in a service | A field-level comparison of one normalized view of the port (service identity, SSH host key, and per endpoint: status, title, redirect path, technology and security headers, cookie names and flags, certificate, TLS version, favicon, probe statuses). The port fingerprint is a hash of the same view |
+| What changed in a service | A field-level comparison of one normalized view of the port (service identity, SSH host key, port-level TLS SNI/version/cipher/certificate fingerprint, and per HTTP endpoint: status, title, redirect path, technology and security headers, cookie names and flags, certificate, TLS version, favicon, probe statuses). The port fingerprint is a hash of the same view |
 | Likely machines behind one IP | Ports grouped by matching `identity` signals |
 | Host lifecycle (active, unstable, missing, inactive) | Consecutive misses (`down`) and up/down flips over the scans that covered the address; `timeout`, `cancelled` and `failed` count as no information |
 
@@ -295,3 +306,7 @@ The worker result does not contain these. The backend computes them from stored 
 ## Current naabu-worker coverage
 
 `naabu-worker` is an alternative TCP discovery stage to masscan-worker. It reports only hosts with open ports, with deduplicated TCP ports and their observation times. It leaves service, identity, HTTP and latency fields empty or `null` because basic Naabu JSON lines do not provide them. A completed unsharded run reports `down` as assigned addresses minus responding hosts; a partial or sharded run leaves `down` and `cancelled` as `null`.
+
+## Current tlsx-worker coverage
+
+`tlsx-worker` probes only assigned IPs, ports and SNI names with ProjectDiscovery TLSX. It reports successful handshakes in `ports[].tls[]` and leaves `http[]` empty. It maps negotiated version and cipher, certificate CN, SAN, issuer, validity, serial and SHA-256 fingerprint when TLSX supplies them. Missing ALPN, certificate key algorithm and bit count are `null`. A host-object target's ports remain known open; a plain address with no TLS response is inconclusive rather than down. On reads the backend combines TLSX observations with Nmap service metadata, keeping each stored worker result separate.

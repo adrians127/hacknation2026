@@ -1,4 +1,4 @@
-import { Columns2, Pencil } from "lucide-react";
+import { Columns2, FileText, Pencil } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
@@ -173,6 +173,12 @@ function HostDetails({
           <VulnerabilitySummaryBadge summary={host.vulnerabilities} />
           <TagList tags={host.tags} />
           <span className="ml-auto flex gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link to={`/app/reports/ips/${host.ip}`}>
+                <FileText />
+                {t("actions.ipReport")}
+              </Link>
+            </Button>
             {baseScanId && (
               <Button asChild size="sm" variant="outline">
                 <Link to={compareUrl({ base: baseScanId, target: scanId, host: host.id })}>
