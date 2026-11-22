@@ -146,6 +146,8 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
   - `renderExpanded(row)` adds a full-width row under a row (return `null` while it is collapsed); the scan's host table uses it for each host's services.
   - Lists the server pages (`page`, `pageSize`, `total` in the response) put `DataTablePagination` under the table and disable column sorting (`enableSorting: false`), since sorting one page would mislead.
   - Filters, the page number and an open side panel live in the URL (`useSearchParams`), so a filtered view can be reloaded and shared (see `app/routes/scan-detail.tsx`).
+- A list whose rows hold inputs (the target entry form's list) uses the `Table` primitives with keys from the data instead of `DataTable`: `DataTable` rebuilds when `data` changes, which would remount an input while someone types in it.
+- A page with unsaved input the user built up (the target entry form) asks before leaving: `useLeaveGuard` in `features/targets/hooks/` (`useBlocker` + `beforeunload`).
 - Details that do not fit a row open in a `Sheet` (`components/ui/sheet.tsx`, a side panel on the Radix dialog). It was written by hand: `shadcn add sheet` also tried to add an unrelated npm package.
 - The app is dark-only (`class="dark"` in `index.html`); `brand` is the accent color (`text-brand`, `bg-brand/15`).
 

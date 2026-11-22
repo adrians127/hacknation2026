@@ -50,7 +50,8 @@
     "kinds": {
       "ip": "IP",
       "cidr": "CIDR",
-      "domain": "Domena"
+      "domain": "Domena",
+      "range": "Zakres"
     },
     "actions": {
       "edit": "Edytuj {{value}}",
@@ -81,11 +82,85 @@
       "subtitle": "Wpisz adresy IP, zakresy CIDR (do /16), zakresy IP i domeny ręcznie albo wczytaj je z pliku CSV lub JSON.",
       "back": "Wróć do celów",
       "tabs": {
-        "manual": "Ręcznie",
+        "form": "Formularz",
+        "text": "Tekst",
         "csv": "Plik CSV",
         "json": "Plik JSON"
       },
-      "manual": {
+      "entry": {
+        "valueLabel": "Cel",
+        "valuePlaceholder": "IP, CIDR, zakres lub domena",
+        "valueHint": "Enter dodaje do listy, Shift+Enter zaczyna nową linię. Wklej listę, żeby dodać wiele celów naraz; tekst po przecinku staje się notatką.",
+        "noteLabel": "Notatka",
+        "notePlaceholder": "Opcjonalnie, np. Sieć kampusu",
+        "add": "Dodaj",
+        "empty": "Wpisz adres IP (192.0.2.15), zakres CIDR (10.0.0.0/24), zakres IP (10.0.0.1-200) albo domenę (example.com).",
+        "detected": {
+          "addresses_one": "{{count, number}} adres",
+          "addresses_few": "{{count, number}} adresy",
+          "addresses_many": "{{count, number}} adresów",
+          "addresses_other": "{{count, number}} adresu",
+          "blocks_one": "zapisany jako {{count, number}} blok CIDR",
+          "blocks_few": "zapisany jako {{count, number}} bloki CIDR",
+          "blocks_many": "zapisany jako {{count, number}} bloków CIDR",
+          "blocks_other": "zapisany jako {{count, number}} bloku CIDR",
+          "domain": "zamieniana na adresy IPv4 przy kolejkowaniu skanu",
+          "lineNote": "Notatka: {{note}}",
+          "alreadyListed": "Już jest na liście"
+        },
+        "linesReady_one": "{{count, number}} linia gotowa do dodania",
+        "linesReady_few": "{{count, number}} linie gotowe do dodania",
+        "linesReady_many": "{{count, number}} linii gotowych do dodania",
+        "linesReady_other": "{{count, number}} linii gotowej do dodania",
+        "added_one": "Dodano {{added, number}} z {{count, number}}.",
+        "added_few": "Dodano {{added, number}} z {{count, number}}.",
+        "added_many": "Dodano {{added, number}} z {{count, number}}.",
+        "added_other": "Dodano {{added, number}} z {{count, number}}.",
+        "alreadyListed_one": "{{count, number}} był już na liście.",
+        "alreadyListed_few": "{{count, number}} były już na liście.",
+        "alreadyListed_many": "{{count, number}} było już na liście.",
+        "alreadyListed_other": "{{count, number}} było już na liście.",
+        "toFix": "Zostało w polu do poprawienia:",
+        "moreProblems_one": "…i {{count, number}} więcej",
+        "moreProblems_few": "…i {{count, number}} więcej",
+        "moreProblems_many": "…i {{count, number}} więcej",
+        "moreProblems_other": "…i {{count, number}} więcej",
+        "list": {
+          "title": "Cele do importu",
+          "empty": "Lista jest jeszcze pusta.",
+          "addresses": "Adresy",
+          "note": "Notatka dla {{value}}",
+          "remove": "Usuń {{value}}",
+          "expand": "Pokaż bloki {{value}}",
+          "collapse": "Ukryj bloki {{value}}",
+          "blocks_one": "Zostanie zapisany jako {{count, number}} cel:",
+          "blocks_few": "Zostanie zapisany jako {{count, number}} cele:",
+          "blocks_many": "Zostanie zapisany jako {{count, number}} celów:",
+          "blocks_other": "Zostanie zapisany jako {{count, number}} celu:",
+          "clear": "Wyczyść listę",
+          "summary_one": "{{count, number}} wpis na liście",
+          "summary_few": "{{count, number}} wpisy na liście",
+          "summary_many": "{{count, number}} wpisów na liście",
+          "summary_other": "{{count, number}} wpisu na liście"
+        },
+        "clearDialog": {
+          "title": "Wyczyścić listę?",
+          "description_one": "{{count, number}} wpis zostanie usunięty.",
+          "description_few": "{{count, number}} wpisy zostaną usunięte.",
+          "description_many": "{{count, number}} wpisów zostanie usuniętych.",
+          "description_other": "{{count, number}} wpisu zostanie usuniętego.",
+          "confirm": "Wyczyść"
+        },
+        "leave": {
+          "title": "Wyjść bez importu?",
+          "description_one": "{{count, number}} wpis z listy nie został zaimportowany i przepadnie.",
+          "description_few": "{{count, number}} wpisy z listy nie zostały zaimportowane i przepadną.",
+          "description_many": "{{count, number}} wpisów z listy nie zostało zaimportowanych i przepadnie.",
+          "description_other": "{{count, number}} wpisu z listy nie zaimportowano i przepadnie.",
+          "confirm": "Wyjdź"
+        }
+      },
+      "text": {
         "label": "Cele",
         "placeholder": "10.0.0.0/24, Sieć kampusu\n192.0.2.15\n198.51.100.20-198.51.100.40, Laboratorium\nexample.com",
         "hint": "Jeden cel w wierszu (IP, CIDR, zakres jak 10.0.0.1-10.0.0.50 albo domena), opcjonalnie z notatką po przecinku. Wiersze zaczynające się od # są pomijane."
@@ -156,6 +231,12 @@
         "too_many_entries": "Ponad 100 000 celów w jednym imporcie.",
         "too_many_addresses": "Ponad 1 048 576 adresów IP w jednym imporcie.",
         "too_many_domains": "Ponad 1000 domen w jednym imporcie."
+      },
+      "tags": {
+        "label": "Tagi",
+        "placeholder": "oddzielone, przecinkami",
+        "hint": "Opcjonalnie. Trafiają do celów dodanych tym importem; cele, które już są na liście, zachowują swoje tagi.",
+        "invalid": "Najwyżej 20 tagów, każdy do 50 znaków."
       },
       "startScan": {
         "label": "Od razu uruchom skan",
