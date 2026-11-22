@@ -19,10 +19,10 @@ export function FeatureStrip() {
       {FEATURES.map(({ key, Icon }) => (
         <li
           key={key}
-          className="flex flex-col items-center gap-3 text-center md:border-l md:border-white/15 md:first:border-l-0"
+          className="flex flex-col items-center gap-3 text-center md:border-l md:border-foreground/15 md:first:border-l-0"
         >
           <Icon className="size-10 text-brand" strokeWidth={1.5} />
-          <span className="max-w-32 text-white/90">{t(`landing.features.${key}`)}</span>
+          <span className="max-w-32 text-foreground/90">{t(`landing.features.${key}`)}</span>
         </li>
       ))}
     </ul>

@@ -7,7 +7,7 @@ const RIBBONS = [
 
 export function WaveBackground() {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden bg-[#010409]">
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden bg-background">
       <svg
         className="size-full"
         viewBox="0 0 1672 941"
@@ -16,13 +16,13 @@ export function WaveBackground() {
       >
         <defs>
           <linearGradient id="wave-stroke" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#0a4dff" stopOpacity="0.9" />
-            <stop offset="0.5" stopColor="#1d8bff" stopOpacity="0.55" />
-            <stop offset="1" stopColor="#3aa0ff" stopOpacity="0.95" />
+            <stop offset="0" stopColor="#fd5200" stopOpacity="0.9" />
+            <stop offset="0.5" stopColor="#ff8a4c" stopOpacity="0.55" />
+            <stop offset="1" stopColor="#ffa545" stopOpacity="0.95" />
           </linearGradient>
           <radialGradient id="wave-glow" cx="0.5" cy="0.45" r="0.6">
-            <stop offset="0" stopColor="#0b2a6b" stopOpacity="0.35" />
-            <stop offset="1" stopColor="#010409" stopOpacity="0" />
+            <stop offset="0" stopColor="#ffe3d6" stopOpacity="0.9" />
+            <stop offset="1" stopColor="#fff1eb" stopOpacity="0" />
           </radialGradient>
           <filter id="wave-blur" x="-10%" y="-30%" width="120%" height="160%">
             <feGaussianBlur stdDeviation="22" />
@@ -40,7 +40,7 @@ export function WaveBackground() {
           </g>
         ))}
       </svg>
-      <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-[#010409]/80" />
+      <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-background/80" />
     </div>
   );
 }
