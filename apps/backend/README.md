@@ -52,7 +52,8 @@ modules/targets        target inventory: POST /targets/import (manual, CSV and J
 modules/scans          GET /scans… (scan results, hosts per scan, changes: scan-results.*, scan-diff.ts);
                        queues a Scan and its ScanJob batches (scans.service.ts, dns.ts, batching.ts)
 modules/results        no routes yet: ingests worker results into observations (details.ts, fingerprint.ts, job-scope.ts)
-modules/hosts          PATCH /hosts…: edits of the Host and Service assets; ingest's helpers for those assets
+modules/hosts          PATCH /hosts…: edits of the Host and Service assets (bulk tags too, routed under /scans);
+                       ingest's helpers for those assets
 modules/vulnerabilities  /vulnerabilities…: sources (NVD, OSV) mirrored into the database, matching services
                        against them, triage; see "Vulnerabilities"
 demo/                  deterministic demo scan data for `db:seed:hosts` (not part of the API build)
@@ -196,6 +197,8 @@ use that same selection, so a retry does not duplicate a host in the scan view.
 - The diff reads only IPs, statuses and fingerprints, so it runs over a whole scan per request; details are loaded for the requested page only. The list's plaintext HTTP summaries come from `httpSummaries()`, without decrypting anything.
 
 **Edits** (`modules/hosts/`, `hosts:update`): `PATCH /hosts/{id}` (note, tags, triage) and `PATCH /hosts/{id}/services/{serviceId}` (the same plus `nameOverride`/`productOverride`/`versionOverride`, `null` clears one). They write the `Host`/`Service` assets, which ingest never touches, so an edit made from any scan shows in every scan and survives later ones (PDF item 14). Triage is `unreviewed | reviewed | important | false_positive`.
+
+**Bulk tags** (`POST /scans/{id}/hosts/tags`, `scans:read` + `hosts:update`): adds or removes one tag on the scan's hosts inside the given IPv4 addresses and CIDRs (`parseHostSelectors`/`selectorRanges` in `contracts/src/hosts/host-selectors.ts`, shared with the dialog). It matches the hosts the scan lists, gone and unknown included, whatever filters the table has. One raw SQL statement updates every matched `Host`; hosts already at `MAX_TAGS` (20) are skipped, so their edit dialog still validates. The response counts `matched`, `changed`, `unchanged` (already had it / never had it) and `limitReached`.
 
 ## Vulnerabilities
 

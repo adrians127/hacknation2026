@@ -13,6 +13,8 @@ import {
   ScanHostListQuerySchema,
   ScanHostListResponseSchema,
   ScanHostParamsSchema,
+  TagScanHostsBodySchema,
+  TagScanHostsResponseSchema,
 } from "./scan-results.schema";
 import { ScanListResponseSchema } from "./scans.schema";
 
@@ -99,6 +101,34 @@ registry.registerPath({
       description: "The host in this scan",
       content: { "application/json": { schema: ScanHostDetailSchema } },
     },
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/scans/{id}/hosts/tags",
+  operationId: "tagScanHosts",
+  summary: "Add a tag to, or remove it from, the scan's hosts in the given addresses and CIDRs",
+  description: [
+    "Requires `scans:read` and `hosts:update`. Matches the hosts the scan lists (gone and unknown",
+    "included). Tags belong to the Host assets, so the change shows in every scan and later scans",
+    "keep it. Hosts that already have the maximum number of tags are skipped.",
+  ].join(" "),
+  tags,
+  security,
+  request: {
+    params: IdParamsSchema,
+    body: { content: { "application/json": { schema: TagScanHostsBodySchema } } },
+  },
+  responses: {
+    200: {
+      description: "How many hosts matched and how many changed",
+      content: { "application/json": { schema: TagScanHostsResponseSchema } },
+    },
+    400: validationFailed,
     401: unauthenticated,
     403: forbidden,
     404: notFound,

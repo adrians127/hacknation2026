@@ -7,8 +7,13 @@ import { z } from "zod";
  */
 export const NonBlankStringSchema = z.string().min(1).regex(/\S/, "Must not be blank");
 
-/** User-assigned labels on inventory items (targets, hosts, services). */
-export const TagsSchema = z.array(NonBlankStringSchema.max(50)).max(20);
+/** One user-assigned label on an inventory item (target, host, service). */
+export const TagSchema = NonBlankStringSchema.max(50);
+
+/** Most tags one item may carry; bulk tagging skips items already at the limit. */
+export const MAX_TAGS = 20;
+
+export const TagsSchema = z.array(TagSchema).max(MAX_TAGS);
 
 /** Machine-readable reason, so the frontend can tell 401/403/409 cases apart and translate them. */
 export const ErrorCodeSchema = z.enum([

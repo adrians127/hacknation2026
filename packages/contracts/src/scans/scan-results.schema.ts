@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { TagSchema } from "../common/common.schema";
+import { HOST_SELECTORS_MAX, HostSelectorSchema } from "../hosts/host-selectors";
 import {
   HttpSummarySchema,
   ServiceIdentitySchema,
@@ -151,6 +153,26 @@ export const ScanHostDetailSchema = ScanHostSchema.extend({
 
 export const ScanHostParamsSchema = z.object({ id: z.uuid(), hostId: z.uuid() });
 
+export const ScanHostTagActionSchema = z.enum(["add", "remove"]);
+
+/** Hosts of the scan list (gone and unknown included) whose address falls in any selector. */
+export const TagScanHostsBodySchema = z.object({
+  action: ScanHostTagActionSchema,
+  tag: TagSchema,
+  selectors: z.array(HostSelectorSchema).min(1).max(HOST_SELECTORS_MAX),
+});
+
+export const TagScanHostsResponseSchema = z.object({
+  /** Hosts of the scan inside the selectors. */
+  matched: CountSchema,
+  /** Got the tag (`add`) or lost it (`remove`). */
+  changed: CountSchema,
+  /** Already had the tag (`add`) or never had it (`remove`). */
+  unchanged: CountSchema,
+  /** `add` only: skipped because the host already has `MAX_TAGS` tags. */
+  limitReached: CountSchema,
+});
+
 export type ScanChange = z.infer<typeof ScanChangeSchema>;
 export type ScanChangeFilter = z.infer<typeof ScanChangeFilterSchema>;
 export type ScanChangeCounts = z.infer<typeof ScanChangeCountsSchema>;
@@ -163,3 +185,6 @@ export type ScanServiceDetail = z.infer<typeof ScanServiceDetailSchema>;
 export type HostHistoryEntry = z.infer<typeof HostHistoryEntrySchema>;
 export type ScanHostDetail = z.infer<typeof ScanHostDetailSchema>;
 export type ScanHostParams = z.infer<typeof ScanHostParamsSchema>;
+export type ScanHostTagAction = z.infer<typeof ScanHostTagActionSchema>;
+export type TagScanHostsBody = z.infer<typeof TagScanHostsBodySchema>;
+export type TagScanHostsResponse = z.infer<typeof TagScanHostsResponseSchema>;

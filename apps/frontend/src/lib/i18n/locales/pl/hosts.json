@@ -132,6 +132,54 @@
     "submit": "Zapisz",
     "submitting": "Zapisywanie…"
   },
+  "bulkTag": {
+    "open": "Otaguj hosty",
+    "title": "Tag dla grupy hostów",
+    "description": "Zmienia hosty z listy tego skanu, których adres mieści się w podanych zakresach. Tag zostaje na hostach, więc widać go w każdym skanie.",
+    "action": {
+      "label": "Akcja",
+      "add": "Dodaj tag",
+      "remove": "Usuń tag"
+    },
+    "selectors": "Adresy i CIDR-y",
+    "selectorsPlaceholder": "10.0.5.0/24, 10.0.6.7",
+    "selectorsHint": "Tylko IPv4. Oddzielaj przecinkami, spacjami lub nowymi liniami.",
+    "selectorsRequired": "Wpisz co najmniej jeden adres lub CIDR",
+    "selectorsInvalid": "To nie jest adres IPv4 ani CIDR: {{list}}",
+    "selectorsTooMany": "Najwyżej {{max}} adresów i CIDR-ów naraz",
+    "tag": "Tag",
+    "tagPlaceholder": "np. dmz",
+    "tagInvalid": "Tag musi mieć od 1 do 50 znaków",
+    "noMatch": "Żaden host tego skanu nie mieści się w tych adresach. Nic nie zmieniono.",
+    "submit": {
+      "add": "Dodaj tag",
+      "remove": "Usuń tag"
+    },
+    "toast": {
+      "add_one": "Dodano tag „{{tag}}” do {{count}} hosta",
+      "add_few": "Dodano tag „{{tag}}” do {{count}} hostów",
+      "add_many": "Dodano tag „{{tag}}” do {{count}} hostów",
+      "add_other": "Dodano tag „{{tag}}” do {{count}} hosta",
+      "remove_one": "Usunięto tag „{{tag}}” z {{count}} hosta",
+      "remove_few": "Usunięto tag „{{tag}}” z {{count}} hostów",
+      "remove_many": "Usunięto tag „{{tag}}” z {{count}} hostów",
+      "remove_other": "Usunięto tag „{{tag}}” z {{count}} hosta",
+      "unchanged": {
+        "add_one": "{{count}} host już go miał",
+        "add_few": "{{count}} hosty już go miały",
+        "add_many": "{{count}} hostów już go miało",
+        "add_other": "{{count}} hosta już go miało",
+        "remove_one": "{{count}} host go nie miał",
+        "remove_few": "{{count}} hosty go nie miały",
+        "remove_many": "{{count}} hostów go nie miało",
+        "remove_other": "{{count}} hosta go nie miało"
+      },
+      "limitReached_one": "Pominięto {{count}} host: ma już {{max}} tagów",
+      "limitReached_few": "Pominięto {{count}} hosty: mają już {{max}} tagów",
+      "limitReached_many": "Pominięto {{count}} hostów: mają już {{max}} tagów",
+      "limitReached_other": "Pominięto {{count}} hosta: mają już {{max}} tagów"
+    }
+  },
   "toast": {
     "hostSaved": "Zapisano hosta",
     "serviceSaved": "Zapisano usługę",

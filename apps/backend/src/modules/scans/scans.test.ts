@@ -2,10 +2,13 @@ import { randomUUID } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { MAX_TAGS } from "@subsurf/contracts/common/common.schema";
 import {
   ScanDetailSchema,
   ScanHostDetailSchema,
   ScanHostListResponseSchema,
+  TagScanHostsResponseSchema,
+  type TagScanHostsBody,
 } from "@subsurf/contracts/scans/scan-results.schema";
 import { ScanListResponseSchema } from "@subsurf/contracts/scans/scans.schema";
 import type { ObservedHost } from "@subsurf/contracts/workers/worker-result.schema";
@@ -15,7 +18,7 @@ import { prisma } from "~backend/lib/prisma";
 import { resultsService } from "~backend/modules/results/results.service";
 import { signInAs } from "~backend/test/auth";
 import { startTestServer, TestClient, type TestServer } from "~backend/test/http";
-import { databaseHost, hostIdOf, ingestScan } from "~backend/test/scans";
+import { databaseHost, hostIdOf, ingestScan, serviceIdOf } from "~backend/test/scans";
 
 let server: TestServer;
 
@@ -207,6 +210,12 @@ describe("GET /scans/{id}/hosts", () => {
     expect(await ips("?q=mysql")).toEqual(["10.0.5.20"]);
     expect(await ips("?q=lab")).toEqual(["10.0.5.8"]);
     expect(await ips("?q=100%25")).toEqual([]);
+    await prisma.service.update({
+      where: { id: await serviceIdOf("10.0.5.7", 22) },
+      data: { productOverride: "Bastion SSH" },
+    });
+    expect(await ips("?q=bastion")).toEqual(["10.0.5.7"]);
+    expect(await ips("?q=ssh&triage=unreviewed")).toEqual(["10.0.5.7", "10.0.5.8"]);
 
     const page = ScanHostListResponseSchema.parse(
       await getJson(client, `/v1/scans/${second}/hosts?page=2&pageSize=1`),
@@ -215,6 +224,28 @@ describe("GET /scans/{id}/hosts", () => {
     expect(page.items.map((host) => host.ip)).toEqual(["10.0.5.8"]);
     expect((await client.get(`/v1/scans/${second}/hosts?change=everything`)).status).toBe(400);
   });
+
+  it("searches a scan with more observations than Postgres takes bind parameters", async () => {
+    const { second } = await twoScans();
+    const { client } = await signInAs(server, { role: "viewer" });
+    // 70,000 more addresses that did not answer (10.1.0.0 onwards).
+    await prisma.$executeRaw`
+      INSERT INTO "HostObservation" (id, "scanId", "resultId", ip, "ipNumber", status)
+      SELECT gen_random_uuid(), r."scanId", r.id,
+             concat_ws('.', 10, 1 + n / 65536, (n / 256) % 256, n % 256), 167837696 + n,
+             'down'::"HostObservationStatus"
+      FROM "ScanJobResult" r CROSS JOIN generate_series(0, 69999) AS n
+      WHERE r."scanId" = ${second}::uuid
+    `;
+    const ips = async (query: string) =>
+      ScanHostListResponseSchema.parse(
+        await getJson(client, `/v1/scans/${second}/hosts${query}`),
+      ).items.map((host) => host.ip);
+
+    expect(await ips("?q=mysql")).toEqual(["10.0.5.20"]);
+    expect(await ips("?q=WIKI")).toEqual(["10.0.5.7"]);
+    expect(await ips("?q=login&triage=unreviewed")).toEqual(["10.0.5.7"]);
+  }, 30_000);
 });
 
 describe("GET /scans/{id}/hosts/{hostId}", () => {
@@ -243,6 +274,122 @@ describe("GET /scans/{id}/hosts/{hostId}", () => {
     // 10.0.5.8 was down in the first scan and is up only in the second.
     expect((await client.get(`/v1/scans/${first}/hosts/${await hostIdOf("10.0.5.8")}`)).status).toBe(404);
     expect((await client.get(`/v1/scans/${first}/hosts/${randomUUID()}`)).status).toBe(404);
+  });
+});
+
+async function tag(client: TestClient, scanId: string, body: TagScanHostsBody) {
+  const res = await client.post(`/v1/scans/${scanId}/hosts/tags`, { body });
+  expect(res.status).toBe(200);
+  return TagScanHostsResponseSchema.parse(await res.json());
+}
+
+const tagsOf = async (ip: string) => (await prisma.host.findUniqueOrThrow({ where: { ip } })).tags;
+
+// The second scan lists 10.0.5.7 (changed), 10.0.5.8 (new) and 10.0.5.20 (gone).
+describe("POST /scans/{id}/hosts/tags", () => {
+  it("adds the tag to the scan's hosts inside the selectors, gone hosts included", async () => {
+    const { first, second } = await twoScans();
+    const { client } = await signInAs(server, { role: "analyst" });
+    await prisma.host.update({ where: { ip: "10.0.5.7" }, data: { tags: ["wiki"] } });
+
+    const body: TagScanHostsBody = { action: "add", tag: " dmz ", selectors: ["10.0.5.0/29", "10.0.5.20"] };
+    expect(await tag(client, second, body)).toEqual({
+      matched: 2,
+      changed: 2,
+      unchanged: 0,
+      limitReached: 0,
+    });
+
+    expect(await tagsOf("10.0.5.7")).toEqual(["wiki", "dmz"]);
+    expect(await tagsOf("10.0.5.20")).toEqual(["dmz"]);
+    expect(await tagsOf("10.0.5.8")).toEqual([]);
+    // Tags are on the Host asset, so the earlier scan shows them too (PDF item 14).
+    const { items } = ScanHostListResponseSchema.parse(
+      await getJson(client, `/v1/scans/${first}/hosts`),
+    );
+    expect(items.find((host) => host.ip === "10.0.5.7")?.tags).toEqual(["wiki", "dmz"]);
+
+    expect(await tag(client, second, body)).toEqual({
+      matched: 2,
+      changed: 0,
+      unchanged: 2,
+      limitReached: 0,
+    });
+  });
+
+  it("skips hosts that already have the most tags allowed", async () => {
+    const { second } = await twoScans();
+    const { client } = await signInAs(server, { role: "editor" });
+    const full = Array.from({ length: MAX_TAGS }, (_, index) => `tag-${index}`);
+    await prisma.host.update({ where: { ip: "10.0.5.8" }, data: { tags: full } });
+
+    expect(await tag(client, second, { action: "add", tag: "dmz", selectors: ["10.0.5.0/24"] })).toEqual({
+      matched: 3,
+      changed: 2,
+      unchanged: 0,
+      limitReached: 1,
+    });
+    expect(await tagsOf("10.0.5.8")).toEqual(full);
+  });
+
+  it("removes the tag and counts the hosts that did not have it", async () => {
+    const { second } = await twoScans();
+    const { client } = await signInAs(server, { role: "analyst" });
+    await prisma.host.update({ where: { ip: "10.0.5.7" }, data: { tags: ["dmz", "wiki"] } });
+    await prisma.host.update({ where: { ip: "10.0.5.20" }, data: { tags: ["dmz"] } });
+
+    const body: TagScanHostsBody = { action: "remove", tag: "dmz", selectors: ["10.0.5.0/24"] };
+    expect(await tag(client, second, body)).toEqual({
+      matched: 3,
+      changed: 2,
+      unchanged: 1,
+      limitReached: 0,
+    });
+    expect(await tagsOf("10.0.5.7")).toEqual(["wiki"]);
+    expect(await tagsOf("10.0.5.20")).toEqual([]);
+  });
+
+  it("matches nothing outside the scan's hosts", async () => {
+    const { first } = await twoScans();
+    const { client } = await signInAs(server, { role: "analyst" });
+
+    // 10.0.5.8 was down in the first scan: it is not one of that scan's hosts.
+    const body: TagScanHostsBody = { action: "add", tag: "dmz", selectors: ["10.0.5.8", "192.168.0.0/16"] };
+    expect(await tag(client, first, body)).toEqual({
+      matched: 0,
+      changed: 0,
+      unchanged: 0,
+      limitReached: 0,
+    });
+    expect(await tagsOf("10.0.5.8")).toEqual([]);
+  });
+
+  it("rejects invalid input and unknown scans", async () => {
+    const { second } = await twoScans();
+    const { client } = await signInAs(server, { role: "analyst" });
+    const post = (scanId: string, body: unknown) =>
+      client.post(`/v1/scans/${scanId}/hosts/tags`, { body });
+
+    expect((await post(second, { action: "add", tag: "dmz", selectors: ["foo"] })).status).toBe(400);
+    expect((await post(second, { action: "add", tag: "dmz", selectors: [] })).status).toBe(400);
+    expect((await post(second, { action: "add", tag: "  ", selectors: ["10.0.5.7"] })).status).toBe(400);
+    expect((await post(second, { action: "drop", tag: "dmz", selectors: ["10.0.5.7"] })).status).toBe(
+      400,
+    );
+    const valid = { action: "add", tag: "dmz", selectors: ["10.0.5.7"] };
+    expect((await post(randomUUID(), valid)).status).toBe(404);
+  });
+
+  it("lets only roles with hosts:update tag", async () => {
+    const { second } = await twoScans();
+    const path = `/v1/scans/${second}/hosts/tags`;
+    const edit = { body: { action: "add", tag: "dmz", selectors: ["10.0.5.7"] } };
+
+    expect((await new TestClient(server.baseUrl).post(path, edit)).status).toBe(401);
+    for (const role of ["admin", "editor", "analyst", "viewer"] as const) {
+      const { client } = await signInAs(server, { role });
+      expect((await client.post(path, edit)).status).toBe(role === "viewer" ? 403 : 200);
+    }
   });
 });
 
