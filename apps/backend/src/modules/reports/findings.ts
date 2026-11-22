@@ -5,6 +5,11 @@ import type {
   PrioritizedHost,
   SeverityCounts,
 } from "@subsurf/contracts/reports/reports.schema";
+import type {
+  SignatureCategory,
+  SignatureEvidence,
+  SignatureRef,
+} from "@subsurf/contracts/signatures/detection.schema";
 import type { HttpEndpoint } from "@subsurf/contracts/workers/worker-result.schema";
 
 import { headerValues, type ReportHost, type ReportService } from "~backend/modules/reports/report-data";
@@ -26,6 +31,8 @@ export const RULE_SEVERITY: Record<FindingRule, FindingSeverity> = {
   "default-page": "low",
   "missing-security-headers": "info",
   "version-disclosure": "info",
+  // Signatures rate their own findings; this is only the fallback.
+  signature: "medium",
 };
 
 const SEVERITY_WEIGHT: Record<FindingSeverity, number> = { high: 10, medium: 5, low: 2, info: 0.5 };
@@ -81,38 +88,6 @@ const REMOTE_ACCESS_SERVICES = new Map([
   ["microsoft-ds", "SMB"],
 ]);
 
-const ADMIN_TITLES: readonly RegExp[] = [
-  /phpmyadmin/i,
-  /\[jenkins\]/i,
-  /^grafana$/i,
-  /^zabbix/i,
-  /gitlab/i,
-  /^elastic$|kibana/i,
-  /routeros|mikrotik/i,
-  /idrac|ilo\b|integrated lights-out/i,
-  /synology diskstation/i,
-  /webmin|portainer|pfsense|proxmox|cpanel|plesk/i,
-  /\badmin(istration|istrator)?\b|panel administracyjny/i,
-];
-const ADMIN_PROBES: ReadonlyMap<string, readonly number[]> = new Map([
-  ["/manager/html", [200, 401, 403]],
-  ["/wp-login.php", [200]],
-  ["/administrator/", [200]],
-  ["/phpmyadmin/", [200, 401]],
-]);
-const DEBUG_TITLES: readonly RegExp[] = [
-  /page not found at \//i,
-  /disallowedhost|traceback|stack trace|whoops!|phpinfo\(\)/i,
-  /swagger ui|api documentation|graphiql/i,
-  /\[staging\]|\bstaging\b/i,
-];
-const DEFAULT_TITLES: readonly RegExp[] = [
-  /^welcome to nginx!?$/i,
-  /apache2 (ubuntu|debian) default page/i,
-  /^iis windows server$/i,
-  /test page for the (apache|nginx)/i,
-  /^it works!?$/i,
-];
 const LOGIN_TITLES = /log ?in|sign ?in|logowanie|zaloguj|log on|anmelden/i;
 const SESSION_COOKIE = /sess|sid|token|auth|login|csrf/i;
 const WEAK_TLS = new Set(["SSLv3", "TLSv1", "TLSv1.0", "TLSv1.1"]);
@@ -199,29 +174,8 @@ function endpointHits(endpoint: HttpEndpoint, now: Date): Hit[] {
   const title = endpoint.title ?? "";
   const at = endpoint.url;
 
-  if (title && ADMIN_TITLES.some((pattern) => pattern.test(title))) hits.push(["admin-panel", `"${title}" at ${at}`]);
-  for (const probe of endpoint.probes) {
-    const statuses = ADMIN_PROBES.get(probe.path);
-    if (statuses && probe.statusCode !== null && statuses.includes(probe.statusCode)) {
-      hits.push(["admin-panel", `${probe.path} answers ${probe.statusCode} at ${at}`]);
-    }
-    if (probe.path === "/server-status" && probe.statusCode === 200) {
-      hits.push(["debug-or-staging", `/server-status is public at ${at}`]);
-    }
-  }
-  const realm = headerValues(endpoint, "www-authenticate").find((value) => /level_15|admin/i.test(value));
-  if (realm) hits.push(["admin-panel", `www-authenticate: ${realm} at ${at}`]);
-
-  if (title && DEBUG_TITLES.some((pattern) => pattern.test(title))) hits.push(["debug-or-staging", `"${title}" at ${at}`]);
-  for (const value of headerValues(endpoint, "x-environment")) {
-    if (/stag|dev|test|uat|qa/i.test(value)) hits.push(["debug-or-staging", `x-environment: ${value} at ${at}`]);
-  }
-  for (const header of endpoint.headers) {
-    if (/^x-debug/i.test(header.name)) hits.push(["debug-or-staging", `${header.name}: ${header.value} at ${at}`]);
-  }
-
+  // Admin panels, staging, debug and default pages are detection signatures (signatureHits).
   if (/^(index of \/|directory listing for)/i.test(title)) hits.push(["directory-listing", `"${title}" at ${at}`]);
-  if (title && DEFAULT_TITLES.some((pattern) => pattern.test(title))) hits.push(["default-page", `"${title}" at ${at}`]);
 
   const loginPage =
     (title && LOGIN_TITLES.test(title)) ||
@@ -278,18 +232,74 @@ function endpointHits(endpoint: HttpEndpoint, now: Date): Hit[] {
   return hits;
 }
 
-/** One finding per rule and service; evidence from several endpoints is joined. */
-export function findingsFor(service: ReportService, now: Date): Finding[] {
-  const hits = [...portHits(service), ...service.details.http.flatMap((endpoint) => endpointHits(endpoint, now))];
-  const byRule = new Map<FindingRule, string[]>();
-  for (const [rule, evidence] of hits) {
-    const list = byRule.get(rule) ?? [];
-    if (!list.includes(evidence)) list.push(evidence);
-    byRule.set(rule, list);
+/** The finding rule a signature's category reports under; others get one `signature` finding each. */
+const RULE_OF_CATEGORY: Partial<Record<SignatureCategory, FindingRule>> = {
+  "admin-panel": "admin-panel",
+  staging: "debug-or-staging",
+  "default-page": "default-page",
+};
+
+function evidenceText({ target, url, key, value }: SignatureEvidence): string {
+  const at = url ? ` at ${url}` : "";
+  switch (target) {
+    case "title":
+      return `"${value}"${at}`;
+    case "probe":
+      return `${key} answers ${value}${at}`;
+    case "cookie":
+      return `cookie ${value}${at}`;
+    case "favicon":
+      return `favicon ${value}${at}`;
+    default:
+      return `${key ? `${key}: ` : ""}${value}${at}`;
   }
-  return [...byRule].map(([rule, evidence]) => ({
+}
+
+interface RatedHit {
+  rule: FindingRule;
+  evidence: string;
+  severity: FindingSeverity;
+  signature: SignatureRef | null;
+}
+
+/** Signatures with a severity are findings; the ones that only identify something are not. */
+function signatureHits(service: ReportService): RatedHit[] {
+  return service.detections.flatMap(({ signature, evidence }) => {
+    if (signature.severity === null) return [];
+    const ref = { id: signature.id, key: signature.key, name: signature.name };
+    const rule = RULE_OF_CATEGORY[signature.category] ?? "signature";
+    return evidence.map((item) => ({ rule, evidence: evidenceText(item), severity: signature.severity!, signature: ref }));
+  });
+}
+
+const SEVERITY_RANK: Record<FindingSeverity, number> = { high: 3, medium: 2, low: 1, info: 0 };
+
+/** One finding per rule and service (per signature for `signature`); evidence of several endpoints is joined. */
+export function findingsFor(service: ReportService, now: Date): Finding[] {
+  const hits: RatedHit[] = [
+    ...[...portHits(service), ...service.details.http.flatMap((endpoint) => endpointHits(endpoint, now))].map(
+      ([rule, evidence]) => ({ rule, evidence, severity: RULE_SEVERITY[rule], signature: null }),
+    ),
+    ...signatureHits(service),
+  ];
+  interface Group {
+    rule: FindingRule;
+    severity: FindingSeverity;
+    evidence: string[];
+    signatures: Map<string, SignatureRef>;
+  }
+  const groups = new Map<string, Group>();
+  for (const hit of hits) {
+    const key = hit.rule === "signature" ? `signature:${hit.signature?.id}` : hit.rule;
+    const group: Group = groups.get(key) ?? { rule: hit.rule, severity: hit.severity, evidence: [], signatures: new Map() };
+    if (!group.evidence.includes(hit.evidence)) group.evidence.push(hit.evidence);
+    if (SEVERITY_RANK[hit.severity] > SEVERITY_RANK[group.severity]) group.severity = hit.severity;
+    if (hit.signature) group.signatures.set(hit.signature.id, hit.signature);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map(({ rule, severity, evidence, signatures }) => ({
     rule,
-    severity: RULE_SEVERITY[rule],
+    severity,
     hostId: service.hostId,
     serviceId: service.serviceId,
     ip: service.ip,
@@ -297,6 +307,7 @@ export function findingsFor(service: ReportService, now: Date): Finding[] {
     evidence:
       evidence.slice(0, MAX_EVIDENCE).join("; ") +
       (evidence.length > MAX_EVIDENCE ? ` (+${evidence.length - MAX_EVIDENCE})` : ""),
+    signatures: [...signatures.values()],
   }));
 }
 

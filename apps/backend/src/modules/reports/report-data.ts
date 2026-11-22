@@ -12,6 +12,11 @@ import type { Scan as ScanRow } from "~backend/generated/prisma/client";
 import { toServiceRemediation } from "~backend/modules/defectdojo/defectdojo.mapper";
 import { openPortDetails, type PortDetails } from "~backend/modules/results/details";
 import {
+  evaluateService,
+  type CompiledSignature,
+  type ServiceDetection,
+} from "~backend/modules/signatures/signature-engine";
+import {
   hostnames,
   resolveServices,
   type HostInScan,
@@ -41,6 +46,8 @@ export interface ReportService {
   triage: TriageStatus;
   tags: string[];
   remediation: ServiceRemediation | null;
+  /** The enabled signatures that match it, evaluated with the report (never stale). */
+  detections: ServiceDetection[];
 }
 
 export interface ReportHost {
@@ -78,8 +85,10 @@ export function toReportService(
   port: PortRow,
   change: ScanChange | null,
   present: boolean,
+  signatures: readonly CompiledSignature[] = [],
 ): ReportService {
   const observed = observedIdentity(port);
+  const details = openPortDetails(port.details);
   return {
     serviceId: service.id,
     hostId: host.id,
@@ -95,15 +104,24 @@ export function toReportService(
     observed,
     extraInfo: port.serviceExtraInfo,
     cpe: port.serviceCpe,
-    details: openPortDetails(port.details),
+    details,
     fingerprint: port.fingerprint,
     triage: service.triage,
     tags: service.tags,
     remediation: toServiceRemediation(service),
+    detections: evaluateService(signatures, {
+      port: service.port,
+      service: { ...observed, extraInfo: port.serviceExtraInfo, cpe: port.serviceCpe },
+      banner: details.banner,
+      http: details.http,
+    }),
   };
 }
 
-export function toReportHosts(entries: readonly HostInScan[]): ReportHost[] {
+export function toReportHosts(
+  entries: readonly HostInScan[],
+  signatures: readonly CompiledSignature[] = [],
+): ReportHost[] {
   return entries.map((entry) => {
     const isUp = entry.current.status === "up";
     return {
@@ -116,7 +134,7 @@ export function toReportHosts(entries: readonly HostInScan[]): ReportHost[] {
       triage: entry.host.triage,
       tags: entry.host.tags,
       services: resolveServices(entry).map(({ diff, service, port }) =>
-        toReportService(entry.host, service, port, diff.change, isUp && diff.observedIn === "current"),
+        toReportService(entry.host, service, port, diff.change, isUp && diff.observedIn === "current", signatures),
       ),
     };
   });

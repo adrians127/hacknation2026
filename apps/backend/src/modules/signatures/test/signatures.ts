@@ -4,6 +4,24 @@ import type {
 } from "@subsurf/contracts/signatures/signatures.schema";
 
 import { prisma } from "~backend/lib/prisma";
+import { BUILT_IN_SIGNATURES } from "~backend/modules/signatures/builtin-signatures";
+import { compileSignature } from "~backend/modules/signatures/signature-engine";
+
+/** The built-ins compiled without a database, with their key as id (pure tests). */
+export const COMPILED_BUILT_INS = BUILT_IN_SIGNATURES.map((builtIn) =>
+  compileSignature(
+    {
+      id: builtIn.key,
+      key: builtIn.key,
+      name: builtIn.name,
+      category: builtIn.category,
+      product: builtIn.product,
+      severity: builtIn.severity,
+      confidence: builtIn.confidence,
+    },
+    builtIn.definition,
+  ),
+);
 
 /** Matches the example result's wiki page (`x-powered-by: PHP/8.1.2`). */
 export const POWERED_BY_PHP: SignatureDefinition = {

@@ -8,6 +8,7 @@ import {
   ScanDetailSchema,
 } from "../scans/scan-results.schema";
 import { ScanStatusSchema } from "../scans/scans.schema";
+import { SignatureRefSchema } from "../signatures/detection.schema";
 import { HostStatusSchema } from "../workers/worker-result.schema";
 
 // Read-only reports built from stored scan results (modules/reports in the backend).
@@ -52,6 +53,8 @@ export const FindingRuleSchema = z.enum([
   "default-page",
   "missing-security-headers",
   "version-disclosure",
+  /** A detection signature with a severity whose category has no rule above (one finding each). */
+  "signature",
 ]);
 
 export const FindingSchema = z.object({
@@ -63,6 +66,8 @@ export const FindingSchema = z.object({
   port: z.number().int(),
   /** What matched, e.g. a header, a title or a certificate date. Not translated. */
   evidence: z.string(),
+  /** The detection signatures (`/signatures`) that raised it; empty for the built-in analyses. */
+  signatures: z.array(SignatureRefSchema),
 });
 
 export const SeverityCountsSchema = z.object({
@@ -117,6 +122,8 @@ export const TechnologySourceSchema = z.enum([
   "cookie",
   "title",
   "probe",
+  "favicon",
+  "banner",
 ]);
 
 export const TechnologyConfidenceSchema = z.enum(["high", "medium", "low"]);
@@ -129,6 +136,8 @@ export const TechnologyInstanceSchema = z.object({
   version: z.string().nullable(),
   sources: z.array(TechnologySourceSchema),
   confidence: TechnologyConfidenceSchema,
+  /** The detection signatures (`/signatures`) that recognised it; empty when only nmap or headers did. */
+  signatures: z.array(SignatureRefSchema),
 });
 
 export const TechnologySchema = z.object({

@@ -6,16 +6,24 @@ import type {
   TechnologyInstance,
   TechnologySource,
 } from "@subsurf/contracts/reports/reports.schema";
+import {
+  SIGNATURE_TECHNOLOGY_CATEGORIES,
+  type SignatureRef,
+  type SignatureTarget,
+} from "@subsurf/contracts/signatures/detection.schema";
 import type { HttpEndpoint } from "@subsurf/contracts/workers/worker-result.schema";
 
 import { generators } from "~backend/modules/reports/findings";
 import { headerValues, type ReportService } from "~backend/modules/reports/report-data";
+import { maxConfidence } from "~backend/modules/signatures/signature-engine";
 
 interface Detection {
   name: string;
   category: TechnologyCategory;
   version: string | null;
   source: TechnologySource;
+  /** Set when a detection signature found it; its own confidence is the least the technology gets. */
+  signature?: SignatureRef & { confidence: TechnologyConfidence };
 }
 
 interface Known {
@@ -121,50 +129,7 @@ function nameAndVersion(value: string, source: TechnologySource, fallback: Techn
   return match ? detect(match[1] ?? trimmed, match[2] ?? null, source, fallback) : detect(trimmed, null, source, fallback);
 }
 
-const COOKIES: readonly [RegExp, string][] = [
-  [/^phpsessid$/i, "php"],
-  [/^jsessionid/i, "servlet"],
-  [/^asp\.net_sessionid$/i, "asp.net"],
-  [/^laravel_session$/i, "laravel"],
-  [/^csrftoken$/i, "django"],
-  [/^(wordpress_|wp-settings)/i, "wordpress"],
-  [/^moodlesession/i, "moodle"],
-  [/^_gitlab_session$/i, "gitlab"],
-  [/^roundcube_sessid$/i, "roundcube"],
-  [/^zbx_session$/i, "zabbix"],
-  [/^grafana_session$/i, "grafana"],
-  [/^nc_session_id$|^oc_sessionpassphrase$/i, "nextcloud"],
-];
-
-const TITLES: readonly [RegExp, string, RegExp?][] = [
-  [/phpmyadmin/i, "phpmyadmin"],
-  [/^grafana$/i, "grafana"],
-  [/^zabbix/i, "zabbix"],
-  [/^nextcloud/i, "nextcloud"],
-  [/^swagger ui$/i, "swagger ui"],
-  [/synology diskstation/i, "synology diskstation"],
-  [/idrac/i, "idrac", /idrac\s?(\d+)/i],
-  [/\[jenkins\]/i, "jenkins"],
-  [/gitlab/i, "gitlab"],
-  [/roundcube webmail/i, "roundcube"],
-  [/routeros/i, "routeros", /routeros v?(\d[\d.]*)/i],
-  [/^apache tomcat/i, "apache tomcat", /tomcat\/(\d[\d.]*)/i],
-  [/: log in to the site$/i, "moodle"],
-  [/^iis windows server$/i, "microsoft-iis"],
-  [/^welcome to nginx!?$/i, "nginx"],
-  [/apache2 (ubuntu|debian) default page/i, "apache"],
-];
-
-const HEADER_MARKERS: readonly [string, string, boolean][] = [
-  ["x-drupal-cache", "drupal", false],
-  ["x-drupal-dynamic-cache", "drupal", false],
-  ["x-jenkins", "jenkins", true],
-  ["x-gitlab-meta", "gitlab", false],
-  ["kbn-name", "kibana", false],
-  ["kbn-version", "kibana", true],
-  ["x-elastic-product", "elasticsearch", false],
-];
-
+/** What the software headers and the generator tag name; specific fingerprints are signatures. */
 function endpointDetections(endpoint: HttpEndpoint): Detection[] {
   const found: Detection[] = [];
   for (const value of headerValues(endpoint, "server")) found.push(...serverTokens(value));
@@ -173,32 +138,38 @@ function endpointDetections(endpoint: HttpEndpoint): Detection[] {
   }
   for (const value of headerValues(endpoint, "x-aspnet-version")) found.push(detect("asp.net", value, "header", "framework"));
   for (const value of headerValues(endpoint, "x-generator")) found.push(nameAndVersion(value, "header", "cms"));
-  for (const [header, name, isVersion] of HEADER_MARKERS) {
-    for (const value of headerValues(endpoint, header)) {
-      found.push(detect(name, isVersion ? value : null, "header", "application"));
-    }
-  }
   for (const value of generators(endpoint)) found.push(nameAndVersion(value, "meta-generator", "cms"));
-
-  const content = endpoint.body?.content ?? "";
-  if (/\/wp-(content|includes)\//i.test(content)) found.push(detect("wordpress", null, "body", "cms"));
-  if (/\/media\/jui\/|\/media\/system\/js\/core\.js/i.test(content)) found.push(detect("joomla", null, "body", "cms"));
-  if (/drupal-settings-json|\/sites\/default\/files\//i.test(content)) found.push(detect("drupal", null, "body", "cms"));
-
-  for (const cookie of endpoint.cookies) {
-    const match = COOKIES.find(([pattern]) => pattern.test(cookie.name));
-    if (match) found.push(detect(match[1], null, "cookie", "framework"));
-  }
-  const title = endpoint.title ?? "";
-  for (const [pattern, name, versionPattern] of TITLES) {
-    if (pattern.test(title)) found.push(detect(name, versionPattern?.exec(title)?.[1] ?? null, "title", "application"));
-  }
-  for (const probe of endpoint.probes) {
-    if (probe.path === "/wp-login.php" && probe.statusCode === 200) found.push(detect("wordpress", null, "probe", "cms"));
-    if (probe.path === "/manager/html" && probe.statusCode === 401) found.push(detect("apache tomcat", null, "probe", "application"));
-    if (probe.path === "/server-status" && probe.title === "Apache Status") found.push(detect("apache", null, "probe", "web-server"));
-  }
   return found;
+}
+
+const SOURCE_OF: Record<SignatureTarget, TechnologySource | null> = {
+  header: "header",
+  cookie: "cookie",
+  title: "title",
+  body: "body",
+  favicon: "favicon",
+  probe: "probe",
+  banner: "banner",
+  service: "service-detection",
+  port: null,
+};
+
+const TECHNOLOGY_CATEGORIES = new Set<string>(SIGNATURE_TECHNOLOGY_CATEGORIES);
+const isTechnologyCategory = (category: string): category is TechnologyCategory => TECHNOLOGY_CATEGORIES.has(category);
+
+/** Signatures that name a technology (`product`), one detection per kind of evidence. */
+function signatureDetections(service: ReportService): Detection[] {
+  return service.detections.flatMap((detection) => {
+    const { signature, sources, version } = detection;
+    if (signature.product === null) return [];
+    const technology = lookup(signature.product, "application");
+    const category = isTechnologyCategory(signature.category) ? signature.category : technology.category;
+    const ref = { id: signature.id, key: signature.key, name: signature.name, confidence: detection.confidence };
+    return sources.flatMap((target) => {
+      const source = SOURCE_OF[target];
+      return source === null ? [] : [{ name: technology.name, category, version, source, signature: ref }];
+    });
+  });
 }
 
 function serviceDetections(service: ReportService): Detection[] {
@@ -209,10 +180,10 @@ function serviceDetections(service: ReportService): Detection[] {
     const alias = ALIASES.get(product.toLowerCase());
     found.push(alias ? { ...alias, version, source: "service-detection" } : { name: product, category, version, source: "service-detection" });
   }
-  return [...found, ...service.details.http.flatMap(endpointDetections)];
+  return [...found, ...service.details.http.flatMap(endpointDetections), ...signatureDetections(service)];
 }
 
-const EXPLICIT_SOURCES = new Set<TechnologySource>(["service-detection", "header", "meta-generator"]);
+const EXPLICIT_SOURCES = new Set<TechnologySource>(["service-detection", "header", "meta-generator", "favicon", "banner"]);
 
 function confidence(sources: ReadonlySet<TechnologySource>): TechnologyConfidence {
   if (sources.size >= 2) return "high";
@@ -232,12 +203,24 @@ export interface ServiceTechnology {
 
 /** What runs on one service, one entry per technology. */
 export function technologiesOf(service: ReportService): ServiceTechnology[] {
-  const merged = new Map<string, { category: TechnologyCategory; versions: (string | null)[]; sources: Set<TechnologySource> }>();
+  interface Entry {
+    category: TechnologyCategory;
+    versions: (string | null)[];
+    sources: Set<TechnologySource>;
+    signatures: Map<string, SignatureRef & { confidence: TechnologyConfidence }>;
+  }
+  const merged = new Map<string, Entry>();
   for (const detection of serviceDetections(service)) {
     if (!/[a-z]/i.test(detection.name)) continue;
-    const entry = merged.get(detection.name) ?? { category: detection.category, versions: [], sources: new Set() };
+    const entry: Entry = merged.get(detection.name) ?? {
+      category: detection.category,
+      versions: [],
+      sources: new Set(),
+      signatures: new Map(),
+    };
     entry.versions.push(detection.version);
     entry.sources.add(detection.source);
+    if (detection.signature) entry.signatures.set(detection.signature.id, detection.signature);
     merged.set(detection.name, entry);
   }
   return [...merged].map(([name, entry]) => ({
@@ -250,7 +233,15 @@ export function technologiesOf(service: ReportService): ServiceTechnology[] {
       port: service.port,
       version: bestVersion(entry.versions),
       sources: [...entry.sources].toSorted(),
-      confidence: confidence(entry.sources),
+      confidence: maxConfidence(
+        confidence(entry.sources),
+        ...[...entry.signatures.values()].map((signature) => signature.confidence),
+      ),
+      signatures: [...entry.signatures.values()].map((signature) => ({
+        id: signature.id,
+        key: signature.key,
+        name: signature.name,
+      })),
     },
   }));
 }

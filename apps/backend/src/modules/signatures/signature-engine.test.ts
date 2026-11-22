@@ -72,6 +72,8 @@ const cookie = (name: string) => ({
   expires: null,
 });
 
+const icon = (mmh3: number) => ({ url: "http://10.0.0.1/favicon.ico", mmh3, sha256: SHA });
+
 const adminTitle = (caseSensitive: boolean): SignatureDefinition => ({
   match: "all",
   conditions: [{ target: "title", value: { op: "equals", value: "admin", caseSensitive } }],
@@ -270,7 +272,6 @@ describe("built-in signatures", () => {
   it("recognise the services of docker/lab as measured there", () => {
     const keys = (http: HttpEndpoint[], extra: Partial<SignatureInput> = {}) =>
       evaluateService(compiled, input({ http, ...extra })).map((detection) => detection.signature.id);
-    const icon = (mmh3: number) => ({ url: "http://10.0.0.1/favicon.ico", mmh3, sha256: SHA });
 
     expect(keys([endpoint({ title: null, cookies: [cookie("security")], favicon: icon(-231109625) })])).toContain("dvwa");
     expect(keys([endpoint({ title: "RabbitMQ Management", favicon: icon(-1015107330) })])).toEqual(

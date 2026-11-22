@@ -7,6 +7,8 @@ import { findingsFor } from "~backend/modules/reports/findings";
 import { classify, dayPeriod } from "~backend/modules/reports/history-reports";
 import type { ReportService } from "~backend/modules/reports/report-data";
 import { technologiesOf } from "~backend/modules/reports/technologies";
+import { evaluateService } from "~backend/modules/signatures/signature-engine";
+import { COMPILED_BUILT_INS } from "~backend/modules/signatures/test/signatures";
 
 const NOW = new Date("2026-11-22T12:00:00Z");
 const SHA = "a".repeat(64);
@@ -31,8 +33,9 @@ function endpoint(overrides: Partial<HttpEndpoint> = {}): HttpEndpoint {
   };
 }
 
+/** A service as reports see it, with the built-in signatures' detections unless given. */
 function service(overrides: Partial<ReportService> = {}): ReportService {
-  return {
+  const base: Omit<ReportService, "detections"> = {
     serviceId: "00000000-0000-7000-8000-000000000001",
     hostId: "00000000-0000-7000-8000-000000000002",
     ip: "10.0.0.1",
@@ -56,6 +59,17 @@ function service(overrides: Partial<ReportService> = {}): ReportService {
     tags: [],
     remediation: null,
     ...overrides,
+  };
+  return {
+    ...base,
+    detections:
+      overrides.detections ??
+      evaluateService(COMPILED_BUILT_INS, {
+        port: base.port,
+        service: { ...base.observed, extraInfo: base.extraInfo, cpe: base.cpe },
+        banner: base.details.banner,
+        http: base.details.http,
+      }),
   };
 }
 
