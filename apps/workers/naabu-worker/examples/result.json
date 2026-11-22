@@ -66,6 +66,7 @@
           },
           "banner": null,
           "scripts": [],
+          "tls": [],
           "http": []
         }
       ]

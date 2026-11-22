@@ -1,6 +1,6 @@
 # apps/workers
 
-One directory is one worker: `apps/workers/<name>/`. Masscan, Nmap and httpx wrappers use C++23; Naabu uses Python 3.
+One directory is one worker: `apps/workers/<name>/`. Masscan, Nmap and httpx wrappers use C++23; Naabu and TLSX use Python 3.
 
 This directory is **not a pnpm workspace** (it has no `package.json`), so turbo skips it and `pnpm build` does not need a local C++ compiler. Workers are built and run in Docker (`pnpm workers:build` and `pnpm workers:masscan` for masscan-worker, `pnpm workers:manager` for worker-manager).
 
@@ -8,6 +8,7 @@ This directory is **not a pnpm workspace** (it has no `package.json`), so turbo 
 |---|---|
 | [`nmap-worker`](nmap-worker/README.md) | TCP service and version detection on address ranges or on Masscan hits (host objects with their own ports) |
 | [`httpx-worker`](httpx-worker/README.md) | HTTP/HTTPS probing on assigned IPv4 addresses, ports and domains; enriches the shared result with web response data |
+| [`tlsx-worker`](tlsx-worker/README.md) | TLS handshake and certificate collection on assigned IPv4 addresses, ports and SNI names, without HTTP probing |
 | [`worker-manager`](worker-manager/README.md) | Orchestrator, not a worker: takes a job list from a file or long-polled from the backend (`--poll`), splits it into tasks, runs the workers (in parallel where their IP:ports do not overlap, in pipeline order where they do), saves their results to files and, with `--poll`, uploads each one to the backend |
 | [`masscan-worker`](masscan-worker/README.md) | High-speed TCP SYN sweep across subnets or all 65,535 ports via masscan. JSON job in, JSON list of live hosts out |
 | [`naabu-worker`](naabu-worker/README.md) | Alternative TCP discovery sweep via Naabu. Same job and result shape as masscan-worker; supports connect and SYN scans |
@@ -25,7 +26,7 @@ Every worker reads the same job JSON and writes the same result JSON, so worker-
 | `exclude` | `[]` | Same formats as `targets`, subtracted before scanning |
 | `ports` | `"1-65535"` | TCP ports: `"22,80,8000-8100"` or `[22, "8000-8100"]` |
 | `rate` | worker's default | Packets per second for the whole job |
-| `max_duration_seconds` | none | Time window, 1 to 604800 (required by nmap-worker) |
+| `max_duration_seconds` | none | Time window, 1 to 604800 (required by nmap-worker, httpx-worker and tlsx-worker) |
 
 Worker-specific settings are more flat snake_case fields (masscan's `wait_seconds`, nmap's `host_timeout_ms`, …), described in the worker's README. Validation errors use the same wording in every worker.
 
@@ -51,7 +52,7 @@ worker-manager in `--poll` mode leases whole job lists instead: it long-polls `P
 
 ## Result format (locked)
 
-What a worker returns for a job is fixed in [`docs/worker-result-format.md`](../../docs/worker-result-format.md): a `{ scan, hosts[] }` document with every address of the job, its open ports and service detection where available. The backend builds scan-data features on it. `nmap-worker` fills port and service observations; `httpx-worker` fills HTTP response observations. TLS certificate and favicon mapping are still pending.
+What a worker returns for a job is fixed in [`docs/worker-result-format.md`](../../docs/worker-result-format.md): a `{ scan, hosts[] }` document with every address of the job, its open ports and service detection where available. The backend builds scan-data features on it. `nmap-worker` fills port and service observations, `httpx-worker` fills HTTP response observations, and `tlsx-worker` fills port-level TLS observations without creating HTTP endpoints. Favicon mapping is still pending.
 
 ## Scan jobs in the database
 

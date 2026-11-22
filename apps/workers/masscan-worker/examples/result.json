@@ -66,6 +66,7 @@
           },
           "banner": null,
           "scripts": [],
+          "tls": [],
           "http": []
         },
         {
@@ -81,6 +82,7 @@
           },
           "banner": null,
           "scripts": [],
+          "tls": [],
           "http": []
         }
       ]
@@ -107,6 +109,7 @@
           },
           "banner": null,
           "scripts": [],
+          "tls": [],
           "http": []
         }
       ]

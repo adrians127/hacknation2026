@@ -49,6 +49,12 @@ const changedPage: Record<string, (port: OpenPort) => void> = {
   "a security header": (port) => {
     port.http[0].headers.push({ name: "strict-transport-security", value: "max-age=600" });
   },
+  "a TLS-only certificate": (port) => {
+    port.tls = [{ vhost: null, version: "tls13", cipher: "TLS_AES_128_GCM_SHA256",
+      alpn: null, cert: { subjectCn: null, san: [], issuer: null, notBefore: null,
+        notAfter: null, serial: null, sha256: "a".repeat(64), selfSigned: null,
+        keyAlgorithm: null, keyBits: null } }];
+  },
 };
 
 function withPolicy(nonce: string): OpenPort {

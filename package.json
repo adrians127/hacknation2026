@@ -39,7 +39,9 @@
     "workers:nmap:build": "docker compose -f docker/docker-compose.workers.yml --profile nmap build nmap-worker",
     "workers:nmap": "docker compose -f docker/docker-compose.workers.yml run --rm -T nmap-worker --input -",
     "workers:httpx:build": "docker compose -f docker/docker-compose.workers.yml --profile httpx build httpx-worker",
-    "workers:httpx": "docker compose -f docker/docker-compose.workers.yml run --rm -T httpx-worker --input -"
+    "workers:httpx": "docker compose -f docker/docker-compose.workers.yml run --rm -T httpx-worker --input -",
+    "workers:tlsx:build": "docker compose -f docker/docker-compose.workers.yml --profile tlsx build tlsx-worker",
+    "workers:tlsx": "docker compose -f docker/docker-compose.workers.yml run --rm -T tlsx-worker --input -"
   },
   "devDependencies": {
     "oxlint": "^1.94.0",

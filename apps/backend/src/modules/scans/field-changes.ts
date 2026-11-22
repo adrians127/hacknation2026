@@ -122,6 +122,9 @@ export function fieldChanges(before: ComparablePort, after: ComparablePort): Fie
   const endpointsBefore = new Map(before.http.map((endpoint) => [endpointKey(endpoint), endpoint]));
   const endpointsAfter = new Map(after.http.map((endpoint) => [endpointKey(endpoint), endpoint]));
   const keys = [...new Set([...endpointsBefore.keys(), ...endpointsAfter.keys()])].toSorted(byName);
+  const tlsBefore = new Map(before.tls.map((entry) => [entry.vhost ?? "", entry]));
+  const tlsAfter = new Map(after.tls.map((entry) => [entry.vhost ?? "", entry]));
+  const tlsKeys = [...new Set([...tlsBefore.keys(), ...tlsAfter.keys()])].toSorted(byName);
 
   return [
     ...service("service.name", (value) => value.name),
@@ -130,6 +133,17 @@ export function fieldChanges(before: ComparablePort, after: ComparablePort): Fie
     ...service("service.extraInfo", (value) => value.extraInfo),
     ...service("service.cpe", (value) => value.cpe.join(" ") || null),
     ...change("ssh.hostKey", before.sshHostKey, after.sshHostKey),
+    ...tlsKeys.flatMap((key) => {
+      const earlier = tlsBefore.get(key);
+      const later = tlsAfter.get(key);
+      if (!earlier || !later)
+        return change("tls.endpoint", earlier ? "observed" : null, later ? "observed" : null, null, key);
+      return [
+        ...change("tls.version", earlier.version, later.version, null, key),
+        ...change("tls.cipher", earlier.cipher, later.cipher, null, key),
+        ...change("tls.cert", earlier.certSha256, later.certSha256, null, key),
+      ];
+    }),
     ...keys.flatMap((key) => {
       const earlier = endpointsBefore.get(key);
       const later = endpointsAfter.get(key);
