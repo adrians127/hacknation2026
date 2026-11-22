@@ -3777,6 +3777,33 @@
                               null
                             ]
                           },
+                          "lifecycle": {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "active",
+                                  "unstable",
+                                  "missing",
+                                  "inactive"
+                                ]
+                              },
+                              "misses": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "flips": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "misses",
+                              "flips"
+                            ]
+                          },
                           "triage": {
                             "type": "string",
                             "enum": [
@@ -4150,6 +4177,7 @@
                           "latencyMs",
                           "hostnames",
                           "change",
+                          "lifecycle",
                           "triage",
                           "tags",
                           "note",
@@ -4337,6 +4365,33 @@
                         "unchanged",
                         "unknown",
                         null
+                      ]
+                    },
+                    "lifecycle": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "unstable",
+                            "missing",
+                            "inactive"
+                          ]
+                        },
+                        "misses": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "flips": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "misses",
+                        "flips"
                       ]
                     },
                     "triage": {
@@ -6089,6 +6144,7 @@
                     "latencyMs",
                     "hostnames",
                     "change",
+                    "lifecycle",
                     "triage",
                     "tags",
                     "note",

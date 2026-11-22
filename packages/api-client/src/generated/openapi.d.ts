@@ -1921,6 +1921,12 @@ export interface operations {
                             hostnames: string[];
                             /** @enum {string|null} */
                             change: "new" | "gone" | "changed" | "unchanged" | "unknown" | null;
+                            lifecycle: {
+                                /** @enum {string} */
+                                state: "active" | "unstable" | "missing" | "inactive";
+                                misses: number;
+                                flips: number;
+                            };
                             /** @enum {string} */
                             triage: "unreviewed" | "reviewed" | "important" | "false_positive";
                             tags: string[];
@@ -2071,6 +2077,12 @@ export interface operations {
                         hostnames: string[];
                         /** @enum {string|null} */
                         change: "new" | "gone" | "changed" | "unchanged" | "unknown" | null;
+                        lifecycle: {
+                            /** @enum {string} */
+                            state: "active" | "unstable" | "missing" | "inactive";
+                            misses: number;
+                            flips: number;
+                        };
                         /** @enum {string} */
                         triage: "unreviewed" | "reviewed" | "important" | "false_positive";
                         tags: string[];

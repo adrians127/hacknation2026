@@ -1,7 +1,9 @@
 import type { TriageStatus } from "@subsurf/contracts/hosts/hosts.schema";
 import {
   HOST_HISTORY_LIMIT,
+  LIFECYCLE_WINDOW,
   type HostHistoryEntry,
+  type HostLifecycle,
   type ScanDetail,
   type ScanHostDetail,
   type ScanHostListQuery,
@@ -18,6 +20,7 @@ import {
 } from "~backend/generated/prisma/client";
 import { HttpError } from "~backend/lib/http-error";
 import { prisma } from "~backend/lib/prisma";
+import { hostLifecycle } from "~backend/modules/scans/host-lifecycle";
 import {
   countChanges,
   countCoverage,
@@ -255,19 +258,49 @@ async function filteredHostIds(
   return new Set(first.filter((id) => others.every((ids) => ids.has(id))));
 }
 
+/** Scans that did not cover an address, or got no answer, do not count: look further back. */
+const LIFECYCLE_SCANS = LIFECYCLE_WINDOW * 3;
+
+/** Each address's lifecycle as of `scan`, from its answers in that scan and earlier ones. */
+async function lifecycles(
+  scan: ScanRow,
+  ips: readonly string[],
+): Promise<Map<string, HostLifecycle>> {
+  if (ips.length === 0) return new Map();
+  const scans = await prisma.scan.findMany({
+    where: { createdAt: { lte: scan.createdAt }, results: { some: {} } },
+    orderBy: { createdAt: "desc" },
+    take: LIFECYCLE_SCANS,
+    select: { id: true },
+  });
+  const age = new Map(scans.map((row, index) => [row.id, index]));
+  const rows = await prisma.$queryRaw<EffectiveRow[]>(
+    effectiveSql(
+      scans.map((row) => row.id),
+      ips,
+    ),
+  );
+  const statuses = new Map<string, HostObservationStatus[]>();
+  for (const row of rows.toSorted((a, b) => (age.get(a.scanId) ?? 0) - (age.get(b.scanId) ?? 0))) {
+    statuses.set(row.ip, [...(statuses.get(row.ip) ?? []), row.status]);
+  }
+  return new Map(ips.map((ip) => [ip, hostLifecycle(statuses.get(ip) ?? [])]));
+}
+
 /** Loads the assets and both scans' observations for the given entries of a diff. */
 async function hostsInScan(
-  scanId: string,
+  scan: ScanRow,
   base: BaseScan | null,
   entries: readonly HostDiff[],
 ): Promise<HostInScan[]> {
+  const scanId = scan.id;
   const ips = entries.map((entry) => entry.ip);
   if (ips.length === 0) return [];
   const ids = await effectiveIds(base ? [scanId, base.id] : [scanId], ips);
   const shownServices = new Map(
     entries.map((entry) => [entry.hostId, entry.services.map((service) => service.serviceId)]),
   );
-  const [hosts, current, before, summaries] = await Promise.all([
+  const [hosts, current, before, summaries, lifecycleByIp] = await Promise.all([
     prisma.host.findMany({
       where: { id: { in: entries.map((entry) => entry.hostId) } },
       include: { services: true },
@@ -280,6 +313,7 @@ async function hostsInScan(
         })
       : [],
     vulnerabilitiesService.summaries(shownServices),
+    lifecycles(scan, ips),
   ]);
   const hostById = new Map(hosts.map((host) => [host.id, host]));
   const currentByIp = new Map(current.map((row) => [row.ip, row]));
@@ -294,6 +328,7 @@ async function hostsInScan(
             host,
             current: observation,
             base: baseByIp.get(diff.ip),
+            lifecycle: lifecycleByIp.get(diff.ip) ?? hostLifecycle([]),
             vulnerabilities: {
               host: summaries.groups.get(diff.hostId) ?? EMPTY_SUMMARY,
               services: summaries.services,
@@ -388,7 +423,7 @@ export const scanResultsService = {
     if (ids) entries = entries.filter((entry) => ids.has(entry.hostId));
 
     const start = (query.page - 1) * query.pageSize;
-    const page = await hostsInScan(scan.id, base, entries.slice(start, start + query.pageSize));
+    const page = await hostsInScan(scan, base, entries.slice(start, start + query.pageSize));
     return {
       items: page.map(toScanHost),
       total: entries.length,
@@ -422,7 +457,7 @@ export const scanResultsService = {
     const [diff] = current ? diffScan([current], base ? (before ? [before] : []) : null) : [];
     if (!diff) throw HttpError.notFound("The host is not part of this scan");
 
-    const [entry] = await hostsInScan(scan.id, base, [diff]);
+    const [entry] = await hostsInScan(scan, base, [diff]);
     if (!entry) throw HttpError.notFound("The host is not part of this scan");
     const [entries, matches] = await Promise.all([
       history(entry.host.ip),

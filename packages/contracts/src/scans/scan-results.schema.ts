@@ -49,6 +49,32 @@ export const ScanCoverageSchema = z.object({
   onlyCurrent: CountSchema,
 });
 
+/** Consecutive `down` answers after which a host counts as inactive. */
+export const INACTIVE_AFTER_MISSES = 3;
+/** How many of the address's latest conclusive answers (`up`/`down`) the lifecycle looks at. */
+export const LIFECYCLE_WINDOW = 10;
+/** Up/down switches within the window that make a host unstable. */
+export const UNSTABLE_MIN_FLIPS = 2;
+
+/**
+ * A host's lifecycle as of the viewed scan, from its latest conclusive answers (PDF: "after how
+ * long without an answer should a host be reported inactive?"). `timeout`, `cancelled` and
+ * `failed` say nothing:
+ * - `inactive`: the last `INACTIVE_AFTER_MISSES` answers were `down`;
+ * - `unstable`: switched between up and down at least `UNSTABLE_MIN_FLIPS` times;
+ * - `missing`: the last answer was `down`, fewer times in a row than `INACTIVE_AFTER_MISSES`;
+ * - `active`: otherwise.
+ */
+export const HostLifecycleStateSchema = z.enum(["active", "unstable", "missing", "inactive"]);
+
+export const HostLifecycleSchema = z.object({
+  state: HostLifecycleStateSchema,
+  /** Consecutive `down` answers up to the viewed scan. */
+  misses: CountSchema,
+  /** Up/down switches within the window. */
+  flips: CountSchema,
+});
+
 /** Picks the scan to compare with; it must be older. Omitted: the previous scan with results. */
 export const ScanCompareQuerySchema = z.object({ base: z.uuid().optional() });
 
@@ -152,6 +178,8 @@ export const ScanHostSchema = z.object({
   latencyMs: z.number().int().nullable(),
   hostnames: z.array(z.string()),
   change: ScanChangeSchema.nullable(),
+  /** As of this scan. */
+  lifecycle: HostLifecycleSchema,
   triage: TriageStatusSchema,
   tags: z.array(z.string()),
   note: z.string(),
@@ -255,6 +283,8 @@ export type ScanChange = z.infer<typeof ScanChangeSchema>;
 export type ScanChangeFilter = z.infer<typeof ScanChangeFilterSchema>;
 export type ScanChangeCounts = z.infer<typeof ScanChangeCountsSchema>;
 export type ScanCoverage = z.infer<typeof ScanCoverageSchema>;
+export type HostLifecycleState = z.infer<typeof HostLifecycleStateSchema>;
+export type HostLifecycle = z.infer<typeof HostLifecycleSchema>;
 export type ScanCompareQuery = z.infer<typeof ScanCompareQuerySchema>;
 export type ServiceSnapshot = z.infer<typeof ServiceSnapshotSchema>;
 export type FieldChangeKind = z.infer<typeof FieldChangeKindSchema>;

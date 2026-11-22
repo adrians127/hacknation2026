@@ -1,9 +1,10 @@
 import type { HttpEndpoint, OpenPort } from "@subsurf/contracts/workers/worker-result.schema";
 
 import { endpoint, type CertSpec, type SiteSpec } from "~backend/demo/http";
+import type { DemoRunNumber } from "~backend/demo/network";
 import { fakeSha256 } from "~backend/demo/random";
 
-/** How a host differs in the second run (the first run is the baseline). */
+/** How a host differs from the first run (the baseline), from its `changesFrom` run on. */
 export type DemoChange =
   | "upgrade"
   | "open-port"
@@ -15,7 +16,7 @@ export type DemoChange =
 /** Everything a profile needs to describe one host in one run. */
 export interface HostContext {
   ip: string;
-  run: 1 | 2;
+  run: DemoRunNumber;
   /** Fixed per host: picks versions and flavours, so both runs agree. */
   variant: number;
   /** Human name used in page titles. */
@@ -24,7 +25,7 @@ export interface HostContext {
   domains: readonly string[];
   observedAt: string;
   ttl: number;
-  /** True in the second run for the changes declared on the host. */
+  /** True from the host's `changesFrom` run on, for the changes declared on it. */
   changed(change: DemoChange): boolean;
 }
 

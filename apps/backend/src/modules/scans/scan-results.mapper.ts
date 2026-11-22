@@ -1,4 +1,5 @@
 import type {
+  HostLifecycle,
   ScanHost,
   ScanHostDetail,
   ScanService,
@@ -39,6 +40,8 @@ export interface HostInScan {
   current: ObservationRow;
   /** The base scan's `up` observation, if any. */
   base: ObservationRow | undefined;
+  /** As of this scan. */
+  lifecycle: HostLifecycle;
   /** Of the Service assets (their newest observation), whatever scan is viewed. */
   vulnerabilities: {
     host: VulnerabilitySummary;
@@ -139,6 +142,7 @@ function hostFields(entry: HostInScan) {
     // A host that is gone keeps the names it had when it was last up.
     hostnames: hostnames(current.status === "up" ? current : entry.base),
     change: entry.diff.change,
+    lifecycle: entry.lifecycle,
     triage: host.triage,
     tags: host.tags,
     note: decryptText(host.note),

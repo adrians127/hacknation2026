@@ -1,5 +1,5 @@
 // Demo scan data, run by `pnpm db:seed:hosts` after `pnpm db:seed` (or `pnpm db:reset`).
-// Two runs over a /18 through the real ingest path; see "Demo data" in the backend README.
+// Four runs over a /18 through the real ingest path; see "Demo data" in the backend README.
 import { parseArgs } from "node:util";
 
 import { seedDemoHosts } from "~backend/demo/seed";

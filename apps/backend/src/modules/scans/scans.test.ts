@@ -49,6 +49,14 @@ function secondScan(hosts: ObservedHost[]): ObservedHost[] {
   ];
 }
 
+/** The example (10.0.5.8 down) with the database host down too. */
+function databaseDown(hosts: ObservedHost[]): ObservedHost[] {
+  return [
+    ...hosts,
+    { ...databaseHost(hosts), status: "down", reason: "no-response", hostnames: [], ports: [] },
+  ];
+}
+
 async function twoScans() {
   const first = await ingestScan(withDatabaseHost);
   const second = await ingestScan(secondScan);
@@ -272,6 +280,31 @@ describe("GET /scans/{id}/hosts", () => {
     });
     // The list never decrypts: headers, cookies and certificates are in the host detail.
     expect(JSON.stringify(items)).not.toContain("PHPSESSID");
+  });
+
+  it("reports each host's lifecycle as of the viewed scan", async () => {
+    const { first, second } = await twoScans();
+    // 10.0.5.8 goes down again and comes back; the database host stays down.
+    await ingestScan(databaseDown);
+    const fourth = await ingestScan(secondScan);
+    const { client } = await signInAs(server, { role: "viewer" });
+    const lifecycles = async (scanId: string, query = "") =>
+      Object.fromEntries(
+        ScanHostListResponseSchema.parse(
+          await getJson(client, `/v1/scans/${scanId}/hosts${query}`),
+        ).items.map((host) => [host.ip, [host.change, host.lifecycle]]),
+      );
+
+    expect(await lifecycles(fourth, `?base=${first}`)).toEqual({
+      "10.0.5.7": ["changed", { state: "active", misses: 0, flips: 0 }],
+      "10.0.5.8": ["new", { state: "unstable", misses: 0, flips: 3 }],
+      "10.0.5.20": ["gone", { state: "inactive", misses: 3, flips: 1 }],
+    });
+    // As of the second scan, later scans do not count yet.
+    expect((await lifecycles(second))["10.0.5.20"]).toEqual([
+      "gone",
+      { state: "missing", misses: 1, flips: 1 },
+    ]);
   });
 
   it("filters by change, search (IP, hostname, title, port, product, tag) and pages", async () => {
