@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { AssetNoteSchema } from "../hosts/hosts.schema";
+import { RuleRefSchema } from "../rules/rule-ref.schema";
 
 const CountSchema = z.number().int().nonnegative();
 const TimestampSchema = z.iso.datetime();
@@ -96,6 +97,8 @@ export const ServiceVulnerabilitySchema = z.object({
   evidence: z.array(VulnerabilityEvidenceSchema),
   references: z.array(z.url()),
   triage: VulnerabilityTriageStatusSchema,
+  /** The rule that set `triage`; `null` when a user did (or nobody). */
+  triageRule: RuleRefSchema.nullable(),
   note: z.string(),
 });
 

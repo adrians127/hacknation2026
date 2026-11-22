@@ -1,0 +1,35 @@
+/// A user-defined rule applied to every scan (modules/rules): it sets triage on vulnerabilities,
+/// services and hosts, tags them, or re-rates changes between scans. Values a rule set carry its
+/// id (`triageRuleId`, `RuleTag`) and go back when it stops matching; users' own edits win.
+model Rule {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  name        String
+  kind        RuleKind
+  enabled     Boolean   @default(true)
+  /// Order among the rules: for one value the first matching rule wins. 0 = first.
+  position    Int
+  /// RuleDefinition from @subsurf/contracts: { kind, scope, condition, action }.
+  definition  Json
+  /// { "$enc": "v1.…" } (src/lib/crypto.ts); null = no note.
+  note        Json?
+  /// After it the rule no longer matches; what it set goes back.
+  expiresAt   DateTime?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy           User?                        @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  hosts               Host[]
+  services            Service[]
+  vulnerabilityTriage ServiceVulnerabilityTriage[]
+  tags                RuleTag[]
+
+  @@index([createdById])
+}
+
+enum RuleKind {
+  vulnerability
+  service
+  unchanged
+  change_priority
+}

@@ -1,0 +1,21 @@
+/// A tag a rule added to a host or service. Kept so the rule adds it once (a user who removes it
+/// keeps it removed) and removes it again when the rule stops matching.
+model RuleTag {
+  id         String         @id @default(uuid(7)) @db.Uuid
+  ruleId     String         @db.Uuid
+  targetKind RuleTargetKind
+  /// Host or Service id; no foreign key, since it points at either table.
+  targetId   String         @db.Uuid
+  tag        String
+  createdAt  DateTime       @default(now())
+
+  rule Rule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([ruleId, targetKind, targetId])
+  @@index([targetId])
+}
+
+enum RuleTargetKind {
+  host
+  service
+}

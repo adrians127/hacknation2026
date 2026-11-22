@@ -1,0 +1,11 @@
+/// One row (id 1): how far the scheduler's rule pass got, so it re-applies the rules only after
+/// new scan results, new vulnerability matches or an expired rule.
+model RuleState {
+  id        Int       @id
+  /// Newest `ScanJobResult.receivedAt` the last pass saw.
+  resultsAt DateTime?
+  /// Newest `VulnerabilityMatch.lastEvaluatedAt` the last pass saw.
+  matchesAt DateTime?
+  /// When the rules were last applied (by the scheduler or a rule change).
+  appliedAt DateTime?
+}

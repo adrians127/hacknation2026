@@ -569,6 +569,74 @@ export interface paths {
         patch: operations["updateRole"];
         trace?: never;
     };
+    "/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the rules
+         * @description Requires `rules:read`. Every rule in order (the first matching rule sets a value), with what it holds now: hosts, services and vulnerabilities whose triage it set, and tags it added.
+         */
+        get: operations["listRules"];
+        put?: never;
+        /**
+         * Create a rule
+         * @description Requires `rules:create`. The rule goes last in the order and applies to every scan, past and future. The rules are applied again right away: values the rule set where it no longer matches go back to `unreviewed` (or to the next matching rule), and it never overwrites a value a user set.
+         */
+        post: operations["createRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a rule
+         * @description Requires `rules:delete`. What the rule set goes back to `unreviewed` (or to the next matching rule) and the tags it added are removed; values users set stay.
+         */
+        delete: operations["deleteRule"];
+        options?: never;
+        head?: never;
+        /**
+         * Change, enable, disable or move a rule
+         * @description Requires `rules:update`. The rules are applied again right away: values the rule set where it no longer matches go back to `unreviewed` (or to the next matching rule), and it never overwrites a value a user set.
+         */
+        patch: operations["updateRule"];
+        trace?: never;
+    };
+    "/rules/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What a rule would do now
+         * @description Requires `rules:read`. Evaluates a rule definition without saving it: how many targets it matches, how many it would change, how many it leaves because a user (or an earlier rule) set them, and examples. Change rules are checked on the newest scan with results.
+         */
+        post: operations["previewRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scans": {
         parameters: {
             query?: never;
@@ -1252,7 +1320,7 @@ export interface components {
                 key: "admin" | "editor" | "analyst" | "viewer" | null;
                 name: string;
             };
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
             mustChangePassword: boolean;
         };
         HealthResponse: {
@@ -1464,8 +1532,121 @@ export interface components {
             name: string;
             description: string;
             isSystem: boolean;
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
             userCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        Rule: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            note: string;
+            enabled: boolean;
+            position: number;
+            /** Format: date-time */
+            expiresAt: string | null;
+            expired: boolean;
+            definition: {
+                /** @enum {string} */
+                kind: "vulnerability";
+                scope: {
+                    ranges: (string)[];
+                    hostTags: string[];
+                    ports: number[];
+                    products: string[];
+                };
+                condition: {
+                    vulnerabilityIds: string[];
+                    severities: ("critical" | "high" | "medium" | "low" | "none" | "unknown")[];
+                    cvssAtLeast: number | null;
+                    cvssBelow: number | null;
+                    kev: boolean | null;
+                    /** @enum {string|null} */
+                    confidence: "confirmed" | "potential" | null;
+                    reasons: ("version_unknown" | "distro_backport_possible" | "fixed_by_backport" | "platform_condition")[];
+                };
+                action: {
+                    /** @enum {string} */
+                    triage: "important" | "accepted_risk" | "false_positive";
+                };
+            } | {
+                /** @enum {string} */
+                kind: "service";
+                scope: {
+                    ranges: (string)[];
+                    hostTags: string[];
+                    ports: number[];
+                    products: string[];
+                };
+                condition: {
+                    /** @enum {string} */
+                    target: "service" | "host";
+                    titles: string[];
+                };
+                action: {
+                    /** @enum {string|null} */
+                    triage: "reviewed" | "important" | "false_positive" | null;
+                    tag: string | null;
+                };
+            } | {
+                /** @enum {string} */
+                kind: "unchanged";
+                scope: {
+                    ranges: (string)[];
+                    hostTags: string[];
+                    ports: number[];
+                    products: string[];
+                };
+                condition: {
+                    /** @enum {string} */
+                    target: "service" | "host";
+                    scans: number;
+                };
+                action: {
+                    /** @enum {string} */
+                    triage: "reviewed" | "important" | "false_positive";
+                };
+            } | {
+                /** @enum {string} */
+                kind: "change_priority";
+                scope: {
+                    ranges: (string)[];
+                    hostTags: string[];
+                    ports: number[];
+                    products: string[];
+                };
+                condition: {
+                    rows: ("host" | "service" | "field")[];
+                    changes: ("new" | "gone" | "changed" | "unknown")[];
+                    fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname")[];
+                    keys: string[];
+                    lifecycles: ("active" | "unstable" | "missing" | "inactive")[];
+                    priorities: ("high" | "medium" | "low")[];
+                };
+                action: {
+                    /** @enum {string} */
+                    type: "priority";
+                    /** @enum {string} */
+                    priority: "high" | "medium" | "low";
+                } | {
+                    /** @enum {string} */
+                    type: "mute";
+                };
+            };
+            affected: {
+                hosts: number;
+                services: number;
+                vulnerabilities: number;
+                tags: number;
+            };
+            createdBy: {
+                /** Format: uuid */
+                id: string;
+                displayName: string;
+            } | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -2375,6 +2556,7 @@ export interface operations {
                             medium: number;
                             low: number;
                         };
+                        muted: number;
                         topChanges: {
                             /** Format: uuid */
                             hostId: string;
@@ -2387,6 +2569,11 @@ export interface operations {
                             /** @enum {string} */
                             priority: "high" | "medium" | "low";
                             reasons: ("new-host" | "returning-host" | "risky-port" | "new-service" | "admin-panel" | "ssh-key-changed" | "self-signed" | "version-change" | "new-endpoint" | "page-change" | "cert-change" | "security-header-removed" | "cookie-flags-weakened" | "technology-header" | "host-inactive" | "host-gone" | "service-gone" | "no-answer" | "other")[];
+                            rule: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            } | null;
                             ports: number[];
                             fields: {
                                 /** @enum {string} */
@@ -4946,7 +5133,7 @@ export interface operations {
                             name: string;
                             description: string;
                             isSystem: boolean;
-                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
                             userCount: number;
                             /** Format: date-time */
                             createdAt: string;
@@ -4988,7 +5175,7 @@ export interface operations {
                 "application/json": {
                     name: string;
                     description: string;
-                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
                 };
             };
         };
@@ -5065,7 +5252,7 @@ export interface operations {
                         name: string;
                         description: string;
                         isSystem: boolean;
-                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
                         userCount: number;
                         /** Format: date-time */
                         createdAt: string;
@@ -5183,7 +5370,7 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     description?: string;
-                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
+                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:create" | "scans:update" | "scans:delete" | "scans:run" | "hosts:update" | "vulnerabilities:read" | "vulnerabilities:update" | "vulnerabilities:create" | "vulnerabilities:delete" | "vulnerabilities:run" | "pipelines:read" | "pipelines:create" | "pipelines:update" | "pipelines:delete" | "workers:read" | "workers:update" | "workers:delete" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export" | "rules:read" | "rules:create" | "rules:update" | "rules:delete")[];
                 };
             };
         };
@@ -5235,6 +5422,692 @@ export interface operations {
             };
             /** @description Name already taken (`ROLE_NAME_TAKEN`) */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            note: string;
+                            enabled: boolean;
+                            position: number;
+                            /** Format: date-time */
+                            expiresAt: string | null;
+                            expired: boolean;
+                            definition: {
+                                /** @enum {string} */
+                                kind: "vulnerability";
+                                scope: {
+                                    ranges: (string)[];
+                                    hostTags: string[];
+                                    ports: number[];
+                                    products: string[];
+                                };
+                                condition: {
+                                    vulnerabilityIds: string[];
+                                    severities: ("critical" | "high" | "medium" | "low" | "none" | "unknown")[];
+                                    cvssAtLeast: number | null;
+                                    cvssBelow: number | null;
+                                    kev: boolean | null;
+                                    /** @enum {string|null} */
+                                    confidence: "confirmed" | "potential" | null;
+                                    reasons: ("version_unknown" | "distro_backport_possible" | "fixed_by_backport" | "platform_condition")[];
+                                };
+                                action: {
+                                    /** @enum {string} */
+                                    triage: "important" | "accepted_risk" | "false_positive";
+                                };
+                            } | {
+                                /** @enum {string} */
+                                kind: "service";
+                                scope: {
+                                    ranges: (string)[];
+                                    hostTags: string[];
+                                    ports: number[];
+                                    products: string[];
+                                };
+                                condition: {
+                                    /** @enum {string} */
+                                    target: "service" | "host";
+                                    titles: string[];
+                                };
+                                action: {
+                                    /** @enum {string|null} */
+                                    triage: "reviewed" | "important" | "false_positive" | null;
+                                    tag: string | null;
+                                };
+                            } | {
+                                /** @enum {string} */
+                                kind: "unchanged";
+                                scope: {
+                                    ranges: (string)[];
+                                    hostTags: string[];
+                                    ports: number[];
+                                    products: string[];
+                                };
+                                condition: {
+                                    /** @enum {string} */
+                                    target: "service" | "host";
+                                    scans: number;
+                                };
+                                action: {
+                                    /** @enum {string} */
+                                    triage: "reviewed" | "important" | "false_positive";
+                                };
+                            } | {
+                                /** @enum {string} */
+                                kind: "change_priority";
+                                scope: {
+                                    ranges: (string)[];
+                                    hostTags: string[];
+                                    ports: number[];
+                                    products: string[];
+                                };
+                                condition: {
+                                    rows: ("host" | "service" | "field")[];
+                                    changes: ("new" | "gone" | "changed" | "unknown")[];
+                                    fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname")[];
+                                    keys: string[];
+                                    lifecycles: ("active" | "unstable" | "missing" | "inactive")[];
+                                    priorities: ("high" | "medium" | "low")[];
+                                };
+                                action: {
+                                    /** @enum {string} */
+                                    type: "priority";
+                                    /** @enum {string} */
+                                    priority: "high" | "medium" | "low";
+                                } | {
+                                    /** @enum {string} */
+                                    type: "mute";
+                                };
+                            };
+                            affected: {
+                                hosts: number;
+                                services: number;
+                                vulnerabilities: number;
+                                tags: number;
+                            };
+                            createdBy: {
+                                /** Format: uuid */
+                                id: string;
+                                displayName: string;
+                            } | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    name: string;
+                    note?: string;
+                    enabled?: boolean;
+                    /** Format: date-time */
+                    expiresAt?: string | null;
+                    definition: {
+                        /** @enum {string} */
+                        kind: "vulnerability";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            vulnerabilityIds: string[];
+                            severities: ("critical" | "high" | "medium" | "low" | "none" | "unknown")[];
+                            cvssAtLeast: number | null;
+                            cvssBelow: number | null;
+                            kev: boolean | null;
+                            /** @enum {string|null} */
+                            confidence: "confirmed" | "potential" | null;
+                            reasons: ("version_unknown" | "distro_backport_possible" | "fixed_by_backport" | "platform_condition")[];
+                        };
+                        action: {
+                            /** @enum {string} */
+                            triage: "important" | "accepted_risk" | "false_positive";
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "service";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            /** @enum {string} */
+                            target: "service" | "host";
+                            titles: string[];
+                        };
+                        action: {
+                            /** @enum {string|null} */
+                            triage: "reviewed" | "important" | "false_positive" | null;
+                            tag: string | null;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "unchanged";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            /** @enum {string} */
+                            target: "service" | "host";
+                            scans: number;
+                        };
+                        action: {
+                            /** @enum {string} */
+                            triage: "reviewed" | "important" | "false_positive";
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "change_priority";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            rows: ("host" | "service" | "field")[];
+                            changes: ("new" | "gone" | "changed" | "unknown")[];
+                            fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname")[];
+                            keys: string[];
+                            lifecycles: ("active" | "unstable" | "missing" | "inactive")[];
+                            priorities: ("high" | "medium" | "low")[];
+                        };
+                        action: {
+                            /** @enum {string} */
+                            type: "priority";
+                            /** @enum {string} */
+                            priority: "high" | "medium" | "low";
+                        } | {
+                            /** @enum {string} */
+                            type: "mute";
+                        };
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description The rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    note?: string;
+                    enabled?: boolean;
+                    /** Format: date-time */
+                    expiresAt?: string | null;
+                    definition?: {
+                        /** @enum {string} */
+                        kind: "vulnerability";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            vulnerabilityIds: string[];
+                            severities: ("critical" | "high" | "medium" | "low" | "none" | "unknown")[];
+                            cvssAtLeast: number | null;
+                            cvssBelow: number | null;
+                            kev: boolean | null;
+                            /** @enum {string|null} */
+                            confidence: "confirmed" | "potential" | null;
+                            reasons: ("version_unknown" | "distro_backport_possible" | "fixed_by_backport" | "platform_condition")[];
+                        };
+                        action: {
+                            /** @enum {string} */
+                            triage: "important" | "accepted_risk" | "false_positive";
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "service";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            /** @enum {string} */
+                            target: "service" | "host";
+                            titles: string[];
+                        };
+                        action: {
+                            /** @enum {string|null} */
+                            triage: "reviewed" | "important" | "false_positive" | null;
+                            tag: string | null;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "unchanged";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            /** @enum {string} */
+                            target: "service" | "host";
+                            scans: number;
+                        };
+                        action: {
+                            /** @enum {string} */
+                            triage: "reviewed" | "important" | "false_positive";
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "change_priority";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            rows: ("host" | "service" | "field")[];
+                            changes: ("new" | "gone" | "changed" | "unknown")[];
+                            fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname")[];
+                            keys: string[];
+                            lifecycles: ("active" | "unstable" | "missing" | "inactive")[];
+                            priorities: ("high" | "medium" | "low")[];
+                        };
+                        action: {
+                            /** @enum {string} */
+                            type: "priority";
+                            /** @enum {string} */
+                            priority: "high" | "medium" | "low";
+                        } | {
+                            /** @enum {string} */
+                            type: "mute";
+                        };
+                    };
+                    position?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description The rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    previewRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    definition: {
+                        /** @enum {string} */
+                        kind: "vulnerability";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            vulnerabilityIds: string[];
+                            severities: ("critical" | "high" | "medium" | "low" | "none" | "unknown")[];
+                            cvssAtLeast: number | null;
+                            cvssBelow: number | null;
+                            kev: boolean | null;
+                            /** @enum {string|null} */
+                            confidence: "confirmed" | "potential" | null;
+                            reasons: ("version_unknown" | "distro_backport_possible" | "fixed_by_backport" | "platform_condition")[];
+                        };
+                        action: {
+                            /** @enum {string} */
+                            triage: "important" | "accepted_risk" | "false_positive";
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "service";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            /** @enum {string} */
+                            target: "service" | "host";
+                            titles: string[];
+                        };
+                        action: {
+                            /** @enum {string|null} */
+                            triage: "reviewed" | "important" | "false_positive" | null;
+                            tag: string | null;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "unchanged";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            /** @enum {string} */
+                            target: "service" | "host";
+                            scans: number;
+                        };
+                        action: {
+                            /** @enum {string} */
+                            triage: "reviewed" | "important" | "false_positive";
+                        };
+                    } | {
+                        /** @enum {string} */
+                        kind: "change_priority";
+                        scope: {
+                            ranges: (string)[];
+                            hostTags: string[];
+                            ports: number[];
+                            products: string[];
+                        };
+                        condition: {
+                            rows: ("host" | "service" | "field")[];
+                            changes: ("new" | "gone" | "changed" | "unknown")[];
+                            fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname")[];
+                            keys: string[];
+                            lifecycles: ("active" | "unstable" | "missing" | "inactive")[];
+                            priorities: ("high" | "medium" | "low")[];
+                        };
+                        action: {
+                            /** @enum {string} */
+                            type: "priority";
+                            /** @enum {string} */
+                            priority: "high" | "medium" | "low";
+                        } | {
+                            /** @enum {string} */
+                            type: "mute";
+                        };
+                    };
+                    /** Format: uuid */
+                    ruleId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        matched: number;
+                        changes: number;
+                        unchanged: number;
+                        skipped: number;
+                        samples: {
+                            /** Format: uuid */
+                            hostId: string;
+                            /** Format: ip */
+                            ip: string;
+                            /** Format: uuid */
+                            serviceId: string | null;
+                            port: number | null;
+                            vulnerabilityId: string | null;
+                            /** @enum {string|null} */
+                            change: "new" | "gone" | "changed" | "unchanged" | "unknown" | null;
+                            /** @enum {string|null} */
+                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | null;
+                            key: string | null;
+                            before: string;
+                            after: string;
+                        }[];
+                        scan: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                        } | null;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5644,6 +6517,11 @@ export interface operations {
                             };
                             /** @enum {string} */
                             triage: "unreviewed" | "reviewed" | "important" | "false_positive";
+                            triageRule: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            } | null;
                             tags: string[];
                             note: string;
                             vulnerabilities: {
@@ -5702,6 +6580,11 @@ export interface operations {
                                 } | null;
                                 /** @enum {string} */
                                 triage: "unreviewed" | "reviewed" | "important" | "false_positive";
+                                triageRule: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                } | null;
                                 tags: string[];
                                 note: string;
                                 vulnerabilities: {
@@ -5808,6 +6691,11 @@ export interface operations {
                         };
                         /** @enum {string} */
                         triage: "unreviewed" | "reviewed" | "important" | "false_positive";
+                        triageRule: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                        } | null;
                         tags: string[];
                         note: string;
                         vulnerabilities: {
@@ -6041,6 +6929,11 @@ export interface operations {
                             } | null;
                             /** @enum {string} */
                             triage: "unreviewed" | "reviewed" | "important" | "false_positive";
+                            triageRule: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            } | null;
                             tags: string[];
                             note: string;
                             vulnerabilities: {
@@ -6151,6 +7044,11 @@ export interface operations {
                                 references: string[];
                                 /** @enum {string} */
                                 triage: "unreviewed" | "important" | "accepted_risk" | "false_positive";
+                                triageRule: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                } | null;
                                 note: string;
                             }[];
                         }[];
@@ -6353,6 +7251,12 @@ export interface operations {
                             priority: "high" | "medium" | "low";
                             /** @enum {string} */
                             reason: "new-host" | "returning-host" | "risky-port" | "new-service" | "admin-panel" | "ssh-key-changed" | "self-signed" | "version-change" | "new-endpoint" | "page-change" | "cert-change" | "security-header-removed" | "cookie-flags-weakened" | "technology-header" | "host-inactive" | "host-gone" | "service-gone" | "no-answer" | "other";
+                            rule: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            } | null;
+                            muted: boolean;
                             lifecycle: {
                                 /** @enum {string} */
                                 state: "active" | "unstable" | "missing" | "inactive";

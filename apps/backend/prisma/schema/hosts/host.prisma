@@ -1,24 +1,28 @@
 /// An address that has been `up` in at least one scan; it lives across scans. Ingest only moves
 /// `firstSeenAt`/`lastSeenAt`. `note`, `tags` and `triage` belong to users and ingest never
-/// writes them (PDF item 14).
+/// writes them (PDF item 14); rules (modules/rules) may set `triage` and tags users left alone.
 model Host {
-  id          String       @id @default(uuid(7)) @db.Uuid
-  ip          String       @unique
+  id           String       @id @default(uuid(7)) @db.Uuid
+  ip           String       @unique
   /// Unsigned integer form for CIDR range queries.
-  ipNumber    BigInt
-  firstSeenAt DateTime
-  lastSeenAt  DateTime
+  ipNumber     BigInt
+  firstSeenAt  DateTime
+  lastSeenAt   DateTime
   /// { "$enc": "v1.…" } (src/lib/crypto.ts); null = no note.
-  note        Json?
-  tags        String[]     @default([])
-  triage      TriageStatus @default(unreviewed)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  note         Json?
+  tags         String[]     @default([])
+  triage       TriageStatus @default(unreviewed)
+  /// The rule that set `triage`; null = a user did (or nobody). A user's edit clears it.
+  triageRuleId String?      @db.Uuid
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   services     Service[]
   observations HostObservation[]
+  triageRule   Rule?             @relation(fields: [triageRuleId], references: [id], onDelete: SetNull)
 
   @@index([ipNumber])
+  @@index([triageRuleId])
 }
 
 /// The analyst's verdict on a host or service.
