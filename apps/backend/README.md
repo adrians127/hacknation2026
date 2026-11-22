@@ -45,14 +45,15 @@ config/                env.ts (zod + process.loadEnvFile), database-url.ts (DB_*
 lib/                   prisma, logger, http-error, api-docs, password, tokens, auth-cookies, auth-context, chunks,
                        crypto (field encryption at rest)
 middleware/            validate, authenticate (requireAuth/requireSession), authorize (requirePermission),
-                       trusted-origin (CSRF), error-handler, not-found
+                       worker-token (requireWorkerToken), trusted-origin (CSRF), error-handler, not-found
 routes/index.ts        apiRouter: one apiRouter.use("/x", ...) line per module
 modules/<feature>/     <feature>.routes.ts | .controller.ts | .service.ts | .test.ts
 modules/auth|users|roles   sign-in and sessions, user accounts, roles (+ system-roles sync, first-admin bootstrap)
 modules/targets        target inventory: POST /targets/import (manual, CSV and JSON all arrive as one JSON body)
 modules/scans          GET /scans… (scan results, hosts per scan, changes: scan-results.*, scan-diff.ts);
                        queues a Scan and its ScanJob batches (scans.service.ts, dns.ts, batching.ts)
-modules/results        no routes yet: ingests worker results into observations (details.ts, fingerprint.ts, job-scope.ts)
+modules/results        ingests worker results into observations (details.ts, fingerprint.ts, job-scope.ts)
+modules/workers        /workers…: machine endpoints for the scan workers (WORKER_TOKEN): POST /workers/manager/results
 modules/hosts          PATCH /hosts…: edits of the Host and Service assets (bulk tags too, routed under /scans);
                        ingest's helpers for those assets
 modules/vulnerabilities  /vulnerabilities…: sources (NVD, OSV) mirrored into the database, matching services
@@ -66,7 +67,7 @@ generated/prisma       Prisma Client (gitignored, generated in postinstall)
 
 **New module:** schemas in `packages/contracts/src/<feature>/` (+ `pnpm generate`), then `src/modules/<feature>/` and one line in `routes/index.ts`. A route declares its contract with `validate({ params, query, body })`, and when a request does not match, the `ZodError` is turned into a 400 automatically. Protected routes start with `requireAuth` and `requirePermission(...)` (see [Auth and RBAC](#auth-and-rbac)).
 
-Request bodies: `app.ts` parses JSON with a 1 MB limit, except for the paths in `OWN_BODY_PARSER_PATHS`, which parse their own larger body in the route, after `requireAuth`/`requirePermission` (`POST /targets/import`: 10 MB, up to 100k entries).
+Request bodies: `app.ts` parses JSON with a 1 MB limit, except for the paths in `OWN_BODY_PARSER_PATHS`, which parse their own larger body in the route, after authentication (`POST /targets/import`: 10 MB, up to 100k entries; `POST /workers/manager/results`: 64 MB, gzip accepted).
 
 Controllers are objects of arrow functions (oxlint's `unbound-method` rejects methods passed to the router). Errors carry an optional machine-readable `code` (`HttpError.forbidden(message, "LAST_ADMIN")`), sent as `error.code` and translated by the frontend; the codes are listed in `contracts/src/common/common.schema.ts`.
 
@@ -143,13 +144,15 @@ Backend tests are integration tests against a real PostgreSQL (`pnpm db:up`). `s
 2. With `startScan` (also requires `scans:run`): domains are resolved to A records **before** the transaction (`modules/scans/dns.ts`: 50 lookups at a time, 2 s timeout, 2 tries). Failures and reserved addresses become `warnings`; the import still succeeds.
 3. In one transaction: a `Scan` with `SCAN_DEFAULT_PORTS`, `SCAN_DEFAULT_MAX_RATE` and `SCAN_BATCH_SIZE` snapshotted, a `ScanTarget` row per entry and the `ScanJob` batches from `planScanJobs` (`modules/scans/batching.ts`): addresses merged, split in address order into batches of at most `SCAN_BATCH_SIZE`, never across two /16 blocks. Each job has a `subnet` (the smallest aligned CIDR around it), its `targets` (CIDRs/IPs) and `hosts` (resolved domain → IP pairs).
 
-Jobs start as `queued` with `kind = discovery`. Leasing them (`/workers/*`, machine token) is the workers team's part; see [`apps/workers/README.md`](../workers/README.md#scan-jobs-in-the-database).
+Jobs start as `queued` with `kind = discovery`. Leasing them (`/workers/*`, machine token) is not implemented yet; see [`apps/workers/README.md`](../workers/README.md#scan-jobs-in-the-database).
 
 ## Scan results
 
 The result a worker sends for a job is fixed in [`docs/worker-result-format.md`](../../docs/worker-result-format.md) (locked). It is the backend's single input for scan data. Results storage, diffs between scans, the dashboard, signatures, export/import and DefectDojo all build on it. That document also lists what the backend derives itself: target membership, detections, coverage, new/gone/changed and host lifecycle.
 
-`resultsService.ingest(result)` (`modules/results/`) takes a result already validated with `WorkerResultSchema` and writes it in one transaction. No route calls it yet: `POST /workers/nmap/results` comes with the lease endpoints and the worker token.
+`resultsService.ingest(result, { taskIndex, taskCount })` (`modules/results/`) takes a result already validated with `WorkerResultSchema` and writes it in one transaction.
+
+`POST /workers/manager/results` (`modules/workers/`) calls it. worker-manager uploads one worker run's result per request, `{ task_index, task_count, result }`, with `Authorization: Bearer <WORKER_TOKEN>` (`middleware/worker-token.ts`: no user session, compared in constant time; without `WORKER_TOKEN` the endpoint answers 503). A leased job that the manager split into tasks comes back as several results under one `leaseId`, told apart by `task_index`; the results of a scan are tied together by `scanId`. The reply is `{ status: "ingested" | "duplicate", resultId }`. The lease and heartbeat endpoints do not exist yet, so the job must already exist as a `ScanJob` (created by the import).
 
 **Two layers of tables:**
 
@@ -167,7 +170,7 @@ The result a worker sends for a job is fixed in [`docs/worker-result-format.md`]
 - The rest stays plaintext under a GIN index (`jsonb_path_ops`), for containment queries such as `details @> '{"http":[{"favicon":{"mmh3":…}}]}'`. Queries on encrypted fields (expired certificates, cookie flags) are meant to go through detections computed at ingest.
 
 **Rules ingest applies:**
-- **Idempotency:** `ScanJobResult.leaseId` is unique. A result resent under the same lease is a no-op that returns the stored id.
+- **Idempotency:** `(leaseId, taskIndex)` is unique on `ScanJobResult`. A result resent under the same lease and task is a no-op that returns the stored id; another task of the same lease is a new result.
 - **Scope:** the job must exist and belong to `scan.scanId` (404 / 400). Every address must be inside the job's `targets`, and every open port inside the scan's `ports` (400 otherwise, nothing is written).
 - **Separate runs:** `(resultId, ip)` is unique. A new lease writes its own host and port observations, even when another result in the same scan reported the same address. Same-lease resends remain idempotent.
 - **Seen window:** results may arrive out of order, so ingest only ever widens `firstSeenAt`/`lastSeenAt`.
@@ -295,6 +298,7 @@ The tables take about 1 GB (`Vulnerability` 592 MB, `VulnerabilityCriterion` 418
 | `DB_HOST` `DB_PORT` `DB_NAME` `DB_USER` `DB_PASSWORD` `DB_SSLMODE` | — | Postgres connection in parts, no `DATABASE_URL` |
 | `JWT_SECRET` | — | HS256 key for access tokens, ≥ 32 characters. Production refuses the `.env.example` value |
 | `DATA_ENCRYPTION_KEY` | — | AES-256-GCM key for fields encrypted at rest: 32 bytes, base64 (`openssl rand -base64 32`). Production refuses the `.env.example` value. Changing it makes stored encrypted fields unreadable |
+| `WORKER_TOKEN` | — | Bearer token of the scan workers on `/workers/*`, ≥ 16 characters; unset turns those endpoints off (503). worker-manager sends it as `WORKER_MANAGER_TOKEN`. Production refuses the `.env.example` value |
 | `ADMIN_EMAIL` `ADMIN_PASSWORD` | — | First admin (startup while there are no users, and the seed). Production refuses the example password |
 | `SEED_DEMO_USERS` `DEMO_USER_PASSWORD` | `false` | Seed only: demo accounts for the editor, analyst and viewer roles |
 | `SCAN_DEFAULT_PORTS` | 28 common TCP ports | Ports snapshotted onto every queued scan (`22,80,8000-8100` syntax) |

@@ -1,5 +1,5 @@
-// worker-manager: a job list in (the backend's lease response), tasks out to independent worker
-// processes, every result saved to files. See README.md for the formats.
+// worker-manager: a job list in (from a file, or long-polled from the backend), tasks out to
+// independent worker processes, every result saved to files. See README.md for the formats.
 
 #include <pthread.h>
 #include <unistd.h>
@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
@@ -25,12 +26,15 @@
 #include <thread>
 #include <vector>
 
+#include "backend_client.hpp"
 #include "config.hpp"
 #include "files.hpp"
 #include "footprint.hpp"
+#include "http_client.hpp"
 #include "job.hpp"
 #include "logger.hpp"
 #include "planner.hpp"
+#include "result_uploader.hpp"
 #include "scheduler.hpp"
 #include "task_runner.hpp"
 
@@ -43,20 +47,28 @@ constexpr int kExitJobFailed = 1;
 constexpr int kExitInvalidInput = 2;
 constexpr int kExitInterrupted = 130;
 
-constexpr std::string_view kUsage =
-    R"(usage: worker-manager --input FILE [--output-dir DIR]
+// A backend that answers "no work" at once instead of holding the request is still asked at
+// most this often.
+constexpr auto kMinPollPeriod = std::chrono::seconds{1};
 
-  --input FILE       job list JSON (the backend's lease response; "-" for stdin)
-  --output-dir DIR   base directory for results (default: results); every run gets
-                     its own <DIR>/<run-id>/ subdirectory
+constexpr std::string_view kUsage =
+    R"(usage: worker-manager (--input FILE | --poll) [--output-dir DIR]
+
+  --input FILE       run one job list JSON ("-" for stdin), then exit
+  --poll             long-poll the backend for job lists and run each one, until
+                     SIGINT/SIGTERM (needs WORKER_MANAGER_TOKEN)
+  --output-dir DIR   base directory for results (default: results); every job list
+                     gets its own <DIR>/<run-id>/ subdirectory
   --version          print version and exit
 
-Exit codes: 0 every job completed or partial, 1 a job failed, 2 invalid input or usage,
-130 stopped by SIGINT/SIGTERM.
+Exit codes (--input): 0 every job completed or partial, 1 a job failed, 2 invalid input or
+usage, 130 stopped by SIGINT/SIGTERM. (--poll): 0 stopped by SIGINT/SIGTERM, 2 invalid
+configuration or usage.
 )";
 
 struct CliOptions {
     std::string input_path;
+    bool is_polling = false;
     std::filesystem::path output_dir = "results";
 };
 
@@ -67,13 +79,15 @@ std::optional<CliOptions> parse_cli(std::span<char* const> args) {
         const bool has_value = i + 1 < args.size();
         if (arg == "--input" && has_value) {
             options.input_path = args[++i];
+        } else if (arg == "--poll") {
+            options.is_polling = true;
         } else if (arg == "--output-dir" && has_value) {
             options.output_dir = args[++i];
         } else {
             return std::nullopt;
         }
     }
-    if (options.input_path.empty()) return std::nullopt;
+    if (options.input_path.empty() == !options.is_polling) return std::nullopt;  // exactly one
     return options;
 }
 
@@ -128,6 +142,7 @@ struct JobRun {
     Plan plan;
     std::vector<TaskOutcome> outcomes;
     std::vector<Json> schedule;  // per task: stage, footprint, the tasks it waited for
+    std::vector<std::optional<UploadOutcome>> uploads;  // --poll, tasks with a result only
 };
 
 Json nullable(const std::optional<std::string>& value) {
@@ -167,12 +182,26 @@ std::string_view job_status(const JobRun& run) {
     return aggregate_status(statuses);
 }
 
+Json upload_summary(const std::optional<UploadOutcome>& upload) {
+    if (!upload) return nullptr;
+    return {
+        {"status", to_string(upload->status)},
+        {"attempts", upload->attempts},
+        {"httpStatus", upload->http_status ? Json(*upload->http_status) : Json(nullptr)},
+        {"resultId", nullable(upload->result_id)},
+        {"duplicate", upload->is_duplicate},
+        {"error", nullable(upload->error)},
+    };
+}
+
 Json job_summary(const JobRun& run) {
     Json tasks = Json::array();
     std::map<std::string_view, std::int64_t> by_status{
         {"completed", 0}, {"partial", 0}, {"failed", 0}, {"cancelled", 0}};
     std::int64_t hosts_up = 0;
     std::int64_t open_ports = 0;
+    std::int64_t uploaded = 0;
+    std::int64_t not_uploaded = 0;
     std::optional<SysClock::time_point> started_at;
     std::optional<SysClock::time_point> finished_at;
     for (std::size_t i = 0; i < run.outcomes.size(); ++i) {
@@ -187,6 +216,9 @@ Json job_summary(const JobRun& run) {
         }
         if (outcome.finished_at && (!finished_at || *outcome.finished_at > *finished_at)) {
             finished_at = outcome.finished_at;
+        }
+        if (const auto& upload = run.uploads[i]) {
+            ++(upload->status == UploadStatus::kUploaded ? uploaded : not_uploaded);
         }
         const bool did_run = outcome.exit_code.has_value();
         Json duration = nullptr;
@@ -208,6 +240,7 @@ Json job_summary(const JobRun& run) {
                                          : Json(nullptr)},
             {"counts", outcome.counts},
             {"schedule", run.schedule[i]},
+            {"upload", upload_summary(run.uploads[i])},
             {"files",
              {{"input", outcome.started_at ? Json(stem + ".input.json") : Json(nullptr)},
               {"result", outcome.has_result ? Json(stem + ".result.json") : Json(nullptr)},
@@ -244,7 +277,9 @@ Json job_summary(const JobRun& run) {
           {"failed", by_status["failed"]},
           {"cancelled", by_status["cancelled"]},
           {"hostsUp", hosts_up},
-          {"openPorts", open_ports}}},
+          {"openPorts", open_ports},
+          {"uploaded", uploaded},
+          {"notUploaded", not_uploaded}}},
         {"warnings", run.plan.warnings},
         {"job", job},
         {"tasks", tasks},
@@ -261,8 +296,6 @@ public:
     SignalThread(const SignalThread&) = delete;
     SignalThread& operator=(const SignalThread&) = delete;
     ~SignalThread() noexcept { ::kill(::getpid(), SIGUSR1); }
-
-    [[nodiscard]] bool was_interrupted() const noexcept { return interrupted_.load(); }
 
     static void block_signals() noexcept {
         sigset_t set = signal_set();
@@ -306,45 +339,10 @@ private:
     std::jthread thread_;  // last: joined before the members it uses are destroyed
 };
 
-int run(const CliOptions& options) {
-    Config config;
-    try {
-        config = read_config();
-    } catch (const std::exception& error) {
-        std::println(stderr, "worker-manager: {}", error.what());
-        return kExitInvalidInput;
-    }
-    const Logger logger{config.log_level, config.log_format};
-    const auto run_started = SysClock::now();
-    logger.info("manager.start", "worker-manager starting",
-                {{"version", WORKER_MANAGER_VERSION},
-                 {"input", options.input_path == "-" ? "stdin" : options.input_path},
-                 {"max_parallel", config.max_parallel},
-                 {"max_rate_pps", config.max_rate}});
+using Binaries = std::map<std::string, std::filesystem::path>;
 
-    const auto text = read_input(options.input_path);
-    if (!text) {
-        logger.error("input.invalid", text.error());
-        return kExitInvalidInput;
-    }
-    const Json document = Json::parse(*text, nullptr, false);
-    if (document.is_discarded()) {
-        logger.error("input.invalid", "the input is not valid JSON");
-        return kExitInvalidInput;
-    }
-    auto list = parse_job_list(document);
-    if (!list) {
-        logger.error("input.invalid", list.error());
-        return kExitInvalidInput;
-    }
-
-    const auto run_dir = create_run_dir(options.output_dir);
-    if (!run_dir) {
-        logger.error("output.failed", run_dir.error());
-        return kExitInvalidInput;
-    }
-
-    std::map<std::string, std::filesystem::path> binaries;
+Binaries find_worker_binaries(const Config& config, const Logger& logger) {
+    Binaries binaries;
     for (const WorkerBinary& worker : config.workers) {
         if (const auto path = find_executable(worker.binary)) {
             binaries.emplace(worker.name, *path);
@@ -355,12 +353,32 @@ int run(const CliOptions& options) {
                         {{"worker", worker.name}, {"binary", worker.binary}});
         }
     }
+    return binaries;
+}
+
+struct RunContext {
+    const Config& config;
+    const Binaries& binaries;
+    std::stop_token stop;   // first SIGINT/SIGTERM
+    std::stop_token force;  // second one
+    const Logger& logger;
+    ResultUploader* uploader = nullptr;  // --poll: every task result goes to the backend
+};
+
+// Plans every job of one list, runs its tasks and writes job.json and run.json into `run_dir`.
+// Returns the --input exit code.
+int run_job_list(JobList& job_list, const std::filesystem::path& run_dir, std::string_view input,
+                 const RunContext& context) {
+    const Config& config = context.config;
+    const Binaries& binaries = context.binaries;
+    const Logger& logger = context.logger;
+    const auto run_started = SysClock::now();
 
     // Plan every job up front, so a bad job is reported without delaying the others.
-    std::vector<JobRun> runs(list->jobs.size() + list->invalid.size());
+    std::vector<JobRun> runs(job_list.jobs.size() + job_list.invalid.size());
     const PlanLimits limits{.max_tasks_per_job = config.max_tasks_per_job,
                             .max_parallel = config.max_parallel};
-    for (Job& job : list->jobs) {
+    for (Job& job : job_list.jobs) {
         JobRun& run = runs[job.index];
         run.index = job.index;
         run.job_id = job.job_id;
@@ -380,6 +398,7 @@ int run(const CliOptions& options) {
             run.plan = std::move(*plan);
             run.outcomes.resize(run.plan.tasks.size());
             run.schedule.resize(run.plan.tasks.size());
+            run.uploads.resize(run.plan.tasks.size());
         }
         run.job = std::move(job);
         if (run.error_code) {
@@ -396,7 +415,7 @@ int run(const CliOptions& options) {
             }
         }
     }
-    for (const InvalidJob& invalid : list->invalid) {
+    for (const InvalidJob& invalid : job_list.invalid) {
         JobRun& run = runs[invalid.index];
         run.index = invalid.index;
         run.job_id = invalid.job_id;
@@ -417,10 +436,10 @@ int run(const CliOptions& options) {
     }
     for (const JobRun& run : runs) {
         std::error_code ec;
-        std::filesystem::create_directory(*run_dir / run.dir_name, ec);
+        std::filesystem::create_directory(run_dir / run.dir_name, ec);
         if (ec) {
             logger.error("output.failed", "cannot create job directory",
-                         {{"dir", (*run_dir / run.dir_name).string()}, {"error", ec.message()}});
+                         {{"dir", (run_dir / run.dir_name).string()}, {"error", ec.message()}});
             return kExitInvalidInput;
         }
     }
@@ -479,48 +498,55 @@ int run(const CliOptions& options) {
         };
     }
 
-    SignalThread::block_signals();
-    std::stop_source stop;
-    std::stop_source force;
-    bool was_interrupted = false;
     {
-        const SignalThread signals{stop, force, logger};
-        {
-            std::vector<std::jthread> pool;
-            const auto threads = std::min<std::size_t>(config.max_parallel, refs.size());
-            for (std::size_t i = 0; i < threads; ++i) {
-                pool.emplace_back([&] {
-                    while (const auto grant = scheduler.acquire(stop.get_token())) {
-                        JobRun& run = runs[refs[grant->id].run_index];
-                        const std::size_t index = refs[grant->id].task_index;
-                        // Each task owns its element; no other thread touches it.
-                        run.schedule[index]["rate"] = grant->rate;
-                        run.outcomes[index] = run_task({.job = *run.job,
-                                                        .task = run.plan.tasks[index],
-                                                        .binary = run.binary,
-                                                        .job_dir = *run_dir / run.dir_name,
-                                                        .deadline_margin = config.deadline_margin,
-                                                        .kill_grace = config.kill_grace,
-                                                        .rate = grant->rate,
-                                                        .stop = stop.get_token(),
-                                                        .force = force.get_token()},
-                                                       logger);
-                        scheduler.release(grant->id);
+        std::vector<std::jthread> pool;
+        const auto threads = std::min<std::size_t>(config.max_parallel, refs.size());
+        for (std::size_t i = 0; i < threads; ++i) {
+            pool.emplace_back([&] {
+                while (const auto grant = scheduler.acquire(context.stop)) {
+                    JobRun& run = runs[refs[grant->id].run_index];
+                    const std::size_t index = refs[grant->id].task_index;
+                    // Each task owns its element; no other thread touches it.
+                    run.schedule[index]["rate"] = grant->rate;
+                    run.outcomes[index] = run_task({.job = *run.job,
+                                                    .task = run.plan.tasks[index],
+                                                    .binary = run.binary,
+                                                    .job_dir = run_dir / run.dir_name,
+                                                    .deadline_margin = config.deadline_margin,
+                                                    .kill_grace = config.kill_grace,
+                                                    .rate = grant->rate,
+                                                    .stop = context.stop,
+                                                    .force = context.force},
+                                                   logger);
+                    scheduler.release(grant->id);
+                    const Task& task = run.plan.tasks[index];
+                    if (context.uploader != nullptr && run.outcomes[index].has_result) {
+                        context.uploader->submit(
+                            {.task_id = task.task_id,
+                             .task_index = task.index,
+                             .task_count = task.count,
+                             .result_path = run_dir / run.dir_name /
+                                            (task_file_stem(task.index) + ".result.json")},
+                            run.uploads[index].emplace());
                     }
-                });
-            }
+                }
+            });
         }
-        was_interrupted = signals.was_interrupted();
     }
+    // A job list is done once its results are with the backend (or given up on).
+    if (context.uploader != nullptr) context.uploader->wait_idle();
+    const bool was_interrupted = context.stop.stop_requested();
 
     Json jobs = Json::array();
     std::vector<std::string_view> statuses;
     std::int64_t hosts_up = 0;
     std::int64_t open_ports = 0;
+    std::int64_t uploaded = 0;
+    std::int64_t not_uploaded = 0;
     bool has_failed_job = false;
     for (const JobRun& run : runs) {
         const Json summary = job_summary(run);
-        const auto job_dir = *run_dir / run.dir_name;
+        const auto job_dir = run_dir / run.dir_name;
         if (!write_json_file(job_dir / "job.json", summary)) {
             logger.error("output.failed", "cannot write job summary",
                          {{"path", (job_dir / "job.json").string()}});
@@ -530,6 +556,8 @@ int run(const CliOptions& options) {
         has_failed_job = has_failed_job || status == "failed";
         hosts_up += summary["counts"]["hostsUp"].get<std::int64_t>();
         open_ports += summary["counts"]["openPorts"].get<std::int64_t>();
+        uploaded += summary["counts"]["uploaded"].get<std::int64_t>();
+        not_uploaded += summary["counts"]["notUploaded"].get<std::int64_t>();
         logger.log(status == "failed" ? LogLevel::kError : LogLevel::kInfo, "job.finished",
                    "job finished",
                    {{"job_id", nullable(run.job_id)},
@@ -551,8 +579,8 @@ int run(const CliOptions& options) {
     const std::string_view run_status = aggregate_status(statuses);
     const Json run_summary{
         {"manager", {{"id", "worker-manager"}, {"version", WORKER_MANAGER_VERSION}}},
-        {"runId", run_dir->filename().string()},
-        {"input", options.input_path},
+        {"runId", run_dir.filename().string()},
+        {"input", input},
         {"status", run_status},
         {"stopReason", was_interrupted ? Json("stop-requested") : Json(nullptr)},
         {"startedAt", format_timestamp(run_started)},
@@ -563,12 +591,14 @@ int run(const CliOptions& options) {
          {{"jobs", runs.size()},
           {"tasks", refs.size()},
           {"hostsUp", hosts_up},
-          {"openPorts", open_ports}}},
+          {"openPorts", open_ports},
+          {"uploaded", uploaded},
+          {"notUploaded", not_uploaded}}},
         {"jobs", jobs},
     };
-    if (!write_json_file(*run_dir / "run.json", run_summary)) {
+    if (!write_json_file(run_dir / "run.json", run_summary)) {
         logger.error("output.failed", "cannot write run summary",
-                     {{"path", (*run_dir / "run.json").string()}});
+                     {{"path", (run_dir / "run.json").string()}});
         return kExitJobFailed;
     }
     logger.info("run.finished", "run finished",
@@ -577,10 +607,163 @@ int run(const CliOptions& options) {
                  {"tasks", refs.size()},
                  {"hosts_up", hosts_up},
                  {"open_ports", open_ports},
-                 {"output", run_dir->string()}});
+                 {"output", run_dir.string()}});
 
     if (was_interrupted) return kExitInterrupted;
     return has_failed_job ? kExitJobFailed : kExitOk;
+}
+
+int run_file(const CliOptions& options, const Config& config, const Logger& logger) {
+    logger.info("manager.start", "worker-manager starting",
+                {{"version", WORKER_MANAGER_VERSION},
+                 {"input", options.input_path == "-" ? "stdin" : options.input_path},
+                 {"max_parallel", config.max_parallel},
+                 {"max_rate_pps", config.max_rate}});
+
+    const auto text = read_input(options.input_path);
+    if (!text) {
+        logger.error("input.invalid", text.error());
+        return kExitInvalidInput;
+    }
+    const Json document = Json::parse(*text, nullptr, false);
+    if (document.is_discarded()) {
+        logger.error("input.invalid", "the input is not valid JSON");
+        return kExitInvalidInput;
+    }
+    auto list = parse_job_list(document);
+    if (!list) {
+        logger.error("input.invalid", list.error());
+        return kExitInvalidInput;
+    }
+    const auto run_dir = create_run_dir(options.output_dir);
+    if (!run_dir) {
+        logger.error("output.failed", run_dir.error());
+        return kExitInvalidInput;
+    }
+    const Binaries binaries = find_worker_binaries(config, logger);
+
+    // Blocked only now: until here SIGINT still ends a stalled read of stdin.
+    SignalThread::block_signals();
+    std::stop_source stop;
+    std::stop_source force;
+    const SignalThread signals{stop, force, logger};
+    return run_job_list(*list, *run_dir, options.input_path,
+                        {.config = config,
+                         .binaries = binaries,
+                         .stop = stop.get_token(),
+                         .force = force.get_token(),
+                         .logger = logger});
+}
+
+// Leases a job list, runs it to the end, leases the next one. Only an idle manager asks, so
+// leased jobs never wait in a local queue while their lease runs out.
+int run_poll(const CliOptions& options, const Config& config, const Logger& logger) {
+    const BackendConfig& backend = config.backend;
+    if (backend.token.empty()) {
+        logger.error("config.invalid", "--poll needs WORKER_MANAGER_TOKEN (the backend's token)");
+        return kExitInvalidInput;
+    }
+    const Binaries binaries = find_worker_binaries(config, logger);
+    LeaseRequest request{.manager_id = backend.manager_id,
+                         .workers = {},
+                         .max_parallel = config.max_parallel,
+                         .wait = backend.poll_wait};
+    for (const WorkerBinary& worker : config.workers) {
+        if (binaries.contains(worker.name)) request.workers.push_back(worker.name);
+    }
+    if (request.workers.empty()) {
+        logger.error("config.invalid", "no worker binary is installed; nothing to ask jobs for");
+        return kExitInvalidInput;
+    }
+
+    SignalThread::block_signals();  // before libcurl or any other thread starts
+    const CurlGlobal curl;
+    const BackendClient client{backend.url, backend.token};
+    std::stop_source stop;
+    std::stop_source force;
+    const SignalThread signals{stop, force, logger};
+    ResultUploader uploader{
+        client,
+        {.attempts = backend.upload_attempts, .retry_delay = backend.retry_delay},
+        stop.get_token(),
+        force.get_token(),
+        logger};
+    const RunContext context{.config = config,
+                             .binaries = binaries,
+                             .stop = stop.get_token(),
+                             .force = force.get_token(),
+                             .logger = logger,
+                             .uploader = &uploader};
+    logger.info("manager.start", "worker-manager polling the backend for jobs",
+                {{"version", WORKER_MANAGER_VERSION},
+                 {"backend", client.lease_url()},
+                 {"manager_id", backend.manager_id},
+                 {"workers", request.workers},
+                 {"wait_s", backend.poll_wait.count()},
+                 {"max_parallel", config.max_parallel},
+                 {"max_rate_pps", config.max_rate}});
+
+    using SteadyClock = std::chrono::steady_clock;
+    std::uint32_t failures = 0;
+    std::chrono::milliseconds delay{0};
+    const auto fail = [&](std::string_view event, std::string_view message) {
+        delay = retry_delay(backend.retry_delay, ++failures);
+        logger.warn(event, message, {{"failures", failures}, {"retry_in_ms", delay.count()}});
+    };
+    while (sleep_unless_stopped(delay, context.stop)) {
+        const auto asked_at = SteadyClock::now();
+        auto lease = client.lease(request, context.stop);
+        if (context.stop.stop_requested()) break;
+        if (!lease) {
+            fail("lease.failed", lease.error());
+            continue;
+        }
+        if (!lease->job_list) {
+            failures = 0;
+            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                SteadyClock::now() - asked_at);
+            delay = std::max<std::chrono::milliseconds>(lease->next_poll, kMinPollPeriod - elapsed);
+            logger.debug("lease.empty", "no jobs", {{"next_poll_ms", delay.count()}});
+            continue;
+        }
+        auto list = parse_job_list(*lease->job_list);
+        if (!list) {
+            fail("lease.invalid",
+                 std::format("the backend sent an invalid job list: {}", list.error()));
+            continue;
+        }
+        const auto run_dir = create_run_dir(options.output_dir);
+        if (!run_dir) {
+            fail("output.failed", run_dir.error());
+            continue;
+        }
+        failures = 0;
+        delay = lease->next_poll;
+        constexpr std::string_view kLeaseFile = "lease.json";
+        if (!write_json_file(*run_dir / kLeaseFile, *lease->job_list)) {
+            logger.error("output.failed", "cannot write the job list",
+                         {{"path", (*run_dir / kLeaseFile).string()}});
+        }
+        logger.info("lease.received", "job list received",
+                    {{"jobs", list->jobs.size() + list->invalid.size()},
+                     {"run_id", run_dir->filename().string()}});
+        (void)run_job_list(*list, *run_dir, kLeaseFile, context);
+    }
+    logger.info("manager.stopped", "stop requested; worker-manager exiting");
+    return kExitOk;
+}
+
+int run(const CliOptions& options) {
+    Config config;
+    try {
+        config = read_config();
+    } catch (const std::exception& error) {
+        std::println(stderr, "worker-manager: {}", error.what());
+        return kExitInvalidInput;
+    }
+    const Logger logger{config.log_level, config.log_format};
+    return options.is_polling ? run_poll(options, config, logger)
+                              : run_file(options, config, logger);
 }
 
 }  // namespace
