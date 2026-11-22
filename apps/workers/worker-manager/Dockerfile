@@ -14,6 +14,11 @@ ARG HTTPX_VERSION=v1.12.0
 ENV CGO_ENABLED=0 GOBIN=/out
 RUN go install github.com/projectdiscovery/httpx/cmd/httpx@${HTTPX_VERSION}
 
+FROM golang:1.26 AS naabu
+ARG NAABU_VERSION=v2.7.0
+ENV CGO_ENABLED=0 GOBIN=/out
+RUN go install github.com/projectdiscovery/naabu/v2/cmd/naabu@${NAABU_VERSION}
+
 FROM ${UBUNTU_IMAGE}:${UBUNTU_VERSION} AS builder
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential cmake ninja-build nlohmann-json3-dev \
@@ -30,10 +35,12 @@ RUN for project in masscan-worker nmap-worker httpx-worker worker-manager; do \
         && ctest --test-dir "build/$project" --output-on-failure \
         && cmake --install "build/$project" --prefix /out || exit 1; \
     done
+COPY naabu-worker ./naabu-worker
+RUN python3 -m unittest discover -s naabu-worker/tests -v
 
 FROM ${UBUNTU_IMAGE}:${UBUNTU_VERSION} AS runner
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends masscan nmap libcap2-bin ca-certificates libssl3t64 \
+    && apt-get install -y --no-install-recommends masscan nmap python3 libcap2-bin ca-certificates libssl3t64 \
       libcurl4-openssl-dev libpugixml-dev \
     && rm -rf /var/lib/apt/lists/* \
     # masscan sends raw SYNs; file capabilities let a non-root user run it. The container
@@ -43,10 +50,14 @@ RUN apt-get update \
     && useradd --system --no-create-home --shell /usr/sbin/nologin worker \
     && mkdir /results && chown worker /results
 COPY --from=httpx /out/httpx /usr/local/bin/httpx
+COPY --from=naabu /out/naabu /usr/local/bin/naabu
+COPY naabu-worker/naabu-worker /usr/local/bin/naabu-worker
+RUN chmod +x /usr/local/bin/naabu-worker \
+    && setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/naabu
 COPY --from=builder /out/bin/masscan-worker /out/bin/nmap-worker /out/bin/httpx-worker /out/bin/worker-manager \
      /usr/local/bin/
 COPY worker-manager/examples /jobs
 USER worker
-ENV WORKER_MANAGER_WORKERS=masscan=/usr/local/bin/masscan-worker,nmap=/usr/local/bin/nmap-worker,httpx=/usr/local/bin/httpx-worker
+ENV WORKER_MANAGER_WORKERS=masscan=/usr/local/bin/masscan-worker,naabu=/usr/local/bin/naabu-worker,nmap=/usr/local/bin/nmap-worker,httpx=/usr/local/bin/httpx-worker
 ENTRYPOINT ["/usr/local/bin/worker-manager"]
 CMD ["--input", "/jobs/example.json", "--output-dir", "/results"]

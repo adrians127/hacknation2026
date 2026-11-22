@@ -5,14 +5,15 @@ Docker Compose files. You run the backend and frontend with `pnpm dev`; only wha
 | File | Project | Services |
 |---|---|---|
 | `docker-compose.yml` | `hacknation` | Infrastructure: `postgres`, `defectdojo-*` |
-| `docker-compose.workers.yml` | `hacknation-workers` | Scan workers: `nmap-worker`, `masscan-worker`, `worker-manager` |
+| `docker-compose.workers.yml` | `hacknation-workers` | Scan workers: `nmap-worker`, `masscan-worker`, `naabu-worker`, `worker-manager` |
 
 | Service | File | Description |
 |---|---|---|
 | `postgres` | `docker-compose.yml` | PostgreSQL 19 (alpine), port bound to `127.0.0.1:5432` only |
 | `defectdojo-*` | `docker-compose.yml` | DefectDojo 3.5 (7 containers), UI and API on `127.0.0.1:8080` only. See [DefectDojo](#defectdojo) |
 | `masscan-worker` | `docker-compose.workers.yml` | One-shot C++ masscan sweep from `apps/workers/masscan-worker`, a job on stdin |
-| `worker-manager` | `docker-compose.workers.yml` (profile `cli`) | C++ orchestrator from `apps/workers/worker-manager`: job list in (a file, or long-polled from the backend), masscan-worker and nmap-worker tasks, results in `worker-results/` |
+| `naabu-worker` | `docker-compose.workers.yml` | One-shot Naabu TCP discovery from `apps/workers/naabu-worker`, a job on stdin |
+| `worker-manager` | `docker-compose.workers.yml` (profile `cli`) | C++ orchestrator from `apps/workers/worker-manager`: job list in (a file, or long-polled from the backend), discovery and Nmap tasks, results in `worker-results/` |
 | `nmap-worker` | `docker-compose.workers.yml` (profile `nmap`) | Long-running C++ worker from `apps/workers/nmap-worker`. Opt-in, no pnpm script |
 
 ## Commands (from the repo root)
@@ -31,6 +32,8 @@ pnpm dojo:seed      # fictional demo data (people, assets, two scan runs, triage
 # workers (docker-compose.workers.yml)
 pnpm workers:build                # build the masscan-worker image
 pnpm workers:masscan < job.json   # one masscan sweep, result JSON on stdout
+pnpm workers:naabu:build          # build naabu-worker
+pnpm workers:naabu < apps/workers/naabu-worker/examples/job-local.json > result.json
 pnpm workers:manager              # build + run worker-manager on its example.json -> worker-results/
 pnpm workers:manager:poll         # worker-manager long-polls the backend for jobs until Ctrl+C
 pnpm workers:nmap:build           # build nmap-worker and run its tests
@@ -58,6 +61,10 @@ Use `pnpm workers:nmap:build` and `pnpm workers:nmap < job.json` for one-shot jo
 ## masscan-worker
 
 A one-shot CLI rather than a long-running service. Build it with `pnpm workers:build` and run a job with `pnpm workers:masscan < job.json` (that is `docker compose -f docker/docker-compose.workers.yml run --rm -T masscan-worker`). The result JSON goes to stdout and the progress logs to stderr. Set `MASSCAN_WORKER_LOG_LEVEL=debug` or `MASSCAN_WORKER_LOG_FORMAT=json` in your shell to change them; compose passes every `MASSCAN_WORKER_*` variable through. It has `cap_add: [NET_RAW, NET_ADMIN]` and `network_mode: host` (Linux hosts only), so it scans from the host's own network interface. Details are in [`apps/workers/masscan-worker/README.md`](../apps/workers/masscan-worker/README.md).
+
+## naabu-worker
+
+Use `pnpm workers:naabu:build` and `pnpm workers:naabu < apps/workers/naabu-worker/examples/job-local.json > result.json` for the alternative discovery worker. Local tests run with `python3 -m unittest discover -s apps/workers/naabu-worker/tests -v` and use a fake Naabu binary. The manager example `pnpm workers:manager --input /jobs/naabu-nmap-local.json --output-dir /results` schedules Naabu before Nmap on loopback. See [`apps/workers/naabu-worker/README.md`](../apps/workers/naabu-worker/README.md).
 
 ## worker-manager
 

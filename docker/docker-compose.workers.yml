@@ -78,6 +78,23 @@ services:
       - NET_RAW
       - NET_ADMIN
 
+  naabu-worker:
+    build:
+      context: ../apps/workers/naabu-worker
+      args:
+        UBUNTU_IMAGE: ${UBUNTU_IMAGE:-ubuntu}
+        NAABU_VERSION: ${NAABU_VERSION:-v2.7.0}
+    image: hacknation/naabu-worker:local
+    restart: "no"
+    network_mode: host
+    environment:
+      NAABU_WORKER_DEFAULT_RATE: ${NAABU_WORKER_DEFAULT_RATE:-1000}
+      NAABU_WORKER_MAX_RATE: ${NAABU_WORKER_MAX_RATE:-100000}
+      NAABU_WORKER_MAX_TARGETS: ${NAABU_WORKER_MAX_TARGETS:-16777216}
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
   # CLI (profile `cli`): reads a job list or polls the backend, runs the requested
   # workers and writes everything to worker-results/<run-id>/. See its README.
   #   docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager
@@ -92,6 +109,7 @@ services:
       args:
         UBUNTU_IMAGE: ${UBUNTU_IMAGE:-ubuntu}
         HTTPX_VERSION: ${HTTPX_VERSION:-v1.12.0}
+        NAABU_VERSION: ${NAABU_VERSION:-v2.7.0}
     image: hacknation/worker-manager:local
     restart: "no"
     # Same reasons as masscan-worker: masscan needs the host's real NIC (Linux hosts only).
@@ -101,7 +119,7 @@ services:
     environment:
       WORKER_MANAGER_LOG_LEVEL: ${WORKER_MANAGER_LOG_LEVEL:-info}
       WORKER_MANAGER_LOG_FORMAT: ${WORKER_MANAGER_LOG_FORMAT:-text}
-      WORKER_MANAGER_STAGES: ${WORKER_MANAGER_STAGES:-masscan,nmap,httpx}
+      WORKER_MANAGER_STAGES: ${WORKER_MANAGER_STAGES:-masscan,naabu,nmap,httpx}
       WORKER_MANAGER_MAX_RATE: ${WORKER_MANAGER_MAX_RATE:-100000}
       WORKER_MANAGER_MIN_TASK_RATE: ${WORKER_MANAGER_MIN_TASK_RATE:-1000}
       # NMAP_MAX_PARALLEL x NMAP_MAX_RATE_PER_PROCESS below; keep them in step.
@@ -122,6 +140,9 @@ services:
       MASSCAN_WORKER_DEFAULT_RATE: ${MASSCAN_WORKER_DEFAULT_RATE:-10000}
       MASSCAN_WORKER_MAX_RATE: ${MASSCAN_WORKER_MAX_RATE:-100000}
       MASSCAN_WORKER_MAX_TARGETS: ${MASSCAN_WORKER_MAX_TARGETS:-16777216}
+      NAABU_WORKER_DEFAULT_RATE: ${NAABU_WORKER_DEFAULT_RATE:-1000}
+      NAABU_WORKER_MAX_RATE: ${NAABU_WORKER_MAX_RATE:-100000}
+      NAABU_WORKER_MAX_TARGETS: ${NAABU_WORKER_MAX_TARGETS:-16777216}
       NMAP_SCAN_TYPE: ${NMAP_SCAN_TYPE:-syn}
       NMAP_MAX_PARALLEL: ${NMAP_MAX_PARALLEL:-2}
       NMAP_MAX_RATE_PER_PROCESS: ${NMAP_MAX_RATE_PER_PROCESS:-50}

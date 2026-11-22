@@ -181,13 +181,13 @@ Change this file first, with the team's agreement, and only then the code. When 
 | Field | Meaning |
 |---|---|
 | `subnet` | The job's subnet (CIDR), or `null` when the addresses do not form one aligned block |
-| `ports` | TCP port spec that was scanned, e.g. `22,80,8000-8100` |
-| `maxParallel`, `maxRatePerProcess` | Worker concurrency and rate limit; Nmap reports processes/packets per second, httpx reports threads/HTTP requests per second |
+| `ports` | TCP port spec that was scanned, e.g. `22,80,8000-8100`; `null` when the job failed before parsing |
+| `maxParallel`, `maxRatePerProcess` | Worker concurrency and rate limit; Nmap reports processes/packets per second, httpx reports threads/HTTP requests per second. `null` when the job failed before parsing |
 | `hostTimeoutMs`, `httpTimeoutMs` | Per-host Nmap timeout (`null` for other workers) and per-request HTTP timeout |
-| `maxBodyBytes`, `maxRedirects` | Limits for `http[].body.content` and `http[].redirects` |
+| `maxBodyBytes`, `maxRedirects` | Limits for `http[].body.content` and `http[].redirects`; `null` for workers without HTTP probing |
 | `nmapArgs` | The Nmap argument vector **without the target addresses**; `[]` for workers without Nmap |
 
-`scan.counts`: `addresses` (addresses in the job), one count per host status (`up`, `down`, `timeout`, `cancelled`, `failed`), `openPorts`, `httpEndpoints` (entries in all `http[]` lists) and `httpRequests` (every HTTP request sent, probes and favicon included).
+`scan.counts`: `addresses` (addresses in the job), one count per host status (`up`, `down`, `timeout`, `cancelled`, `failed`), `openPorts`, `httpEndpoints` (entries in all `http[]` lists) and `httpRequests` (every HTTP request sent, probes and favicon included). `addresses` is `null` for invalid input. Discovery workers report `down` and `cancelled` as `null` when a sharded or interrupted sweep cannot establish those totals.
 
 ### `hosts[]`
 
@@ -291,3 +291,7 @@ The worker result does not contain these. The backend computes them from stored 
 ## Current httpx-worker coverage
 
 `httpx-worker` probes assigned IPs, ports and vhosts with ProjectDiscovery httpx. It fills HTTP status, title, headers, hashed cookie values, bounded body, unfollowed redirects and explicit path probes. It leaves Nmap service metadata, favicon and TLS certificate details `null` because those values are not produced by its current invocation. For a host-object target, its ports are already known open; for an address/range target, only a responding HTTP port is reported open. The backend combines worker observations on reads, retaining Nmap service metadata and adding HTTP responses from httpx; stored results remain separate.
+
+## Current naabu-worker coverage
+
+`naabu-worker` is an alternative TCP discovery stage to masscan-worker. It reports only hosts with open ports, with deduplicated TCP ports and their observation times. It leaves service, identity, HTTP and latency fields empty or `null` because basic Naabu JSON lines do not provide them. A completed unsharded run reports `down` as assigned addresses minus responding hosts; a partial or sharded run leaves `down` and `cancelled` as `null`.
