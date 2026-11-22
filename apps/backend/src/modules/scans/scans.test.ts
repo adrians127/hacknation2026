@@ -348,6 +348,18 @@ describe("GET /scans/{id}/hosts/{hostId}", () => {
     expect(vhost.tls?.cert.subjectCn).toBe("wiki.example.org");
     expect(after.services[0]).toMatchObject({ banner: "SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13" });
     expect(after.history.map((entry) => entry.status)).toEqual(["up", "up"]);
+    // Side by side: the base scan's decrypted observation, and what differs from it.
+    expect(after.services[0].fieldChanges).toEqual([
+      { field: "service.version", endpoint: null, key: null, before: "9.6p1", after: "9.7p1" },
+    ]);
+    expect(after.services[0].before).toMatchObject({ observed: { version: "9.6p1" } });
+    expect(after.services[1].fieldChanges).toEqual([]);
+    expect(after.services[1].before?.http[0].cookies.map((cookie) => cookie.name)).toEqual([
+      "PHPSESSID",
+    ]);
+    expect(after.services[2]).toMatchObject({ port: 8080, change: "new", before: null, fieldChanges: [] });
+    expect(after.fieldChanges).toEqual([]);
+    expect(before.services.every((service) => service.before === null)).toBe(true);
   });
 
   it("compares the host with an explicitly chosen base scan", async () => {

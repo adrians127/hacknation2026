@@ -71,6 +71,46 @@ export const ScanDetailSchema = ScanSchema.extend({
   coverage: ScanCoverageSchema.nullable(),
 });
 
+/**
+ * One field that differs between the base scan's and this scan's observation of a port (or, for
+ * `host.hostname`, of the host). The compared fields are the ones the port fingerprint covers.
+ */
+export const FieldChangeKindSchema = z.enum([
+  "service.name",
+  "service.product",
+  "service.version",
+  "service.extraInfo",
+  "service.cpe",
+  "ssh.hostKey",
+  "http.endpoint",
+  "http.status",
+  "http.title",
+  "http.redirect",
+  "http.header",
+  "http.securityHeader",
+  "http.cookie",
+  "http.cookieFlags",
+  "tls.cert",
+  "tls.issuer",
+  "tls.expiry",
+  "tls.selfSigned",
+  "tls.version",
+  "http.favicon",
+  "http.probe",
+  "host.hostname",
+]);
+
+export const FieldChangeSchema = z.object({
+  field: FieldChangeKindSchema,
+  /** The HTTP endpoint the change is on (`vhost: null` = requested by bare IP). */
+  endpoint: HttpEndpointSchema.pick({ scheme: true, vhost: true }).nullable(),
+  /** Header name, cookie name or probe path. */
+  key: z.string().nullable(),
+  /** `null`: absent on that side (a header, cookie, endpoint or probe that appeared or went). */
+  before: z.string().nullable(),
+  after: z.string().nullable(),
+});
+
 /** How one scan saw a port, from plaintext columns only. */
 export const ServiceSnapshotSchema = z.object({
   observed: ServiceIdentitySchema,
@@ -142,7 +182,9 @@ export const ScanHostListResponseSchema = z.object({
   pageSize: z.number().int().positive(),
 });
 
-export const ScanServiceDetailSchema = ScanServiceSchema.extend({
+/** How one scan saw a port, decrypted. */
+export const ServiceObservationSchema = z.object({
+  observed: ServiceIdentitySchema,
   reason: z.string().nullable(),
   extraInfo: z.string().nullable(),
   cpe: z.array(z.string()),
@@ -153,6 +195,13 @@ export const ScanServiceDetailSchema = ScanServiceSchema.extend({
   scripts: OpenPortSchema.shape.scripts,
   /** Full endpoints, decrypted: headers, cookies (hashed values only), TLS certificate, probes. */
   http: z.array(HttpEndpointSchema),
+});
+
+export const ScanServiceDetailSchema = ScanServiceSchema.extend(ServiceObservationSchema.shape).extend({
+  /** The base scan's observation of the port, decrypted; `null` when it was not open there. */
+  before: ServiceObservationSchema.nullable(),
+  /** What differs from `before`; empty unless the service is `changed`. */
+  fieldChanges: z.array(FieldChangeSchema),
   firstSeenAt: z.iso.datetime(),
   lastSeenAt: z.iso.datetime(),
   /** Active matches first, then the ones retracted in the last 30 days. */
@@ -171,6 +220,8 @@ export const HostHistoryEntrySchema = z.object({
 export const HOST_HISTORY_LIMIT = 10;
 
 export const ScanHostDetailSchema = ScanHostSchema.extend({
+  /** Host-level differences from the base scan (`host.hostname`), when it was up in both. */
+  fieldChanges: z.array(FieldChangeSchema),
   firstSeenAt: z.iso.datetime(),
   lastSeenAt: z.iso.datetime(),
   services: z.array(ScanServiceDetailSchema),
@@ -206,6 +257,9 @@ export type ScanChangeCounts = z.infer<typeof ScanChangeCountsSchema>;
 export type ScanCoverage = z.infer<typeof ScanCoverageSchema>;
 export type ScanCompareQuery = z.infer<typeof ScanCompareQuerySchema>;
 export type ServiceSnapshot = z.infer<typeof ServiceSnapshotSchema>;
+export type FieldChangeKind = z.infer<typeof FieldChangeKindSchema>;
+export type FieldChange = z.infer<typeof FieldChangeSchema>;
+export type ServiceObservation = z.infer<typeof ServiceObservationSchema>;
 export type ScanDetail = z.infer<typeof ScanDetailSchema>;
 export type ScanService = z.infer<typeof ScanServiceSchema>;
 export type ScanHost = z.infer<typeof ScanHostSchema>;

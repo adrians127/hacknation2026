@@ -4933,6 +4933,93 @@
                                   "version"
                                 ]
                               },
+                              "reason": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "extraInfo": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "cpe": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "method": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "confidence": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "identity": {
+                                "type": "object",
+                                "properties": {
+                                  "ttl": {
+                                    "type": [
+                                      "integer",
+                                      "null"
+                                    ],
+                                    "minimum": 0,
+                                    "maximum": 255
+                                  },
+                                  "sshHostKeySha256": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  },
+                                  "tlsCertSha256": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "pattern": "^[0-9a-f]{64}$"
+                                  }
+                                },
+                                "required": [
+                                  "ttl",
+                                  "sshHostKeySha256",
+                                  "tlsCertSha256"
+                                ]
+                              },
+                              "banner": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "scripts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "output": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "output"
+                                  ]
+                                }
+                              },
                               "http": {
                                 "type": "array",
                                 "items": {
@@ -4974,6 +5061,361 @@
                                         "string",
                                         "null"
                                       ]
+                                    },
+                                    "headers": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "value": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "name",
+                                          "value"
+                                        ]
+                                      }
+                                    },
+                                    "cookies": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "valueSha256": {
+                                            "type": "string",
+                                            "pattern": "^[0-9a-f]{64}$"
+                                          },
+                                          "secure": {
+                                            "type": "boolean"
+                                          },
+                                          "httpOnly": {
+                                            "type": "boolean"
+                                          },
+                                          "sameSite": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "enum": [
+                                              "Strict",
+                                              "Lax",
+                                              "None",
+                                              null
+                                            ]
+                                          },
+                                          "domain": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "path": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "expires": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "name",
+                                          "valueSha256",
+                                          "secure",
+                                          "httpOnly",
+                                          "sameSite",
+                                          "domain",
+                                          "path",
+                                          "expires"
+                                        ]
+                                      }
+                                    },
+                                    "redirects": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "url": {
+                                            "type": "string",
+                                            "format": "uri"
+                                          },
+                                          "statusCode": {
+                                            "type": "integer",
+                                            "minimum": 300,
+                                            "maximum": 399
+                                          },
+                                          "location": {
+                                            "type": "string"
+                                          },
+                                          "followed": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "url",
+                                          "statusCode",
+                                          "location",
+                                          "followed"
+                                        ]
+                                      }
+                                    },
+                                    "body": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "sha256": {
+                                          "type": "string",
+                                          "pattern": "^[0-9a-f]{64}$"
+                                        },
+                                        "size": {
+                                          "type": "integer",
+                                          "minimum": 0
+                                        },
+                                        "contentType": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "content": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "truncated": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "sha256",
+                                        "size",
+                                        "contentType",
+                                        "content",
+                                        "truncated"
+                                      ]
+                                    },
+                                    "favicon": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "url": {
+                                          "type": "string",
+                                          "format": "uri"
+                                        },
+                                        "mmh3": {
+                                          "type": "integer",
+                                          "minimum": -2147483648,
+                                          "maximum": 2147483647
+                                        },
+                                        "sha256": {
+                                          "type": "string",
+                                          "pattern": "^[0-9a-f]{64}$"
+                                        }
+                                      },
+                                      "required": [
+                                        "url",
+                                        "mmh3",
+                                        "sha256"
+                                      ]
+                                    },
+                                    "tls": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "version": {
+                                          "type": "string"
+                                        },
+                                        "cipher": {
+                                          "type": "string"
+                                        },
+                                        "alpn": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
+                                        "cert": {
+                                          "type": "object",
+                                          "properties": {
+                                            "subjectCn": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "san": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "issuer": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "notBefore": {
+                                              "type": "string",
+                                              "format": "date-time"
+                                            },
+                                            "notAfter": {
+                                              "type": "string",
+                                              "format": "date-time"
+                                            },
+                                            "serial": {
+                                              "type": "string"
+                                            },
+                                            "sha256": {
+                                              "type": "string",
+                                              "pattern": "^[0-9a-f]{64}$"
+                                            },
+                                            "selfSigned": {
+                                              "type": "boolean"
+                                            },
+                                            "keyAlgorithm": {
+                                              "type": "string"
+                                            },
+                                            "keyBits": {
+                                              "type": [
+                                                "integer",
+                                                "null"
+                                              ],
+                                              "exclusiveMinimum": 0
+                                            }
+                                          },
+                                          "required": [
+                                            "subjectCn",
+                                            "san",
+                                            "issuer",
+                                            "notBefore",
+                                            "notAfter",
+                                            "serial",
+                                            "sha256",
+                                            "selfSigned",
+                                            "keyAlgorithm",
+                                            "keyBits"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "version",
+                                        "cipher",
+                                        "alpn",
+                                        "cert"
+                                      ]
+                                    },
+                                    "probes": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "path": {
+                                            "type": "string"
+                                          },
+                                          "statusCode": {
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ],
+                                            "minimum": 100,
+                                            "maximum": 599
+                                          },
+                                          "location": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "title": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "size": {
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ],
+                                            "minimum": 0
+                                          },
+                                          "bodySha256": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "pattern": "^[0-9a-f]{64}$"
+                                          },
+                                          "error": {
+                                            "type": [
+                                              "object",
+                                              "null"
+                                            ],
+                                            "properties": {
+                                              "code": {
+                                                "type": "string",
+                                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                              },
+                                              "message": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": [
+                                              "code",
+                                              "message"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "path",
+                                          "statusCode",
+                                          "location",
+                                          "title",
+                                          "size",
+                                          "bodySha256",
+                                          "error"
+                                        ]
+                                      }
+                                    },
+                                    "error": {
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ],
+                                      "properties": {
+                                        "code": {
+                                          "type": "string",
+                                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                        },
+                                        "message": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "code",
+                                        "message"
+                                      ]
                                     }
                                   },
                                   "required": [
@@ -4982,13 +5424,29 @@
                                     "url",
                                     "finalUrl",
                                     "statusCode",
-                                    "title"
+                                    "title",
+                                    "headers",
+                                    "cookies",
+                                    "redirects",
+                                    "body",
+                                    "favicon",
+                                    "tls",
+                                    "probes",
+                                    "error"
                                   ]
                                 }
                               }
                             },
                             "required": [
                               "observed",
+                              "reason",
+                              "extraInfo",
+                              "cpe",
+                              "method",
+                              "confidence",
+                              "identity",
+                              "banner",
+                              "scripts",
                               "http"
                             ]
                           },
@@ -5132,6 +5590,93 @@
                               "required": [
                                 "id",
                                 "output"
+                              ]
+                            }
+                          },
+                          "fieldChanges": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "enum": [
+                                    "service.name",
+                                    "service.product",
+                                    "service.version",
+                                    "service.extraInfo",
+                                    "service.cpe",
+                                    "ssh.hostKey",
+                                    "http.endpoint",
+                                    "http.status",
+                                    "http.title",
+                                    "http.redirect",
+                                    "http.header",
+                                    "http.securityHeader",
+                                    "http.cookie",
+                                    "http.cookieFlags",
+                                    "tls.cert",
+                                    "tls.issuer",
+                                    "tls.expiry",
+                                    "tls.selfSigned",
+                                    "tls.version",
+                                    "http.favicon",
+                                    "http.probe",
+                                    "host.hostname"
+                                  ]
+                                },
+                                "endpoint": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "scheme": {
+                                      "type": "string",
+                                      "enum": [
+                                        "http",
+                                        "https"
+                                      ]
+                                    },
+                                    "vhost": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "minLength": 1,
+                                      "maxLength": 253
+                                    }
+                                  },
+                                  "required": [
+                                    "scheme",
+                                    "vhost"
+                                  ]
+                                },
+                                "key": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "before": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "after": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "endpoint",
+                                "key",
+                                "before",
+                                "after"
                               ]
                             }
                           },
@@ -5381,9 +5926,97 @@
                           "identity",
                           "banner",
                           "scripts",
+                          "fieldChanges",
                           "firstSeenAt",
                           "lastSeenAt",
                           "vulnerabilityMatches"
+                        ]
+                      }
+                    },
+                    "fieldChanges": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "field": {
+                            "type": "string",
+                            "enum": [
+                              "service.name",
+                              "service.product",
+                              "service.version",
+                              "service.extraInfo",
+                              "service.cpe",
+                              "ssh.hostKey",
+                              "http.endpoint",
+                              "http.status",
+                              "http.title",
+                              "http.redirect",
+                              "http.header",
+                              "http.securityHeader",
+                              "http.cookie",
+                              "http.cookieFlags",
+                              "tls.cert",
+                              "tls.issuer",
+                              "tls.expiry",
+                              "tls.selfSigned",
+                              "tls.version",
+                              "http.favicon",
+                              "http.probe",
+                              "host.hostname"
+                            ]
+                          },
+                          "endpoint": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "scheme": {
+                                "type": "string",
+                                "enum": [
+                                  "http",
+                                  "https"
+                                ]
+                              },
+                              "vhost": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1,
+                                "maxLength": 253
+                              }
+                            },
+                            "required": [
+                              "scheme",
+                              "vhost"
+                            ]
+                          },
+                          "key": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "before": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "after": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "field",
+                          "endpoint",
+                          "key",
+                          "before",
+                          "after"
                         ]
                       }
                     },
@@ -5461,6 +6094,7 @@
                     "note",
                     "vulnerabilities",
                     "services",
+                    "fieldChanges",
                     "firstSeenAt",
                     "lastSeenAt",
                     "history"

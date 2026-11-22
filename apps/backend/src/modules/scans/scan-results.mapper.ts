@@ -4,6 +4,7 @@ import type {
   ScanService,
   ScanServiceDetail,
   HostHistoryEntry,
+  ServiceObservation,
   ServiceSnapshot,
 } from "@subsurf/contracts/scans/scan-results.schema";
 import type { Scan, ScanHostCounts } from "@subsurf/contracts/scans/scans.schema";
@@ -14,7 +15,9 @@ import type {
 
 import type { Prisma, Scan as ScanRow } from "~backend/generated/prisma/client";
 import { decryptText } from "~backend/lib/crypto";
-import { httpSummaries, openPortDetails } from "~backend/modules/results/details";
+import { comparablePort } from "~backend/modules/results/comparable";
+import { httpSummaries, openPortDetails, storedOpenPort } from "~backend/modules/results/details";
+import { fieldChanges, hostnameChanges } from "~backend/modules/scans/field-changes";
 import type { HostDiff, ServiceDiff } from "~backend/modules/scans/scan-diff";
 import { EMPTY_SUMMARY } from "~backend/modules/vulnerabilities/vulnerabilities.mapper";
 
@@ -155,30 +158,50 @@ export function toScanHost(entry: HostInScan): ScanHost {
   };
 }
 
+function observationOf(port: PortRow): ServiceObservation {
+  const details = openPortDetails(port.details);
+  return {
+    observed: identityOf(port),
+    reason: port.reason,
+    extraInfo: port.serviceExtraInfo,
+    cpe: port.serviceCpe,
+    method: port.serviceMethod,
+    confidence: port.serviceConfidence,
+    identity: details.identity,
+    banner: details.banner,
+    scripts: details.scripts,
+    http: details.http,
+  };
+}
+
+/** Field-level differences of a `changed` service (both scans saw the port open). */
+function changesOf({ diff, port, basePort }: ResolvedService) {
+  if (diff.change !== "changed" || !basePort || basePort === port) return [];
+  return fieldChanges(
+    comparablePort(storedOpenPort(basePort)),
+    comparablePort(storedOpenPort(port)),
+  );
+}
+
 export function toScanHostDetail(
   entry: HostInScan,
   history: HostHistoryEntry[],
   matches: ReadonlyMap<string, ServiceVulnerability[]>,
 ): ScanHostDetail {
+  const upInBoth = entry.current.status === "up" && entry.base !== undefined;
   return {
     ...hostFields(entry),
+    fieldChanges: upInBoth ? hostnameChanges(hostnames(entry.base), hostnames(entry.current)) : [],
     firstSeenAt: entry.host.firstSeenAt.toISOString(),
     lastSeenAt: entry.host.lastSeenAt.toISOString(),
     history,
     services: resolveServices(entry).map((resolved): ScanServiceDetail => {
-      const { port, service } = resolved;
-      const details = openPortDetails(port.details);
+      const { port, service, basePort } = resolved;
       return {
         ...serviceFields(resolved, entry.vulnerabilities.services),
-        http: details.http,
-        reason: port.reason,
-        extraInfo: port.serviceExtraInfo,
-        cpe: port.serviceCpe,
-        method: port.serviceMethod,
-        confidence: port.serviceConfidence,
-        identity: details.identity,
-        banner: details.banner,
-        scripts: details.scripts,
+        ...observationOf(port),
+        before: basePort ? observationOf(basePort) : null,
+        fieldChanges: changesOf(resolved),
         firstSeenAt: service.firstSeenAt.toISOString(),
         lastSeenAt: service.lastSeenAt.toISOString(),
         vulnerabilityMatches: matches.get(service.id) ?? [],

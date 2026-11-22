@@ -2187,6 +2187,21 @@ export interface operations {
                                     product: string | null;
                                     version: string | null;
                                 };
+                                reason: string | null;
+                                extraInfo: string | null;
+                                cpe: string[];
+                                method: string | null;
+                                confidence: number | null;
+                                identity: {
+                                    ttl: number | null;
+                                    sshHostKeySha256: string | null;
+                                    tlsCertSha256: string | null;
+                                };
+                                banner: string | null;
+                                scripts: {
+                                    id: string;
+                                    output: string;
+                                }[];
                                 http: {
                                     /** @enum {string} */
                                     scheme: "http" | "https";
@@ -2197,6 +2212,76 @@ export interface operations {
                                     finalUrl: string;
                                     statusCode: number | null;
                                     title: string | null;
+                                    headers: {
+                                        name: string;
+                                        value: string;
+                                    }[];
+                                    cookies: {
+                                        name: string;
+                                        valueSha256: string;
+                                        secure: boolean;
+                                        httpOnly: boolean;
+                                        /** @enum {string|null} */
+                                        sameSite: "Strict" | "Lax" | "None" | null;
+                                        domain: string | null;
+                                        path: string | null;
+                                        expires: string | null;
+                                    }[];
+                                    redirects: {
+                                        /** Format: uri */
+                                        url: string;
+                                        statusCode: number;
+                                        location: string;
+                                        followed: boolean;
+                                    }[];
+                                    body: {
+                                        sha256: string;
+                                        size: number;
+                                        contentType: string | null;
+                                        content: string | null;
+                                        truncated: boolean;
+                                    } | null;
+                                    favicon: {
+                                        /** Format: uri */
+                                        url: string;
+                                        mmh3: number;
+                                        sha256: string;
+                                    } | null;
+                                    tls: {
+                                        version: string;
+                                        cipher: string;
+                                        alpn: string | null;
+                                        cert: {
+                                            subjectCn: string | null;
+                                            san: string[];
+                                            issuer: string | null;
+                                            /** Format: date-time */
+                                            notBefore: string;
+                                            /** Format: date-time */
+                                            notAfter: string;
+                                            serial: string;
+                                            sha256: string;
+                                            selfSigned: boolean;
+                                            keyAlgorithm: string;
+                                            keyBits: number | null;
+                                        };
+                                    } | null;
+                                    probes: {
+                                        path: string;
+                                        statusCode: number | null;
+                                        location: string | null;
+                                        title: string | null;
+                                        size: number | null;
+                                        bodySha256: string | null;
+                                        error: {
+                                            code: string;
+                                            message: string;
+                                        } | null;
+                                    }[];
+                                    error: {
+                                        code: string;
+                                        message: string;
+                                    } | null;
                                 }[];
                             } | null;
                             /** @enum {string} */
@@ -2224,6 +2309,18 @@ export interface operations {
                             scripts: {
                                 id: string;
                                 output: string;
+                            }[];
+                            fieldChanges: {
+                                /** @enum {string} */
+                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname";
+                                endpoint: {
+                                    /** @enum {string} */
+                                    scheme: "http" | "https";
+                                    vhost: string | null;
+                                } | null;
+                                key: string | null;
+                                before: string | null;
+                                after: string | null;
                             }[];
                             /** Format: date-time */
                             firstSeenAt: string;
@@ -2273,6 +2370,18 @@ export interface operations {
                                 triage: "unreviewed" | "important" | "accepted_risk" | "false_positive";
                                 note: string;
                             }[];
+                        }[];
+                        fieldChanges: {
+                            /** @enum {string} */
+                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname";
+                            endpoint: {
+                                /** @enum {string} */
+                                scheme: "http" | "https";
+                                vhost: string | null;
+                            } | null;
+                            key: string | null;
+                            before: string | null;
+                            after: string | null;
                         }[];
                         /** Format: date-time */
                         firstSeenAt: string;
