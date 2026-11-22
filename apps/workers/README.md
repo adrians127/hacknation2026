@@ -2,12 +2,37 @@
 
 Scanning workers written in **C++**. One directory is one worker: `apps/workers/<name>/` with its own `CMakeLists.txt`, `CMakePresets.json`, `Dockerfile` and `README.md`.
 
-This directory is **not a pnpm workspace** (it has no `package.json`), so turbo skips it and `pnpm build` does not need a local C++ compiler. Workers are built and run in Docker (`pnpm workers:build`, `pnpm workers:masscan`, both masscan-worker only for now).
+This directory is **not a pnpm workspace** (it has no `package.json`), so turbo skips it and `pnpm build` does not need a local C++ compiler. Workers are built and run in Docker (`pnpm workers:build` and `pnpm workers:masscan` for masscan-worker, `pnpm workers:manager` for worker-manager).
 
 | Worker | Description |
 |---|---|
-| [`nmap-worker`](nmap-worker/README.md) | TCP service and version detection on Masscan hits |
-| [`masscan-worker`](masscan-worker/README.md) | High-speed TCP SYN sweep across subnets or all 65,535 ports via masscan. JSON job in, JSON topology of live hosts out |
+| [`nmap-worker`](nmap-worker/README.md) | TCP service and version detection on address ranges or on Masscan hits (host objects with their own ports) |
+| [`worker-manager`](worker-manager/README.md) | Orchestrator, not a worker: splits a job list into tasks, runs the workers (in parallel where their IP:ports do not overlap, in pipeline order where they do), saves their results to files (no backend connection yet) |
+| [`masscan-worker`](masscan-worker/README.md) | High-speed TCP SYN sweep across subnets or all 65,535 ports via masscan. JSON job in, JSON list of live hosts out |
+
+## Job and result format
+
+Every worker reads the same job JSON and writes the same result JSON, so worker-manager (and later the backend) handles them alike. A new worker follows this section.
+
+**Job (input):** one object, snake_case keys; unknown keys are ignored (worker-manager adds `task_id`, `task_index`, `task_count`).
+
+| Field | Default | Description |
+|---|---|---|
+| `job_id`, `scan_id`, `lease_id` | none | Strings, echoed as `scan.jobId`, `scanId`, `leaseId` (`null` when not given) |
+| `targets` | required | IPv4 address, CIDR (`10.0.0.0/24`) or range (`10.0.0.1-10.0.0.50`): an array, or one comma-separated string. nmap-worker also takes host objects `{ip, ports, domains}` here |
+| `exclude` | `[]` | Same formats as `targets`, subtracted before scanning |
+| `ports` | `"1-65535"` | TCP ports: `"22,80,8000-8100"` or `[22, "8000-8100"]` |
+| `rate` | worker's default | Packets per second for the whole job |
+| `max_duration_seconds` | none | Time window, 1 to 604800 (required by nmap-worker) |
+
+Worker-specific settings are more flat snake_case fields (masscan's `wait_seconds`, nmap's `host_timeout_ms`, …), described in the worker's README. Validation errors use the same wording in every worker.
+
+**Result (output):** exactly `{ "scan": {…}, "hosts": [ … ] }` as in [`docs/worker-result-format.md`](../../docs/worker-result-format.md), in its key order, with no extra top-level keys. Every key is always present: a worker writes `null` (or `[]`) for what it cannot discover. masscan-worker, for example, has `service: null` and `params.hostTimeoutMs: null`, where nmap-worker fills them in.
+
+- Job-level `scan.error.code`: `invalid-input`, `scanner-unavailable`, `scanner-failed` or `io-error`. Host-level codes (`host-timeout`, `nmap-exit`, …) are on `hosts[].error`.
+- Invalid input: `status: "failed"`, `stopReason: "error"`, `hosts: []`, ids echoed when readable, `params` all `null` except `nmapArgs: []`, `counts.addresses`, `down` and `cancelled` `null`.
+- `params.subnet` is the job's CIDR when its addresses are exactly one aligned block, otherwise `null`; `params.ports` is the normalized port spec.
+- CLI and exit codes are shared too: `--input`, `--output`, `--pretty`; `0` completed or partial, `1` failed, `2` invalid input; a result is written in every case, and `SIGTERM` still writes a `partial` result.
 
 ## Backend protocol: HTTP pull
 
