@@ -27,6 +27,7 @@ import { EMPTY_SUMMARY } from "~backend/modules/vulnerabilities/vulnerabilities.
 export const OBSERVATION_INCLUDE = {
   hostnames: { select: { name: true, source: true } },
   ports: true,
+  result: { select: { workerId: true } },
 } as const satisfies Prisma.HostObservationInclude;
 
 export type ObservationRow = Prisma.HostObservationGetPayload<{ include: typeof OBSERVATION_INCLUDE }>;

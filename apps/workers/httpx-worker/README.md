@@ -75,17 +75,14 @@ result with `task_index` and `task_count` in `--poll` mode. The backend must
 construct the HTTP job from discovery results. Its `/workers/manager/lease`
 endpoint is not implemented yet; file mode works without it.
 
-The backend currently stores each worker result as a separate `HostObservation`.
-Its scan read path selects one observation per IP and prefers Nmap for an `up`
-host. Thus both results persist, but the selected Nmap observation hides httpx's
-`http[]` data. Backend integration should combine observations by
-`(scanId, ip, protocol, port)` when reading a scan: retain Nmap service/version,
-scripts and port identity, and attach httpx endpoints (keyed by scheme and
-vhost). It should keep observations and result IDs intact for audit/history,
-then calculate the effective fingerprint from the combined port. Ingest must
-also keep HTTP tasks in a distinct lease or task index: `(leaseId, taskIndex)`
-is the backend's deduplication key. The worker reports
-`worker.id: "httpx-worker"`.
+The backend stores each worker result as a separate `HostObservation`. Its scan
+read path combines the latest effective observation from each worker stage by
+`(scanId, ip, protocol, port)`. Nmap supplies service/version and scripts;
+httpx supplies HTTP endpoints keyed by scheme and vhost; Masscan still supplies
+ports absent from later stages. This also works when a scan uses only Masscan
+and httpx. Stored observations and result IDs remain unchanged. HTTP tasks need
+a distinct lease or task index because `(leaseId, taskIndex)` is the backend's
+deduplication key. The worker reports `worker.id: "httpx-worker"`.
 
 ## Test
 
