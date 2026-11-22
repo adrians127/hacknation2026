@@ -78,7 +78,7 @@
     },
     "import": {
       "title": "Dodaj cele",
-      "subtitle": "Wpisz adresy IP, zakresy CIDR (do /16) i domeny ręcznie albo wczytaj je z pliku CSV lub JSON.",
+      "subtitle": "Wpisz adresy IP, zakresy CIDR (do /16), zakresy IP i domeny ręcznie albo wczytaj je z pliku CSV lub JSON.",
       "back": "Wróć do celów",
       "tabs": {
         "manual": "Ręcznie",
@@ -87,8 +87,8 @@
       },
       "manual": {
         "label": "Cele",
-        "placeholder": "10.0.0.0/24, Sieć kampusu\n192.0.2.15\nexample.com",
-        "hint": "Jeden cel w wierszu, opcjonalnie z notatką po przecinku. Wiersze zaczynające się od # są pomijane."
+        "placeholder": "10.0.0.0/24, Sieć kampusu\n192.0.2.15\n198.51.100.20-198.51.100.40, Laboratorium\nexample.com",
+        "hint": "Jeden cel w wierszu (IP, CIDR, zakres jak 10.0.0.1-10.0.0.50 albo domena), opcjonalnie z notatką po przecinku. Wiersze zaczynające się od # są pomijane."
       },
       "csv": {
         "hint": "Jeden cel w wierszu i opcjonalna notatka w następnej kolumnie. Wiersz nagłówka (target, note) nie jest wymagany; kolumny można rozdzielać przecinkiem, średnikiem lub tabulatorem.",
@@ -127,22 +127,27 @@
         "problem": "Problem",
         "changed": "Zmieniono",
         "rejected": "Pominięto",
+        "overlap": "Nakłada się",
         "more_one": "…i jeszcze {{count, number}}",
         "more_few": "…i jeszcze {{count, number}}",
         "more_many": "…i jeszcze {{count, number}}",
         "more_other": "…i jeszcze {{count, number}}"
       },
       "issues": {
-        "invalid_format": "To nie jest adres IPv4, zakres CIDR ani domena",
+        "invalid_format": "To nie jest adres IPv4, CIDR, zakres IP ani domena",
         "ipv6_unsupported": "IPv6 nie jest obsługiwane",
         "reserved_range": "Zakres zarezerwowany (loopback, link-local, multicast lub broadcast)",
         "cidr_too_large": "Zakres większy niż /16",
+        "invalid_range": "Zakres kończy się przed swoim początkiem",
+        "range_too_large": "Zakres obejmuje więcej niż 65 536 adresów (/16)",
         "value_too_long": "Za długa wartość",
         "note_too_long": "Notatka dłuższa niż 500 znaków",
         "duplicate": "Powtarza wcześniejszy wpis",
         "cidr_normalized": "Bity hosta wyzerowane do adresu sieci",
         "single_host_cidr": "Zakres /32 jest importowany jako pojedynczy adres",
-        "url_stripped": "Z adresu URL pozostawiono samą nazwę hosta"
+        "url_stripped": "Z adresu URL pozostawiono samą nazwę hosta",
+        "range_split": "Zakres IP zapisany jako bloki CIDR",
+        "covered_by": "Pokrywa się z {{detail}} z tego importu"
       },
       "listErrors": {
         "empty": "Nie ma nic do zaimportowania.",

@@ -78,7 +78,7 @@
     },
     "import": {
       "title": "Add targets",
-      "subtitle": "Enter IP addresses, CIDR ranges (up to /16) and domains by hand, or load them from a CSV or JSON file.",
+      "subtitle": "Enter IP addresses, CIDR ranges (up to /16), IP ranges and domains by hand, or load them from a CSV or JSON file.",
       "back": "Back to targets",
       "tabs": {
         "manual": "Manual",
@@ -87,8 +87,8 @@
       },
       "manual": {
         "label": "Targets",
-        "placeholder": "10.0.0.0/24, Campus network\n192.0.2.15\nexample.com",
-        "hint": "One target per line, optionally followed by a comma and a note. Lines starting with # are skipped."
+        "placeholder": "10.0.0.0/24, Campus network\n192.0.2.15\n198.51.100.20-198.51.100.40, Lab\nexample.com",
+        "hint": "One target per line (an IP, CIDR, range such as 10.0.0.1-10.0.0.50, or domain), optionally followed by a comma and a note. Lines starting with # are skipped."
       },
       "csv": {
         "hint": "One target per row with an optional note in the next column. A header row (target, note) is optional; columns may be separated by a comma, semicolon or tab.",
@@ -121,20 +121,25 @@
         "problem": "Problem",
         "changed": "Changed",
         "rejected": "Skipped",
+        "overlap": "Overlap",
         "more_one": "…and {{count, number}} more",
         "more_other": "…and {{count, number}} more"
       },
       "issues": {
-        "invalid_format": "Not an IPv4 address, CIDR range or domain",
+        "invalid_format": "Not an IPv4 address, CIDR, IP range or domain",
         "ipv6_unsupported": "IPv6 is not supported",
         "reserved_range": "Reserved range (loopback, link-local, multicast or broadcast)",
         "cidr_too_large": "Range larger than /16",
+        "invalid_range": "The range ends before it starts",
+        "range_too_large": "Range of more than 65,536 addresses (a /16)",
         "value_too_long": "Too long",
         "note_too_long": "Note longer than 500 characters",
         "duplicate": "Repeats an earlier entry",
         "cidr_normalized": "Host bits cleared to the network address",
         "single_host_cidr": "A /32 range is imported as a single address",
-        "url_stripped": "URL reduced to its host name"
+        "url_stripped": "URL reduced to its host name",
+        "range_split": "IP range saved as CIDR blocks",
+        "covered_by": "Overlaps {{detail}} from this import"
       },
       "listErrors": {
         "empty": "There is nothing to import.",

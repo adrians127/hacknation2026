@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  cidrSize,
   cidrToRange,
   formatCidr,
   intToIpv4,
@@ -9,6 +10,7 @@ import {
   overlapsReserved,
   parseCidr,
   rangeSize,
+  rangeToCidrs,
   type Ipv4Range,
 } from "./ipv4";
 
@@ -19,6 +21,8 @@ import {
 
 export const TargetKindSchema = z.enum(["ip", "cidr", "domain"]);
 export type TargetKind = z.infer<typeof TargetKindSchema>;
+/** What a user can enter. A `range` is never stored: it becomes `ip`/`cidr` blocks. */
+export type TargetInputKind = TargetKind | "range";
 
 export const TARGET_IMPORT_LIMITS = {
   /** Entries in one import. */
@@ -27,7 +31,7 @@ export const TARGET_IMPORT_LIMITS = {
   maxAddresses: 1_048_576,
   /** The backend resolves domains while it queues the scan, inside the request. */
   maxDomains: 1_000,
-  /** The largest accepted CIDR is a /16. */
+  /** The largest accepted CIDR is a /16, and an IP range may not cover more addresses. */
   minCidrPrefix: 16,
   /** A raw value may be a URL, so it can be longer than any normalized target. */
   maxRawValueLength: 2048,
@@ -42,12 +46,16 @@ export const TargetIssueCodeSchema = z.enum([
   "ipv6_unsupported",
   "reserved_range",
   "cidr_too_large",
+  "invalid_range",
+  "range_too_large",
   "value_too_long",
   "note_too_long",
   "duplicate",
   "cidr_normalized",
   "single_host_cidr",
   "url_stripped",
+  "range_split",
+  "covered_by",
 ]);
 export type TargetIssueCode = z.infer<typeof TargetIssueCodeSchema>;
 
@@ -56,6 +64,8 @@ const WARNING_CODES: ReadonlySet<TargetIssueCode> = new Set<TargetIssueCode>([
   "cidr_normalized",
   "single_host_cidr",
   "url_stripped",
+  "range_split",
+  "covered_by",
 ]);
 
 /** A warning keeps the entry (normalized) or drops a harmless repeat; any other code rejects it. */
@@ -74,8 +84,24 @@ export const TargetListErrorCodeSchema = z.enum([
 ]);
 export type TargetListErrorCode = z.infer<typeof TargetListErrorCodeSchema>;
 
+/** One stored target an IP range is split into. */
+export interface TargetBlock {
+  kind: "ip" | "cidr";
+  value: string;
+  range: Ipv4Range;
+}
+
 export type ParsedTargetValue =
   | { ok: true; kind: TargetKind; value: string; range: Ipv4Range | null; warnings: TargetIssueCode[] }
+  | {
+      ok: true;
+      kind: "range";
+      /** `start-end`, both full addresses. */
+      value: string;
+      range: Ipv4Range;
+      blocks: TargetBlock[];
+      warnings: TargetIssueCode[];
+    }
   | { ok: false; code: TargetIssueCode };
 
 export interface ParsedTarget {
@@ -84,6 +110,8 @@ export interface ParsedTarget {
   note: string;
   /** Addresses the target covers; `null` for a domain (resolved later, by the backend). */
   range: Ipv4Range | null;
+  /** The input row it came from; the blocks of an IP range share one. */
+  position: number;
 }
 
 export interface TargetIssue {
@@ -91,6 +119,8 @@ export interface TargetIssue {
   position: number;
   raw: string;
   code: TargetIssueCode;
+  /** `covered_by`: the earlier input (normalized) that overlaps this one. */
+  detail?: string;
 }
 
 export interface TargetParseResult {
@@ -113,6 +143,9 @@ const Cidrv6Schema = z.cidrv6();
 const HostnameSchema = z.hostname();
 
 const URL_PATTERN = /^[a-z][a-z\d+.-]*:\/\//i;
+const IPV4_LIKE = String.raw`\d{1,3}(?:\.\d{1,3}){3}`;
+// `a.b.c.d-e.f.g.h` or nmap's `a.b.c.d-h`; a hyphenated domain never starts with a dotted quad.
+const RANGE_PATTERN = new RegExp(String.raw`^(${IPV4_LIKE})\s*[-–]\s*(${IPV4_LIKE}|\d{1,3})$`);
 const MAX_RAW_DISPLAY_LENGTH = 200;
 
 const stripBrackets = (value: string) => value.replace(/^\[(.*)\]$/, "$1");
@@ -130,6 +163,8 @@ export function parseTargetValue(raw: string): ParsedTargetValue {
     warnings.push("url_stripped");
   }
 
+  const range = RANGE_PATTERN.exec(value);
+  if (range) return parseRangeValue(range[1] ?? "", range[2] ?? "", warnings);
   if (value.includes("/")) return parseCidrValue(value, warnings);
   if (Ipv4Schema.safeParse(value).success) {
     const address = ipv4ToInt(value);
@@ -162,6 +197,29 @@ function parseCidrValue(value: string, warnings: TargetIssueCode[]): ParsedTarge
   return addressResult("cidr", normalized, cidrToRange(cidr), warnings);
 }
 
+function parseRangeValue(first: string, last: string, warnings: TargetIssueCode[]): ParsedTargetValue {
+  const lastIp = last.includes(".") ? last : first.slice(0, first.lastIndexOf(".") + 1) + last;
+  if (!Ipv4Schema.safeParse(first).success || !Ipv4Schema.safeParse(lastIp).success) {
+    return { ok: false, code: "invalid_format" };
+  }
+  const range = { start: ipv4ToInt(first), end: ipv4ToInt(lastIp) };
+  if (range.start > range.end) return { ok: false, code: "invalid_range" };
+  if (rangeSize(range) > cidrSize(TARGET_IMPORT_LIMITS.minCidrPrefix)) {
+    return { ok: false, code: "range_too_large" };
+  }
+  if (overlapsReserved(range)) return { ok: false, code: "reserved_range" };
+
+  const blocks = rangeToCidrs(range).map(
+    (cidr): TargetBlock => ({
+      kind: cidr.prefix === 32 ? "ip" : "cidr",
+      value: formatCidr(cidr),
+      range: cidrToRange(cidr),
+    }),
+  );
+  const value = `${intToIpv4(range.start)}-${intToIpv4(range.end)}`;
+  return { ok: true, kind: "range", value, range, blocks, warnings: [...warnings, "range_split"] };
+}
+
 function addressResult(
   kind: TargetKind,
   value: string,
@@ -186,11 +244,12 @@ function parseDomain(value: string, warnings: TargetIssueCode[]): ParsedTargetVa
 const truncate = (value: string) =>
   value.length > MAX_RAW_DISPLAY_LENGTH ? `${value.slice(0, MAX_RAW_DISPLAY_LENGTH)}…` : value;
 
-/** Validates, normalizes and deduplicates raw rows from any source. */
+/** Validates, normalizes and deduplicates raw rows from any source; IP ranges become blocks. */
 export function collectTargets(rows: Iterable<RawTarget>): TargetParseResult {
   const entries: ParsedTarget[] = [];
   const issues: TargetIssue[] = [];
   const seen = new Set<string>();
+  const inputs = new Map<number, { raw: string; value: string }>();
 
   for (const { position, value, note } of rows) {
     const raw = truncate(value.trim());
@@ -204,16 +263,56 @@ export function collectTargets(rows: Iterable<RawTarget>): TargetParseResult {
       issues.push({ position, raw, code: "note_too_long" });
       continue;
     }
-    if (seen.has(parsed.value)) {
+    const targets: Omit<ParsedTarget, "note" | "position">[] =
+      parsed.kind === "range" ? parsed.blocks : [parsed];
+    // A range is a repeat only when every one of its blocks is already there.
+    const fresh = seen.has(parsed.value) ? [] : targets.filter((target) => !seen.has(target.value));
+    if (fresh.length === 0) {
       issues.push({ position, raw, code: "duplicate" });
       continue;
     }
     seen.add(parsed.value);
+    inputs.set(position, { raw, value: parsed.value });
     for (const code of parsed.warnings) issues.push({ position, raw, code });
-    entries.push({ kind: parsed.kind, value: parsed.value, note: trimmedNote, range: parsed.range });
+    for (const { kind, value: target, range } of fresh) {
+      seen.add(target);
+      entries.push({ kind, value: target, note: trimmedNote, range, position });
+    }
   }
 
-  return finish(entries, issues, []);
+  const covered = coveredIssues(entries, inputs);
+  return finish(entries, covered.length > 0 ? issues.concat(covered).toSorted(byPosition) : issues, []);
+}
+
+const byPosition = (a: TargetIssue, b: TargetIssue) => a.position - b.position;
+
+/**
+ * Entries inside another entry's addresses. Every range is a CIDR block by now, so two
+ * entries either nest or do not touch, and the widest block seen so far is the container.
+ */
+function coveredIssues(
+  entries: readonly ParsedTarget[],
+  inputs: ReadonlyMap<number, { raw: string; value: string }>,
+): TargetIssue[] {
+  const ranged = entries
+    .filter((entry): entry is ParsedTarget & { range: Ipv4Range } => entry.range !== null)
+    .toSorted((a, b) => a.range.start - b.range.start || b.range.end - a.range.end);
+  const issues: TargetIssue[] = [];
+  const reported = new Set<string>();
+  let widest: (typeof ranged)[number] | undefined;
+  for (const entry of ranged) {
+    if (widest && widest.range.end >= entry.range.end) {
+      const detail = inputs.get(widest.position)?.value ?? widest.value;
+      const key = `${entry.position}\n${detail}`;
+      if (!reported.has(key)) {
+        reported.add(key);
+        const raw = inputs.get(entry.position)?.raw ?? entry.value;
+        issues.push({ position: entry.position, raw, code: "covered_by", detail });
+      }
+    }
+    if (!widest || entry.range.end > widest.range.end) widest = entry;
+  }
+  return issues;
 }
 
 function finish(
@@ -242,12 +341,17 @@ function finish(
 const VALUE_COLUMNS = ["target", "value", "address", "host", "hostname", "ip", "cidr", "domain"];
 const NOTE_COLUMNS = ["note", "label", "description", "comment"];
 
+/** Manual input and CSV (see `splitTargetText`). */
+export function parseTargetText(text: string): TargetParseResult {
+  return collectTargets(splitTargetText(text));
+}
+
 /**
- * Manual input and CSV: one target per line, an optional note in the next column.
+ * One target per line, an optional note in the next column; `position` is the 1-based line.
  * A first row naming a value column (`target`, `ip`, …) is a header and picks the columns.
  * Separator `,`, `;` or tab (detected once); `"` quotes; `#` comments and blank lines are skipped.
  */
-export function parseTargetText(text: string): TargetParseResult {
+export function splitTargetText(text: string): RawTarget[] {
   const rows: RawTarget[] = [];
   let delimiter: string | null = null;
   let columns = { value: 0, note: 1 };
@@ -274,7 +378,7 @@ export function parseTargetText(text: string): TargetParseResult {
     });
   });
 
-  return collectTargets(rows);
+  return rows;
 }
 
 function detectDelimiter(line: string): string {
@@ -357,5 +461,5 @@ export function parseTargetJson(text: string): TargetParseResult {
   });
 
   const result = collectTargets(rows);
-  return { ...result, issues: [...shapeIssues, ...result.issues].toSorted((a, b) => a.position - b.position) };
+  return { ...result, issues: [...shapeIssues, ...result.issues].toSorted(byPosition) };
 }
