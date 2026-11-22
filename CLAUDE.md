@@ -46,6 +46,7 @@ English is the project's default language: documentation, code comments, commit 
 | Contract (zod schemas, OpenAPI generation, adding an endpoint) | [`packages/contracts/README.md`](packages/contracts/README.md) |
 | Typed API client (and why it uses TS 6) | [`packages/api-client/README.md`](packages/api-client/README.md) |
 | Local infrastructure (PostgreSQL, DefectDojo; workers: separate compose file) | [`docker/README.md`](docker/README.md) |
+| DefectDojo API (push/pull, dedup, status mapping, access, demo data) | [`docs/defectdojo-integration.md`](docs/defectdojo-integration.md) |
 | Technical documentation and presentation | [`docs/`](docs/) |
 
 ## Repository structure
