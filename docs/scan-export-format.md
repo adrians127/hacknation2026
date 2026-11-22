@@ -79,6 +79,7 @@ Rules:
 - **Placement.** The scan takes its place among the others by when the file says it ran (`scan.createdAt`, the earliest worker start, or the earliest `observed_at`), never in the future, and at the time of the import when the file does not say. An older file can therefore become the base scan of a newer scan.
 - **Once.** The same content is imported once. A second upload answers `409 SCAN_ALREADY_IMPORTED` with the existing scan's id. Export time, the scan's id and the edits do not make a file different.
 - **Edits** are applied only with `?edits=fill` (which also needs `hosts:update`), and only where the host or service has no value yet: tags are added, the triage is set while it is `unreviewed`, the note while it is empty, a correction while there is none. Nothing a user set is overwritten.
+- **Older and hand-written files.** The result format grows with every worker (a port's `tls` list came with the tlsx worker). Keys a file leaves out are read as "nothing observed": a host needs only `ip` and `status`, a port only `port`, an HTTP endpoint only `scheme` and `url`, and a document may omit `coverage` and `edits`. What is there is validated strictly. The export itself always writes every key.
 - **Limits:** 1,048,576 addresses, 20,000 hosts up, 4,096 worker results (`SCAN_IMPORT_LIMITS`).
 
 The reader is `packages/contracts/src/scans/scan-import.ts`. The import page runs it for the preview and the backend runs the same code on the uploaded file.
