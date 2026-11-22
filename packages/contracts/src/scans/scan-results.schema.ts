@@ -12,6 +12,7 @@ import {
   HostStatusSchema,
   HttpEndpointSchema,
   OpenPortSchema,
+  PortTlsSchema,
 } from "../workers/worker-result.schema";
 import {
   ServiceVulnerabilitySchema,
@@ -119,6 +120,8 @@ export const FieldChangeKindSchema = z.enum([
   "tls.expiry",
   "tls.selfSigned",
   "tls.version",
+  "tls.cipher",
+  "tls.endpoint",
   "http.favicon",
   "http.probe",
   "host.hostname",
@@ -223,6 +226,7 @@ export const ServiceObservationSchema = z.object({
   scripts: OpenPortSchema.shape.scripts,
   /** Full endpoints, decrypted: headers, cookies (hashed values only), TLS certificate, probes. */
   http: z.array(HttpEndpointSchema),
+  tls: z.array(PortTlsSchema),
 });
 
 export const ScanServiceDetailSchema = ScanServiceSchema.extend(ServiceObservationSchema.shape).extend({

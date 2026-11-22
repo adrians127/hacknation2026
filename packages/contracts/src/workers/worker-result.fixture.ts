@@ -162,6 +162,7 @@ export function buildWorkerResult(ids: WorkerResultIds = EXAMPLE_IDS): WorkerRes
             identity: { ttl: 64, sshHostKeySha256: hash("a"), tlsCertSha256: null },
             banner: "SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13",
             scripts: [{ id: "ssh-hostkey", output: "256 SHA256:abc (ED25519)" }],
+            tls: [],
             http: [],
           },
           {
@@ -181,6 +182,7 @@ export function buildWorkerResult(ids: WorkerResultIds = EXAMPLE_IDS): WorkerRes
             identity: { ttl: 64, sshHostKeySha256: null, tlsCertSha256: hash("e") },
             banner: null,
             scripts: [],
+            tls: [],
             http: [wikiEndpoint, bareIpEndpoint],
           },
         ],

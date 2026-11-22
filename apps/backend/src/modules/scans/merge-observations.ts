@@ -11,6 +11,7 @@ const portKey = (row: Pick<PortRow, "protocol" | "port">) => `${row.protocol}/${
 function workerRank(worker: string): number {
   if (worker.startsWith("nmap")) return 3;
   if (worker.startsWith("httpx")) return 2;
+  if (worker.startsWith("tlsx")) return 2;
   if (worker.startsWith("masscan")) return 1;
   return 0;
 }
@@ -21,6 +22,16 @@ function httpEndpoints(port: PortRow): Prisma.JsonObject[] {
   const http = details.http;
   return Array.isArray(http)
     ? http.filter((entry): entry is Prisma.JsonObject =>
+        entry !== null && !Array.isArray(entry) && typeof entry === "object",
+      )
+    : [];
+}
+
+function tlsObservations(port: PortRow): Prisma.JsonObject[] {
+  const details = port.details;
+  if (details === null || Array.isArray(details) || typeof details !== "object") return [];
+  return Array.isArray(details.tls)
+    ? details.tls.filter((entry): entry is Prisma.JsonObject =>
         entry !== null && !Array.isArray(entry) && typeof entry === "object",
       )
     : [];
@@ -56,6 +67,14 @@ function mergePorts(rows: readonly ObservationRow[]): PortRow[] {
           endpoints.set(endpointKey(endpoint), endpoint);
         }
       }
+      const tls = new Map<string, Prisma.JsonObject>();
+      for (const candidate of ranked.toSorted((a, b) =>
+        Number(a.worker.startsWith("tlsx")) - Number(b.worker.startsWith("tlsx")),
+      )) {
+        for (const observation of tlsObservations(candidate.port)) {
+          tls.set(typeof observation.vhost === "string" ? observation.vhost : "", observation);
+        }
+      }
       const details = base.details;
       if (details === null || Array.isArray(details) || typeof details !== "object") return base;
       const merged: PortRow = {
@@ -63,6 +82,7 @@ function mergePorts(rows: readonly ObservationRow[]): PortRow[] {
         details: {
           ...details,
           http: [...endpoints.values()].toSorted((a, b) => endpointKey(a).localeCompare(endpointKey(b))),
+          tls: [...tls.entries()].toSorted(([a], [b]) => a.localeCompare(b)).map(([, value]) => value),
         },
       };
       return { ...merged, fingerprint: portFingerprint(storedOpenPort(merged)) };
