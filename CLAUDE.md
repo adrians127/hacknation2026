@@ -105,6 +105,7 @@ pnpm vulns:mirror <dir>   # download the vulnerability sources for an offline la
 pnpm infra:up       # all infrastructure compose services, DefectDojo included (infra:down, infra:logs)
 pnpm dojo:up        # DefectDojo only, :8080 (dojo:logs, dojo:smoke)
 pnpm workers:build  # build the masscan-worker image (run a sweep: pnpm workers:masscan < job.json)
+pnpm workers:manager  # build + run worker-manager on its example job list; results in worker-results/
 ```
 
 ## Conventions
@@ -182,7 +183,8 @@ apps/workers/<name>-worker/
 
 Then, in the same change:
 
-1. Add the worker to the table in [`apps/workers/README.md`](apps/workers/README.md).
-2. Add a service to `docker/docker-compose.workers.yml` (grant only the capabilities it needs; a one-shot CLI worker goes in the `cli` profile).
-3. Add the worker's README to the "Where to look" table here (ask the user first, per the rule above).
-4. Dependencies: system packages in the Dockerfile or CMake `FetchContent` pinned to a release tag or commit hash, never a branch. Check the latest release before pinning; do not write a version from memory.
+1. Read and write the shared JSON: [job and result format](apps/workers/README.md#job-and-result-format) (same input fields, `{scan, hosts}` result with `null` for what the worker cannot discover, same error codes and exit codes).
+2. Add the worker to the table in [`apps/workers/README.md`](apps/workers/README.md).
+3. Add a service to `docker/docker-compose.workers.yml` (grant only the capabilities it needs; a one-shot CLI worker goes in the `cli` profile).
+4. Add the worker's README to the "Where to look" table here (ask the user first, per the rule above).
+5. Dependencies: system packages in the Dockerfile or CMake `FetchContent` pinned to a release tag or commit hash, never a branch. Check the latest release before pinning; do not write a version from memory.

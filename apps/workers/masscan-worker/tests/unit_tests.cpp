@@ -236,9 +236,8 @@ void test_report() {
     check(scan["counts"]["addresses"] == 256 && scan["counts"]["up"] == 1 &&
               scan["counts"]["down"] == 255 && scan["counts"]["openPorts"] == 1,
           "report counts");
-    check(report["hosts"].size() == 1 && report["masscan"]["resume"].is_null() &&
-              report["masscan"]["topology"]["subnets"].size() == 1,
-          "report hosts and masscan block");
+    check(report["hosts"].size() == 1 && report.size() == 2 && !report.contains("masscan"),
+          "report has only scan and hosts");
 
     const auto failed = build_report(
         {.status = ScanStatus::kFailed, .error = Error{ErrorCode::kInvalidInput, "bad"}});

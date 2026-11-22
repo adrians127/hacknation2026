@@ -37,7 +37,7 @@ struct ReportInput {
     std::span<const std::string> warnings{};
 };
 
-// The result document of docs/worker-result-format.md ({scan, hosts}), plus a `masscan` block.
+// The result document of docs/worker-result-format.md: {scan, hosts}.
 [[nodiscard]] nlohmann::ordered_json build_report(const ReportInput& input);
 
 }  // namespace masscan_worker
