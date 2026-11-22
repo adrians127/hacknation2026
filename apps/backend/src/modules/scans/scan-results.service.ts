@@ -1,3 +1,4 @@
+import type { TriageStatus } from "@subsurf/contracts/hosts/hosts.schema";
 import {
   HOST_HISTORY_LIMIT,
   type HostHistoryEntry,
@@ -162,71 +163,70 @@ function inRanges(ranges: readonly Ipv4Range[], address: number): boolean {
 }
 
 /** LIKE wildcards in user input match literally. */
-const likePattern = (term: string) => `%${term.replaceAll(/[\\%_]/g, (char) => `\\${char}`)}%`;
+const escapeLike = (term: string) => term.replaceAll(/[\\%_]/g, (char) => `\\${char}`);
 
-/** Page titles live in the plaintext part of `details`: searched in SQL, within these scans. */
-async function hostIdsByTitle(term: string, observationIds: string[]): Promise<string[]> {
-  if (observationIds.length === 0) return [];
-  const rows = await prisma.$queryRaw<{ hostId: string }[]>`
-    SELECT DISTINCT ho."hostId"
-    FROM "PortObservation" po JOIN "HostObservation" ho ON ho.id = po."hostObservationId"
-    WHERE ho.id = ANY(${observationIds}::uuid[]) AND ho."hostId" IS NOT NULL
-      AND EXISTS (
+/**
+ * Hosts matching a search term: IP prefix, tag, service correction, or what these scans'
+ * effective observations saw (hostname, service name/product, port, HTTP page title).
+ * One statement over the effective-observation CTE: handing their ids to Prisma filters
+ * exceeds Postgres's 65,535 bind parameters on large scans.
+ */
+async function hostIdsMatching(term: string, scanIds: readonly string[]): Promise<string[]> {
+  const contains = `%${escapeLike(term)}%`;
+  const port = /^\d{1,5}$/.test(term) ? Prisma.sql`OR po.port = ${Number(term)}` : Prisma.empty;
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    WITH effective AS (${effectiveSql(scanIds)}),
+    observed AS (
+      SELECT ho.id, ho."hostId"
+      FROM effective e JOIN "HostObservation" ho ON ho.id = e.id
+      WHERE ho."hostId" IS NOT NULL
+    )
+    SELECT h.id FROM "Host" h
+    WHERE h.ip LIKE ${`${escapeLike(term)}%`} OR ${term} = ANY(h.tags)
+    UNION
+    SELECT s."hostId" FROM "Service" s
+    WHERE s."nameOverride" ILIKE ${contains} OR s."productOverride" ILIKE ${contains}
+    UNION
+    SELECT o."hostId" FROM observed o
+    JOIN "HostnameObservation" hn ON hn."hostObservationId" = o.id
+    WHERE hn.name ILIKE ${contains}
+    UNION
+    SELECT o."hostId" FROM observed o
+    JOIN "PortObservation" po ON po."hostObservationId" = o.id
+    WHERE po."serviceName" ILIKE ${contains} OR po."serviceProduct" ILIKE ${contains} ${port}
+      OR EXISTS (
         SELECT 1 FROM jsonb_array_elements(po.details -> 'http') AS endpoint
-        WHERE endpoint ->> 'title' ILIKE ${likePattern(term)}
-      )`;
-  return rows.map((row) => row.hostId);
+        WHERE endpoint ->> 'title' ILIKE ${contains}
+      )
+  `;
+  return rows.map((row) => row.id);
 }
 
-async function searchWhere(term: string, scanIds: string[]): Promise<Prisma.HostWhereInput> {
-  const observationIds = await effectiveIds(scanIds);
-  const contains = { contains: term, mode: "insensitive" } as const;
-  const inScans = { hostObservation: { id: { in: observationIds } } };
-  const or: Prisma.HostWhereInput[] = [
-    { ip: { startsWith: term } },
-    { tags: { has: term } },
-    { observations: { some: { id: { in: observationIds }, hostnames: { some: { name: contains } } } } },
-    {
-      services: {
-        some: {
-          OR: [
-            { nameOverride: contains },
-            { productOverride: contains },
-            {
-              observations: {
-                some: { ...inScans, OR: [{ serviceName: contains }, { serviceProduct: contains }] },
-              },
-            },
-          ],
-        },
-      },
-    },
-  ];
-  if (/^\d{1,5}$/.test(term)) {
-    or.push({ services: { some: { port: Number(term), observations: { some: inScans } } } });
-  }
-  const byTitle = await hostIdsByTitle(term, observationIds);
-  if (byTitle.length > 0) or.push({ id: { in: byTitle } });
-  return { OR: or };
+async function hostIdsWithTriage(triage: TriageStatus): Promise<string[]> {
+  const hosts = await prisma.host.findMany({
+    where: { OR: [{ triage }, { services: { some: { triage } } }] },
+    select: { id: true },
+  });
+  return hosts.map((host) => host.id);
 }
 
-/** `null` when the query has no host filters. */
+/**
+ * `null` when the query has no host filters. Intersected here rather than in one Prisma
+ * query, which would send each id list as bind parameters.
+ */
 async function filteredHostIds(
   query: ScanHostListQuery,
   scanIds: string[],
 ): Promise<Set<string> | null> {
-  const and: Prisma.HostWhereInput[] = [];
+  const filters: Promise<string[]>[] = [];
   const term = query.q?.trim();
-  if (term) and.push(await searchWhere(term, scanIds));
-  if (query.triage) {
-    and.push({ OR: [{ triage: query.triage }, { services: { some: { triage: query.triage } } }] });
-  }
-  if (query.vulnerability) {
-    and.push({ id: { in: await vulnerabilitiesService.hostIdsWith(query.vulnerability) } });
-  }
-  if (and.length === 0) return null;
-  const hosts = await prisma.host.findMany({ where: { AND: and }, select: { id: true } });
-  return new Set(hosts.map((host) => host.id));
+  if (term) filters.push(hostIdsMatching(term, scanIds));
+  if (query.triage) filters.push(hostIdsWithTriage(query.triage));
+  if (query.vulnerability) filters.push(vulnerabilitiesService.hostIdsWith(query.vulnerability));
+  if (filters.length === 0) return null;
+  const [first = [], ...rest] = await Promise.all(filters);
+  const others = rest.map((ids) => new Set(ids));
+  return new Set(first.filter((id) => others.every((ids) => ids.has(id))));
 }
 
 /** Loads the assets and both scans' observations for the given entries of a diff. */

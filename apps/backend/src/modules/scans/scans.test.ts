@@ -18,7 +18,7 @@ import { prisma } from "~backend/lib/prisma";
 import { resultsService } from "~backend/modules/results/results.service";
 import { signInAs } from "~backend/test/auth";
 import { startTestServer, TestClient, type TestServer } from "~backend/test/http";
-import { databaseHost, hostIdOf, ingestScan } from "~backend/test/scans";
+import { databaseHost, hostIdOf, ingestScan, serviceIdOf } from "~backend/test/scans";
 
 let server: TestServer;
 
@@ -210,6 +210,12 @@ describe("GET /scans/{id}/hosts", () => {
     expect(await ips("?q=mysql")).toEqual(["10.0.5.20"]);
     expect(await ips("?q=lab")).toEqual(["10.0.5.8"]);
     expect(await ips("?q=100%25")).toEqual([]);
+    await prisma.service.update({
+      where: { id: await serviceIdOf("10.0.5.7", 22) },
+      data: { productOverride: "Bastion SSH" },
+    });
+    expect(await ips("?q=bastion")).toEqual(["10.0.5.7"]);
+    expect(await ips("?q=ssh&triage=unreviewed")).toEqual(["10.0.5.7", "10.0.5.8"]);
 
     const page = ScanHostListResponseSchema.parse(
       await getJson(client, `/v1/scans/${second}/hosts?page=2&pageSize=1`),
@@ -218,6 +224,28 @@ describe("GET /scans/{id}/hosts", () => {
     expect(page.items.map((host) => host.ip)).toEqual(["10.0.5.8"]);
     expect((await client.get(`/v1/scans/${second}/hosts?change=everything`)).status).toBe(400);
   });
+
+  it("searches a scan with more observations than Postgres takes bind parameters", async () => {
+    const { second } = await twoScans();
+    const { client } = await signInAs(server, { role: "viewer" });
+    // 70,000 more addresses that did not answer (10.1.0.0 onwards).
+    await prisma.$executeRaw`
+      INSERT INTO "HostObservation" (id, "scanId", "resultId", ip, "ipNumber", status)
+      SELECT gen_random_uuid(), r."scanId", r.id,
+             concat_ws('.', 10, 1 + n / 65536, (n / 256) % 256, n % 256), 167837696 + n,
+             'down'::"HostObservationStatus"
+      FROM "ScanJobResult" r CROSS JOIN generate_series(0, 69999) AS n
+      WHERE r."scanId" = ${second}::uuid
+    `;
+    const ips = async (query: string) =>
+      ScanHostListResponseSchema.parse(
+        await getJson(client, `/v1/scans/${second}/hosts${query}`),
+      ).items.map((host) => host.ip);
+
+    expect(await ips("?q=mysql")).toEqual(["10.0.5.20"]);
+    expect(await ips("?q=WIKI")).toEqual(["10.0.5.7"]);
+    expect(await ips("?q=login&triage=unreviewed")).toEqual(["10.0.5.7"]);
+  }, 30_000);
 });
 
 describe("GET /scans/{id}/hosts/{hostId}", () => {
