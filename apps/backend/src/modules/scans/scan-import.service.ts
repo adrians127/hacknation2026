@@ -65,7 +65,7 @@ async function writeImport(
   const scan = await tx.scan.create({
     data: {
       name: query.name?.trim() ?? "",
-      origin: "imported",
+      trigger: "results_import",
       importKey,
       status: plan.scan.status,
       ports: plan.scan.ports ?? env.SCAN_DEFAULT_PORTS,
@@ -96,6 +96,7 @@ async function writeImport(
     attempts: 1,
     leaseId: leases[index],
     leasedBy: "import",
+    worker: job.result.scan.worker.id,
     startedAt: new Date(job.result.scan.startedAt),
     finishedAt: new Date(job.result.scan.finishedAt),
     durationMs: job.result.scan.durationMs,

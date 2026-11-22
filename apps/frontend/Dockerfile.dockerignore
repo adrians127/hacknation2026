@@ -1,0 +1,22 @@
+# Used instead of the root .dockerignore when building apps/frontend/Dockerfile (BuildKit).
+.git
+.github
+**/.turbo
+**/node_modules
+**/dist
+**/logs
+**/*.log
+**/*.tsbuildinfo
+
+# Real secrets must never enter the build context.
+**/.env
+**/.env.*
+
+# Not part of the frontend image.
+apps/backend
+apps/workers
+docker
+docs
+scripts
+worker-results
+*.pdf

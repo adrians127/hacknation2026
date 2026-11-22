@@ -287,20 +287,21 @@
       "up": "Hosts up",
       "noAnswer": "No answer",
       "openPorts": "Open ports",
-      "duration": "Duration"
+      "duration": "Duration",
+      "pipeline": "Pipeline",
+      "trigger": "Started by"
     },
     "statuses": {
       "queued": "Queued",
       "running": "Running",
       "completed": "Completed",
       "stopped": "Stopped",
-      "failed": "Failed"
-    },
-    "origins": {
-      "imported": "Imported"
+      "failed": "Failed",
+      "paused": "Paused"
     },
     "detail": {
       "back": "All scans",
+      "report": "Scan report",
       "title": "Scan of {{date}}",
       "subtitle": "What this scan found. Changes are measured against the previous scan, only for addresses that answered both times.",
       "addresses": "Addresses",
@@ -309,7 +310,7 @@
       "noAnswer": "No answer",
       "openPorts": "Open ports",
       "jobs": "Jobs finished",
-      "stoppedJobs": "{{formatted}} stopped at the time window's end",
+      "stoppedJobs": "{{formatted}} stopped",
       "duration": "Duration",
       "rate": "Rate limit",
       "ports": "Scanned ports",
@@ -321,7 +322,19 @@
         "changed": "hosts changed",
         "unknown": "hosts with nothing to compare"
       },
-      "serviceChanges": "Services: {{new}} new, {{gone}} gone, {{changed}} changed."
+      "serviceChanges": "Services: {{new}} new, {{gone}} gone, {{changed}} changed.",
+      "pipeline": "Pipeline",
+      "noPipeline": "Started by a target import",
+      "windowEnds": "Time window ends {{date}}",
+      "pausedHint": "The time window closed with jobs left. They continue at the pipeline's next run time.",
+      "stop": "Stop scan",
+      "stopTitle": "Stop this scan?",
+      "stopDescription": "Queued jobs are cancelled. Jobs a worker is already running finish first, then the scan ends.",
+      "stopped": "Scan stopping",
+      "tabs": {
+        "hosts": "Hosts",
+        "jobs": "Jobs"
+      }
     },
     "export": {
       "button": "Export {{format}}",
@@ -437,6 +450,49 @@
       },
       "export": "Export changes as {{format}}",
       "exportFailed": "The export failed: {{message}}"
+    },
+    "triggers": {
+      "import": "Target import",
+      "manual": "Run now",
+      "schedule": "Schedule",
+      "results_import": "Imported results"
+    },
+    "jobs": {
+      "steps": "Steps",
+      "step": "Step {{index}}: {{worker}}",
+      "stepInput": {
+        "targets": "scans the targets",
+        "previous": "scans what step {{index}} found"
+      },
+      "progress": "{{done}} of {{total}} jobs finished",
+      "waiting": "Waits for the previous step",
+      "filters": {
+        "step": "Step",
+        "allSteps": "All steps",
+        "status": "Status",
+        "allStatuses": "All statuses"
+      },
+      "columns": {
+        "sequence": "#",
+        "step": "Step",
+        "subnet": "Addresses",
+        "status": "Status",
+        "attempts": "Attempts",
+        "leasedBy": "Worker manager",
+        "duration": "Duration",
+        "results": "Results",
+        "error": "Last error"
+      },
+      "statuses": {
+        "queued": "Queued",
+        "leased": "Running",
+        "completed": "Completed",
+        "failed": "Failed",
+        "stopped": "Stopped"
+      },
+      "addresses_one": "{{count}} address",
+      "addresses_other": "{{count}} addresses",
+      "empty": "No jobs match."
     }
   },
   "language": {
@@ -467,9 +523,12 @@
     "dashboard": "Dashboard",
     "targets": "Targets",
     "scans": "Scans",
+    "reports": "Reports",
     "users": "Users",
     "roles": "Roles",
-    "vulnerabilities": "Vulnerabilities"
+    "vulnerabilities": "Vulnerabilities",
+    "pipelines": "Pipelines",
+    "workers": "Workers"
   },
   "notFound": {
     "title": "Page not found",
@@ -558,11 +617,20 @@
     "PACKAGE_MAPPING_EXISTS": "This mapping already exists.",
     "SOURCE_DISABLED": "The source is disabled. Enable it first.",
     "BASE_SCAN_NOT_OLDER": "The scan to compare with must be older than the compared scan.",
+    "PIPELINE_NAME_TAKEN": "A pipeline with this name already exists.",
+    "PIPELINE_RUN_ACTIVE": "A run of this pipeline is still going. Wait for it or stop it first.",
+    "NO_SCANNABLE_TARGETS": "None of the pipeline's targets can be scanned. Check its tags and ranges.",
+    "WORKER_DISABLED": "A step uses a disabled worker. An administrator has to enable it first.",
+    "WORKER_IN_USE": "A pipeline still uses this worker. Remove it from the pipeline first.",
+    "WORKER_BUILTIN": "Built-in workers come from code: only whether they run, their rate cap and defaults can change.",
+    "PORTS_NOT_ALLOWED": "These ports are outside the ports the scanner may probe.",
+    "SCAN_NOT_STOPPABLE": "The scan has already ended.",
     "DEFECTDOJO_NOT_CONFIGURED": "DefectDojo is not configured on the server.",
     "DEFECTDOJO_UNAVAILABLE": "DefectDojo did not answer or refused the API token.",
     "DEFECTDOJO_SYNC_RUNNING": "A DefectDojo sync is already running.",
     "DEFECTDOJO_PUSH_RUNNING": "A push to DefectDojo is already running.",
     "NOTHING_TO_PUSH": "There is nothing to push: no open services in this scan or selection.",
+    "SAME_SCAN": "Pick two different scans to compare.",
     "SCAN_IMPORT_INVALID": "The file is not a scan export, a worker result or a results CSV this version can read.",
     "SCAN_ALREADY_IMPORTED": "This file was imported before.",
     "SCAN_IMPORT_RUNNING": "Another import is running. Try again when it finishes."

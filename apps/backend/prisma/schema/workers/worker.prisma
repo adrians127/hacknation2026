@@ -1,0 +1,26 @@
+/// A block pipelines are built from: one worker worker-manager can run, under the same `name`
+/// (WORKER_MANAGER_WORKERS). Built-in ones are synced from the contracts catalog at startup.
+model Worker {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  name            String   @unique
+  displayName     String
+  description     String   @default("")
+  /// From the code catalog: only `enabled`, `defaults` and `maxRate` belong to admins.
+  isBuiltin       Boolean  @default(false)
+  enabled         Boolean  @default(false)
+  stage           Int      @default(100)
+  /// WorkerInput[]: `targets` and/or `hosts`.
+  inputs          String[] @default(["targets"])
+  /// SplitStrategy[] worker-manager may use on its jobs.
+  splitStrategies String[] @default(["none"])
+  /// WorkerParamField[] from @subsurf/contracts.
+  paramFields     Json     @default("[]")
+  /// Admin defaults for the fields, by key.
+  defaults        Json     @default("{}")
+  /// Packets per second a step of this worker may use at most.
+  maxRate         Int      @default(100)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  steps PipelineStep[]
+}

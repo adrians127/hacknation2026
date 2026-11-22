@@ -16,6 +16,7 @@ import { prisma } from "~backend/lib/prisma";
 import { serviceWithMatch } from "~backend/modules/vulnerabilities/test/matches";
 import { createUser, signInAs } from "~backend/test/auth";
 import { startTestServer, type TestServer } from "~backend/test/http";
+import { HOURLY_UTC, addTargets, createPipeline, pipelineBody } from "~backend/test/pipelines";
 import { hostIdOf, ingestScan } from "~backend/test/scans";
 
 let server: TestServer;
@@ -83,6 +84,34 @@ const servicePath = async () => {
   const { hostId, serviceId } = await serviceWithMatch();
   return `/v1/hosts/${hostId}/services/${serviceId}`;
 };
+const pipelinePath = async (suffix = "") => `/v1/pipelines/${await createPipeline()}${suffix}`;
+const runnablePipelinePath = async () => {
+  await addTargets([`10.${Math.floor(Math.random() * 200)}.0.0/24`]);
+  return pipelinePath("/runs");
+};
+const queuedScanPath = async (suffix: string) => {
+  const { id } = await prisma.scan.create({
+    data: {
+      ports: "22",
+      maxRate: 100,
+      batchSize: 256,
+      targetCount: 0,
+      addressCount: 0,
+      jobCount: 0,
+      requestedById: (await createUser()).id,
+    },
+  });
+  return `/v1/scans/${id}${suffix}`;
+};
+const workerPath = async (name: string) =>
+  `/v1/workers/${(await prisma.worker.findUniqueOrThrow({ where: { name } })).id}`;
+const customWorkerPath = async () => {
+  const { id } = await prisma.worker.create({
+    data: { name: `custom-${Math.floor(Math.random() * 1e9)}`, displayName: "Custom" },
+  });
+  return `/v1/workers/${id}`;
+};
+const scanReportPath = (kind: string) => async () => `/v1/reports/scans/${await ingestScan()}/${kind}`;
 const importTargets = (startScan: boolean) => async () => ({
   entries: [{ value: "192.0.2.10" }],
   startScan,
@@ -176,6 +205,85 @@ const ENDPOINTS: Endpoint[] = [
     requires: ["scans:read", "hosts:update"],
     path: () => scanPath("/hosts/tags"),
     body: async () => ({ action: "add", tag: "dmz", selectors: ["10.0.5.0/24"] }),
+  },
+
+  { route: "GET /scans/{id}/jobs", requires: ["scans:read"], path: () => queuedScanPath("/jobs") },
+  {
+    route: "POST /scans/{id}/stop",
+    requires: ["scans:read", "scans:run"],
+    path: () => queuedScanPath("/stop"),
+  },
+
+  // pipelines
+  { route: "GET /pipelines", requires: ["pipelines:read"], path: async () => "/v1/pipelines" },
+  { route: "GET /pipelines/{id}", requires: ["pipelines:read"], path: () => pipelinePath() },
+  {
+    route: "POST /pipelines/schedule/preview",
+    requires: ["pipelines:read"],
+    path: async () => "/v1/pipelines/schedule/preview",
+    body: async () => ({ schedule: HOURLY_UTC }),
+  },
+  {
+    route: "POST /pipelines",
+    requires: ["pipelines:create"],
+    path: async () => "/v1/pipelines",
+    body: () => pipelineBody(),
+  },
+  {
+    route: "PATCH /pipelines/{id}",
+    requires: ["pipelines:update"],
+    path: () => pipelinePath(),
+    body: async () => ({ description: "Changed" }),
+  },
+  { route: "DELETE /pipelines/{id}", requires: ["pipelines:delete"], path: () => pipelinePath() },
+  { route: "POST /pipelines/{id}/runs", requires: ["scans:run"], path: runnablePipelinePath },
+
+  // workers
+  { route: "GET /workers", requires: ["workers:read"], path: async () => "/v1/workers" },
+  {
+    route: "PATCH /workers/{id}",
+    requires: ["workers:update"],
+    path: () => workerPath("masscan"),
+    body: async () => ({ maxRate: 5000 }),
+  },
+  { route: "DELETE /workers/{id}", requires: ["workers:delete"], path: customWorkerPath },
+
+  // reports
+  { route: "GET /reports/scans/{id}/summary", requires: ["scans:read"], path: scanReportPath("summary") },
+  { route: "GET /reports/scans/{id}/findings", requires: ["scans:read"], path: scanReportPath("findings") },
+  {
+    route: "GET /reports/scans/{id}/technologies",
+    requires: ["scans:read"],
+    path: scanReportPath("technologies"),
+  },
+  { route: "GET /reports/scans/{id}/exposure", requires: ["scans:read"], path: scanReportPath("exposure") },
+  { route: "GET /reports/scans/{id}/triage", requires: ["scans:read"], path: scanReportPath("triage") },
+  { route: "GET /reports/scans/{id}/tags", requires: ["scans:read"], path: scanReportPath("tags") },
+  {
+    route: "GET /reports/diff",
+    requires: ["scans:read"],
+    path: async () => `/v1/reports/diff?from=${await ingestScan()}&to=${await ingestScan()}`,
+  },
+  {
+    route: "GET /reports/ips/{ip}",
+    requires: ["scans:read"],
+    path: async () => {
+      await ingestScan();
+      return "/v1/reports/ips/10.0.5.7";
+    },
+  },
+  {
+    route: "GET /reports/stability",
+    requires: ["scans:read"],
+    path: async () => `/v1/reports/stability?scanId=${await ingestScan()}`,
+  },
+  {
+    route: "GET /reports/time-of-day",
+    requires: ["scans:read"],
+    path: async () => {
+      await ingestScan();
+      return "/v1/reports/time-of-day";
+    },
   },
 
   // hosts

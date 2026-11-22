@@ -33,7 +33,7 @@ config/                  typed env variables (fail-fast)
 features/<name>/         api/, components/, hooks/, lib/, types/ (no barrel files)
 hooks/ lib/ stores/ types/   shared code
 lib/auth/                useMe, useCan/usePermissions, role and permission labels, safe redirects
-lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin,hosts,vulnerabilities}.json, parity test
+lib/i18n/                index.ts, locales/{en,pl}/{common,auth,admin,hosts,vulnerabilities,reports}.json, parity test
 ```
 
 Outside `src/`, `public/` is served as-is; `public/samples/targets.{csv,json}` and `scan-results.{csv,json}` are the sample files linked from the target and results import pages (`features/scans/lib/samples.test.ts` keeps the result samples importable).
@@ -137,6 +137,7 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 - **Labels:** system roles are translated by key and custom roles show their stored name (`useRoleLabels`); permissions read as "Resource: Action" (`usePermissionLabel`, keys in `auth.json`). A new permission needs `permissions.resources.<resource>` (and a new action) in both languages.
 - **Errors:** `useErrorMessage()` turns anything a query or mutation threw into a translated message, by the API's `error.code` (`common.json`, `errors.*`) or by status.
 - **Admin panel:** `features/users` and `features/roles` (the permission matrix in `features/roles/lib/permission-matrix.ts` is built from the contracts catalog). The admin routes compose them, e.g. the user form gets the role list from `features/roles`.
+- **Pipelines and workers:** `features/pipelines` is the block builder (`/app/pipelines`, `/app/pipelines/new`, `/app/pipelines/:pipelineId`): targets (tags and ranges), an ordered chain of worker steps whose own settings are rendered from the worker's `paramFields` (`features/workers/components/worker-param-input.tsx`), and the schedule with a "Next runs" preview computed by the backend. The form is checked with the contracts' `PipelineBodySchema` and `validateStepParams`; without `pipelines:update` it is read-only, without `scans:run` the schedule controls are. `start-scan-dialog.tsx` is the scans page's "Start scan". `features/workers` is the Workers page (`app/routes/admin/workers.tsx`: the registry and the worker managers, refreshed every 30 s). The scan detail's Jobs tab (`features/scans/components/scan-jobs-panel.tsx`) shows each step's progress and the jobs; scan queries refresh every 5 s while a scan is queued, running or paused.
 - **Vulnerabilities:** `features/vulnerabilities` holds the badges and the per-service list that `features/hosts` shows (the data comes with the scan's host responses, under `scans:read`), and the panels of the Vulnerability databases page (`app/routes/admin/vulnerabilities.tsx`: sources, sync history, CPE → package mappings). The sources query polls while a sync runs or waits for the sync process.
 
 ## Pages and tables
@@ -154,6 +155,15 @@ Sign-in, sessions and RBAC are enforced by the backend ([backend README](../back
 - Details that do not fit a row open in a `Sheet` (`components/ui/sheet.tsx`, a side panel on the Radix dialog). It was written by hand: `shadcn add sheet` also tried to add an unrelated npm package.
 - The app is dark-only (`class="dark"` in `index.html`); `brand` is the accent color (`text-brand`, `bg-brand/15`).
 
+## Reports
+
+`features/reports` renders the backend's `/reports/*` endpoints ([backend README](../backend/README.md#reports)) under `/app/reports` (`scans:read`). The hub (`/app/reports`) picks a scan, two scans or an IP address; the scan page links to its summary report and the host panel to the host's IP report.
+
+- **Routes:** `scans/:scanId/:kind` (`summary`, `findings`, `technologies`, `exposure`, `triage`, `tags`), `diff?from=&to=`, `ips/:ip`, `stability?window=&inactiveAfter=`, `time-of-day?scans=`. Options live in the URL, so a report can be shared and reloaded.
+- **`ReportShell`** (`components/report-parts.tsx`) gives every report its header, the generated-at line and three actions: **Print / PDF** (`window.print()`), **JSON** (the API response as is) and **CSV** (one flat table per report, built in the report's component).
+- **Print:** the `@media print` block in `index.css` switches the dark tokens to light ones; the sidebar, controls and buttons carry `print:hidden`. `ReportTable` shows the first rows on screen with a toggle, but every row on paper.
+- **CSV** (`lib/export.ts`): UTF-8 with a BOM for Excel, and cells starting with `=`, `+`, `-` or `@` are prefixed with `'` so a spreadsheet does not run them as formulas.
+
 ## Translations
 
 English is the default language: the fallback for unsupported browser languages and the reference for typing. Every user-facing string goes into **both** files (`locales/en/*.json` and `locales/pl/*.json`) in the same change. `t()` is typed against the English resources. `pnpm test` checks that the keys match (including plural forms: en `one/other`, pl `one/few/many/other`), but it cannot check whether the Polish text is an actual translation.
@@ -162,4 +172,8 @@ English is the default language: the fallback for unsupported browser languages 
 
 | Variable | Description |
 |---|---|
-| `VITE_API_BASE_URL` | Backend URL without `/v1`, e.g. `http://localhost:3001` |
+| `VITE_API_BASE_URL` | Backend URL without `/v1`, e.g. `http://localhost:3001`; `/` = the page's own origin (the Docker image, whose nginx proxies `/v1` to the backend) |
+
+## Docker
+
+`apps/frontend/Dockerfile` (built from the repo root; `Dockerfile.dockerignore` replaces the root `.dockerignore`) builds the app with `VITE_API_BASE_URL=/` and serves it with nginx (`nginx.conf`), which proxies `/v1` to the `backend` container. One origin means cookies, CORS and the backend's Origin check work under any host name or IP. Compose runs it as `frontend` in the `app` profile ([`docker/README.md`](../../docker/README.md#everything-in-docker)).

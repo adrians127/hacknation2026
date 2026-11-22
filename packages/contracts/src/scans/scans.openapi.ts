@@ -23,6 +23,7 @@ import {
 import { ScanChangesQuerySchema, ScanChangesResponseSchema } from "./scan-changes.schema";
 import { ScanExportDocumentSchema, ScanExportQuerySchema } from "./scan-export.schema";
 import { ImportScanQuerySchema, ImportScanResponseSchema } from "./scan-import.schema";
+import { ScanJobListQuerySchema, ScanJobListResponseSchema } from "./scan-jobs.schema";
 import { ScanListResponseSchema } from "./scans.schema";
 
 const tags = ["Scans"];
@@ -244,5 +245,50 @@ registry.registerPath({
     401: unauthenticated,
     403: forbidden,
     409: errorResponse("The file was imported before, or another import is running"),
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/scans/{id}/jobs",
+  operationId: "listScanJobs",
+  summary: "List a scan's jobs",
+  description: [
+    "Requires `scans:read`. In step order, then sequence; `step` and `status` filter. A step that",
+    "takes the previous step's hosts gets a job each time one of the previous step's jobs completes.",
+  ].join(" "),
+  tags,
+  security,
+  request: { params: IdParamsSchema, query: ScanJobListQuerySchema },
+  responses: {
+    200: {
+      description: "One page of jobs",
+      content: { "application/json": { schema: ScanJobListResponseSchema } },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/scans/{id}/stop",
+  operationId: "stopScan",
+  summary: "Stop a scan",
+  description: [
+    "Requires `scans:read` and `scans:run`. Queued jobs are stopped; leased ones finish their",
+    "current run (worker-manager has no cancel channel), and the scan ends once they do.",
+  ].join(" "),
+  tags,
+  security,
+  request: { params: IdParamsSchema },
+  responses: {
+    204: { description: "Stopped, or stopping once the leased jobs end" },
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+    409: errorResponse("The scan has already ended (`SCAN_NOT_STOPPABLE`)"),
   },
 });

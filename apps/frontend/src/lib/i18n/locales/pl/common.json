@@ -321,20 +321,21 @@
       "up": "Aktywne hosty",
       "noAnswer": "Bez odpowiedzi",
       "openPorts": "Otwarte porty",
-      "duration": "Czas trwania"
+      "duration": "Czas trwania",
+      "pipeline": "Potok",
+      "trigger": "Uruchomiony przez"
     },
     "statuses": {
       "queued": "W kolejce",
       "running": "W toku",
       "completed": "Zakończony",
       "stopped": "Zatrzymany",
-      "failed": "Błąd"
-    },
-    "origins": {
-      "imported": "Zaimportowany"
+      "failed": "Błąd",
+      "paused": "Wstrzymany"
     },
     "detail": {
       "back": "Wszystkie skany",
+      "report": "Raport skanu",
       "title": "Skan z {{date}}",
       "subtitle": "Co znalazł ten skan. Zmiany liczymy względem poprzedniego skanu, tylko dla adresów, które odpowiedziały w obu.",
       "addresses": "Adresy",
@@ -342,8 +343,8 @@
       "down": "nieaktywne: {{formatted}}",
       "noAnswer": "Bez odpowiedzi",
       "openPorts": "Otwarte porty",
-      "jobs": "Zakończone joby",
-      "stoppedJobs": "zatrzymane na końcu okna czasowego: {{formatted}}",
+      "jobs": "Zakończone zadania",
+      "stoppedJobs": "zatrzymane: {{formatted}}",
       "duration": "Czas trwania",
       "rate": "Limit tempa",
       "ports": "Skanowane porty",
@@ -355,7 +356,19 @@
         "changed": "zmienione hosty",
         "unknown": "hosty bez danych do porównania"
       },
-      "serviceChanges": "Usługi: nowe {{new}}, zniknięte {{gone}}, zmienione {{changed}}."
+      "serviceChanges": "Usługi: nowe {{new}}, zniknięte {{gone}}, zmienione {{changed}}.",
+      "pipeline": "Potok",
+      "noPipeline": "Uruchomiony przez import celów",
+      "windowEnds": "Okno czasowe kończy się {{date}}",
+      "pausedHint": "Okno czasowe zamknęło się przed końcem pracy. Pozostałe zadania ruszą w kolejnym terminie potoku.",
+      "stop": "Zatrzymaj skan",
+      "stopTitle": "Zatrzymać ten skan?",
+      "stopDescription": "Zadania w kolejce zostaną anulowane. Zadania, które worker już wykonuje, najpierw się zakończą, a potem skan się zakończy.",
+      "stopped": "Skan jest zatrzymywany",
+      "tabs": {
+        "hosts": "Hosty",
+        "jobs": "Zadania"
+      }
     },
     "export": {
       "button": "Eksportuj {{format}}",
@@ -479,6 +492,51 @@
       },
       "export": "Eksportuj zmiany jako {{format}}",
       "exportFailed": "Eksport się nie powiódł: {{message}}"
+    },
+    "triggers": {
+      "import": "Import celów",
+      "manual": "Uruchom teraz",
+      "schedule": "Harmonogram",
+      "results_import": "Zaimportowane wyniki"
+    },
+    "jobs": {
+      "steps": "Kroki",
+      "step": "Krok {{index}}: {{worker}}",
+      "stepInput": {
+        "targets": "skanuje cele",
+        "previous": "skanuje to, co znalazł krok {{index}}"
+      },
+      "progress": "Zakończone zadania: {{done}} z {{total}}",
+      "waiting": "Czeka na poprzedni krok",
+      "filters": {
+        "step": "Krok",
+        "allSteps": "Wszystkie kroki",
+        "status": "Stan",
+        "allStatuses": "Wszystkie stany"
+      },
+      "columns": {
+        "sequence": "#",
+        "step": "Krok",
+        "subnet": "Adresy",
+        "status": "Stan",
+        "attempts": "Próby",
+        "leasedBy": "Menedżer workerów",
+        "duration": "Czas trwania",
+        "results": "Wyniki",
+        "error": "Ostatni błąd"
+      },
+      "statuses": {
+        "queued": "W kolejce",
+        "leased": "W toku",
+        "completed": "Zakończone",
+        "failed": "Błąd",
+        "stopped": "Zatrzymane"
+      },
+      "addresses_one": "{{count}} adres",
+      "addresses_few": "{{count}} adresy",
+      "addresses_many": "{{count}} adresów",
+      "addresses_other": "{{count}} adresu",
+      "empty": "Brak pasujących zadań."
     }
   },
   "language": {
@@ -509,9 +567,12 @@
     "dashboard": "Pulpit",
     "targets": "Cele",
     "scans": "Skany",
+    "reports": "Raporty",
     "users": "Użytkownicy",
     "roles": "Role",
-    "vulnerabilities": "Podatności"
+    "vulnerabilities": "Podatności",
+    "pipelines": "Potoki",
+    "workers": "Workery"
   },
   "notFound": {
     "title": "Nie znaleziono strony",
@@ -604,11 +665,20 @@
     "PACKAGE_MAPPING_EXISTS": "Takie mapowanie już istnieje.",
     "SOURCE_DISABLED": "Źródło jest wyłączone. Najpierw je włącz.",
     "BASE_SCAN_NOT_OLDER": "Skan, z którym porównujesz, musi być starszy od porównywanego skanu.",
+    "PIPELINE_NAME_TAKEN": "Potok o tej nazwie już istnieje.",
+    "PIPELINE_RUN_ACTIVE": "Uruchomienie tego potoku jeszcze trwa. Poczekaj na nie albo najpierw je zatrzymaj.",
+    "NO_SCANNABLE_TARGETS": "Żadnego z celów potoku nie da się przeskanować. Sprawdź jego tagi i zakresy.",
+    "WORKER_DISABLED": "Krok używa wyłączonego workera. Najpierw musi go włączyć administrator.",
+    "WORKER_IN_USE": "Ten worker jest nadal używany przez potok. Najpierw usuń go z potoku.",
+    "WORKER_BUILTIN": "Wbudowane workery pochodzą z kodu: zmienić można tylko to, czy działają, ich limit tempa i wartości domyślne.",
+    "PORTS_NOT_ALLOWED": "Te porty są poza portami, które skaner może sprawdzać.",
+    "SCAN_NOT_STOPPABLE": "Skan już się zakończył.",
     "DEFECTDOJO_NOT_CONFIGURED": "Integracja z DefectDojo nie jest skonfigurowana na serwerze.",
     "DEFECTDOJO_UNAVAILABLE": "DefectDojo nie odpowiada albo odrzucił token API.",
     "DEFECTDOJO_SYNC_RUNNING": "Synchronizacja z DefectDojo już trwa.",
     "DEFECTDOJO_PUSH_RUNNING": "Wysyłka do DefectDojo już trwa.",
     "NOTHING_TO_PUSH": "Nie ma czego wysłać: brak otwartych usług w tym skanie lub zaznaczeniu.",
+    "SAME_SCAN": "Wybierz dwa różne skany do porównania.",
     "SCAN_IMPORT_INVALID": "Plik nie jest eksportem skanu, wynikiem workera ani plikiem CSV z wynikami w formacie, który ta wersja potrafi odczytać.",
     "SCAN_ALREADY_IMPORTED": "Ten plik został już zaimportowany.",
     "SCAN_IMPORT_RUNNING": "Trwa inny import. Spróbuj ponownie, gdy się zakończy."

@@ -1,4 +1,4 @@
-import { formatPortSpec, parsePortSpec, type PortRange } from "@subsurf/contracts/scans/port-spec";
+import { unionPortSpecs } from "@subsurf/contracts/scans/port-spec";
 import {
   importedRanges,
   type ImportedScanFacts,
@@ -77,11 +77,11 @@ const openPortsOf = (hosts: readonly ObservedHost[]) =>
 
 /** The recorded spec widened by every port seen open, so ingest's scope check holds. */
 function scannedPorts(specs: readonly (string | null)[], hosts: readonly ObservedHost[]): string | null {
-  const ranges: PortRange[] = [
-    ...specs.flatMap((spec) => (spec === null ? [] : parsePortSpec(spec))),
-    ...hosts.flatMap((host) => host.ports.map(({ port }) => ({ from: port, to: port }))),
+  const parts = [
+    ...specs.flatMap((spec) => (spec === null ? [] : [spec])),
+    ...hosts.flatMap((host) => host.ports.map(({ port }) => String(port))),
   ];
-  return formatPortSpec(ranges);
+  return parts.length > 0 ? unionPortSpecs(parts) : null;
 }
 
 function targetRange(target: string): Ipv4Range {
