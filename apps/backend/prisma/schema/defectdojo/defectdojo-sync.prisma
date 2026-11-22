@@ -1,0 +1,22 @@
+/// One pull of DefectDojo data into hosts and services (modules/defectdojo).
+model DefectDojoSync {
+  id          String               @id @default(uuid(7)) @db.Uuid
+  status      DefectDojoSyncStatus @default(running)
+  startedAt   DateTime             @default(now())
+  finishedAt  DateTime?
+  startedById String?              @db.Uuid
+  /// DefectDojoSyncStatsSchema (contracts); null while running and when it failed.
+  stats       Json?
+  error       String?
+
+  startedBy User? @relation(fields: [startedById], references: [id], onDelete: SetNull)
+
+  @@index([startedById])
+  @@index([startedAt])
+}
+
+enum DefectDojoSyncStatus {
+  running
+  succeeded
+  failed
+}

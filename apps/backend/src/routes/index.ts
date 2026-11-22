@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { authRoutes } from "~backend/modules/auth/auth.routes";
+import { defectDojoRoutes } from "~backend/modules/defectdojo/defectdojo.routes";
 import { healthRoutes } from "~backend/modules/health/health.routes";
 import { hostsRoutes } from "~backend/modules/hosts/hosts.routes";
 import { rolesRoutes } from "~backend/modules/roles/roles.routes";
@@ -15,6 +16,7 @@ import { usersRoutes } from "~backend/modules/users/users.routes";
 export const apiRouter = Router();
 
 apiRouter.use("/auth", authRoutes);
+apiRouter.use("/defectdojo", defectDojoRoutes);
 apiRouter.use("/health", healthRoutes);
 apiRouter.use("/hosts", hostsRoutes);
 apiRouter.use("/roles", rolesRoutes);

@@ -49,7 +49,16 @@
     "actions": "Actions",
     "port": "Port",
     "service": "Service",
-    "http": "HTTP"
+    "http": "HTTP",
+    "remediation": "Remediation",
+    "select": "Select"
+  },
+  "remediation": {
+    "slaDue": "SLA due",
+    "slaOverdue": "SLA overdue",
+    "planned": "Fix planned",
+    "riskAcceptedUntil": "Risk accepted until",
+    "source": "From DefectDojo (last sync)"
   },
   "actions": {
     "expand": "Show the services of {{ip}}",
@@ -58,6 +67,7 @@
     "edit": "Edit",
     "editHost": "Edit {{ip}}",
     "editService": "Edit service {{name}}",
+    "select": "Select {{name}}",
     "triageOf": "Triage status of {{name}}"
   },
   "service": {

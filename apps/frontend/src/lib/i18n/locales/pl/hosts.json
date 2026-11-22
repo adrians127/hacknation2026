@@ -49,7 +49,16 @@
     "actions": "Akcje",
     "port": "Port",
     "service": "Usługa",
-    "http": "HTTP"
+    "http": "HTTP",
+    "remediation": "Naprawa",
+    "select": "Zaznacz"
+  },
+  "remediation": {
+    "slaDue": "Termin SLA",
+    "slaOverdue": "SLA przekroczone",
+    "planned": "Planowana naprawa",
+    "riskAcceptedUntil": "Ryzyko zaakceptowane do",
+    "source": "Z DefectDojo (ostatnia synchronizacja)"
   },
   "actions": {
     "expand": "Pokaż usługi hosta {{ip}}",
@@ -58,6 +67,7 @@
     "edit": "Edytuj",
     "editHost": "Edytuj {{ip}}",
     "editService": "Edytuj usługę {{name}}",
+    "select": "Zaznacz {{name}}",
     "triageOf": "Status triage: {{name}}"
   },
   "service": {

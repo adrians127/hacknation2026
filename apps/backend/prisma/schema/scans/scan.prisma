@@ -21,6 +21,7 @@ model Scan {
   targets     ScanTarget[]
   jobs        ScanJob[]
   results     ScanJobResult[]
+  defectDojoPushes DefectDojoPush[]
   hosts       HostObservation[]
 
   @@index([requestedById])

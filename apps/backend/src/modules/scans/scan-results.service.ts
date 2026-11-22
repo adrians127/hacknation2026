@@ -334,6 +334,14 @@ export const scanResultsService = {
     };
   },
 
+  /** Every host of the scan (unpaged) with both scans' observations, for an export. */
+  async hostsForExport(scanId: string): Promise<{ scan: ScanRow; hosts: HostInScan[] }> {
+    const scan = await findScan(scanId);
+    const base = await findBaseScan(scan);
+    const entries = await diffWithBase(scan, base);
+    return { scan, hosts: await hostsInScan(scan.id, base, entries) };
+  },
+
   async getHost(scanId: string, hostId: string): Promise<ScanHostDetail> {
     const scan = await findScan(scanId);
     const base = await findBaseScan(scan);

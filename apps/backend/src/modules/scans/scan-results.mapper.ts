@@ -9,6 +9,7 @@ import type { Scan, ScanHostCounts } from "@subsurf/contracts/scans/scans.schema
 
 import type { Prisma, Scan as ScanRow } from "~backend/generated/prisma/client";
 import { decryptText } from "~backend/lib/crypto";
+import { toServiceRemediation } from "~backend/modules/defectdojo/defectdojo.mapper";
 import { httpSummaries, openPortDetails } from "~backend/modules/results/details";
 import type { HostDiff, ServiceDiff } from "~backend/modules/scans/scan-diff";
 
@@ -53,21 +54,21 @@ export function toScan(scan: ScanRow, hosts: ScanHostCounts, openPorts: number):
 
 const HOSTNAME_ORDER = { job: 0, tls_san: 1, ptr: 2 } as const;
 
-function hostnames(observation: ObservationRow | undefined): string[] {
+export function hostnames(observation: ObservationRow | undefined): string[] {
   const sorted = (observation?.hostnames ?? []).toSorted(
     (a, b) => HOSTNAME_ORDER[a.source] - HOSTNAME_ORDER[b.source] || a.name.localeCompare(b.name),
   );
   return [...new Set(sorted.map((hostname) => hostname.name))];
 }
 
-interface ResolvedService {
+export interface ResolvedService {
   diff: ServiceDiff;
   service: ServiceRow;
   port: PortRow;
 }
 
 /** Pairs each service of the diff with its asset and the observation that describes it. */
-function resolveServices(entry: HostInScan): ResolvedService[] {
+export function resolveServices(entry: HostInScan): ResolvedService[] {
   return entry.diff.services.flatMap((diff) => {
     const observation = diff.observedIn === "current" ? entry.current : entry.base;
     const port = observation?.ports.find((candidate) => candidate.serviceId === diff.serviceId);
@@ -91,6 +92,7 @@ function serviceFields({ diff, service, port }: ResolvedService) {
     triage: service.triage,
     tags: service.tags,
     note: decryptText(service.note),
+    remediation: toServiceRemediation(service),
   };
 }
 

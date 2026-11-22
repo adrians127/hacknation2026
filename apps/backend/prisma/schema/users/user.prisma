@@ -19,6 +19,8 @@ model User {
   sessions Session[]
   targets  Target[]
   scans    Scan[]
+  defectDojoSyncs DefectDojoSync[]
+  defectDojoPushes DefectDojoPush[]
 
   @@index([roleId])
 }

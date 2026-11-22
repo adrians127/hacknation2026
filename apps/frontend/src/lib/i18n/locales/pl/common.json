@@ -301,6 +301,39 @@
     "badge": "Dane przykładowe",
     "tooltip": "Ta strona pokazuje przykładowe dane generowane w przeglądarce. Backend jeszcze ich nie udostępnia, więc zmiany wprowadzone tutaj nie są zapisywane."
   },
+  "defectdojo": {
+    "title": "DefectDojo",
+    "never": "Jeszcze nie synchronizowano. Synchronizacja importuje tagi findingów, tagi i właścicieli assetów, triage nieprzejrzanych usług oraz terminy naprawy.",
+    "notConfigured": "Brak konfiguracji: ustaw DEFECTDOJO_URL i DEFECTDOJO_API_TOKEN w backendzie.",
+    "running": "Synchronizacja rozpoczęta {{when}} przez: {{by}} wciąż trwa.",
+    "failed": "Ostatnia synchronizacja ({{when}}, {{by}}) nie powiodła się: {{error}}",
+    "succeeded": "Ostatnia synchronizacja {{when}} ({{by}}): dopasowano {{matched}} z {{findings}} findingów, zaktualizowano usługi: {{services}}, hosty: {{hosts}}, dodano tagi: {{tags}}.",
+    "unknownUser": "usunięty użytkownik",
+    "sync": "Synchronizuj z DefectDojo",
+    "syncing": "Synchronizacja…",
+    "hint": "Pobiera aktualne dane z DefectDojo. Tagi są dopisywane do Twoich; Twój triage i edycje nigdy nie są nadpisywane.",
+    "toast": "Zsynchronizowano z DefectDojo: zaktualizowano usługi: {{services}}, hosty: {{hosts}}",
+    "push": {
+      "scan": "Wyślij skan do DefectDojo",
+      "selected_one": "Wyślij {{count}} zaznaczony",
+      "selected_few": "Wyślij {{count}} zaznaczone",
+      "selected_many": "Wyślij {{count}} zaznaczonych",
+      "selected_other": "Wyślij {{count}} zaznaczonych",
+      "clear": "Wyczyść zaznaczenie",
+      "hint": "Każda usługa z tego skanu jako finding informacyjny w produkcie DefectDojo „SubSurf discovery”.",
+      "confirmScanTitle": "Wysłać ten skan do DefectDojo?",
+      "confirmScan": "Każda usługa trafi jako finding Info razem z triage i tagami. Findingi usług, których ten skan już nie widzi, zostaną zamknięte w DefectDojo; hosty, które nie odpowiedziały, zachowują swoje.",
+      "confirmSelectionTitle_one": "Wysłać {{count}} zaznaczony element do DefectDojo?",
+      "confirmSelectionTitle_few": "Wysłać {{count}} zaznaczone elementy do DefectDojo?",
+      "confirmSelectionTitle_many": "Wysłać {{count}} zaznaczonych elementów do DefectDojo?",
+      "confirmSelectionTitle_other": "Wysłać {{count}} zaznaczonych elementów do DefectDojo?",
+      "confirmSelection": "Wysyłane są tylko zaznaczone hosty (wszystkie ich usługi) i usługi. W DefectDojo nic nie zostanie zamknięte.",
+      "confirm": "Wyślij",
+      "toast": "Wysłano findingi: {{findings}} (nowe: {{created}}, zamknięte: {{closed}}, bez zmian: {{untouched}})",
+      "last": "Ostatnia wysyłka {{when}} ({{by}}): findingi: {{findings}}, nowe: {{created}}, zamknięte: {{closed}}.",
+      "lastFailed": "Ostatnia wysyłka ({{when}}, {{by}}) nie powiodła się: {{error}}"
+    }
+  },
   "errors": {
     "generic": "Coś poszło nie tak. Spróbuj ponownie.",
     "network": "Brak połączenia z serwerem.",
@@ -317,6 +350,11 @@
     "SYSTEM_ROLE_READ_ONLY": "Ról systemowych nie można zmieniać.",
     "ROLE_IN_USE": "Ta rola jest nadal przypisana użytkownikom. Najpierw przenieś ich do innej roli.",
     "EMAIL_TAKEN": "Użytkownik z tym adresem email już istnieje.",
-    "ROLE_NAME_TAKEN": "Rola o tej nazwie już istnieje."
+    "ROLE_NAME_TAKEN": "Rola o tej nazwie już istnieje.",
+    "DEFECTDOJO_NOT_CONFIGURED": "Integracja z DefectDojo nie jest skonfigurowana na serwerze.",
+    "DEFECTDOJO_UNAVAILABLE": "DefectDojo nie odpowiada albo odrzucił token API.",
+    "DEFECTDOJO_SYNC_RUNNING": "Synchronizacja z DefectDojo już trwa.",
+    "DEFECTDOJO_PUSH_RUNNING": "Wysyłka do DefectDojo już trwa.",
+    "NOTHING_TO_PUSH": "Nie ma czego wysłać: brak otwartych usług w tym skanie lub zaznaczeniu."
   }
 }

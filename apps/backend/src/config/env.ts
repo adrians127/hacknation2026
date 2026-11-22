@@ -75,6 +75,10 @@ const envSchema = z
         .refine(isPowerOfTwo, "SCAN_BATCH_SIZE must be a power of two")
         .default(256),
     ),
+
+    // DefectDojo API (src/modules/defectdojo); both unset = the integration is off.
+    DEFECTDOJO_URL: blankAsAbsent(z.url().optional()),
+    DEFECTDOJO_API_TOKEN: blankAsAbsent(z.string().min(1).optional()),
   })
   .refine((value) => value.NODE_ENV !== "production" || value.JWT_SECRET !== EXAMPLE_JWT_SECRET, {
     path: ["JWT_SECRET"],

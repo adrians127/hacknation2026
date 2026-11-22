@@ -12,6 +12,7 @@ import { useScanHost } from "@/features/hosts/api/get-scan-host";
 import { ChangeBadge } from "@/features/hosts/components/change-badge";
 import { HostStatusBadge } from "@/features/hosts/components/host-status-badge";
 import { HttpEndpointDetails } from "@/features/hosts/components/http-endpoint-details";
+import { RemediationDates } from "@/features/hosts/components/remediation-dates";
 import { ServiceIdentity } from "@/features/hosts/components/service-identity";
 import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageBadge } from "@/features/hosts/components/triage-badge";
@@ -66,6 +67,11 @@ function ServiceSection({
         </Field>
         {service.extraInfo && <Field label={t("detail.extraInfo")}>{service.extraInfo}</Field>}
         {service.identity.ttl !== null && <Field label="TTL">{service.identity.ttl}</Field>}
+        {service.remediation && (
+          <Field label={t("columns.remediation")}>
+            <RemediationDates remediation={service.remediation} />
+          </Field>
+        )}
         {service.cpe.length > 0 && (
           <Field label="CPE">
             <span className="font-mono text-xs break-all">{service.cpe.join(", ")}</span>

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ServiceRemediationSchema } from "../defectdojo/defectdojo.schema";
 import {
   HttpSummarySchema,
   ServiceIdentitySchema,
@@ -64,6 +65,8 @@ export const ScanServiceSchema = z.object({
   triage: TriageStatusSchema,
   tags: z.array(z.string()),
   note: z.string(),
+  /** From the last DefectDojo sync; `null` when no DefectDojo finding gives a date. */
+  remediation: ServiceRemediationSchema.nullable(),
 });
 
 export const ScanHostSchema = z.object({

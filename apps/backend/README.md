@@ -48,6 +48,9 @@ modules/scans          GET /scans… (scan results, hosts per scan, changes: sca
                        queues a Scan and its ScanJob batches (scans.service.ts, dns.ts, batching.ts)
 modules/results        no routes yet: ingests worker results into observations (details.ts, fingerprint.ts, job-scope.ts)
 modules/hosts          PATCH /hosts…: edits of the Host and Service assets; ingest's helpers for those assets
+modules/defectdojo     GET|POST /defectdojo/sync: pulls DefectDojo tags, owners, triage and remediation dates
+                       into hosts and services; POST /defectdojo/push: a scan (or a selection) as Info
+                       findings (client, import rules, report builder, sync and push runs)
 demo/                  deterministic demo scan data for `db:seed:hosts` (not part of the API build)
 test/                  integration test setup: test database, TestClient (fetch + cookie jar), sign-in helpers,
                        ingestScan() (scans.ts)
@@ -80,7 +83,7 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
 
 ### Permissions and roles
 
-- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|run` and `hosts:update`. `scans:read` guards the scan results (hosts included), `hosts:update` the edits of hosts and services; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
+- The catalog is `PERMISSIONS` in `packages/contracts/src/auth/permissions.ts`, as `resource:action`: `users:*`, `roles:*`, `targets:*`, `scans:read|run`, `hosts:update` and `defectdojo:read|import|export`. `scans:read` guards the scan results (hosts included), `hosts:update` the edits of hosts and services; the frontend gates its mocked screens with the rest. The admin panel's matrix is built from `PERMISSION_RESOURCES` × `PERMISSION_ACTIONS`.
 - A route checks permissions with `requirePermission("users:read")` after `requireAuth`. Services that act on other accounts or roles also call `assertHoldsAll` (below).
 - **System roles** (`admin`, `editor`, `analyst`, `viewer`) are read-only. `syncSystemRoles()` (`modules/roles/system-roles.ts`) runs at startup and in the seed: it gives them exactly `SYSTEM_ROLE_PERMISSIONS` and drops permissions that no longer exist from custom roles.
 - **Custom roles** are rows with a `permissions` array. Deleting a role that users still have needs `reassignToRoleId` (and `users:update`); the users move and the role is deleted in one transaction.
@@ -103,7 +106,8 @@ Local accounts only (no external identity provider). The PDF's four roles (secti
    | create and delete, including import | ✓ | ✓ | | |
    | run, stop and schedule scans (`scans:run`) | ✓ | ✓ | | |
    | export to a CSV/JSON file | ✓ | ✓ | ✓ | ✓ |
-   | export to DefectDojo | ✓ | ✓ | | |
+   | export to DefectDojo (`defectdojo:export`) | ✓ | ✓ | | |
+| import from DefectDojo (`defectdojo:import`) | ✓ | ✓ | | |
    | global scanner limits (`settings:manage`: rate, ports, ranges, time windows) | ✓ | | | |
    | users and roles | ✓ | | | |
 
@@ -188,6 +192,8 @@ use that same selection, so a retry does not duplicate a host in the scan view.
 - The first scan has no base scan: every `change` is `null`.
 - The diff reads only IPs, statuses and fingerprints, so it runs over a whole scan per request; details are loaded for the requested page only. The list's plaintext HTTP summaries come from `httpSummaries()`, without decrypting anything.
 
+**DefectDojo sync** (`modules/defectdojo/`): `POST /defectdojo/sync` merges DefectDojo tags into host and service tags, sets triage on services still `unreviewed` and replaces `Service.remediationPlannedOn`/`slaDueOn`/`riskAcceptedUntil` (returned as `remediation` on every scan service). `POST /defectdojo/push` sends a scan's services (all, or the selected hosts and services) as `Generic Findings Import` findings, importing once and reimporting into the same test later (`DefectDojoPush` rows keep the test id). Rules: [`docs/defectdojo-integration.md`](../../docs/defectdojo-integration.md#sync-into-subsurf-implemented) and [push](../../docs/defectdojo-integration.md#push-from-subsurf-implemented).
+
 **Edits** (`modules/hosts/`, `hosts:update`): `PATCH /hosts/{id}` (note, tags, triage) and `PATCH /hosts/{id}/services/{serviceId}` (the same plus `nameOverride`/`productOverride`/`versionOverride`, `null` clears one). They write the `Host`/`Service` assets, which ingest never touches, so an edit made from any scan shows in every scan and survives later ones (PDF item 14). Triage is `unreviewed | reviewed | important | false_positive`.
 
 ## Demo data
@@ -217,6 +223,7 @@ use that same selection, so a retry does not duplicate a host in the scan view.
 | `SCAN_DEFAULT_PORTS` | 28 common TCP ports | Ports snapshotted onto every queued scan (`22,80,8000-8100` syntax) |
 | `SCAN_DEFAULT_MAX_RATE` | `100` | Packets per second a worker may send for one job |
 | `SCAN_BATCH_SIZE` | `256` | Addresses per scan job, a power of two from 16 to 1024 |
+| `DEFECTDOJO_URL` `DEFECTDOJO_API_TOKEN` | — | DefectDojo API for the sync (local: `http://localhost:8080` and the dev token from `docker/README.md`). Unset = the sync answers 503 `DEFECTDOJO_NOT_CONFIGURED` |
 
 ## Docker
 

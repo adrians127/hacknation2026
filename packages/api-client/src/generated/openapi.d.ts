@@ -104,6 +104,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/defectdojo/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * DefectDojo connection and the last sync
+         * @description Requires `defectdojo:read`.
+         */
+        get: operations["getDefectDojoStatus"];
+        put?: never;
+        /**
+         * Pull the current DefectDojo data into hosts and services
+         * @description Requires `defectdojo:import`. Reads every product and finding, matches findings to services by host:port and imports: finding tags (service tags), product tags and owners (host tags, `owner:`/`contact:`), triage of services that are still `unreviewed`, and remediation dates. Tags are merged into the user tags; nothing users set is overwritten.
+         */
+        post: operations["syncDefectDojo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/defectdojo/push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Push a scan's services to DefectDojo as informational findings
+         * @description Requires `defectdojo:export`. One `Info` finding per service (Generic Findings Import) in the product `SubSurf discovery`: the first push is an import, later ones reimport into the same test. A whole-scan push closes findings of services the scan no longer sees (unknown hosts keep theirs); a push of `hostIds`/`serviceIds` closes nothing. Triage maps to `false_p` and `verified`; service tags become finding tags.
+         */
+        post: operations["pushToDefectDojo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -479,7 +523,7 @@ export interface components {
                 message: string;
                 status: number;
                 /** @enum {string} */
-                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN";
+                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN" | "DEFECTDOJO_NOT_CONFIGURED" | "DEFECTDOJO_UNAVAILABLE" | "DEFECTDOJO_SYNC_RUNNING" | "DEFECTDOJO_PUSH_RUNNING" | "NOTHING_TO_PUSH";
                 details?: unknown;
             };
         };
@@ -496,7 +540,7 @@ export interface components {
                 key: "admin" | "editor" | "analyst" | "viewer" | null;
                 name: string;
             };
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
             mustChangePassword: boolean;
         };
         HealthResponse: {
@@ -517,7 +561,7 @@ export interface components {
             name: string;
             description: string;
             isSystem: boolean;
-            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
             userCount: number;
             /** Format: date-time */
             createdAt: string;
@@ -960,6 +1004,315 @@ export interface operations {
             };
         };
     };
+    getDefectDojoStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether DefectDojo is configured, and the last sync */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        configured: boolean;
+                        /** Format: uri */
+                        url: string | null;
+                        lastSync: {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            status: "running" | "succeeded" | "failed";
+                            /** Format: date-time */
+                            startedAt: string;
+                            /** Format: date-time */
+                            finishedAt: string | null;
+                            startedBy: {
+                                /** Format: uuid */
+                                id: string;
+                                displayName: string;
+                            } | null;
+                            stats: {
+                                products: number;
+                                findings: number;
+                                matchedFindings: number;
+                                unmatchedFindings: number;
+                                hostsUpdated: number;
+                                servicesUpdated: number;
+                                tagsAdded: number;
+                                tagsSkipped: number;
+                                triageSet: number;
+                                remediationUpdated: number;
+                            } | null;
+                            error: string | null;
+                        } | null;
+                        lastPush: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            scanId: string;
+                            /** @enum {string} */
+                            scope: "scan" | "selection";
+                            /** @enum {string} */
+                            status: "running" | "succeeded" | "failed";
+                            /** Format: date-time */
+                            startedAt: string;
+                            /** Format: date-time */
+                            finishedAt: string | null;
+                            startedBy: {
+                                /** Format: uuid */
+                                id: string;
+                                displayName: string;
+                            } | null;
+                            findings: number;
+                            testId: number | null;
+                            stats: {
+                                created: number;
+                                closed: number;
+                                reactivated: number;
+                                untouched: number;
+                            } | null;
+                            error: string | null;
+                        } | null;
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    syncDefectDojo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The finished sync with what it changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** @enum {string} */
+                        status: "running" | "succeeded" | "failed";
+                        /** Format: date-time */
+                        startedAt: string;
+                        /** Format: date-time */
+                        finishedAt: string | null;
+                        startedBy: {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                        } | null;
+                        stats: {
+                            products: number;
+                            findings: number;
+                            matchedFindings: number;
+                            unmatchedFindings: number;
+                            hostsUpdated: number;
+                            servicesUpdated: number;
+                            tagsAdded: number;
+                            tagsSkipped: number;
+                            triageSet: number;
+                            remediationUpdated: number;
+                        } | null;
+                        error: string | null;
+                    };
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another sync is running (`DEFECTDOJO_SYNC_RUNNING`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description DefectDojo did not answer or refused the token (`DEFECTDOJO_UNAVAILABLE`) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description DefectDojo is not configured (`DEFECTDOJO_NOT_CONFIGURED`) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pushToDefectDojo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    scanId: string;
+                    hostIds?: string[];
+                    serviceIds?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description The finished push with DefectDojo's counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** Format: uuid */
+                        scanId: string;
+                        /** @enum {string} */
+                        scope: "scan" | "selection";
+                        /** @enum {string} */
+                        status: "running" | "succeeded" | "failed";
+                        /** Format: date-time */
+                        startedAt: string;
+                        /** Format: date-time */
+                        finishedAt: string | null;
+                        startedBy: {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                        } | null;
+                        findings: number;
+                        testId: number | null;
+                        stats: {
+                            created: number;
+                            closed: number;
+                            reactivated: number;
+                            untouched: number;
+                        } | null;
+                        error: string | null;
+                    };
+                };
+            };
+            /** @description Validation failed, or nothing to push (`NOTHING_TO_PUSH`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another push is running (`DEFECTDOJO_PUSH_RUNNING`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description DefectDojo did not answer or rejected the report (`DEFECTDOJO_UNAVAILABLE`) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description DefectDojo is not configured (`DEFECTDOJO_NOT_CONFIGURED`) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -1161,7 +1514,7 @@ export interface operations {
                             name: string;
                             description: string;
                             isSystem: boolean;
-                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+                            permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
                             userCount: number;
                             /** Format: date-time */
                             createdAt: string;
@@ -1203,7 +1556,7 @@ export interface operations {
                 "application/json": {
                     name: string;
                     description: string;
-                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+                    permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
                 };
             };
         };
@@ -1280,7 +1633,7 @@ export interface operations {
                         name: string;
                         description: string;
                         isSystem: boolean;
-                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+                        permissions: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
                         userCount: number;
                         /** Format: date-time */
                         createdAt: string;
@@ -1398,7 +1751,7 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     description?: string;
-                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update")[];
+                    permissions?: ("users:read" | "users:create" | "users:update" | "users:delete" | "roles:read" | "roles:create" | "roles:update" | "roles:delete" | "targets:read" | "targets:create" | "targets:update" | "targets:delete" | "scans:read" | "scans:run" | "hosts:update" | "defectdojo:read" | "defectdojo:import" | "defectdojo:export")[];
                 };
             };
         };
@@ -1697,6 +2050,14 @@ export interface operations {
                                 triage: "unreviewed" | "reviewed" | "important" | "false_positive";
                                 tags: string[];
                                 note: string;
+                                remediation: {
+                                    /** Format: date */
+                                    plannedOn: string | null;
+                                    /** Format: date */
+                                    slaDueOn: string | null;
+                                    /** Format: date */
+                                    riskAcceptedUntil: string | null;
+                                } | null;
                             }[];
                         }[];
                         total: number;
@@ -1881,6 +2242,14 @@ export interface operations {
                             triage: "unreviewed" | "reviewed" | "important" | "false_positive";
                             tags: string[];
                             note: string;
+                            remediation: {
+                                /** Format: date */
+                                plannedOn: string | null;
+                                /** Format: date */
+                                slaDueOn: string | null;
+                                /** Format: date */
+                                riskAcceptedUntil: string | null;
+                            } | null;
                             reason: string | null;
                             extraInfo: string | null;
                             cpe: string[];

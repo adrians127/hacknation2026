@@ -6,6 +6,7 @@ import { GuardedButton } from "@/components/guarded-button";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DefectDojoSyncCard } from "@/features/defectdojo/components/defectdojo-sync-card";
 import { useScans } from "@/features/scans/api/get-scans";
 import { ScansTable } from "@/features/scans/components/scans-table";
 import { useErrorMessage } from "@/hooks/use-error-message";
@@ -32,6 +33,8 @@ export function ScansRoute() {
           </GuardedButton>
         }
       />
+
+      <DefectDojoSyncCard />
 
       {scans.isPending ? (
         <Skeleton className="h-48 w-full" />

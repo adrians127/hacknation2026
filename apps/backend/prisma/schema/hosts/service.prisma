@@ -16,7 +16,11 @@ model Service {
   nameOverride    String?
   productOverride String?
   versionOverride String?
-  createdAt       DateTime          @default(now())
+  /// Imported from DefectDojo (modules/defectdojo); every sync replaces them, users do not edit them.
+  remediationPlannedOn DateTime? @db.Date
+  slaDueOn             DateTime? @db.Date
+  riskAcceptedUntil    DateTime? @db.Date
+  createdAt      DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
   host         Host              @relation(fields: [hostId], references: [id], onDelete: Cascade)

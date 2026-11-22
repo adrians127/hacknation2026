@@ -80,7 +80,7 @@ A pnpm + turbo monorepo. The workspaces are `apps/*` and `packages/*`.
   - the PDF's four roles (item 13) are locked system roles, and admins create custom roles (item 12);
   - details and the rules for mapping new permissions onto system roles: [`apps/backend/README.md`](apps/backend/README.md#auth-and-rbac).
 - **Sensitive data:** encrypted at rest at the application level (AES-256-GCM, `DATA_ENCRYPTION_KEY`, `apps/backend/src/lib/crypto.ts`). Scan results store sensitive JSON fields as `{ "$enc": "v1.…" }`, and host/service notes are encrypted too; the other tables are still to be covered (see the backend README).
-- **DefectDojo:** a local instance runs in `docker/` (`http://localhost:8080`, fixed dev API token). The backend will push findings through `/api/v2/import-scan/`. Not implemented yet.
+- **DefectDojo:** a local instance runs in `docker/` (`http://localhost:8080`, fixed dev API token). **Pull is implemented** (`modules/defectdojo`, `POST /defectdojo/sync`: tags, owners, triage, remediation dates into `Host`/`Service`; rules in [`docs/defectdojo-integration.md`](docs/defectdojo-integration.md#sync-into-subsurf-implemented)). **Push is implemented** too (`POST /defectdojo/push`: a scan or a selection as Info findings, import then reimport into one test; [`docs/defectdojo-integration.md`](docs/defectdojo-integration.md#push-from-subsurf-implemented)).
 
 ## Monorepo commands
 
