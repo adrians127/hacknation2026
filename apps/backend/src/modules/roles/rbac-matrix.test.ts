@@ -8,6 +8,7 @@ import {
 import { ErrorResponseSchema } from "@subsurf/contracts/common/common.schema";
 
 import { prisma } from "~backend/lib/prisma";
+import { serviceWithMatch } from "~backend/modules/vulnerabilities/test/matches";
 import { createUser, signInAs } from "~backend/test/auth";
 import { startTestServer, type TestServer } from "~backend/test/http";
 
@@ -31,6 +32,21 @@ interface Endpoint {
 const viewerRoleId = async () =>
   (await prisma.role.findUniqueOrThrow({ where: { key: "viewer" } })).id;
 const someUserPath = async (suffix = "") => `/v1/users/${(await createUser()).id}${suffix}`;
+const mappingPath = async () => {
+  const mapping = await prisma.packageMapping.create({
+    data: {
+      cpeVendor: "vendor",
+      cpeProduct: `product-${Math.random()}`,
+      ecosystem: "Maven",
+      packageName: "org.example:example",
+    },
+  });
+  return `/v1/vulnerabilities/mappings/${mapping.id}`;
+};
+const triagePath = async () => {
+  const { serviceId, canonicalId } = await serviceWithMatch();
+  return `/v1/vulnerabilities/services/${serviceId}/${canonicalId}`;
+};
 const customRolePath = async () =>
   `/v1/roles/${(await prisma.role.create({ data: { name: `Custom ${Math.random()}`, permissions: [] } })).id}`;
 
@@ -77,6 +93,51 @@ const ENDPOINTS: Endpoint[] = [
     method: "POST",
     path: async () => "/v1/targets/import",
     body: async () => ({ entries: [{ value: "192.0.2.10" }], startScan: false }),
+  },
+  {
+    permission: "vulnerabilities:read",
+    method: "GET",
+    path: async () => "/v1/vulnerabilities/sources",
+  },
+  {
+    permission: "vulnerabilities:read",
+    method: "GET",
+    path: async () => "/v1/vulnerabilities/sources/nvd/runs",
+  },
+  {
+    permission: "vulnerabilities:run",
+    method: "POST",
+    path: async () => "/v1/vulnerabilities/sources/nvd/sync",
+    body: async () => ({ mode: "incremental" }),
+  },
+  {
+    permission: "vulnerabilities:run",
+    method: "PATCH",
+    path: async () => "/v1/vulnerabilities/sources/osv",
+    body: async () => ({ enabled: true }),
+  },
+  {
+    permission: "vulnerabilities:read",
+    method: "GET",
+    path: async () => "/v1/vulnerabilities/mappings",
+  },
+  {
+    permission: "vulnerabilities:create",
+    method: "POST",
+    path: async () => "/v1/vulnerabilities/mappings",
+    body: async () => ({
+      cpeVendor: "acme",
+      cpeProduct: `widget-${Math.floor(Math.random() * 1e9)}`,
+      ecosystem: "npm",
+      packageName: "widget",
+    }),
+  },
+  { permission: "vulnerabilities:delete", method: "DELETE", path: mappingPath },
+  {
+    permission: "vulnerabilities:update",
+    method: "PATCH",
+    path: triagePath,
+    body: async () => ({ triage: "important" }),
   },
 ];
 

@@ -10,6 +10,11 @@ import {
   HttpEndpointSchema,
   OpenPortSchema,
 } from "../workers/worker-result.schema";
+import {
+  ServiceVulnerabilitySchema,
+  VulnerabilityFilterSchema,
+  VulnerabilitySummarySchema,
+} from "../vulnerabilities/vulnerabilities.schema";
 import { ScanSchema, type ScanJobStatus } from "./scans.schema";
 
 // Separate from scans.schema.ts: worker-result.schema imports that file, so it cannot import back.
@@ -64,6 +69,8 @@ export const ScanServiceSchema = z.object({
   triage: TriageStatusSchema,
   tags: z.array(z.string()),
   note: z.string(),
+  /** Of the Service asset as its newest observation describes it, whatever scan is viewed. */
+  vulnerabilities: VulnerabilitySummarySchema,
 });
 
 export const ScanHostSchema = z.object({
@@ -79,6 +86,8 @@ export const ScanHostSchema = z.object({
   triage: TriageStatusSchema,
   tags: z.array(z.string()),
   note: z.string(),
+  /** Distinct vulnerabilities across the host's services. */
+  vulnerabilities: VulnerabilitySummarySchema,
   services: z.array(ScanServiceSchema),
 });
 
@@ -93,6 +102,8 @@ export const ScanHostListQuerySchema = z.object({
   /** Matches the host's triage status or any of its services'. */
   triage: TriageStatusSchema.optional(),
   change: ScanChangeFilterSchema.optional(),
+  /** Hosts with a confirmed vulnerability (any, critical, high or above, in CISA KEV). */
+  vulnerability: VulnerabilityFilterSchema.optional(),
 });
 
 export const ScanHostListResponseSchema = z.object({
@@ -115,6 +126,8 @@ export const ScanServiceDetailSchema = ScanServiceSchema.extend({
   http: z.array(HttpEndpointSchema),
   firstSeenAt: z.iso.datetime(),
   lastSeenAt: z.iso.datetime(),
+  /** Active matches first, then the ones retracted in the last 30 days. */
+  vulnerabilityMatches: z.array(ServiceVulnerabilitySchema),
 });
 
 export const HostHistoryEntrySchema = z.object({

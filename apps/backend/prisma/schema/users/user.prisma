@@ -15,10 +15,13 @@ model User {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  role     Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  sessions Session[]
-  targets  Target[]
-  scans    Scan[]
+  role                     Role                         @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  sessions                 Session[]
+  targets                  Target[]
+  scans                    Scan[]
+  vulnerabilityJobRequests VulnerabilityJobRequest[]
+  vulnerabilityTriage      ServiceVulnerabilityTriage[]
+  packageMappings          PackageMapping[]
 
   @@index([roleId])
 }

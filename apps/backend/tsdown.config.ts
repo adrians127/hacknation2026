@@ -1,7 +1,7 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: { index: "src/index.ts" },
+  entry: { index: "src/index.ts", "vuln-sync": "src/vuln-sync.ts" },
   format: ["esm"],
   platform: "node",
   target: "node26",

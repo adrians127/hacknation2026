@@ -4,6 +4,7 @@ import { guestLoader, requireAuthLoader } from "@/app/loaders";
 import { RoleDetailRoute } from "@/app/routes/admin/role-detail";
 import { RolesRoute } from "@/app/routes/admin/roles";
 import { UsersRoute } from "@/app/routes/admin/users";
+import { VulnerabilitiesRoute } from "@/app/routes/admin/vulnerabilities";
 import { AppLayout } from "@/app/routes/app-layout";
 import { ChangePasswordRoute } from "@/app/routes/change-password";
 import { DashboardRoute } from "@/app/routes/dashboard";
@@ -75,6 +76,11 @@ export const router = createBrowserRouter([
               { index: true, Component: RolesRoute },
               { path: ":roleId", Component: RoleDetailRoute },
             ],
+          },
+          {
+            path: "admin/vulnerabilities",
+            element: <RequirePermission permission="vulnerabilities:read" />,
+            children: [{ index: true, Component: VulnerabilitiesRoute }],
           },
           { path: "*", Component: NotFoundRoute },
         ],

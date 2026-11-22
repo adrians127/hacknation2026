@@ -11,6 +11,7 @@ import { HttpSummary } from "@/features/hosts/components/http-summary";
 import { ServiceIdentity } from "@/features/hosts/components/service-identity";
 import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageControl } from "@/features/hosts/components/triage-control";
+import { VulnerabilitySummaryBadge } from "@/features/vulnerabilities/components/vulnerability-summary";
 import { createDataTableColumns } from "@/lib/data-table";
 
 const column = createDataTableColumns<ScanService>();
@@ -26,6 +27,7 @@ export function ServicesTable({
   onEdit: (host: ScanHost, service: ScanService) => void;
 }) {
   const { t } = useTranslation("hosts");
+  const { t: tv } = useTranslation("vulnerabilities");
 
   const columns = useMemo(
     () =>
@@ -53,6 +55,11 @@ export function ServicesTable({
           id: "service",
           header: t("columns.service"),
           cell: ({ row: { original: service } }) => <ServiceIdentity service={service} />,
+        }),
+        column.accessor("vulnerabilities", {
+          header: tv("columns.vulnerabilities"),
+          enableSorting: false,
+          cell: ({ getValue }) => <VulnerabilitySummaryBadge summary={getValue()} />,
         }),
         column.accessor("http", {
           header: t("columns.http"),
@@ -101,7 +108,7 @@ export function ServicesTable({
           ),
         }),
       ]),
-    [t, host, compared, onEdit],
+    [t, tv, host, compared, onEdit],
   );
 
   return (

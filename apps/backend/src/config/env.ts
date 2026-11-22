@@ -75,6 +75,23 @@ const envSchema = z
         .refine(isPowerOfTwo, "SCAN_BATCH_SIZE must be a power of two")
         .default(256),
     ),
+
+    // Vulnerability databases (src/modules/vulnerabilities): used by the vuln-sync process and,
+    // for the sources' state and links, by the API. Source-specific settings live next to each
+    // source (nvd.config.ts, osv.config.ts).
+    VULN_SOURCES: blankAsAbsent(
+      z
+        .string()
+        .regex(/^[a-z0-9-]+(,[a-z0-9-]+)*$/, "Comma-separated source ids, e.g. nvd,osv")
+        .default("nvd,osv"),
+    ),
+    VULN_SYNC_INTERVAL_HOURS: blankAsAbsent(z.coerce.number().positive().max(24 * 7).default(8)),
+    VULN_FULL_SYNC_INTERVAL_DAYS: blankAsAbsent(z.coerce.number().positive().max(90).default(7)),
+    VULN_SYNC_POLL_SECONDS: blankAsAbsent(z.coerce.number().int().min(5).max(3600).default(30)),
+    // A full sync that would withdraw more than this share of a source's records stops instead.
+    VULN_SWEEP_MAX_RATIO: blankAsAbsent(z.coerce.number().min(0).max(1).default(0.05)),
+    // Downloads land here, in the sources' own layout: the directory doubles as an offline mirror.
+    VULN_CACHE_DIR: blankAsAbsent(z.string().min(1).default(".cache/vulnerabilities")),
   })
   .refine((value) => value.NODE_ENV !== "production" || value.JWT_SECRET !== EXAMPLE_JWT_SECRET, {
     path: ["JWT_SECRET"],

@@ -9,6 +9,10 @@ import {
   ScanChangeFilterSchema,
   type ScanChangeFilter,
 } from "@subsurf/contracts/scans/scan-results.schema";
+import {
+  VulnerabilityFilterSchema,
+  type VulnerabilityFilter,
+} from "@subsurf/contracts/vulnerabilities/vulnerabilities.schema";
 
 import { DataTablePagination } from "@/components/data-table-pagination";
 import { PageHeader } from "@/components/page-header";
@@ -56,6 +60,7 @@ export function ScanDetailRoute() {
   const { scanId = "" } = useParams();
   const { t, i18n } = useTranslation();
   const { t: th } = useTranslation("hosts");
+  const { t: tv } = useTranslation("vulnerabilities");
   const locale = i18n.resolvedLanguage;
   const errorMessage = useErrorMessage();
   const [params, setParams] = useSearchParams();
@@ -63,6 +68,10 @@ export function ScanDetailRoute() {
   const q = params.get("q") ?? "";
   const triage: TriageStatus | undefined = parseOr(TriageStatusSchema, params.get("triage"));
   const change: ScanChangeFilter | undefined = parseOr(ScanChangeFilterSchema, params.get("change"));
+  const vulnerability: VulnerabilityFilter | undefined = parseOr(
+    VulnerabilityFilterSchema,
+    params.get("vulnerability"),
+  );
   const openHostId = params.get("host");
 
   const [search, setSearch] = useState(q);
@@ -90,7 +99,14 @@ export function ScanDetailRoute() {
   }, [debouncedSearch, q, update]);
 
   const scan = useScan(scanId);
-  const hosts = useScanHosts(scanId, { page, pageSize: PAGE_SIZE, q: q || undefined, triage, change });
+  const hosts = useScanHosts(scanId, {
+    page,
+    pageSize: PAGE_SIZE,
+    q: q || undefined,
+    triage,
+    change,
+    vulnerability,
+  });
 
   const openHost = useCallback((host: { id: string }) => update({ host: host.id }), [update]);
   const editHost = useCallback((host: HostRef) => setDialog({ kind: "host", host }), []);
@@ -180,6 +196,24 @@ export function ScanDetailRoute() {
             {TriageStatusSchema.options.map((status) => (
               <SelectItem key={status} value={status}>
                 {th(`triage.${status}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={vulnerability ?? ANY}
+          onValueChange={(value) =>
+            update({ vulnerability: value === ANY ? null : value, page: null })
+          }
+        >
+          <SelectTrigger aria-label={tv("filter.label")} className="min-w-52">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ANY}>{tv("filter.all")}</SelectItem>
+            {VulnerabilityFilterSchema.options.map((option) => (
+              <SelectItem key={option} value={option}>
+                {tv(`filter.options.${option}`)}
               </SelectItem>
             ))}
           </SelectContent>

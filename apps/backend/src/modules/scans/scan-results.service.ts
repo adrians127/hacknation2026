@@ -28,6 +28,8 @@ import {
   toScanHostDetail,
   type HostInScan,
 } from "~backend/modules/scans/scan-results.mapper";
+import { EMPTY_SUMMARY } from "~backend/modules/vulnerabilities/vulnerabilities.mapper";
+import { vulnerabilitiesService } from "~backend/modules/vulnerabilities/vulnerabilities.service";
 
 const DIFF_SELECT = {
   ip: true,
@@ -203,6 +205,9 @@ async function filteredHostIds(
   if (query.triage) {
     and.push({ OR: [{ triage: query.triage }, { services: { some: { triage: query.triage } } }] });
   }
+  if (query.vulnerability) {
+    and.push({ id: { in: await vulnerabilitiesService.hostIdsWith(query.vulnerability) } });
+  }
   if (and.length === 0) return null;
   const hosts = await prisma.host.findMany({ where: { AND: and }, select: { id: true } });
   return new Set(hosts.map((host) => host.id));
@@ -217,7 +222,10 @@ async function hostsInScan(
   const ips = entries.map((entry) => entry.ip);
   if (ips.length === 0) return [];
   const ids = await effectiveIds(base ? [scanId, base.id] : [scanId], ips);
-  const [hosts, current, before] = await Promise.all([
+  const shownServices = new Map(
+    entries.map((entry) => [entry.hostId, entry.services.map((service) => service.serviceId)]),
+  );
+  const [hosts, current, before, summaries] = await Promise.all([
     prisma.host.findMany({
       where: { id: { in: entries.map((entry) => entry.hostId) } },
       include: { services: true },
@@ -229,6 +237,7 @@ async function hostsInScan(
           include: OBSERVATION_INCLUDE,
         })
       : [],
+    vulnerabilitiesService.summaries(shownServices),
   ]);
   const hostById = new Map(hosts.map((host) => [host.id, host]));
   const currentByIp = new Map(current.map((row) => [row.ip, row]));
@@ -237,7 +246,18 @@ async function hostsInScan(
     const host = hostById.get(diff.hostId);
     const observation = currentByIp.get(diff.ip);
     return host && observation
-      ? [{ diff, host, current: observation, base: baseByIp.get(diff.ip) }]
+      ? [
+          {
+            diff,
+            host,
+            current: observation,
+            base: baseByIp.get(diff.ip),
+            vulnerabilities: {
+              host: summaries.groups.get(diff.hostId) ?? EMPTY_SUMMARY,
+              services: summaries.services,
+            },
+          },
+        ]
       : [];
   });
 }
@@ -352,6 +372,10 @@ export const scanResultsService = {
 
     const [entry] = await hostsInScan(scan.id, base, [diff]);
     if (!entry) throw HttpError.notFound("The host is not part of this scan");
-    return toScanHostDetail(entry, await history(entry.host.ip));
+    const [entries, matches] = await Promise.all([
+      history(entry.host.ip),
+      vulnerabilitiesService.details(diff.services.map((service) => service.serviceId)),
+    ]);
+    return toScanHostDetail(entry, entries, matches);
   },
 };

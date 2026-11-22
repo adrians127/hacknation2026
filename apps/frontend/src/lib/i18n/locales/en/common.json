@@ -253,7 +253,8 @@
     "targets": "Targets",
     "scans": "Scans",
     "users": "Users",
-    "roles": "Roles"
+    "roles": "Roles",
+    "vulnerabilities": "Vulnerabilities"
   },
   "notFound": {
     "title": "Page not found",
@@ -303,6 +304,8 @@
     "SYSTEM_ROLE_READ_ONLY": "System roles cannot be changed.",
     "ROLE_IN_USE": "Users still have this role. Move them to another role first.",
     "EMAIL_TAKEN": "A user with this email already exists.",
-    "ROLE_NAME_TAKEN": "A role with this name already exists."
+    "ROLE_NAME_TAKEN": "A role with this name already exists.",
+    "PACKAGE_MAPPING_EXISTS": "This mapping already exists.",
+    "SOURCE_DISABLED": "The source is disabled. Enable it first."
   }
 }

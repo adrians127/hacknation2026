@@ -7,6 +7,7 @@ import { rolesRoutes } from "~backend/modules/roles/roles.routes";
 import { scansRoutes } from "~backend/modules/scans/scans.routes";
 import { targetsRoutes } from "~backend/modules/targets/targets.routes";
 import { usersRoutes } from "~backend/modules/users/users.routes";
+import { vulnerabilitiesRoutes } from "~backend/modules/vulnerabilities/vulnerabilities.routes";
 
 /**
  * Root API router, mounted at `/v1`. Adding a feature = create `modules/<feature>/`
@@ -21,3 +22,4 @@ apiRouter.use("/roles", rolesRoutes);
 apiRouter.use("/scans", scansRoutes);
 apiRouter.use("/targets", targetsRoutes);
 apiRouter.use("/users", usersRoutes);
+apiRouter.use("/vulnerabilities", vulnerabilitiesRoutes);
