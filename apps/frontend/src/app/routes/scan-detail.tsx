@@ -1,4 +1,4 @@
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, Tags } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router";
@@ -15,6 +15,7 @@ import {
 } from "@subsurf/contracts/vulnerabilities/vulnerabilities.schema";
 
 import { DataTablePagination } from "@/components/data-table-pagination";
+import { GuardedButton } from "@/components/guarded-button";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScanHosts } from "@/features/hosts/api/get-scan-hosts";
+import { BulkTagDialog } from "@/features/hosts/components/bulk-tag-dialog";
 import { HostEditDialog } from "@/features/hosts/components/host-edit-dialog";
 import { HostSheet } from "@/features/hosts/components/host-sheet";
 import { HostsTable } from "@/features/hosts/components/hosts-table";
@@ -40,7 +42,8 @@ type HostRef = HostEdits & { ip: string };
 type ServiceRef = ServiceEdits & { port: number; protocol: string; observed: ServiceIdentity };
 type Dialog =
   | { kind: "host"; host: HostRef }
-  | { kind: "service"; host: HostRef; service: ServiceRef };
+  | { kind: "service"; host: HostRef; service: ServiceRef }
+  | { kind: "bulkTag" };
 
 function parsePage(raw: string | null): number {
   const page = Number(raw);
@@ -146,6 +149,16 @@ export function ScanDetailRoute() {
           </span>
         }
         description={t("scans.detail.subtitle")}
+        actions={
+          <GuardedButton
+            variant="outline"
+            permissions={["hosts:update"]}
+            onClick={() => setDialog({ kind: "bulkTag" })}
+          >
+            <Tags />
+            {th("bulkTag.open")}
+          </GuardedButton>
+        }
       />
 
       <ScanSummary
@@ -258,6 +271,9 @@ export function ScanDetailRoute() {
 
       {dialog?.kind === "host" && (
         <HostEditDialog key={dialog.host.id} host={dialog.host} onClose={() => setDialog(null)} />
+      )}
+      {dialog?.kind === "bulkTag" && (
+        <BulkTagDialog scanId={scanId} onClose={() => setDialog(null)} />
       )}
       {dialog?.kind === "service" && (
         <ServiceEditDialog

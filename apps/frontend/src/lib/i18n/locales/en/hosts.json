@@ -132,6 +132,44 @@
     "submit": "Save",
     "submitting": "Saving…"
   },
+  "bulkTag": {
+    "open": "Tag hosts",
+    "title": "Tag a group of hosts",
+    "description": "Changes the hosts this scan lists whose address is in the ranges you enter. Tags stay on the hosts, so every scan shows them.",
+    "action": {
+      "label": "Action",
+      "add": "Add tag",
+      "remove": "Remove tag"
+    },
+    "selectors": "Addresses and CIDRs",
+    "selectorsPlaceholder": "10.0.5.0/24, 10.0.6.7",
+    "selectorsHint": "IPv4 only. Separate with commas, spaces or new lines.",
+    "selectorsRequired": "Enter at least one address or CIDR",
+    "selectorsInvalid": "Not an IPv4 address or CIDR: {{list}}",
+    "selectorsTooMany": "At most {{max}} addresses and CIDRs at once",
+    "tag": "Tag",
+    "tagPlaceholder": "e.g. dmz",
+    "tagInvalid": "A tag needs 1 to 50 characters",
+    "noMatch": "No host of this scan is in these addresses. Nothing was changed.",
+    "submit": {
+      "add": "Add tag",
+      "remove": "Remove tag"
+    },
+    "toast": {
+      "add_one": "Tag “{{tag}}” added to {{count}} host",
+      "add_other": "Tag “{{tag}}” added to {{count}} hosts",
+      "remove_one": "Tag “{{tag}}” removed from {{count}} host",
+      "remove_other": "Tag “{{tag}}” removed from {{count}} hosts",
+      "unchanged": {
+        "add_one": "{{count}} host already had it",
+        "add_other": "{{count}} hosts already had it",
+        "remove_one": "{{count}} host did not have it",
+        "remove_other": "{{count}} hosts did not have it"
+      },
+      "limitReached_one": "{{count}} host skipped: it already has {{max}} tags",
+      "limitReached_other": "{{count}} hosts skipped: they already have {{max}} tags"
+    }
+  },
   "toast": {
     "hostSaved": "Host saved",
     "serviceSaved": "Service saved",
