@@ -1831,7 +1831,8 @@
                             "tls.endpoint",
                             "http.favicon",
                             "http.probe",
-                            "host.hostname"
+                            "host.hostname",
+                            "detection"
                           ]
                         }
                       },
@@ -7151,6 +7152,8 @@
                                 "host-gone",
                                 "service-gone",
                                 "no-answer",
+                                "detection",
+                                "detection-gone",
                                 "other"
                               ]
                             }
@@ -7211,7 +7214,8 @@
                                     "tls.endpoint",
                                     "http.favicon",
                                     "http.probe",
-                                    "host.hostname"
+                                    "host.hostname",
+                                    "detection"
                                   ]
                                 },
                                 "endpoint": {
@@ -7312,6 +7316,128 @@
                         ]
                       },
                       "maxItems": 20
+                    },
+                    "detections": {
+                      "type": "object",
+                      "properties": {
+                        "hosts": {
+                          "type": "object",
+                          "properties": {
+                            "high": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "medium": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "low": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "info": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "high",
+                            "medium",
+                            "low",
+                            "info"
+                          ]
+                        },
+                        "top": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "signatureId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "key": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "cms",
+                                  "web-server",
+                                  "language",
+                                  "framework",
+                                  "application",
+                                  "device",
+                                  "service",
+                                  "admin-panel",
+                                  "staging",
+                                  "default-page",
+                                  "interesting-header",
+                                  "interesting-cookie",
+                                  "other"
+                                ]
+                              },
+                              "product": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "severity": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "info",
+                                  "low",
+                                  "medium",
+                                  "high",
+                                  null
+                                ]
+                              },
+                              "builtIn": {
+                                "type": "boolean"
+                              },
+                              "hosts": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "services": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "newHosts": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "signatureId",
+                              "key",
+                              "name",
+                              "category",
+                              "product",
+                              "severity",
+                              "builtIn",
+                              "hosts",
+                              "services",
+                              "newHosts"
+                            ]
+                          },
+                          "maxItems": 8
+                        }
+                      },
+                      "required": [
+                        "hosts",
+                        "top"
+                      ]
                     }
                   },
                   "required": [
@@ -7322,7 +7448,8 @@
                     "changes",
                     "priorities",
                     "muted",
-                    "topChanges"
+                    "topChanges",
+                    "detections"
                   ]
                 }
               }
@@ -10602,7 +10729,8 @@
                                     "cors-wildcard",
                                     "default-page",
                                     "missing-security-headers",
-                                    "version-disclosure"
+                                    "version-disclosure",
+                                    "signature"
                                   ]
                                 },
                                 "severity": {
@@ -10631,6 +10759,32 @@
                                 },
                                 "evidence": {
                                   "type": "string"
+                                },
+                                "signatures": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "key": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "key",
+                                      "name"
+                                    ]
+                                  }
                                 }
                               },
                               "required": [
@@ -10640,7 +10794,8 @@
                                 "serviceId",
                                 "ip",
                                 "port",
-                                "evidence"
+                                "evidence",
+                                "signatures"
                               ]
                             }
                           }
@@ -11077,7 +11232,8 @@
                               "cors-wildcard",
                               "default-page",
                               "missing-security-headers",
-                              "version-disclosure"
+                              "version-disclosure",
+                              "signature"
                             ]
                           },
                           "severity": {
@@ -11176,7 +11332,8 @@
                                     "cors-wildcard",
                                     "default-page",
                                     "missing-security-headers",
-                                    "version-disclosure"
+                                    "version-disclosure",
+                                    "signature"
                                   ]
                                 },
                                 "severity": {
@@ -11205,6 +11362,32 @@
                                 },
                                 "evidence": {
                                   "type": "string"
+                                },
+                                "signatures": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "key": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "key",
+                                      "name"
+                                    ]
+                                  }
                                 }
                               },
                               "required": [
@@ -11214,7 +11397,8 @@
                                 "serviceId",
                                 "ip",
                                 "port",
-                                "evidence"
+                                "evidence",
+                                "signatures"
                               ]
                             }
                           }
@@ -11454,7 +11638,9 @@
                                       "body",
                                       "cookie",
                                       "title",
-                                      "probe"
+                                      "probe",
+                                      "favicon",
+                                      "banner"
                                     ]
                                   }
                                 },
@@ -11465,6 +11651,32 @@
                                     "medium",
                                     "low"
                                   ]
+                                },
+                                "signatures": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "key": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "key",
+                                      "name"
+                                    ]
+                                  }
                                 }
                               },
                               "required": [
@@ -11474,7 +11686,8 @@
                                 "port",
                                 "version",
                                 "sources",
-                                "confidence"
+                                "confidence",
+                                "signatures"
                               ]
                             }
                           }
@@ -14135,7 +14348,8 @@
                               "cors-wildcard",
                               "default-page",
                               "missing-security-headers",
-                              "version-disclosure"
+                              "version-disclosure",
+                              "signature"
                             ]
                           },
                           "severity": {
@@ -14164,6 +14378,32 @@
                           },
                           "evidence": {
                             "type": "string"
+                          },
+                          "signatures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "key": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "key",
+                                "name"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -14173,7 +14413,8 @@
                           "serviceId",
                           "ip",
                           "port",
-                          "evidence"
+                          "evidence",
+                          "signatures"
                         ]
                       }
                     },
@@ -16107,7 +16348,8 @@
                                             "tls.endpoint",
                                             "http.favicon",
                                             "http.probe",
-                                            "host.hostname"
+                                            "host.hostname",
+                                            "detection"
                                           ]
                                         }
                                       },
@@ -16874,7 +17116,8 @@
                                     "tls.endpoint",
                                     "http.favicon",
                                     "http.probe",
-                                    "host.hostname"
+                                    "host.hostname",
+                                    "detection"
                                   ]
                                 }
                               },
@@ -17605,7 +17848,8 @@
                                     "tls.endpoint",
                                     "http.favicon",
                                     "http.probe",
-                                    "host.hostname"
+                                    "host.hostname",
+                                    "detection"
                                   ]
                                 }
                               },
@@ -18384,7 +18628,8 @@
                                     "tls.endpoint",
                                     "http.favicon",
                                     "http.probe",
-                                    "host.hostname"
+                                    "host.hostname",
+                                    "detection"
                                   ]
                                 }
                               },
@@ -18594,6 +18839,7 @@
                               "http.favicon",
                               "http.probe",
                               "host.hostname",
+                              "detection",
                               null
                             ]
                           },
@@ -19760,6 +20006,25 @@
             "required": false,
             "name": "vulnerability",
             "in": "query"
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "any"
+                  ]
+                }
+              ]
+            },
+            "required": false,
+            "name": "signature",
+            "in": "query"
           }
         ],
         "responses": {
@@ -19941,6 +20206,92 @@
                               "kev",
                               "maxSeverity"
                             ]
+                          },
+                          "detections": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "signatureId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "key": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "category": {
+                                  "type": "string",
+                                  "enum": [
+                                    "cms",
+                                    "web-server",
+                                    "language",
+                                    "framework",
+                                    "application",
+                                    "device",
+                                    "service",
+                                    "admin-panel",
+                                    "staging",
+                                    "default-page",
+                                    "interesting-header",
+                                    "interesting-cookie",
+                                    "other"
+                                  ]
+                                },
+                                "product": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "severity": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "info",
+                                    "low",
+                                    "medium",
+                                    "high",
+                                    null
+                                  ]
+                                },
+                                "confidence": {
+                                  "type": "string",
+                                  "enum": [
+                                    "high",
+                                    "medium",
+                                    "low"
+                                  ]
+                                },
+                                "version": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "builtIn": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "signatureId",
+                                "key",
+                                "name",
+                                "category",
+                                "product",
+                                "severity",
+                                "confidence",
+                                "version",
+                                "builtIn"
+                              ]
+                            }
                           },
                           "services": {
                             "type": "array",
@@ -20284,6 +20635,92 @@
                                     "slaDueOn",
                                     "riskAcceptedUntil"
                                   ]
+                                },
+                                "detections": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "signatureId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "key": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "category": {
+                                        "type": "string",
+                                        "enum": [
+                                          "cms",
+                                          "web-server",
+                                          "language",
+                                          "framework",
+                                          "application",
+                                          "device",
+                                          "service",
+                                          "admin-panel",
+                                          "staging",
+                                          "default-page",
+                                          "interesting-header",
+                                          "interesting-cookie",
+                                          "other"
+                                        ]
+                                      },
+                                      "product": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "severity": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ],
+                                        "enum": [
+                                          "info",
+                                          "low",
+                                          "medium",
+                                          "high",
+                                          null
+                                        ]
+                                      },
+                                      "confidence": {
+                                        "type": "string",
+                                        "enum": [
+                                          "high",
+                                          "medium",
+                                          "low"
+                                        ]
+                                      },
+                                      "version": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "builtIn": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "signatureId",
+                                      "key",
+                                      "name",
+                                      "category",
+                                      "product",
+                                      "severity",
+                                      "confidence",
+                                      "version",
+                                      "builtIn"
+                                    ]
+                                  }
                                 }
                               },
                               "required": [
@@ -20300,7 +20737,8 @@
                                 "tags",
                                 "note",
                                 "vulnerabilities",
-                                "remediation"
+                                "remediation",
+                                "detections"
                               ]
                             }
                           }
@@ -20320,6 +20758,7 @@
                           "tags",
                           "note",
                           "vulnerabilities",
+                          "detections",
                           "services"
                         ]
                       }
@@ -20342,6 +20781,178 @@
                     "total",
                     "page",
                     "pageSize"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scans/{id}/detections": {
+      "get": {
+        "operationId": "listScanDetections",
+        "summary": "How many hosts each detection signature matched in a scan",
+        "description": "Requires `scans:read`. One entry per signature that matched in the scan, with hosts, services and hosts it did not match in the base scan; `evaluated` is false while the scan is still being checked.",
+        "tags": [
+          "Scans"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matches per signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "evaluated": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "signatureId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "key": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "cms",
+                              "web-server",
+                              "language",
+                              "framework",
+                              "application",
+                              "device",
+                              "service",
+                              "admin-panel",
+                              "staging",
+                              "default-page",
+                              "interesting-header",
+                              "interesting-cookie",
+                              "other"
+                            ]
+                          },
+                          "product": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "severity": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "info",
+                              "low",
+                              "medium",
+                              "high",
+                              null
+                            ]
+                          },
+                          "builtIn": {
+                            "type": "boolean"
+                          },
+                          "hosts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "services": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "newHosts": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "signatureId",
+                          "key",
+                          "name",
+                          "category",
+                          "product",
+                          "severity",
+                          "builtIn",
+                          "hosts",
+                          "services",
+                          "newHosts"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "evaluated",
+                    "items"
                   ]
                 }
               }
@@ -20710,6 +21321,92 @@
                         "kev",
                         "maxSeverity"
                       ]
+                    },
+                    "detections": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "signatureId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "key": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "cms",
+                              "web-server",
+                              "language",
+                              "framework",
+                              "application",
+                              "device",
+                              "service",
+                              "admin-panel",
+                              "staging",
+                              "default-page",
+                              "interesting-header",
+                              "interesting-cookie",
+                              "other"
+                            ]
+                          },
+                          "product": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "severity": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "info",
+                              "low",
+                              "medium",
+                              "high",
+                              null
+                            ]
+                          },
+                          "confidence": {
+                            "type": "string",
+                            "enum": [
+                              "high",
+                              "medium",
+                              "low"
+                            ]
+                          },
+                          "version": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "builtIn": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "signatureId",
+                          "key",
+                          "name",
+                          "category",
+                          "product",
+                          "severity",
+                          "confidence",
+                          "version",
+                          "builtIn"
+                        ]
+                      }
                     },
                     "services": {
                       "type": "array",
@@ -22001,6 +22698,154 @@
                               "riskAcceptedUntil"
                             ]
                           },
+                          "detections": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "signatureId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "key": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "category": {
+                                  "type": "string",
+                                  "enum": [
+                                    "cms",
+                                    "web-server",
+                                    "language",
+                                    "framework",
+                                    "application",
+                                    "device",
+                                    "service",
+                                    "admin-panel",
+                                    "staging",
+                                    "default-page",
+                                    "interesting-header",
+                                    "interesting-cookie",
+                                    "other"
+                                  ]
+                                },
+                                "product": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "severity": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "enum": [
+                                    "info",
+                                    "low",
+                                    "medium",
+                                    "high",
+                                    null
+                                  ]
+                                },
+                                "confidence": {
+                                  "type": "string",
+                                  "enum": [
+                                    "high",
+                                    "medium",
+                                    "low"
+                                  ]
+                                },
+                                "version": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "builtIn": {
+                                  "type": "boolean"
+                                },
+                                "sources": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "header",
+                                      "cookie",
+                                      "title",
+                                      "body",
+                                      "favicon",
+                                      "probe",
+                                      "banner",
+                                      "service",
+                                      "port"
+                                    ]
+                                  }
+                                },
+                                "evidence": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "target": {
+                                        "type": "string",
+                                        "enum": [
+                                          "header",
+                                          "cookie",
+                                          "title",
+                                          "body",
+                                          "favicon",
+                                          "probe",
+                                          "banner",
+                                          "service",
+                                          "port"
+                                        ]
+                                      },
+                                      "url": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "key": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "value": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "target",
+                                      "url",
+                                      "key",
+                                      "value"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "signatureId",
+                                "key",
+                                "name",
+                                "category",
+                                "product",
+                                "severity",
+                                "confidence",
+                                "version",
+                                "builtIn",
+                                "sources",
+                                "evidence"
+                              ]
+                            }
+                          },
                           "reason": {
                             "type": [
                               "string",
@@ -22244,7 +23089,8 @@
                                     "tls.endpoint",
                                     "http.favicon",
                                     "http.probe",
-                                    "host.hostname"
+                                    "host.hostname",
+                                    "detection"
                                   ]
                                 },
                                 "endpoint": {
@@ -22562,6 +23408,7 @@
                           "note",
                           "vulnerabilities",
                           "remediation",
+                          "detections",
                           "reason",
                           "extraInfo",
                           "cpe",
@@ -22609,7 +23456,8 @@
                               "tls.endpoint",
                               "http.favicon",
                               "http.probe",
-                              "host.hostname"
+                              "host.hostname",
+                              "detection"
                             ]
                           },
                           "endpoint": {
@@ -22742,6 +23590,7 @@
                     "tags",
                     "note",
                     "vulnerabilities",
+                    "detections",
                     "services",
                     "fieldChanges",
                     "firstSeenAt",
@@ -23114,6 +23963,7 @@
                               "http.favicon",
                               "http.probe",
                               "host.hostname",
+                              "detection",
                               null
                             ]
                           },
@@ -23191,6 +24041,8 @@
                               "host-gone",
                               "service-gone",
                               "no-answer",
+                              "detection",
+                              "detection-gone",
                               "other"
                             ]
                           },

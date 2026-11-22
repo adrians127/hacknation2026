@@ -1,3 +1,4 @@
+import type { SignatureSeverity } from "@subsurf/contracts/signatures/detection.schema";
 import type {
   ChangePriority,
   ChangeReason,
@@ -87,10 +88,29 @@ function fieldRow(row: RowFacts): Rated {
   }
 }
 
+/** A signature started matching (rated by its severity), stopped, or read another version. */
+function detectionRow(row: RowFacts, severity: SignatureSeverity | null): Rated {
+  if (row.after === null) return low("detection-gone");
+  if (row.before !== null) return medium("version-change");
+  if (severity === "high") return high("detection");
+  return severity === "medium" ? medium("detection") : low("detection");
+}
+
 /** The priority of one change and why (`ChangeReasonSchema`); `hostChange` is its host's. */
-export function rateChange(row: RowFacts, hostChange: ScanChange = row.change): ScanChangeRow {
+export function rateChange(
+  row: RowFacts,
+  hostChange: ScanChange = row.change,
+  /** For `detection` rows: the severity of the signature. */
+  severity: SignatureSeverity | null = null,
+): ScanChangeRow {
   const rated =
-    row.field !== null ? fieldRow(row) : row.port === null ? hostRow(row) : serviceRow(row, hostChange);
+    row.field === "detection"
+      ? detectionRow(row, severity)
+      : row.field !== null
+        ? fieldRow(row)
+        : row.port === null
+          ? hostRow(row)
+          : serviceRow(row, hostChange);
   return { ...row, ...rated, rule: null, muted: false };
 }
 

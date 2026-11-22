@@ -32,6 +32,8 @@ export const ChangeReasonSchema = z.enum([
   "host-gone",
   "service-gone",
   "no-answer",
+  "detection",
+  "detection-gone",
   "other",
 ]);
 

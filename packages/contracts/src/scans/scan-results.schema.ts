@@ -9,6 +9,7 @@ import {
   TriageStatusSchema,
 } from "../hosts/hosts.schema";
 import { RuleRefSchema } from "../rules/rule-ref.schema";
+import { DetectionSchema, DetectionSummarySchema } from "../signatures/detection.schema";
 import {
   HostStatusSchema,
   HttpEndpointSchema,
@@ -128,6 +129,8 @@ export const FieldChangeKindSchema = z.enum([
   "http.favicon",
   "http.probe",
   "host.hostname",
+  /** A detection signature (`key`: its name) started or stopped matching, or read another version. */
+  "detection",
 ]);
 
 export const FieldChangeSchema = z.object({
@@ -172,6 +175,8 @@ export const ScanServiceSchema = z.object({
   vulnerabilities: VulnerabilitySummarySchema,
   /** From the last DefectDojo sync; `null` when no DefectDojo finding gives a date. */
   remediation: ServiceRemediationSchema.nullable(),
+  /** Signatures that matched the port in this scan (in the base scan for a `gone` service), most severe first. */
+  detections: z.array(DetectionSummarySchema),
 });
 
 export const ScanHostSchema = z.object({
@@ -195,6 +200,8 @@ export const ScanHostSchema = z.object({
   note: z.string(),
   /** Distinct vulnerabilities across the host's services. */
   vulnerabilities: VulnerabilitySummarySchema,
+  /** Distinct signatures across the host's services, most severe first. */
+  detections: z.array(DetectionSummarySchema),
   services: z.array(ScanServiceSchema),
 });
 
@@ -211,6 +218,8 @@ export const ScanHostListQuerySchema = ScanCompareQuerySchema.extend({
   change: ScanChangeFilterSchema.optional(),
   /** Hosts with a confirmed vulnerability (any, critical, high or above, in CISA KEV). */
   vulnerability: VulnerabilityFilterSchema.optional(),
+  /** Hosts a signature (its id) matched in this scan; `any`: any signature with a severity. */
+  signature: z.union([z.uuid(), z.literal("any")]).optional(),
 });
 
 export const ScanHostListResponseSchema = z.object({
@@ -250,6 +259,23 @@ export const ScanServiceDetailSchema = ScanServiceSchema.extend(ServiceObservati
   lastSeenAt: z.iso.datetime(),
   /** Active matches first, then the ones retracted in the last 30 days. */
   vulnerabilityMatches: z.array(ServiceVulnerabilitySchema),
+  /** With what matched (evidence). */
+  detections: z.array(DetectionSchema),
+});
+
+/** One signature's matches in a scan (`GET /scans/{id}/detections`). */
+export const ScanDetectionCountSchema = DetectionSummarySchema.omit({ confidence: true, version: true }).extend({
+  hosts: CountSchema,
+  services: CountSchema,
+  /** Hosts it matched that the base scan's matches did not include. */
+  newHosts: CountSchema,
+});
+
+export const ScanDetectionsResponseSchema = z.object({
+  /** `false` while the scan is still being checked against the enabled signatures. */
+  evaluated: z.boolean(),
+  /** Most severe first, then most hosts. */
+  items: z.array(ScanDetectionCountSchema),
 });
 
 export const HostHistoryEntrySchema = z.object({
@@ -319,3 +345,5 @@ export type ScanHostParams = z.infer<typeof ScanHostParamsSchema>;
 export type ScanHostTagAction = z.infer<typeof ScanHostTagActionSchema>;
 export type TagScanHostsBody = z.infer<typeof TagScanHostsBodySchema>;
 export type TagScanHostsResponse = z.infer<typeof TagScanHostsResponseSchema>;
+export type ScanDetectionCount = z.infer<typeof ScanDetectionCountSchema>;
+export type ScanDetectionsResponse = z.infer<typeof ScanDetectionsResponseSchema>;

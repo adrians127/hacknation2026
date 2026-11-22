@@ -69,6 +69,8 @@
       "host-gone": "stopped answering",
       "service-gone": "port closed",
       "no-answer": "no answer",
+      "detection": "detection signature matched",
+      "detection-gone": "detection signature stopped matching",
       "other": "other change"
     }
   },

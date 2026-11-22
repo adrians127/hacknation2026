@@ -705,6 +705,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scans/{id}/detections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many hosts each detection signature matched in a scan
+         * @description Requires `scans:read`. One entry per signature that matched in the scan, with hosts, services and hosts it did not match in the base scan; `evaluated` is false while the scan is still being checked.
+         */
+        get: operations["listScanDetections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scans/{id}/visualization-hosts": {
         parameters: {
             query?: never;
@@ -1753,7 +1773,7 @@ export interface components {
                 condition: {
                     rows: ("host" | "service" | "field")[];
                     changes: ("new" | "gone" | "changed" | "unknown")[];
-                    fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname")[];
+                    fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | "detection")[];
                     keys: string[];
                     lifecycles: ("active" | "unstable" | "missing" | "inactive")[];
                     priorities: ("high" | "medium" | "low")[];
@@ -2983,7 +3003,7 @@ export interface operations {
                             change: "new" | "gone" | "changed" | "unchanged" | "unknown";
                             /** @enum {string} */
                             priority: "high" | "medium" | "low";
-                            reasons: ("new-host" | "returning-host" | "risky-port" | "new-service" | "admin-panel" | "ssh-key-changed" | "self-signed" | "version-change" | "new-endpoint" | "page-change" | "cert-change" | "security-header-removed" | "cookie-flags-weakened" | "technology-header" | "host-inactive" | "host-gone" | "service-gone" | "no-answer" | "other")[];
+                            reasons: ("new-host" | "returning-host" | "risky-port" | "new-service" | "admin-panel" | "ssh-key-changed" | "self-signed" | "version-change" | "new-endpoint" | "page-change" | "cert-change" | "security-header-removed" | "cookie-flags-weakened" | "technology-header" | "host-inactive" | "host-gone" | "service-gone" | "no-answer" | "detection" | "detection-gone" | "other")[];
                             rule: {
                                 /** Format: uuid */
                                 id: string;
@@ -2992,7 +3012,7 @@ export interface operations {
                             ports: number[];
                             fields: {
                                 /** @enum {string} */
-                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname";
+                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | "detection";
                                 endpoint: {
                                     /** @enum {string} */
                                     scheme: "http" | "https";
@@ -3009,6 +3029,29 @@ export interface operations {
                                 flips: number;
                             };
                         }[];
+                        detections: {
+                            hosts: {
+                                high: number;
+                                medium: number;
+                                low: number;
+                                info: number;
+                            };
+                            top: {
+                                /** Format: uuid */
+                                signatureId: string;
+                                key: string | null;
+                                name: string;
+                                /** @enum {string} */
+                                category: "cms" | "web-server" | "language" | "framework" | "application" | "device" | "service" | "admin-panel" | "staging" | "default-page" | "interesting-header" | "interesting-cookie" | "other";
+                                product: string | null;
+                                /** @enum {string|null} */
+                                severity: "info" | "low" | "medium" | "high" | null;
+                                builtIn: boolean;
+                                hosts: number;
+                                services: number;
+                                newHosts: number;
+                            }[];
+                        };
                     };
                 };
             };
@@ -4230,7 +4273,7 @@ export interface operations {
                             tags: string[];
                             findings: {
                                 /** @enum {string} */
-                                rule: "database-exposed" | "debug-or-staging" | "tls-expired" | "admin-panel" | "cleartext-protocol" | "directory-listing" | "tls-expiring" | "tls-weak" | "outdated-software" | "remote-access" | "tls-self-signed" | "cookie-insecure" | "cors-wildcard" | "default-page" | "missing-security-headers" | "version-disclosure";
+                                rule: "database-exposed" | "debug-or-staging" | "tls-expired" | "admin-panel" | "cleartext-protocol" | "directory-listing" | "tls-expiring" | "tls-weak" | "outdated-software" | "remote-access" | "tls-self-signed" | "cookie-insecure" | "cors-wildcard" | "default-page" | "missing-security-headers" | "version-disclosure" | "signature";
                                 /** @enum {string} */
                                 severity: "high" | "medium" | "low" | "info";
                                 /** Format: uuid */
@@ -4241,6 +4284,12 @@ export interface operations {
                                 ip: string;
                                 port: number;
                                 evidence: string;
+                                signatures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    key: string | null;
+                                    name: string;
+                                }[];
                             }[];
                         }[];
                         topPorts: {
@@ -4375,7 +4424,7 @@ export interface operations {
                         };
                         byRule: {
                             /** @enum {string} */
-                            rule: "database-exposed" | "debug-or-staging" | "tls-expired" | "admin-panel" | "cleartext-protocol" | "directory-listing" | "tls-expiring" | "tls-weak" | "outdated-software" | "remote-access" | "tls-self-signed" | "cookie-insecure" | "cors-wildcard" | "default-page" | "missing-security-headers" | "version-disclosure";
+                            rule: "database-exposed" | "debug-or-staging" | "tls-expired" | "admin-panel" | "cleartext-protocol" | "directory-listing" | "tls-expiring" | "tls-weak" | "outdated-software" | "remote-access" | "tls-self-signed" | "cookie-insecure" | "cors-wildcard" | "default-page" | "missing-security-headers" | "version-disclosure" | "signature";
                             /** @enum {string} */
                             severity: "high" | "medium" | "low" | "info";
                             count: number;
@@ -4394,7 +4443,7 @@ export interface operations {
                             tags: string[];
                             findings: {
                                 /** @enum {string} */
-                                rule: "database-exposed" | "debug-or-staging" | "tls-expired" | "admin-panel" | "cleartext-protocol" | "directory-listing" | "tls-expiring" | "tls-weak" | "outdated-software" | "remote-access" | "tls-self-signed" | "cookie-insecure" | "cors-wildcard" | "default-page" | "missing-security-headers" | "version-disclosure";
+                                rule: "database-exposed" | "debug-or-staging" | "tls-expired" | "admin-panel" | "cleartext-protocol" | "directory-listing" | "tls-expiring" | "tls-weak" | "outdated-software" | "remote-access" | "tls-self-signed" | "cookie-insecure" | "cors-wildcard" | "default-page" | "missing-security-headers" | "version-disclosure" | "signature";
                                 /** @enum {string} */
                                 severity: "high" | "medium" | "low" | "info";
                                 /** Format: uuid */
@@ -4405,6 +4454,12 @@ export interface operations {
                                 ip: string;
                                 port: number;
                                 evidence: string;
+                                signatures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    key: string | null;
+                                    name: string;
+                                }[];
                             }[];
                         }[];
                     };
@@ -4499,9 +4554,15 @@ export interface operations {
                                 ip: string;
                                 port: number;
                                 version: string | null;
-                                sources: ("service-detection" | "header" | "meta-generator" | "body" | "cookie" | "title" | "probe")[];
+                                sources: ("service-detection" | "header" | "meta-generator" | "body" | "cookie" | "title" | "probe" | "favicon" | "banner")[];
                                 /** @enum {string} */
                                 confidence: "high" | "medium" | "low";
+                                signatures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    key: string | null;
+                                    name: string;
+                                }[];
                             }[];
                         }[];
                         groups: {
@@ -5281,7 +5342,7 @@ export interface operations {
                         }[];
                         findings: {
                             /** @enum {string} */
-                            rule: "database-exposed" | "debug-or-staging" | "tls-expired" | "admin-panel" | "cleartext-protocol" | "directory-listing" | "tls-expiring" | "tls-weak" | "outdated-software" | "remote-access" | "tls-self-signed" | "cookie-insecure" | "cors-wildcard" | "default-page" | "missing-security-headers" | "version-disclosure";
+                            rule: "database-exposed" | "debug-or-staging" | "tls-expired" | "admin-panel" | "cleartext-protocol" | "directory-listing" | "tls-expiring" | "tls-weak" | "outdated-software" | "remote-access" | "tls-self-signed" | "cookie-insecure" | "cors-wildcard" | "default-page" | "missing-security-headers" | "version-disclosure" | "signature";
                             /** @enum {string} */
                             severity: "high" | "medium" | "low" | "info";
                             /** Format: uuid */
@@ -5292,6 +5353,12 @@ export interface operations {
                             ip: string;
                             port: number;
                             evidence: string;
+                            signatures: {
+                                /** Format: uuid */
+                                id: string;
+                                key: string | null;
+                                name: string;
+                            }[];
                         }[];
                         technologies: {
                             name: string;
@@ -5946,7 +6013,7 @@ export interface operations {
                                 condition: {
                                     rows: ("host" | "service" | "field")[];
                                     changes: ("new" | "gone" | "changed" | "unknown")[];
-                                    fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname")[];
+                                    fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | "detection")[];
                                     keys: string[];
                                     lifecycles: ("active" | "unstable" | "missing" | "inactive")[];
                                     priorities: ("high" | "medium" | "low")[];
@@ -6087,7 +6154,7 @@ export interface operations {
                         condition: {
                             rows: ("host" | "service" | "field")[];
                             changes: ("new" | "gone" | "changed" | "unknown")[];
-                            fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname")[];
+                            fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | "detection")[];
                             keys: string[];
                             lifecycles: ("active" | "unstable" | "missing" | "inactive")[];
                             priorities: ("high" | "medium" | "low")[];
@@ -6289,7 +6356,7 @@ export interface operations {
                         condition: {
                             rows: ("host" | "service" | "field")[];
                             changes: ("new" | "gone" | "changed" | "unknown")[];
-                            fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname")[];
+                            fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | "detection")[];
                             keys: string[];
                             lifecycles: ("active" | "unstable" | "missing" | "inactive")[];
                             priorities: ("high" | "medium" | "low")[];
@@ -6438,7 +6505,7 @@ export interface operations {
                         condition: {
                             rows: ("host" | "service" | "field")[];
                             changes: ("new" | "gone" | "changed" | "unknown")[];
-                            fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname")[];
+                            fields: ("service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | "detection")[];
                             keys: string[];
                             lifecycles: ("active" | "unstable" | "missing" | "inactive")[];
                             priorities: ("high" | "medium" | "low")[];
@@ -6482,7 +6549,7 @@ export interface operations {
                             /** @enum {string|null} */
                             change: "new" | "gone" | "changed" | "unchanged" | "unknown" | null;
                             /** @enum {string|null} */
-                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | null;
+                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | "detection" | null;
                             key: string | null;
                             triage: {
                                 before: ("unreviewed" | "reviewed" | "important" | "false_positive") | ("unreviewed" | "important" | "accepted_risk" | "false_positive");
@@ -6903,6 +6970,7 @@ export interface operations {
                 triage?: "unreviewed" | "reviewed" | "important" | "false_positive";
                 change?: "any" | "new" | "gone" | "changed" | "unknown";
                 vulnerability?: "any" | "critical" | "high" | "kev";
+                signature?: string | "any";
             };
             header?: never;
             path: {
@@ -6956,6 +7024,21 @@ export interface operations {
                                 /** @enum {string|null} */
                                 maxSeverity: "critical" | "high" | "medium" | "low" | "none" | "unknown" | null;
                             };
+                            detections: {
+                                /** Format: uuid */
+                                signatureId: string;
+                                key: string | null;
+                                name: string;
+                                /** @enum {string} */
+                                category: "cms" | "web-server" | "language" | "framework" | "application" | "device" | "service" | "admin-panel" | "staging" | "default-page" | "interesting-header" | "interesting-cookie" | "other";
+                                product: string | null;
+                                /** @enum {string|null} */
+                                severity: "info" | "low" | "medium" | "high" | null;
+                                /** @enum {string} */
+                                confidence: "high" | "medium" | "low";
+                                version: string | null;
+                                builtIn: boolean;
+                            }[];
                             services: {
                                 /** Format: uuid */
                                 id: string;
@@ -7027,11 +7110,101 @@ export interface operations {
                                     /** Format: date */
                                     riskAcceptedUntil: string | null;
                                 } | null;
+                                detections: {
+                                    /** Format: uuid */
+                                    signatureId: string;
+                                    key: string | null;
+                                    name: string;
+                                    /** @enum {string} */
+                                    category: "cms" | "web-server" | "language" | "framework" | "application" | "device" | "service" | "admin-panel" | "staging" | "default-page" | "interesting-header" | "interesting-cookie" | "other";
+                                    product: string | null;
+                                    /** @enum {string|null} */
+                                    severity: "info" | "low" | "medium" | "high" | null;
+                                    /** @enum {string} */
+                                    confidence: "high" | "medium" | "low";
+                                    version: string | null;
+                                    builtIn: boolean;
+                                }[];
                             }[];
                         }[];
                         total: number;
                         page: number;
                         pageSize: number;
+                    };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in, or the session expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing permission, or the user must change their password first */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listScanDetections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matches per signature */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        evaluated: boolean;
+                        items: {
+                            /** Format: uuid */
+                            signatureId: string;
+                            key: string | null;
+                            name: string;
+                            /** @enum {string} */
+                            category: "cms" | "web-server" | "language" | "framework" | "application" | "device" | "service" | "admin-panel" | "staging" | "default-page" | "interesting-header" | "interesting-cookie" | "other";
+                            product: string | null;
+                            /** @enum {string|null} */
+                            severity: "info" | "low" | "medium" | "high" | null;
+                            builtIn: boolean;
+                            hosts: number;
+                            services: number;
+                            newHosts: number;
+                        }[];
                     };
                 };
             };
@@ -7188,6 +7361,21 @@ export interface operations {
                             /** @enum {string|null} */
                             maxSeverity: "critical" | "high" | "medium" | "low" | "none" | "unknown" | null;
                         };
+                        detections: {
+                            /** Format: uuid */
+                            signatureId: string;
+                            key: string | null;
+                            name: string;
+                            /** @enum {string} */
+                            category: "cms" | "web-server" | "language" | "framework" | "application" | "device" | "service" | "admin-panel" | "staging" | "default-page" | "interesting-header" | "interesting-cookie" | "other";
+                            product: string | null;
+                            /** @enum {string|null} */
+                            severity: "info" | "low" | "medium" | "high" | null;
+                            /** @enum {string} */
+                            confidence: "high" | "medium" | "low";
+                            version: string | null;
+                            builtIn: boolean;
+                        }[];
                         services: {
                             /** Format: uuid */
                             id: string;
@@ -7434,6 +7622,29 @@ export interface operations {
                                 /** Format: date */
                                 riskAcceptedUntil: string | null;
                             } | null;
+                            detections: {
+                                /** Format: uuid */
+                                signatureId: string;
+                                key: string | null;
+                                name: string;
+                                /** @enum {string} */
+                                category: "cms" | "web-server" | "language" | "framework" | "application" | "device" | "service" | "admin-panel" | "staging" | "default-page" | "interesting-header" | "interesting-cookie" | "other";
+                                product: string | null;
+                                /** @enum {string|null} */
+                                severity: "info" | "low" | "medium" | "high" | null;
+                                /** @enum {string} */
+                                confidence: "high" | "medium" | "low";
+                                version: string | null;
+                                builtIn: boolean;
+                                sources: ("header" | "cookie" | "title" | "body" | "favicon" | "probe" | "banner" | "service" | "port")[];
+                                evidence: {
+                                    /** @enum {string} */
+                                    target: "header" | "cookie" | "title" | "body" | "favicon" | "probe" | "banner" | "service" | "port";
+                                    url: string | null;
+                                    key: string | null;
+                                    value: string;
+                                }[];
+                            }[];
                             reason: string | null;
                             extraInfo: string | null;
                             cpe: string[];
@@ -7471,7 +7682,7 @@ export interface operations {
                             }[];
                             fieldChanges: {
                                 /** @enum {string} */
-                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname";
+                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | "detection";
                                 endpoint: {
                                     /** @enum {string} */
                                     scheme: "http" | "https";
@@ -7537,7 +7748,7 @@ export interface operations {
                         }[];
                         fieldChanges: {
                             /** @enum {string} */
-                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname";
+                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | "detection";
                             endpoint: {
                                 /** @enum {string} */
                                 scheme: "http" | "https";
@@ -7721,7 +7932,7 @@ export interface operations {
                             /** @enum {string} */
                             change: "new" | "gone" | "changed" | "unchanged" | "unknown";
                             /** @enum {string|null} */
-                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | null;
+                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | "detection" | null;
                             endpoint: {
                                 /** @enum {string} */
                                 scheme: "http" | "https";
@@ -7733,7 +7944,7 @@ export interface operations {
                             /** @enum {string} */
                             priority: "high" | "medium" | "low";
                             /** @enum {string} */
-                            reason: "new-host" | "returning-host" | "risky-port" | "new-service" | "admin-panel" | "ssh-key-changed" | "self-signed" | "version-change" | "new-endpoint" | "page-change" | "cert-change" | "security-header-removed" | "cookie-flags-weakened" | "technology-header" | "host-inactive" | "host-gone" | "service-gone" | "no-answer" | "other";
+                            reason: "new-host" | "returning-host" | "risky-port" | "new-service" | "admin-panel" | "ssh-key-changed" | "self-signed" | "version-change" | "new-endpoint" | "page-change" | "cert-change" | "security-header-removed" | "cookie-flags-weakened" | "technology-header" | "host-inactive" | "host-gone" | "service-gone" | "no-answer" | "detection" | "detection-gone" | "other";
                             rule: {
                                 /** Format: uuid */
                                 id: string;

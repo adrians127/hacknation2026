@@ -15,6 +15,7 @@ import {
   ScanDetailSchema,
   ScanHostDetailSchema,
   ScanHostListQuerySchema,
+  ScanDetectionsResponseSchema,
   ScanHostListResponseSchema,
   ScanVisualizationHostsResponseSchema,
   ScanHostParamsSchema,
@@ -90,6 +91,30 @@ registry.registerPath({
     200: {
       description: "One page of hosts",
       content: { "application/json": { schema: ScanHostListResponseSchema } },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/scans/{id}/detections",
+  operationId: "listScanDetections",
+  summary: "How many hosts each detection signature matched in a scan",
+  description: [
+    "Requires `scans:read`. One entry per signature that matched in the scan, with hosts, services and",
+    "hosts it did not match in the base scan; `evaluated` is false while the scan is still being checked.",
+  ].join(" "),
+  tags,
+  security,
+  request: { params: IdParamsSchema },
+  responses: {
+    200: {
+      description: "Matches per signature",
+      content: { "application/json": { schema: ScanDetectionsResponseSchema } },
     },
     400: validationFailed,
     401: unauthenticated,

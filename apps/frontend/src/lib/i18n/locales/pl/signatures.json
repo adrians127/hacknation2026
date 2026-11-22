@@ -22,7 +22,11 @@
       "all": "Wszystkie sygnatury",
       "custom": "Własne",
       "builtIn": "Wbudowane"
-    }
+    },
+    "signature": "Sygnatura detekcyjna",
+    "anySignature": "Dowolne detekcje",
+    "anyFinding": "Dowolne znalezisko sygnatury",
+    "signatureOption": "{{name}} ({{count}})"
   },
   "columns": {
     "name": "Sygnatura",
@@ -30,7 +34,8 @@
     "conditions": "Pasuje, gdy",
     "hits": "Najnowszy skan",
     "enabled": "Wł.",
-    "actions": "Akcje"
+    "actions": "Akcje",
+    "detections": "Detekcje"
   },
   "hits": {
     "off": "Wyłączona",
@@ -199,5 +204,28 @@
     "skip": "Zostaw istniejącą",
     "replace": "Zastąp ją",
     "submit": "Importuj"
+  },
+  "more": "+{{count}}",
+  "detections": {
+    "title_one": "Sygnatury detekcyjne ({{count}})",
+    "title_few": "Sygnatury detekcyjne ({{count}})",
+    "title_many": "Sygnatury detekcyjne ({{count}})",
+    "title_other": "Sygnatury detekcyjne ({{count}})",
+    "evidence_one": "Co pasowało ({{count}})",
+    "evidence_few": "Co pasowało ({{count}})",
+    "evidence_many": "Co pasowało ({{count}})",
+    "evidence_other": "Co pasowało ({{count}})"
+  },
+  "dashboard": {
+    "title": "Sygnatury detekcyjne",
+    "description": "Co sygnatury oznaczyły w najnowszym skanie: panele administracyjne, strony testowe i debug, aplikacje testowe oraz własne sygnatury.",
+    "hosts": "hostów",
+    "showHosts": "Pokaż te hosty",
+    "none": "W tym skanie nie dopasowała się żadna sygnatura z wagą.",
+    "hostCount": "hosty: {{hosts}} · usługi: {{services}}",
+    "newHosts_one": "{{count}} nowy od poprzedniego skanu",
+    "newHosts_few": "{{count}} nowe od poprzedniego skanu",
+    "newHosts_many": "{{count}} nowych od poprzedniego skanu",
+    "newHosts_other": "{{count}} nowego od poprzedniego skanu"
   }
 }

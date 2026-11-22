@@ -256,8 +256,10 @@
       },
       "host": {
         "hostname": "Nazwa hosta"
-      }
-    }
+      },
+      "detection": "Sygnatura detekcyjna"
+    },
+    "detected": "wykryto"
   },
   "compare": {
     "notScanned": "Poza skanem",

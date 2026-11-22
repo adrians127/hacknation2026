@@ -71,6 +71,8 @@
       "host-gone": "przestał odpowiadać",
       "service-gone": "zamknięty port",
       "no-answer": "brak odpowiedzi",
+      "detection": "dopasowana sygnatura detekcyjna",
+      "detection-gone": "sygnatura detekcyjna przestała pasować",
       "other": "inna zmiana"
     }
   },

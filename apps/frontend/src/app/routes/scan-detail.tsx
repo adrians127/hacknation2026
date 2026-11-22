@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DefectDojoPushActions } from "@/features/defectdojo/components/defectdojo-push-actions";
+import { useScanDetections } from "@/features/scans/api/get-scan-detections";
 import { useScanHosts } from "@/features/hosts/api/get-scan-hosts";
 import { BulkTagDialog } from "@/features/hosts/components/bulk-tag-dialog";
 import { HostEditDialog } from "@/features/hosts/components/host-edit-dialog";
@@ -84,6 +85,7 @@ export function ScanDetailRoute() {
   const { t, i18n } = useTranslation();
   const { t: th } = useTranslation("hosts");
   const { t: tv } = useTranslation("vulnerabilities");
+  const { t: ts } = useTranslation("signatures");
   const locale = i18n.resolvedLanguage;
   const errorMessage = useErrorMessage();
   const [params, setParams] = useSearchParams();
@@ -95,6 +97,7 @@ export function ScanDetailRoute() {
     VulnerabilityFilterSchema,
     params.get("vulnerability"),
   );
+  const signature = params.get("signature") ?? undefined;
   const openHostId = params.get("host");
   const tab = params.get("tab") === "jobs" ? "jobs" : "hosts";
   const jobsPage = parsePage(params.get("jobsPage"));
@@ -151,7 +154,9 @@ export function ScanDetailRoute() {
     triage,
     change,
     vulnerability,
+    signature,
   });
+  const detections = useScanDetections(scanId);
 
   const openHost = useCallback((host: { id: string }) => update({ host: host.id }), [update]);
   const editHost = useCallback((host: HostRef) => setDialog({ kind: "host", host }), []);
@@ -328,6 +333,23 @@ export function ScanDetailRoute() {
                 {VulnerabilityFilterSchema.options.map((option) => (
                   <SelectItem key={option} value={option}>
                     {tv(`filter.options.${option}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={signature ?? ANY}
+              onValueChange={(value) => update({ signature: value === ANY ? null : value, page: null })}
+            >
+              <SelectTrigger aria-label={ts("filters.signature")} className="min-w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ANY}>{ts("filters.anySignature")}</SelectItem>
+                <SelectItem value="any">{ts("filters.anyFinding")}</SelectItem>
+                {(detections.data?.items ?? []).map((item) => (
+                  <SelectItem key={item.signatureId} value={item.signatureId}>
+                    {ts("filters.signatureOption", { name: item.name, count: item.hosts })}
                   </SelectItem>
                 ))}
               </SelectContent>

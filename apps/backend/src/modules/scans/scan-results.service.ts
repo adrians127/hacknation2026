@@ -10,6 +10,7 @@ import {
   type ScanHostListResponse,
   type ScanVisualizationHostsResponse,
   type ScanCoverage,
+  type ScanDetectionsResponse,
 } from "@subsurf/contracts/scans/scan-results.schema";
 import type { ScanChangesResponse } from "@subsurf/contracts/scans/scan-changes.schema";
 import type {
@@ -61,6 +62,7 @@ import {
   type ObservationRow,
 } from "~backend/modules/scans/scan-results.mapper";
 import { toScanJob, toScanSteps } from "~backend/modules/scans/scan-jobs.mapper";
+import { signatureMatchesService } from "~backend/modules/signatures/signature-matches.service";
 import { EMPTY_SUMMARY } from "~backend/modules/vulnerabilities/vulnerabilities.mapper";
 import { vulnerabilitiesService } from "~backend/modules/vulnerabilities/vulnerabilities.service";
 
@@ -339,6 +341,7 @@ async function filteredHostIds(
   if (term) filters.push(hostIdsMatching(term, scanIds));
   if (query.triage) filters.push(hostIdsWithTriage(query.triage));
   if (query.vulnerability) filters.push(vulnerabilitiesService.hostIdsWith(query.vulnerability));
+  if (query.signature && scanIds[0]) filters.push(signatureMatchesService.hostIdsWith(scanIds[0], query.signature));
   if (filters.length === 0) return null;
   const [first = [], ...rest] = await Promise.all(filters);
   const others = rest.map((ids) => new Set(ids));
@@ -400,7 +403,8 @@ async function hostsInScan(
   const shownServices = new Map(
     entries.map((entry) => [entry.hostId, entry.services.map((service) => service.serviceId)]),
   );
-  const [hosts, observations, summaries, lifecycleByIp, rules] = await Promise.all([
+  const serviceIds = [...shownServices.values()].flat();
+  const [hosts, observations, summaries, lifecycleByIp, rules, detections, baseDetections] = await Promise.all([
     prisma.host.findMany({
       where: { id: { in: entries.map((entry) => entry.hostId) } },
       include: { services: true },
@@ -409,7 +413,10 @@ async function hostsInScan(
     vulnerabilitiesService.summaries(shownServices),
     lifecycles(scan, ips),
     ruleNames(),
+    signatureMatchesService.summaries(scanId, serviceIds),
+    base ? signatureMatchesService.summaries(base.id, serviceIds) : new Map(),
   ]);
+  const comparable = base ? await signatureMatchesService.comparable(scanId, base.id) : false;
   const current = observations.filter((row) => row.scanId === scanId);
   const before = base
     ? observations.filter((row) => row.scanId === base.id && row.status === "up")
@@ -433,6 +440,7 @@ async function hostsInScan(
               services: summaries.services,
             },
             rules,
+            detections: { current: detections, base: baseDetections, comparable },
           },
         ]
       : [];
@@ -482,6 +490,13 @@ export const scanResultsService = {
       orderBy: { createdAt: "desc" },
       select: { id: true },
     });
+  },
+
+  /** Matches per detection signature in the scan (filter options, dashboard). */
+  async detections(scanId: string): Promise<ScanDetectionsResponse> {
+    const scan = await findScan(scanId);
+    const base = await resolveBase(scan, undefined);
+    return signatureMatchesService.counts(scan.id, base?.id ?? null);
   },
 
   /** The scan's `up` addresses with their merged observations, a batch at a time (signatures). */
@@ -761,10 +776,13 @@ export const scanResultsService = {
 
     const [entry] = await hostsInScan(scan, base, [diff]);
     if (!entry) throw HttpError.notFound("The host is not part of this scan");
-    const [entries, matches] = await Promise.all([
+    const serviceIds = diff.services.map((service) => service.serviceId);
+    const [entries, matches, detections, baseDetections] = await Promise.all([
       history(entry.host.ip),
-      vulnerabilitiesService.details(diff.services.map((service) => service.serviceId)),
+      vulnerabilitiesService.details(serviceIds),
+      signatureMatchesService.details(scan.id, serviceIds),
+      base ? signatureMatchesService.details(base.id, serviceIds) : new Map(),
     ]);
-    return toScanHostDetail(entry, entries, matches);
+    return toScanHostDetail(entry, entries, matches, { current: detections, base: baseDetections });
   },
 };

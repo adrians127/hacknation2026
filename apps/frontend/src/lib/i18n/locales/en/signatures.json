@@ -20,7 +20,11 @@
       "all": "All signatures",
       "custom": "Custom",
       "builtIn": "Built-in"
-    }
+    },
+    "signature": "Detection signature",
+    "anySignature": "Any detections",
+    "anyFinding": "Any signature finding",
+    "signatureOption": "{{name}} ({{count}})"
   },
   "columns": {
     "name": "Signature",
@@ -28,7 +32,8 @@
     "conditions": "Matches when",
     "hits": "Newest scan",
     "enabled": "On",
-    "actions": "Actions"
+    "actions": "Actions",
+    "detections": "Detections"
   },
   "hits": {
     "off": "Off",
@@ -197,5 +202,22 @@
     "skip": "Keep the existing one",
     "replace": "Replace it",
     "submit": "Import"
+  },
+  "more": "+{{count}}",
+  "detections": {
+    "title_one": "Detection signatures ({{count}})",
+    "title_other": "Detection signatures ({{count}})",
+    "evidence_one": "What matched ({{count}})",
+    "evidence_other": "What matched ({{count}})"
+  },
+  "dashboard": {
+    "title": "Detection signatures",
+    "description": "What the signatures flagged in the newest scan: admin panels, staging and debug pages, test applications and your own signatures.",
+    "hosts": "hosts",
+    "showHosts": "Show these hosts",
+    "none": "No signature with a severity matched in this scan.",
+    "hostCount": "hosts: {{hosts}} · services: {{services}}",
+    "newHosts_one": "{{count}} new since the previous scan",
+    "newHosts_other": "{{count}} new since the previous scan"
   }
 }
