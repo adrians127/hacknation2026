@@ -1,7 +1,13 @@
 import { randomUUID } from "node:crypto";
 
-import type { PipelineBody, PipelineStep, Schedule } from "@subsurf/contracts/pipelines/pipelines.schema";
+import type {
+  PipelineBody,
+  PipelineStep,
+  Schedule,
+  TargetSelector,
+} from "@subsurf/contracts/pipelines/pipelines.schema";
 
+import { Prisma } from "~backend/generated/prisma/client";
 import { prisma } from "~backend/lib/prisma";
 import { createUser } from "~backend/test/auth";
 
@@ -19,6 +25,7 @@ export async function stepBody(
   return {
     workerId: await workerId(name),
     input: name === "masscan" ? "targets" : "previous",
+    targets: name === "masscan" ? { tags: [], targetIds: [], ranges: [] } : null,
     ports: TEST_PORTS,
     rate: name === "masscan" ? 1000 : 100,
     batchSize: 256,
@@ -29,16 +36,18 @@ export async function stepBody(
   };
 }
 
-/** masscan over the targets, then nmap on its hits; no schedule. */
-export async function pipelineBody(overrides: Partial<PipelineBody> = {}): Promise<PipelineBody> {
+/** masscan over the targets (`targets`: its selection), then nmap on its hits; no schedule. */
+export async function pipelineBody(
+  overrides: Partial<PipelineBody> & { targets?: TargetSelector } = {},
+): Promise<PipelineBody> {
+  const { targets, ...rest } = overrides;
   return {
     name: `Pipeline ${randomUUID()}`,
     description: "",
     enabled: false,
-    targets: { tags: [], targetIds: [], ranges: [] },
-    steps: [await stepBody("masscan"), await stepBody("nmap")],
+    steps: [await stepBody("masscan", targets ? { targets } : {}), await stepBody("nmap")],
     schedule: null,
-    ...overrides,
+    ...rest,
   };
 }
 
@@ -53,7 +62,7 @@ export const HOURLY_UTC: Schedule = {
 
 /** Straight into the database, skipping the API's checks. */
 export async function createPipeline(
-  overrides: Partial<PipelineBody> & { nextRunAt?: Date | null } = {},
+  overrides: Partial<PipelineBody> & { nextRunAt?: Date | null; targets?: TargetSelector } = {},
 ): Promise<string> {
   const { nextRunAt = null, ...rest } = overrides;
   const body = await pipelineBody(rest);
@@ -63,11 +72,16 @@ export async function createPipeline(
       name: body.name,
       description: body.description,
       enabled: body.enabled,
-      targetSelector: body.targets,
       schedule: body.schedule ?? undefined,
       nextRunAt,
       createdById: owner.id,
-      steps: { create: body.steps.map((step, index) => ({ ...step, position: index + 1 })) },
+      steps: {
+        create: body.steps.map(({ targets, ...step }, index) => ({
+          ...step,
+          targetSelector: targets ?? Prisma.DbNull,
+          position: index + 1,
+        })),
+      },
     },
   });
   return pipeline.id;

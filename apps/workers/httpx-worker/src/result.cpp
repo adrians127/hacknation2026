@@ -12,6 +12,7 @@
 #include <set>
 #include <sstream>
 #include <tuple>
+#include <utility>
 
 namespace httpx_worker {
 namespace {
@@ -91,7 +92,9 @@ int number(const Json& object, const char* key) {
     const auto mmh3 = parse_mmh3(str(*hashes, "body_mmh3"));
     const auto digest = str(*hashes, "body_sha256");
     if (!mmh3 || !is_sha256_hex(digest)) return std::nullopt;
-    return OrderedJson{{"url", std::move(url)}, {"mmh3", *mmh3}, {"sha256", digest}};
+    // in_place: nlohmann's conversion operator makes `return OrderedJson{...}` ambiguous.
+    return std::optional<OrderedJson>{
+        std::in_place, OrderedJson{{"url", std::move(url)}, {"mmh3", *mmh3}, {"sha256", digest}}};
 }
 
 bool text_type(std::string_view type) {
