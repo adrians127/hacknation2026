@@ -1040,6 +1040,26 @@ export interface components {
                         id: string;
                         output: string;
                     }[];
+                    tls: {
+                        vhost: string | null;
+                        version: string | null;
+                        cipher: string | null;
+                        alpn: string | null;
+                        cert: {
+                            subjectCn: string | null;
+                            san: string[];
+                            issuer: string | null;
+                            /** Format: date-time */
+                            notBefore: string | null;
+                            /** Format: date-time */
+                            notAfter: string | null;
+                            serial: string | null;
+                            sha256: string | null;
+                            selfSigned: boolean | null;
+                            keyAlgorithm: string | null;
+                            keyBits: number | null;
+                        } | null;
+                    }[];
                     http: {
                         /** @enum {string} */
                         scheme: "http" | "https";
@@ -1226,6 +1246,26 @@ export interface components {
                         scripts: {
                             id: string;
                             output: string;
+                        }[];
+                        tls: {
+                            vhost: string | null;
+                            version: string | null;
+                            cipher: string | null;
+                            alpn: string | null;
+                            cert: {
+                                subjectCn: string | null;
+                                san: string[];
+                                issuer: string | null;
+                                /** Format: date-time */
+                                notBefore: string | null;
+                                /** Format: date-time */
+                                notAfter: string | null;
+                                serial: string | null;
+                                sha256: string | null;
+                                selfSigned: boolean | null;
+                                keyAlgorithm: string | null;
+                                keyBits: number | null;
+                            } | null;
                         }[];
                         http: {
                             /** @enum {string} */
@@ -1566,7 +1606,7 @@ export interface operations {
                             ports: number[];
                             fields: {
                                 /** @enum {string} */
-                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname";
+                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname";
                                 endpoint: {
                                     /** @enum {string} */
                                     scheme: "http" | "https";
@@ -3017,6 +3057,26 @@ export interface operations {
                                         message: string;
                                     } | null;
                                 }[];
+                                tls: {
+                                    vhost: string | null;
+                                    version: string | null;
+                                    cipher: string | null;
+                                    alpn: string | null;
+                                    cert: {
+                                        subjectCn: string | null;
+                                        san: string[];
+                                        issuer: string | null;
+                                        /** Format: date-time */
+                                        notBefore: string | null;
+                                        /** Format: date-time */
+                                        notAfter: string | null;
+                                        serial: string | null;
+                                        sha256: string | null;
+                                        selfSigned: boolean | null;
+                                        keyAlgorithm: string | null;
+                                        keyBits: number | null;
+                                    } | null;
+                                }[];
                             } | null;
                             /** @enum {string} */
                             triage: "unreviewed" | "reviewed" | "important" | "false_positive";
@@ -3052,9 +3112,29 @@ export interface operations {
                                 id: string;
                                 output: string;
                             }[];
+                            tls: {
+                                vhost: string | null;
+                                version: string | null;
+                                cipher: string | null;
+                                alpn: string | null;
+                                cert: {
+                                    subjectCn: string | null;
+                                    san: string[];
+                                    issuer: string | null;
+                                    /** Format: date-time */
+                                    notBefore: string | null;
+                                    /** Format: date-time */
+                                    notAfter: string | null;
+                                    serial: string | null;
+                                    sha256: string | null;
+                                    selfSigned: boolean | null;
+                                    keyAlgorithm: string | null;
+                                    keyBits: number | null;
+                                } | null;
+                            }[];
                             fieldChanges: {
                                 /** @enum {string} */
-                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname";
+                                field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname";
                                 endpoint: {
                                     /** @enum {string} */
                                     scheme: "http" | "https";
@@ -3115,7 +3195,7 @@ export interface operations {
                         }[];
                         fieldChanges: {
                             /** @enum {string} */
-                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname";
+                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname";
                             endpoint: {
                                 /** @enum {string} */
                                 scheme: "http" | "https";
@@ -3299,7 +3379,7 @@ export interface operations {
                             /** @enum {string} */
                             change: "new" | "gone" | "changed" | "unchanged" | "unknown";
                             /** @enum {string|null} */
-                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "http.favicon" | "http.probe" | "host.hostname" | null;
+                            field: "service.name" | "service.product" | "service.version" | "service.extraInfo" | "service.cpe" | "ssh.hostKey" | "http.endpoint" | "http.status" | "http.title" | "http.redirect" | "http.header" | "http.securityHeader" | "http.cookie" | "http.cookieFlags" | "tls.cert" | "tls.issuer" | "tls.expiry" | "tls.selfSigned" | "tls.version" | "tls.cipher" | "tls.endpoint" | "http.favicon" | "http.probe" | "host.hostname" | null;
                             endpoint: {
                                 /** @enum {string} */
                                 scheme: "http" | "https";
@@ -4694,6 +4774,26 @@ export interface operations {
                             scripts: {
                                 id: string;
                                 output: string;
+                            }[];
+                            tls: {
+                                vhost: string | null;
+                                version: string | null;
+                                cipher: string | null;
+                                alpn: string | null;
+                                cert: {
+                                    subjectCn: string | null;
+                                    san: string[];
+                                    issuer: string | null;
+                                    /** Format: date-time */
+                                    notBefore: string | null;
+                                    /** Format: date-time */
+                                    notAfter: string | null;
+                                    serial: string | null;
+                                    sha256: string | null;
+                                    selfSigned: boolean | null;
+                                    keyAlgorithm: string | null;
+                                    keyBits: number | null;
+                                } | null;
                             }[];
                             http: {
                                 /** @enum {string} */
