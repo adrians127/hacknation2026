@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import { IdParamsSchema } from "@subsurf/contracts/common/common.schema";
 import {
+  ScanCompareQuerySchema,
   ScanHostListQuerySchema,
   ScanHostParamsSchema,
   TagScanHostsBodySchema,
@@ -17,13 +18,17 @@ export const scansRoutes = Router();
 scansRoutes.use(requireAuth, requirePermission("scans:read"));
 
 scansRoutes.get("/", c.list);
-scansRoutes.get("/:id", validate({ params: IdParamsSchema }), c.get);
+scansRoutes.get("/:id", validate({ params: IdParamsSchema, query: ScanCompareQuerySchema }), c.get);
 scansRoutes.get(
   "/:id/hosts",
   validate({ params: IdParamsSchema, query: ScanHostListQuerySchema }),
   c.listHosts,
 );
-scansRoutes.get("/:id/hosts/:hostId", validate({ params: ScanHostParamsSchema }), c.getHost);
+scansRoutes.get(
+  "/:id/hosts/:hostId",
+  validate({ params: ScanHostParamsSchema, query: ScanCompareQuerySchema }),
+  c.getHost,
+);
 scansRoutes.post(
   "/:id/hosts/tags",
   requirePermission("hosts:update"),

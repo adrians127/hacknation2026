@@ -31,6 +31,7 @@ export const ErrorCodeSchema = z.enum([
   "ROLE_NAME_TAKEN",
   "PACKAGE_MAPPING_EXISTS",
   "SOURCE_DISABLED",
+  "BASE_SCAN_NOT_OLDER",
 ]);
 
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;

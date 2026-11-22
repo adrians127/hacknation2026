@@ -8,6 +8,7 @@ import {
 } from "../common/common.openapi";
 import { IdParamsSchema } from "../common/common.schema";
 import {
+  ScanCompareQuerySchema,
   ScanDetailSchema,
   ScanHostDetailSchema,
   ScanHostListQuerySchema,
@@ -43,19 +44,21 @@ registry.registerPath({
   method: "get",
   path: "/scans/{id}",
   operationId: "getScan",
-  summary: "Get a scan with its jobs and the changes since the previous scan",
+  summary: "Get a scan with its jobs and the changes since the base scan",
   description: [
-    "Requires `scans:read`. Changes are counted against the base scan (the previous scan with",
-    "results), only for addresses this scan answered for.",
+    "Requires `scans:read`. Changes are counted against the base scan: `base` if given (it must",
+    "be older), otherwise the previous scan with results. `coverage` counts the addresses each",
+    "scan answered for; a host is only `new` or `gone` where both did.",
   ].join(" "),
   tags,
   security,
-  request: { params: IdParamsSchema },
+  request: { params: IdParamsSchema, query: ScanCompareQuerySchema },
   responses: {
     200: {
       description: "The scan",
       content: { "application/json": { schema: ScanDetailSchema } },
     },
+    400: validationFailed,
     401: unauthenticated,
     403: forbidden,
     404: notFound,
@@ -69,7 +72,8 @@ registry.registerPath({
   summary: "List the hosts of a scan, with their services and changes",
   description: [
     "Requires `scans:read`. Hosts that were up in this scan, plus hosts that were up in the base",
-    "scan and are now `down` (gone) or did not answer (unknown), in address order.",
+    "scan (`base`, or the previous scan with results) and are now `down` (gone) or did not answer",
+    "(unknown), in address order. Each service carries the base scan's observation (`before`).",
   ].join(" "),
   tags,
   security,
@@ -91,16 +95,19 @@ registry.registerPath({
   path: "/scans/{id}/hosts/{hostId}",
   operationId: "getScanHost",
   summary: "Get a host as one scan saw it",
-  description:
-    "Requires `scans:read`. Services with their decrypted details from this scan, and the address's scan history.",
+  description: [
+    "Requires `scans:read`. Services with their decrypted details from this scan, compared with",
+    "the base scan (`base`, or the previous scan with results), and the address's scan history.",
+  ].join(" "),
   tags,
   security,
-  request: { params: ScanHostParamsSchema },
+  request: { params: ScanHostParamsSchema, query: ScanCompareQuerySchema },
   responses: {
     200: {
       description: "The host in this scan",
       content: { "application/json": { schema: ScanHostDetailSchema } },
     },
+    400: validationFailed,
     401: unauthenticated,
     403: forbidden,
     404: notFound,

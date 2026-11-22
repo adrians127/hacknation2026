@@ -6,6 +6,7 @@ import {
   type ScanHostDetail,
   type ScanHostListQuery,
   type ScanHostListResponse,
+  type ScanCoverage,
 } from "@subsurf/contracts/scans/scan-results.schema";
 import type { Scan, ScanHostCounts, ScanJobStatus } from "@subsurf/contracts/scans/scans.schema";
 import type { Ipv4Range } from "@subsurf/contracts/targets/ipv4";
@@ -19,6 +20,7 @@ import { HttpError } from "~backend/lib/http-error";
 import { prisma } from "~backend/lib/prisma";
 import {
   countChanges,
+  countCoverage,
   diffScan,
   matchesChange,
   type HostDiff,
@@ -97,13 +99,27 @@ async function findScan(id: string): Promise<ScanRow> {
   return scan;
 }
 
-/** The previous scan that has results: what "new", "gone" and "changed" are relative to. */
-function findBaseScan(scan: ScanRow): Promise<BaseScan | null> {
-  return prisma.scan.findFirst({
-    where: { createdAt: { lt: scan.createdAt }, results: { some: {} } },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, startedAt: true },
+/**
+ * What "new", "gone" and "changed" are relative to: the requested scan, which must be older,
+ * or the previous scan that has results.
+ */
+async function resolveBase(scan: ScanRow, baseId: string | undefined): Promise<BaseScan | null> {
+  if (baseId === undefined) {
+    return prisma.scan.findFirst({
+      where: { createdAt: { lt: scan.createdAt }, results: { some: {} } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, startedAt: true },
+    });
+  }
+  const base = await prisma.scan.findUnique({
+    where: { id: baseId },
+    select: { id: true, startedAt: true, createdAt: true },
   });
+  if (!base) throw HttpError.notFound("Base scan not found");
+  if (base.createdAt >= scan.createdAt) {
+    throw HttpError.badRequest("The base scan must be older than the scan", "BASE_SCAN_NOT_OLDER");
+  }
+  return { id: base.id, startedAt: base.startedAt };
 }
 
 async function scanSummaries(scanIds: readonly string[]): Promise<Map<string, ScanSummary>> {
@@ -128,23 +144,33 @@ async function scanSummaries(scanIds: readonly string[]): Promise<Map<string, Sc
   return summaries;
 }
 
-async function diffWithBase(scan: ScanRow, base: BaseScan | null): Promise<HostDiff[]> {
+interface ScanComparison {
+  entries: HostDiff[];
+  /** `null` without a base scan. */
+  coverage: ScanCoverage | null;
+}
+
+async function diffWithBase(scan: ScanRow, base: BaseScan | null): Promise<ScanComparison> {
   const ids = await effectiveIds(base ? [scan.id, base.id] : [scan.id]);
   const observations = await prisma.hostObservation.findMany({
     where: { id: { in: ids } },
     select: { ...DIFF_SELECT, scanId: true },
   });
-  const upNow = observations.filter((host) => host.scanId === scan.id && host.status === "up");
-  if (!base) return diffScan(upNow, null);
+  const now = observations.filter((host) => host.scanId === scan.id);
+  const upNow = now.filter((host) => host.status === "up");
+  if (!base) return { entries: diffScan(upNow, null), coverage: null };
 
-  const upBefore = observations.filter((host) => host.scanId === base.id && host.status === "up");
+  const before = observations.filter((host) => host.scanId === base.id);
   const stillUp = new Set(upNow.map((host) => host.ip));
-  const missing = new Set(upBefore.filter((host) => !stillUp.has(host.ip)).map((host) => host.ip));
+  const missing = new Set(
+    before.filter((host) => host.status === "up" && !stillUp.has(host.ip)).map((host) => host.ip),
+  );
   const answeredOtherwise =
-    missing.size === 0
-      ? []
-      : observations.filter((host) => host.scanId === scan.id && missing.has(host.ip));
-  return diffScan([...upNow, ...answeredOtherwise], upBefore);
+    missing.size === 0 ? [] : now.filter((host) => host.status !== "up" && missing.has(host.ip));
+  return {
+    entries: diffScan([...upNow, ...answeredOtherwise], before),
+    coverage: countCoverage(now, before),
+  };
 }
 
 /** `ranges` sorted and merged (`mergeRanges`). */
@@ -322,10 +348,10 @@ export const scanResultsService = {
     });
   },
 
-  async get(id: string): Promise<ScanDetail> {
+  async get(id: string, baseId?: string): Promise<ScanDetail> {
     const scan = await findScan(id);
-    const base = await findBaseScan(scan);
-    const [summaries, jobs, entries] = await Promise.all([
+    const base = await resolveBase(scan, baseId);
+    const [summaries, jobs, { entries, coverage }] = await Promise.all([
       scanSummaries([scan.id]),
       prisma.scanJob.groupBy({ by: ["status"], where: { scanId: scan.id }, _count: { status: true } }),
       diffWithBase(scan, base),
@@ -348,13 +374,14 @@ export const scanResultsService = {
       jobs: jobCounts,
       baseScan: base && { id: base.id, startedAt: base.startedAt?.toISOString() ?? null },
       changes: base ? countChanges(entries) : null,
+      coverage,
     };
   },
 
   async listHosts(scanId: string, query: ScanHostListQuery): Promise<ScanHostListResponse> {
     const scan = await findScan(scanId);
-    const base = await findBaseScan(scan);
-    let entries = await diffWithBase(scan, base);
+    const base = await resolveBase(scan, query.base);
+    let { entries } = await diffWithBase(scan, base);
     const { change } = query;
     if (change) entries = entries.filter((entry) => matchesChange(entry.change, change));
     const ids = await filteredHostIds(query, base ? [scan.id, base.id] : [scan.id]);
@@ -373,15 +400,15 @@ export const scanResultsService = {
   /** Host assets the scan lists (gone and unknown included) inside `ranges` (sorted, merged). */
   async hostIdsIn(scanId: string, ranges: readonly Ipv4Range[]): Promise<string[]> {
     const scan = await findScan(scanId);
-    const entries = await diffWithBase(scan, await findBaseScan(scan));
+    const { entries } = await diffWithBase(scan, await resolveBase(scan, undefined));
     return entries
       .filter((entry) => inRanges(ranges, Number(entry.ipNumber)))
       .map((entry) => entry.hostId);
   },
 
-  async getHost(scanId: string, hostId: string): Promise<ScanHostDetail> {
+  async getHost(scanId: string, hostId: string, baseId?: string): Promise<ScanHostDetail> {
     const scan = await findScan(scanId);
-    const base = await findBaseScan(scan);
+    const base = await resolveBase(scan, baseId);
     const host = await prisma.host.findUnique({ where: { id: hostId }, select: { ip: true } });
     if (!host) throw HttpError.notFound("Host not found");
 
@@ -391,7 +418,7 @@ export const scanResultsService = {
       select: { ...DIFF_SELECT, scanId: true },
     });
     const current = observations.find((row) => row.scanId === scan.id);
-    const before = observations.find((row) => row.scanId === base?.id && row.status === "up");
+    const before = observations.find((row) => row.scanId === base?.id);
     const [diff] = current ? diffScan([current], base ? (before ? [before] : []) : null) : [];
     if (!diff) throw HttpError.notFound("The host is not part of this scan");
 

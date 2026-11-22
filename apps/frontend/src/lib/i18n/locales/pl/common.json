@@ -406,6 +406,7 @@
     "EMAIL_TAKEN": "Użytkownik z tym adresem email już istnieje.",
     "ROLE_NAME_TAKEN": "Rola o tej nazwie już istnieje.",
     "PACKAGE_MAPPING_EXISTS": "Takie mapowanie już istnieje.",
-    "SOURCE_DISABLED": "Źródło jest wyłączone. Najpierw je włącz."
+    "SOURCE_DISABLED": "Źródło jest wyłączone. Najpierw je włącz.",
+    "BASE_SCAN_NOT_OLDER": "Skan, z którym porównujesz, musi być starszy od porównywanego skanu."
   }
 }

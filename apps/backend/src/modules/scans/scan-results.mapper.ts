@@ -4,6 +4,7 @@ import type {
   ScanService,
   ScanServiceDetail,
   HostHistoryEntry,
+  ServiceSnapshot,
 } from "@subsurf/contracts/scans/scan-results.schema";
 import type { Scan, ScanHostCounts } from "@subsurf/contracts/scans/scans.schema";
 import type {
@@ -74,20 +75,34 @@ interface ResolvedService {
   diff: ServiceDiff;
   service: ServiceRow;
   port: PortRow;
+  /** The base scan's observation of the port, if it was open there. */
+  basePort: PortRow | undefined;
 }
 
 /** Pairs each service of the diff with its asset and the observation that describes it. */
 function resolveServices(entry: HostInScan): ResolvedService[] {
   return entry.diff.services.flatMap((diff) => {
-    const observation = diff.observedIn === "current" ? entry.current : entry.base;
-    const port = observation?.ports.find((candidate) => candidate.serviceId === diff.serviceId);
+    const basePort = entry.base?.ports.find((candidate) => candidate.serviceId === diff.serviceId);
+    const port =
+      diff.observedIn === "current"
+        ? entry.current.ports.find((candidate) => candidate.serviceId === diff.serviceId)
+        : basePort;
     const service = entry.host.services.find((candidate) => candidate.id === diff.serviceId);
-    return port && service ? [{ diff, service, port }] : [];
+    return port && service ? [{ diff, service, port, basePort }] : [];
   });
 }
 
+const identityOf = (port: PortRow) => ({
+  name: port.serviceName,
+  product: port.serviceProduct,
+  version: port.serviceVersion,
+});
+
+const snapshotOf = (port: PortRow | undefined): ServiceSnapshot | null =>
+  port ? { observed: identityOf(port), http: httpSummaries(port.details) } : null;
+
 function serviceFields(
-  { diff, service, port }: ResolvedService,
+  { diff, service, port, basePort }: ResolvedService,
   summaries: ReadonlyMap<string, VulnerabilitySummary>,
 ) {
   return {
@@ -95,7 +110,8 @@ function serviceFields(
     protocol: service.protocol,
     port: service.port,
     change: diff.change,
-    observed: { name: port.serviceName, product: port.serviceProduct, version: port.serviceVersion },
+    observed: identityOf(port),
+    before: snapshotOf(basePort),
     overrides: {
       name: service.nameOverride,
       product: service.productOverride,
@@ -114,6 +130,7 @@ function hostFields(entry: HostInScan) {
     id: host.id,
     ip: host.ip,
     status: current.status,
+    baseStatus: entry.diff.baseStatus,
     observedAt: current.observedAt?.toISOString() ?? null,
     latencyMs: current.latencyMs,
     // A host that is gone keeps the names it had when it was last up.

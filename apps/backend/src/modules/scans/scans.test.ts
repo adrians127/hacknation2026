@@ -150,7 +150,71 @@ describe("GET /scans/{id}", () => {
       jobs: { queued: 1, leased: 0, completed: 0, failed: 0, stopped: 0 },
       ports: "21-23,80,443,3306,8000-8100",
     });
-    expect(earliest).toMatchObject({ baseScan: null, changes: null });
+    expect(earliest).toMatchObject({ baseScan: null, changes: null, coverage: null });
+    expect(latest.coverage).toEqual({ both: 3, onlyBase: 0, onlyCurrent: 0 });
+  });
+
+  it("compares with an explicitly chosen older scan", async () => {
+    const { first, second } = await twoScans();
+    const third = await ingestScan(secondScan);
+    const { client } = await signInAs(server, { role: "viewer" });
+
+    const byDefault = ScanDetailSchema.parse(await getJson(client, `/v1/scans/${third}`));
+    const withFirst = ScanDetailSchema.parse(await getJson(client, `/v1/scans/${third}?base=${first}`));
+
+    expect(byDefault).toMatchObject({
+      baseScan: { id: second },
+      changes: { hosts: { new: 0, gone: 0, changed: 0, unknown: 0 } },
+    });
+    expect(withFirst).toMatchObject({
+      baseScan: { id: first },
+      changes: {
+        hosts: { new: 1, gone: 1, changed: 1, unknown: 0 },
+        services: { new: 2, gone: 1, changed: 1 },
+      },
+    });
+  });
+
+  it("rejects a base scan that is not older, and answers 404 for an unknown one", async () => {
+    const { first, second } = await twoScans();
+    const { client } = await signInAs(server, { role: "viewer" });
+
+    const newer = await client.get(`/v1/scans/${first}?base=${second}`);
+    expect(newer.status).toBe(400);
+    expect(await newer.json()).toMatchObject({ error: { code: "BASE_SCAN_NOT_OLDER" } });
+    expect((await client.get(`/v1/scans/${first}?base=${first}`)).status).toBe(400);
+    expect((await client.get(`/v1/scans/${first}?base=not-a-uuid`)).status).toBe(400);
+    expect((await client.get(`/v1/scans/${second}?base=${randomUUID()}`)).status).toBe(404);
+  });
+
+  it("marks a host unknown, not new, when the base scan got no answer from it", async () => {
+    await ingestScan();
+    const second = await ingestScan((hosts) => {
+      const [wiki] = hosts;
+      // 10.0.5.9 timed out in the first scan, which has no observation of 10.0.5.30.
+      return [
+        ...hosts.filter((host) => host.ip !== "10.0.5.9"),
+        { ...wiki, ip: "10.0.5.9", hostnames: [] },
+        { ...wiki, ip: "10.0.5.30", hostnames: [] },
+      ];
+    });
+    const { client } = await signInAs(server, { role: "viewer" });
+
+    const detail = ScanDetailSchema.parse(await getJson(client, `/v1/scans/${second}`));
+    const { items } = ScanHostListResponseSchema.parse(
+      await getJson(client, `/v1/scans/${second}/hosts?change=unknown`),
+    );
+
+    expect(detail.changes?.hosts).toEqual({ new: 0, gone: 0, changed: 0, unknown: 2 });
+    expect(detail.coverage).toEqual({ both: 2, onlyBase: 0, onlyCurrent: 2 });
+    expect(items.map((host) => [host.ip, host.status, host.baseStatus])).toEqual([
+      ["10.0.5.9", "up", "timeout"],
+      ["10.0.5.30", "up", null],
+    ]);
+    expect(items[0].services.map((service) => [service.change, service.before])).toEqual([
+      ["unknown", null],
+      ["unknown", null],
+    ]);
   });
 
   it("answers 404 for an unknown scan", async () => {
@@ -175,17 +239,36 @@ describe("GET /scans/{id}/hosts", () => {
       ["10.0.5.8", "up", "new"],
       ["10.0.5.20", "down", "gone"],
     ]);
+    expect(items.map((host) => host.baseStatus)).toEqual(["up", "down", "up"]);
     const [wiki, , database] = items;
-    expect(wiki.services.map((service) => [service.port, service.change, service.observed.version])).toEqual([
-      [22, "changed", "9.7p1"],
-      [443, "unchanged", "1.24.0"],
-      [8080, "new", null],
+    expect(
+      wiki.services.map((service) => [
+        service.port,
+        service.change,
+        service.observed.version,
+        service.before?.observed.version ?? null,
+      ]),
+    ).toEqual([
+      [22, "changed", "9.7p1", "9.6p1"],
+      [443, "unchanged", "1.24.0", "1.24.0"],
+      [8080, "new", null, null],
+    ]);
+    expect(wiki.services[1].before?.http.map((endpoint) => endpoint.title)).toEqual([
+      "Wiki – login",
+      null,
     ]);
     expect(wiki.services[1].http.map((endpoint) => endpoint.title)).toEqual(["Wiki – login", null]);
     // A host that is gone shows what it had when it was last up.
     expect(database).toMatchObject({
       hostnames: ["db01.example.org"],
-      services: [{ port: 3306, change: "gone", observed: { product: "MySQL" } }],
+      services: [
+        {
+          port: 3306,
+          change: "gone",
+          observed: { product: "MySQL" },
+          before: { observed: { product: "MySQL" } },
+        },
+      ],
     });
     // The list never decrypts: headers, cookies and certificates are in the host detail.
     expect(JSON.stringify(items)).not.toContain("PHPSESSID");
@@ -265,6 +348,27 @@ describe("GET /scans/{id}/hosts/{hostId}", () => {
     expect(vhost.tls?.cert.subjectCn).toBe("wiki.example.org");
     expect(after.services[0]).toMatchObject({ banner: "SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13" });
     expect(after.history.map((entry) => entry.status)).toEqual(["up", "up"]);
+  });
+
+  it("compares the host with an explicitly chosen base scan", async () => {
+    const { first, second } = await twoScans();
+    const third = await ingestScan(secondScan);
+    const { client } = await signInAs(server, { role: "viewer" });
+    const wiki = await hostIdOf("10.0.5.7");
+
+    const byDefault = ScanHostDetailSchema.parse(await getJson(client, `/v1/scans/${third}/hosts/${wiki}`));
+    const withFirst = ScanHostDetailSchema.parse(
+      await getJson(client, `/v1/scans/${third}/hosts/${wiki}?base=${first}`),
+    );
+
+    expect(byDefault.change).toBe("unchanged");
+    expect(withFirst).toMatchObject({ change: "changed", baseStatus: "up" });
+    expect(withFirst.services[0]).toMatchObject({
+      port: 22,
+      change: "changed",
+      before: { observed: { version: "9.6p1" } },
+    });
+    expect((await client.get(`/v1/scans/${second}/hosts/${wiki}?base=${third}`)).status).toBe(400);
   });
 
   it("answers 404 for a host the scan did not see", async () => {

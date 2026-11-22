@@ -372,6 +372,7 @@
     "EMAIL_TAKEN": "A user with this email already exists.",
     "ROLE_NAME_TAKEN": "A role with this name already exists.",
     "PACKAGE_MAPPING_EXISTS": "This mapping already exists.",
-    "SOURCE_DISABLED": "The source is disabled. Enable it first."
+    "SOURCE_DISABLED": "The source is disabled. Enable it first.",
+    "BASE_SCAN_NOT_OLDER": "The scan to compare with must be older than the compared scan."
   }
 }

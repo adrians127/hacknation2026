@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 
 import type { IdParams } from "@subsurf/contracts/common/common.schema";
 import {
+  ScanCompareQuerySchema,
   ScanHostListQuerySchema,
   type ScanDetail,
   type ScanHostDetail,
@@ -21,7 +22,8 @@ export const scansController = {
   },
 
   get: async (req: Request<IdParams>, res: Response<ScanDetail>) => {
-    res.status(200).json(await scanResultsService.get(req.params.id));
+    const { base } = ScanCompareQuerySchema.parse(req.query);
+    res.status(200).json(await scanResultsService.get(req.params.id, base));
   },
 
   listHosts: async (req: Request<IdParams>, res: Response<ScanHostListResponse>) => {
@@ -31,7 +33,8 @@ export const scansController = {
   },
 
   getHost: async (req: Request<ScanHostParams>, res: Response<ScanHostDetail>) => {
-    res.status(200).json(await scanResultsService.getHost(req.params.id, req.params.hostId));
+    const { base } = ScanCompareQuerySchema.parse(req.query);
+    res.status(200).json(await scanResultsService.getHost(req.params.id, req.params.hostId, base));
   },
 
   tagHosts: async (

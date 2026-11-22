@@ -241,8 +241,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get a scan with its jobs and the changes since the previous scan
-         * @description Requires `scans:read`. Changes are counted against the base scan (the previous scan with results), only for addresses this scan answered for.
+         * Get a scan with its jobs and the changes since the base scan
+         * @description Requires `scans:read`. Changes are counted against the base scan: `base` if given (it must be older), otherwise the previous scan with results. `coverage` counts the addresses each scan answered for; a host is only `new` or `gone` where both did.
          */
         get: operations["getScan"];
         put?: never;
@@ -262,7 +262,7 @@ export interface paths {
         };
         /**
          * List the hosts of a scan, with their services and changes
-         * @description Requires `scans:read`. Hosts that were up in this scan, plus hosts that were up in the base scan and are now `down` (gone) or did not answer (unknown), in address order.
+         * @description Requires `scans:read`. Hosts that were up in this scan, plus hosts that were up in the base scan (`base`, or the previous scan with results) and are now `down` (gone) or did not answer (unknown), in address order. Each service carries the base scan's observation (`before`).
          */
         get: operations["listScanHosts"];
         put?: never;
@@ -282,7 +282,7 @@ export interface paths {
         };
         /**
          * Get a host as one scan saw it
-         * @description Requires `scans:read`. Services with their decrypted details from this scan, and the address's scan history.
+         * @description Requires `scans:read`. Services with their decrypted details from this scan, compared with the base scan (`base`, or the previous scan with results), and the address's scan history.
          */
         get: operations["getScanHost"];
         put?: never;
@@ -643,7 +643,7 @@ export interface components {
                 message: string;
                 status: number;
                 /** @enum {string} */
-                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN" | "PACKAGE_MAPPING_EXISTS" | "SOURCE_DISABLED";
+                code?: "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "PASSWORD_CHANGE_REQUIRED" | "FORBIDDEN" | "UNTRUSTED_ORIGIN" | "PERMISSION_ESCALATION" | "SELF_MODIFICATION" | "LAST_ADMIN" | "SYSTEM_ROLE_READ_ONLY" | "ROLE_IN_USE" | "EMAIL_TAKEN" | "ROLE_NAME_TAKEN" | "PACKAGE_MAPPING_EXISTS" | "SOURCE_DISABLED" | "BASE_SCAN_NOT_OLDER";
                 details?: unknown;
             };
         };
@@ -1765,7 +1765,9 @@ export interface operations {
     };
     getScan: {
         parameters: {
-            query?: never;
+            query?: {
+                base?: string;
+            };
             header?: never;
             path: {
                 id: string;
@@ -1832,7 +1834,21 @@ export interface operations {
                                 changed: number;
                             };
                         } | null;
+                        coverage: {
+                            both: number;
+                            onlyBase: number;
+                            onlyCurrent: number;
+                        } | null;
                     };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Not signed in, or the session expired */
@@ -1867,6 +1883,7 @@ export interface operations {
     listScanHosts: {
         parameters: {
             query?: {
+                base?: string;
                 page?: number;
                 pageSize?: number;
                 q?: string;
@@ -1896,6 +1913,8 @@ export interface operations {
                             ip: string;
                             /** @enum {string} */
                             status: "up" | "down" | "timeout" | "cancelled" | "failed";
+                            /** @enum {string|null} */
+                            baseStatus: "up" | "down" | "timeout" | "cancelled" | "failed" | null;
                             /** Format: date-time */
                             observedAt: string | null;
                             latencyMs: number | null;
@@ -1942,6 +1961,24 @@ export interface operations {
                                     statusCode: number | null;
                                     title: string | null;
                                 }[];
+                                before: {
+                                    observed: {
+                                        name: string | null;
+                                        product: string | null;
+                                        version: string | null;
+                                    };
+                                    http: {
+                                        /** @enum {string} */
+                                        scheme: "http" | "https";
+                                        vhost: string | null;
+                                        /** Format: uri */
+                                        url: string;
+                                        /** Format: uri */
+                                        finalUrl: string;
+                                        statusCode: number | null;
+                                        title: string | null;
+                                    }[];
+                                } | null;
                                 /** @enum {string} */
                                 triage: "unreviewed" | "reviewed" | "important" | "false_positive";
                                 tags: string[];
@@ -2001,7 +2038,9 @@ export interface operations {
     };
     getScanHost: {
         parameters: {
-            query?: never;
+            query?: {
+                base?: string;
+            };
             header?: never;
             path: {
                 id: string;
@@ -2024,6 +2063,8 @@ export interface operations {
                         ip: string;
                         /** @enum {string} */
                         status: "up" | "down" | "timeout" | "cancelled" | "failed";
+                        /** @enum {string|null} */
+                        baseStatus: "up" | "down" | "timeout" | "cancelled" | "failed" | null;
                         /** Format: date-time */
                         observedAt: string | null;
                         latencyMs: number | null;
@@ -2140,6 +2181,24 @@ export interface operations {
                                     message: string;
                                 } | null;
                             }[];
+                            before: {
+                                observed: {
+                                    name: string | null;
+                                    product: string | null;
+                                    version: string | null;
+                                };
+                                http: {
+                                    /** @enum {string} */
+                                    scheme: "http" | "https";
+                                    vhost: string | null;
+                                    /** Format: uri */
+                                    url: string;
+                                    /** Format: uri */
+                                    finalUrl: string;
+                                    statusCode: number | null;
+                                    title: string | null;
+                                }[];
+                            } | null;
                             /** @enum {string} */
                             triage: "unreviewed" | "reviewed" | "important" | "false_positive";
                             tags: string[];
@@ -2232,6 +2291,15 @@ export interface operations {
                             openPorts: number;
                         }[];
                     };
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Not signed in, or the session expired */
