@@ -1,8 +1,6 @@
 import { useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 
-import { TARGET_IMPORT_LIMITS } from "@subsurf/contracts/targets/target-input";
-
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -12,15 +10,16 @@ export interface LoadedFile {
   text: string;
 }
 
-interface TargetFileInputProps {
+interface FileInputProps {
   id: string;
   accept: string;
+  maxBytes: number;
   file: LoadedFile | null;
   onLoad: (file: LoadedFile | null) => void;
 }
 
-/** Reads the chosen file in the browser; only the parsed entries are sent to the API. */
-export function TargetFileInput({ id, accept, file, onLoad }: TargetFileInputProps) {
+/** Reads the chosen text file in the browser, so the page can show what it holds before sending it. */
+export function FileInput({ id, accept, maxBytes, file, onLoad }: FileInputProps) {
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
 
@@ -31,22 +30,22 @@ export function TargetFileInput({ id, accept, file, onLoad }: TargetFileInputPro
       onLoad(null);
       return;
     }
-    if (selected.size > TARGET_IMPORT_LIMITS.maxFileBytes) {
-      setError(t("targets.import.file.tooLarge"));
+    if (selected.size > maxBytes) {
+      setError(t("file.tooLarge", { size: Math.floor(maxBytes / 1024 ** 2) }));
       onLoad(null);
       return;
     }
     try {
       onLoad({ name: selected.name, size: selected.size, text: await selected.text() });
     } catch {
-      setError(t("targets.import.file.unreadable"));
+      setError(t("file.unreadable"));
       onLoad(null);
     }
   }
 
   return (
     <div className="grid gap-2">
-      <Label htmlFor={id}>{t("targets.import.file.label")}</Label>
+      <Label htmlFor={id}>{t("file.label")}</Label>
       <Input
         id={id}
         type="file"
@@ -57,7 +56,7 @@ export function TargetFileInput({ id, accept, file, onLoad }: TargetFileInputPro
       />
       {file && (
         <p className="text-sm text-muted-foreground">
-          {t("targets.import.file.selected", { name: file.name, size: Math.ceil(file.size / 1024) })}
+          {t("file.selected", { name: file.name, size: Math.ceil(file.size / 1024) })}
         </p>
       )}
       {error && (

@@ -49,9 +49,15 @@ export function ScansTable({
           header: t("scans.columns.started"),
           sortFn: "datetime",
           cell: ({ row: { original: scan } }) => (
-            <Link to={`/app/scans/${scan.id}`} className="font-medium hover:underline">
-              {formatDateTime(scan.startedAt ?? scan.createdAt, locale)}
-            </Link>
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Link to={`/app/scans/${scan.id}`} className="font-medium hover:underline">
+                {formatDateTime(scan.startedAt ?? scan.createdAt, locale)}
+              </Link>
+              {scan.origin === "imported" && (
+                <Badge variant="outline">{t("scans.origins.imported")}</Badge>
+              )}
+              {scan.name && <span className="text-muted-foreground">{scan.name}</span>}
+            </span>
           ),
         }),
         column.accessor("status", {

@@ -1,0 +1,8 @@
+ip,status,hostnames,observed_at,latency_ms,host_triage,host_tags,host_note,protocol,port,service,product,version,extra_info,cpe,ssh_host_key,service_triage,service_tags,service_note,name_override,product_override,version_override,scheme,vhost,url,final_url,status_code,title
+192.0.2.7,up,wiki.example.org web01.example.org,2026-11-20T01:03:11Z,3,important,"dmz,wiki","Public wiki, owned by the web team.",tcp,22,ssh,OpenSSH,9.6p1,Ubuntu 3ubuntu13,cpe:/a:openbsd:openssh:9.6p1,aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,unreviewed,,,,,,,,,,,
+192.0.2.7,up,wiki.example.org web01.example.org,2026-11-20T01:03:11Z,3,important,"dmz,wiki","Public wiki, owned by the web team.",tcp,443,https,nginx,1.24.0,,cpe:/a:nginx:nginx:1.24.0,,unreviewed,,,,,,https,wiki.example.org,https://wiki.example.org/,https://wiki.example.org/login,200,Wiki – login
+192.0.2.7,up,wiki.example.org web01.example.org,2026-11-20T01:03:11Z,3,important,"dmz,wiki","Public wiki, owned by the web team.",tcp,443,https,nginx,1.24.0,,cpe:/a:nginx:nginx:1.24.0,,unreviewed,,,,,,https,,https://192.0.2.7/,https://192.0.2.7/,404,
+192.0.2.9,timeout,,2026-11-20T01:05:40Z,,unreviewed,,,,,,,,,,,,,,,,,,,,,,
+192.0.2.20,up,db01.example.org,2026-11-20T01:04:02Z,3,unreviewed,,,tcp,3306,mysql,MySQL,8.0.36,,cpe:/a:oracle:mysql:8.0.36,,reviewed,database,,,MySQL Community Server,,,,,,,
+192.0.2.0/28,down,,,,,,,,,,,,,,,,,,,,,,,,,,
+192.0.2.20,down,,,,,,,,,,,,,,,,,,,,,,,,,,

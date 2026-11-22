@@ -174,9 +174,16 @@ export function ScanDetailRoute() {
             <Badge variant={SCAN_STATUS_VARIANT[scanData.status]}>
               {t(`scans.statuses.${scanData.status}`)}
             </Badge>
+            {scanData.origin === "imported" && (
+              <Badge variant="outline">{t("scans.origins.imported")}</Badge>
+            )}
           </span>
         }
-        description={t("scans.detail.subtitle")}
+        description={
+          scanData.name
+            ? `${scanData.name}. ${t("scans.detail.subtitle")}`
+            : t("scans.detail.subtitle")
+        }
         actions={
           <>
             <ScanExportButtons scan={scanData} />

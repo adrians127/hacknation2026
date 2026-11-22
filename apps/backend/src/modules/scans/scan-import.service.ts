@@ -5,6 +5,7 @@ import type {
   ImportedEdits,
   ImportScanQuery,
   ImportScanResponse,
+  ScanAlreadyImportedDetails,
 } from "@subsurf/contracts/scans/scan-import.schema";
 import { WorkerResultSchema } from "@subsurf/contracts/workers/worker-result.schema";
 
@@ -29,12 +30,9 @@ const importKeyOf = (plan: ScanImportPlan) =>
 
 async function alreadyImported(importKey: string): Promise<HttpError | null> {
   const existing = await prisma.scan.findUnique({ where: { importKey }, select: { id: true } });
-  return existing
-    ? new HttpError(409, "This file was imported before", {
-        code: "SCAN_ALREADY_IMPORTED",
-        details: { scanId: existing.id },
-      })
-    : null;
+  if (!existing) return null;
+  const details: ScanAlreadyImportedDetails = { scanId: existing.id };
+  return new HttpError(409, "This file was imported before", { code: "SCAN_ALREADY_IMPORTED", details });
 }
 
 /** `createdAt` orders scans (base scan, lifecycle, dashboard): two scans never share one. */

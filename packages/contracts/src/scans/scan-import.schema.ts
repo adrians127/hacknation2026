@@ -40,6 +40,10 @@ export const ImportScanResponseSchema = z.object({
   warningCount: CountSchema,
 });
 
+/** `error.details` of `SCAN_ALREADY_IMPORTED`: the scan the same file became before. */
+export const ScanAlreadyImportedDetailsSchema = z.object({ scanId: z.uuid() });
+
 export type ImportScanQuery = z.infer<typeof ImportScanQuerySchema>;
+export type ScanAlreadyImportedDetails = z.infer<typeof ScanAlreadyImportedDetailsSchema>;
 export type ImportedEdits = z.infer<typeof ImportedEditsSchema>;
 export type ImportScanResponse = z.infer<typeof ImportScanResponseSchema>;

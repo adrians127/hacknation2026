@@ -1,0 +1,322 @@
+{
+  "format": "subsurf-scan",
+  "version": 1,
+  "exportedAt": "2026-11-20T02:00:00.000Z",
+  "scan": {
+    "id": "0193f0d0-0000-7000-8000-0000000000aa",
+    "name": "Sample scan",
+    "status": "completed",
+    "createdAt": "2026-11-20T01:00:00.000Z",
+    "startedAt": "2026-11-20T01:00:00.000Z",
+    "finishedAt": "2026-11-20T01:15:00.000Z",
+    "ports": "22,80,443,3306",
+    "maxRate": 100,
+    "counts": {
+      "addresses": 17,
+      "up": 2,
+      "down": 14,
+      "timeout": 1,
+      "cancelled": 0,
+      "failed": 0,
+      "openPorts": 3
+    }
+  },
+  "coverage": [
+    "192.0.2.0/28",
+    "192.0.2.20"
+  ],
+  "hosts": [
+    {
+      "ip": "192.0.2.7",
+      "status": "up",
+      "reason": "syn-ack",
+      "observedAt": "2026-11-20T01:03:11Z",
+      "latencyMs": 3,
+      "hostnames": [
+        {
+          "name": "wiki.example.org",
+          "source": "job"
+        },
+        {
+          "name": "web01.example.org",
+          "source": "ptr"
+        },
+        {
+          "name": "wiki.example.org",
+          "source": "tls-san"
+        }
+      ],
+      "error": null,
+      "ports": [
+        {
+          "port": 22,
+          "protocol": "tcp",
+          "state": "open",
+          "reason": "syn-ack",
+          "service": {
+            "name": "ssh",
+            "product": "OpenSSH",
+            "version": "9.6p1",
+            "extraInfo": "Ubuntu 3ubuntu13",
+            "cpe": [
+              "cpe:/a:openbsd:openssh:9.6p1"
+            ],
+            "method": "probed",
+            "confidence": 10
+          },
+          "identity": {
+            "ttl": 64,
+            "sshHostKeySha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "tlsCertSha256": null
+          },
+          "banner": "SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13",
+          "scripts": [
+            {
+              "id": "ssh-hostkey",
+              "output": "256 SHA256:abc (ED25519)"
+            }
+          ],
+          "http": []
+        },
+        {
+          "port": 443,
+          "protocol": "tcp",
+          "state": "open",
+          "reason": "syn-ack",
+          "service": {
+            "name": "https",
+            "product": "nginx",
+            "version": "1.24.0",
+            "extraInfo": null,
+            "cpe": [
+              "cpe:/a:nginx:nginx:1.24.0"
+            ],
+            "method": "probed",
+            "confidence": 10
+          },
+          "identity": {
+            "ttl": 64,
+            "sshHostKeySha256": null,
+            "tlsCertSha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          },
+          "banner": null,
+          "scripts": [],
+          "http": [
+            {
+              "scheme": "https",
+              "vhost": "wiki.example.org",
+              "url": "https://wiki.example.org/",
+              "finalUrl": "https://wiki.example.org/login",
+              "statusCode": 200,
+              "title": "Wiki – login",
+              "headers": [
+                {
+                  "name": "server",
+                  "value": "nginx/1.24.0"
+                },
+                {
+                  "name": "x-powered-by",
+                  "value": "PHP/8.1.2"
+                }
+              ],
+              "cookies": [
+                {
+                  "name": "PHPSESSID",
+                  "valueSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                  "secure": true,
+                  "httpOnly": false,
+                  "sameSite": null,
+                  "domain": null,
+                  "path": "/",
+                  "expires": null
+                }
+              ],
+              "redirects": [
+                {
+                  "url": "https://wiki.example.org/",
+                  "statusCode": 302,
+                  "location": "/login",
+                  "followed": true
+                }
+              ],
+              "body": {
+                "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "size": 18342,
+                "contentType": "text/html",
+                "content": "<!doctype html><title>Wiki – login</title><link href=\"/wp-content/x.css\">",
+                "truncated": false
+              },
+              "favicon": {
+                "url": "https://wiki.example.org/favicon.ico",
+                "mmh3": -1137954245,
+                "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+              },
+              "tls": {
+                "version": "TLSv1.3",
+                "cipher": "TLS_AES_256_GCM_SHA384",
+                "alpn": "h2",
+                "cert": {
+                  "subjectCn": "wiki.example.org",
+                  "san": [
+                    "wiki.example.org"
+                  ],
+                  "issuer": "R11",
+                  "notBefore": "2026-09-01T00:00:00Z",
+                  "notAfter": "2026-11-30T00:00:00Z",
+                  "serial": "04a1b2c3",
+                  "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                  "selfSigned": false,
+                  "keyAlgorithm": "RSA",
+                  "keyBits": 2048
+                }
+              },
+              "probes": [
+                {
+                  "path": "/wp-admin/",
+                  "statusCode": 302,
+                  "location": "/wp-login.php",
+                  "title": null,
+                  "size": 0,
+                  "bodySha256": null,
+                  "error": null
+                }
+              ],
+              "error": null
+            },
+            {
+              "scheme": "https",
+              "vhost": null,
+              "url": "https://192.0.2.7/",
+              "finalUrl": "https://192.0.2.7/",
+              "statusCode": 404,
+              "title": null,
+              "headers": [
+                {
+                  "name": "server",
+                  "value": "nginx/1.24.0"
+                },
+                {
+                  "name": "x-powered-by",
+                  "value": "PHP/8.1.2"
+                }
+              ],
+              "cookies": [],
+              "redirects": [],
+              "body": {
+                "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                "size": 153,
+                "contentType": "text/html",
+                "content": "Not Found",
+                "truncated": false
+              },
+              "favicon": null,
+              "tls": {
+                "version": "TLSv1.3",
+                "cipher": "TLS_AES_256_GCM_SHA384",
+                "alpn": "h2",
+                "cert": {
+                  "subjectCn": "wiki.example.org",
+                  "san": [
+                    "wiki.example.org"
+                  ],
+                  "issuer": "R11",
+                  "notBefore": "2026-09-01T00:00:00Z",
+                  "notAfter": "2026-11-30T00:00:00Z",
+                  "serial": "04a1b2c3",
+                  "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                  "selfSigned": false,
+                  "keyAlgorithm": "RSA",
+                  "keyBits": 2048
+                }
+              },
+              "probes": [],
+              "error": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ip": "192.0.2.9",
+      "status": "timeout",
+      "reason": null,
+      "observedAt": "2026-11-20T01:05:40Z",
+      "latencyMs": null,
+      "hostnames": [],
+      "error": {
+        "code": "host-timeout",
+        "message": "no result within hostTimeoutMs"
+      },
+      "ports": []
+    },
+    {
+      "ip": "192.0.2.20",
+      "status": "up",
+      "reason": "syn-ack",
+      "observedAt": "2026-11-20T01:04:02Z",
+      "latencyMs": 3,
+      "hostnames": [
+        {
+          "name": "db01.example.org",
+          "source": "ptr"
+        }
+      ],
+      "error": null,
+      "ports": [
+        {
+          "port": 3306,
+          "protocol": "tcp",
+          "state": "open",
+          "reason": "syn-ack",
+          "service": {
+            "name": "mysql",
+            "product": "MySQL",
+            "version": "8.0.36",
+            "extraInfo": null,
+            "cpe": [
+              "cpe:/a:oracle:mysql:8.0.36"
+            ],
+            "method": "probed",
+            "confidence": 10
+          },
+          "identity": {
+            "ttl": 64,
+            "sshHostKeySha256": null,
+            "tlsCertSha256": null
+          },
+          "banner": null,
+          "scripts": [],
+          "http": []
+        }
+      ]
+    }
+  ],
+  "edits": {
+    "hosts": [
+      {
+        "ip": "192.0.2.7",
+        "triage": "important",
+        "tags": [
+          "dmz",
+          "wiki"
+        ],
+        "note": "Public wiki, owned by the web team."
+      }
+    ],
+    "services": [
+      {
+        "ip": "192.0.2.20",
+        "protocol": "tcp",
+        "port": 3306,
+        "triage": "reviewed",
+        "tags": [
+          "database"
+        ],
+        "note": "",
+        "nameOverride": null,
+        "productOverride": "MySQL Community Server",
+        "versionOverride": null
+      }
+    ]
+  }
+}
