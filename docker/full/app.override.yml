@@ -1,0 +1,27 @@
+# Merged over docker-compose.yml by docker-compose.full.yml (include). Turns the `app` profile
+# on and runs the backend like `pnpm dev`: development mode with the .env.example secrets, so the
+# README accounts work. Local testing only. docker/.env still wins when it sets a secret.
+x-full-env: &full-env
+  NODE_ENV: development
+  JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-change-me-in-production}
+  DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-ZGV2LW9ubHktZGF0YS1rZXktY2hhbmdlLW1lLTAwMDA=}
+  WORKER_TOKEN: ${WORKER_TOKEN:-dev-only-worker-token-change-me}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin-change-me-now}
+  # The defaults plus the lab's own ports (81 NPM, 3000 Gitea, 5672/15672 RabbitMQ, 8474/8666 Toxiproxy).
+  SCAN_DEFAULT_PORTS: ${SCAN_DEFAULT_PORTS:-21,22,23,25,53,80,81,110,111,135,139,143,443,445,993,995,1433,1521,2049,3000,3306,3389,5432,5672,5900,6379,8000,8080,8443,8474,8666,9200,15672,27017}
+  SCAN_DEFAULT_MAX_RATE: ${SCAN_DEFAULT_MAX_RATE:-500}
+
+services:
+  backend-migrate:
+    profiles: !reset []
+    environment: *full-env
+
+  backend:
+    profiles: !reset []
+    environment: *full-env
+    # Development mode also logs to logs/dev.log; /app belongs to root in the image.
+    tmpfs:
+      - /app/logs:mode=1777
+
+  frontend:
+    profiles: !reset []
