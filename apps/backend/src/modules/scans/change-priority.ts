@@ -37,9 +37,11 @@ function serviceRow(row: RowFacts): Rated {
   return row.port !== null && RISKY_PORTS.has(row.port) ? high("risky-port") : medium("new-service");
 }
 
-/** Lost `Secure` or `HttpOnly`: the flags are listed as `Secure, HttpOnly, SameSite=…`. */
+/** Cookie flags are listed as `Secure, HttpOnly, SameSite=…`. */
+const flags = (value: string | null) => new Set((value ?? "").split(", "));
+
+/** Lost `Secure` or `HttpOnly`. */
 function weakened(before: string | null, after: string | null): boolean {
-  const flags = (value: string | null) => new Set((value ?? "").split(", "));
   const now = flags(after);
   return [...flags(before)].some((flag) => (flag === "Secure" || flag === "HttpOnly") && !now.has(flag));
 }
