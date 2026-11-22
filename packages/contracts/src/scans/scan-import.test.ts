@@ -78,6 +78,52 @@ describe("readScanJson", () => {
     expect(read.ok && read.warnings).toEqual([{ code: "empty_result", position: 1, detail: IDS.jobId }]);
   });
 
+  it("fills the keys an older or hand-written file leaves out", () => {
+    const { coverage: _coverage, edits: _edits, ...complete } = document();
+    const older = {
+      ...complete,
+      hosts: [
+        // Written before ports had `tls`, and by hand: only what somebody knew.
+        {
+          ip: "10.0.5.7",
+          status: "up",
+          ports: [{ port: 22 }, { port: 80, http: [{ scheme: "http", url: "http://10.0.5.7/" }] }],
+        },
+        { ip: "10.0.5.9", status: "timeout" },
+      ],
+    };
+
+    const read = readScanJson(older);
+
+    if (!read.ok || read.import.inputFormat !== "subsurf-scan") throw new Error("Expected a document");
+    expect(read.import.coverage).toEqual([]);
+    expect(read.import.edits).toEqual({ hosts: [], services: [] });
+    const [host, other] = read.import.hosts;
+    expect(other).toMatchObject({ status: "timeout", hostnames: [], ports: [], error: null });
+    expect(host.ports[0]).toEqual({
+      port: 22,
+      protocol: "tcp",
+      state: "open",
+      reason: null,
+      service: null,
+      identity: { ttl: null, sshHostKeySha256: null, tlsCertSha256: null },
+      banner: null,
+      scripts: [],
+      http: [],
+      tls: [],
+    });
+    expect(host.ports[1].http[0]).toMatchObject({
+      finalUrl: "http://10.0.5.7/",
+      statusCode: null,
+      headers: [],
+      body: null,
+    });
+    // What is there is still validated.
+    expect(codes(readScanJson({ ...older, hosts: [{ ip: "10.0.5.7", status: "open" }] }))).toEqual([
+      "invalid_document",
+    ]);
+  });
+
   it("says why a file cannot be imported", () => {
     const other = buildWorkerResult({ ...IDS, scanId: "0193a000-0000-7000-8000-000000000009" });
     const [wiki] = buildWorkerResult(IDS).hosts;

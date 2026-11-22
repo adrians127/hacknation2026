@@ -9950,6 +9950,131 @@
                                     ]
                                   }
                                 },
+                                "tls": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "vhost": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ],
+                                        "minLength": 1,
+                                        "maxLength": 253
+                                      },
+                                      "version": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "cipher": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "alpn": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "cert": {
+                                        "type": [
+                                          "object",
+                                          "null"
+                                        ],
+                                        "properties": {
+                                          "subjectCn": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "san": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "issuer": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "notBefore": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "format": "date-time"
+                                          },
+                                          "notAfter": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "format": "date-time"
+                                          },
+                                          "serial": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "sha256": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "pattern": "^[0-9a-f]{64}$"
+                                          },
+                                          "selfSigned": {
+                                            "type": [
+                                              "boolean",
+                                              "null"
+                                            ]
+                                          },
+                                          "keyAlgorithm": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "keyBits": {
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ],
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "subjectCn",
+                                          "san",
+                                          "issuer",
+                                          "notBefore",
+                                          "notAfter",
+                                          "serial",
+                                          "sha256",
+                                          "selfSigned",
+                                          "keyAlgorithm",
+                                          "keyBits"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "vhost",
+                                      "version",
+                                      "cipher",
+                                      "alpn",
+                                      "cert"
+                                    ]
+                                  }
+                                },
                                 "http": {
                                   "type": "array",
                                   "items": {
@@ -10376,6 +10501,7 @@
                                 "identity",
                                 "banner",
                                 "scripts",
+                                "tls",
                                 "http"
                               ]
                             },

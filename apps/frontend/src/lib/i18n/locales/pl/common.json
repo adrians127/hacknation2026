@@ -388,7 +388,7 @@
         "down": "Nieaktywne",
         "noAnswer": "Brak odpowiedzi",
         "openPorts": "Otwarte porty",
-        "httpEndpoints": "Punkty końcowe HTTP",
+        "httpEndpoints": "Endpointy HTTP",
         "edits": "Edycje w pliku",
         "editsValue": "Hosty: {{hosts, number}} · Usługi: {{services, number}}",
         "cannotImport": "Tego pliku nie można zaimportować.",

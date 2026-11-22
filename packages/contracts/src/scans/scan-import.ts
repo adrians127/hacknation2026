@@ -134,6 +134,67 @@ const schemaIssues = (
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const HOST_DEFAULTS = {
+  reason: null,
+  observedAt: null,
+  latencyMs: null,
+  hostnames: [],
+  error: null,
+  ports: [],
+};
+const PORT_DEFAULTS = {
+  protocol: "tcp",
+  state: "open",
+  reason: null,
+  service: null,
+  identity: { ttl: null, sshHostKeySha256: null, tlsCertSha256: null },
+  banner: null,
+  scripts: [],
+  http: [],
+  tls: [],
+};
+const ENDPOINT_DEFAULTS = {
+  vhost: null,
+  statusCode: null,
+  title: null,
+  headers: [],
+  cookies: [],
+  redirects: [],
+  body: null,
+  favicon: null,
+  tls: null,
+  probes: [],
+  error: null,
+};
+
+const filled = (defaults: Record<string, unknown>, value: unknown, more?: (item: Record<string, unknown>) => object) =>
+  isRecord(value) ? { ...defaults, ...value, ...more?.({ ...defaults, ...value }) } : value;
+
+const each = (list: unknown, fill: (item: unknown) => unknown) =>
+  Array.isArray(list) ? list.map(fill) : list;
+
+/**
+ * A host with the keys an older or hand-written file leaves out set to "nothing observed". The
+ * result format grows with every worker, and a file exported before a key existed must still
+ * import; what is there is validated as strictly as ever.
+ */
+export function fillHostDefaults(host: unknown): unknown {
+  return filled(HOST_DEFAULTS, host, ({ ports }) => ({
+    ports: each(ports, (port) =>
+      filled(PORT_DEFAULTS, port, ({ http }) => ({
+        http: each(http, (endpoint) =>
+          filled(ENDPOINT_DEFAULTS, endpoint, ({ url, finalUrl }) => ({ finalUrl: finalUrl ?? url })),
+        ),
+      })),
+    ),
+  }));
+}
+
+const withHostDefaults = (file: Record<string, unknown>) => ({
+  ...file,
+  hosts: each(file.hosts, fillHostDefaults),
+});
+
 function blockRange(block: string): Ipv4Range {
   if (block.includes("/")) return cidrToRange(parseCidr(block));
   const address = ipv4ToInt(block);
@@ -159,7 +220,9 @@ const finalStatus = (status: ScanStatus): ImportedScanFacts["status"] =>
 
 function readDocument(data: Record<string, unknown>): ScanImportRead {
   if (data.version !== SCAN_EXPORT_VERSION) return failed("unsupported_version", String(data.version));
-  const parsed = ScanExportDocumentSchema.safeParse(data);
+  const parsed = ScanExportDocumentSchema.safeParse(
+    withHostDefaults({ coverage: [], edits: { hosts: [], services: [] }, ...data }),
+  );
   if (!parsed.success) return { ok: false, errors: schemaIssues("invalid_document", parsed.error, null) };
   const { scan, coverage, hosts, edits } = parsed.data;
   const duplicate = firstDuplicate(hosts.map((host) => host.ip));
@@ -191,7 +254,7 @@ function readWorkerResults(items: readonly unknown[]): ScanImportRead {
   const results: WorkerResult[] = [];
   const warnings: ScanImportIssue[] = [];
   for (const [index, item] of items.entries()) {
-    const parsed = WorkerResultSchema.safeParse(item);
+    const parsed = WorkerResultSchema.safeParse(isRecord(item) ? withHostDefaults(item) : item);
     if (!parsed.success) return { ok: false, errors: schemaIssues("invalid_result", parsed.error, index) };
     if (parsed.data.hosts.length === 0) {
       warnings.push({ code: "empty_result", position: index, detail: parsed.data.scan.jobId });
@@ -404,6 +467,7 @@ export function readScanCsv(text: string): ScanImportRead {
         banner: null,
         scripts: [],
         http: [],
+        tls: [],
       };
       host.ports.push(port);
       const edit = cellEdits(cell("service_triage"), cell("service_tags"), cell("service_note"));
