@@ -241,6 +241,19 @@ void test_config() {
         threw = true;
     }
     check(threw, "repeated stage");
+    const auto caps = parse_worker_rate_caps("nmap=100, other = 5000");
+    check(caps.size() == 2 && caps[0].name == "nmap" && caps[0].rate == 100 && caps[1].rate == 5000,
+          "worker rate caps");
+    check(parse_worker_rate_caps("").empty(), "no worker rate caps");
+    for (const char* bad : {"nmap", "nmap=0", "nmap=x", "=5"}) {
+        threw = false;
+        try {
+            (void)parse_worker_rate_caps(bad);
+        } catch (const std::exception&) {
+            threw = true;
+        }
+        check(threw, std::string{"rejects rate cap "} + bad);
+    }
     check(random_seed() < (std::uint64_t{1} << 53), "seed below 2^53");
 }
 

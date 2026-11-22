@@ -2,6 +2,8 @@
 
 A **C++23** orchestrator for the scan workers. It takes a **job list** (the format the backend's lease endpoint will return), splits every job into **tasks**, runs one independent worker process per task and saves every worker result to files. Tasks on disjoint `IP:port`s run in parallel; tasks sharing one run one after another, in pipeline order (see [Scheduling](#scheduling-what-may-run-in-parallel)).
 
+It runs **masscan-worker** (discovery) and **nmap-worker** (service detection on the hosts and ports masscan found), masscan first wherever their `IP:port`s overlap.
+
 For now it has **no backend connection**: the job list comes from a file and results go to disk. The long poll, heartbeats and forwarding results to the backend are the next step; the file layout below is already shaped for that (one `task-NNN.result.json` = one result to forward).
 
 ## Run (Docker)
@@ -23,7 +25,7 @@ WORKER_MANAGER_MAX_PARALLEL=4 MASSCAN_WORKER_LOG_LEVEL=debug pnpm workers:manage
 
 **Edit the targets in `example.json` first** (it scans `192.168.1.0/24`); scan only networks you are allowed to scan. The container runs as `${WORKER_UID:-1000}:${WORKER_GID:-1000}` so result files belong to you; set both if your uid is not 1000. Like masscan-worker it uses `network_mode: host` and `NET_RAW`/`NET_ADMIN` (Linux hosts only).
 
-The image is built from `apps/workers/` and contains `worker-manager`, `masscan-worker` and `masscan`. Both projects' tests run during the image build.
+The image is built from `apps/workers/` and contains `worker-manager`, `masscan-worker`, `nmap-worker`, `masscan` and `nmap`. All three projects' tests run during the image build. The example has two masscan jobs and one nmap job; nmap job ids (`job_id`, `scan_id`) must be UUIDs, as the result contract requires.
 
 ## CLI
 
@@ -105,7 +107,8 @@ A held-back task is logged once with the reason (`task held back task_id=svc/1 r
 Every worker is an independent binary with the same interface, so the manager needs no worker-specific code beyond `split`:
 
 - `<binary> --input FILE --output FILE`; logs on stderr; a result JSON written **in every case**.
-- Input: the job's `params` plus a common envelope, `job_id`, `scan_id`, `lease_id`, `task_id` (`<job_id>/<index>`), `task_index`, `task_count`, and `rate`, the packets per second the scheduler granted (the worker must not exceed it). Workers ignore fields they do not know.
+- `SIGTERM` stops the scan and still writes a `partial` result (the manager signals the worker's whole process group).
+- Input: the job's `params` plus a common envelope, `job_id`, `scan_id`, `lease_id`, `task_id` (`<job_id>/<index>`), `task_index`, `task_count`, `rate` (the packets per second the scheduler granted; the worker must not exceed it) and `max_duration_seconds` (from the job's `deadline`, at most 7 days). Workers ignore fields they do not know.
 - Output: the shared result format of [`docs/worker-result-format.md`](../../../docs/worker-result-format.md). The manager reads `scan.status` (`completed` / `partial` / `failed`), `scan.error` and `scan.counts`.
 - The worker enforces `max_duration_seconds` itself. As a backstop the manager sends `SIGTERM` once a task overruns it by `WORKER_MANAGER_KILL_GRACE`, and `SIGKILL` 10 s later.
 
@@ -130,7 +133,7 @@ Statuses: a task is `completed`, `partial`, `failed` or `cancelled` (never start
 
 `WORKER_MANAGER_MAX_RATE` is one packet budget (packets per second) for everything the manager runs at once. The scheduler hands it out in queue order and writes each task's share into its input as `rate`:
 
-- The first ready task takes **all it may**: its job's `params.rate` if set (the cap for all tasks of that job together), otherwise **everything that is free**.
+- The first ready task takes **all it may**: its job's `params.rate` if set (the cap for all tasks of that job together) and its worker's `WORKER_MANAGER_WORKER_MAX_RATE`, otherwise **everything that is free**.
 - The next task gets what is left, and so on. A task needs at least `WORKER_MANAGER_MIN_TASK_RATE` (or its job's `rate`, if lower) to start.
 - If the first ready task in the queue cannot get that minimum, the free budget is **kept for it**: tasks behind it do not take it. When a task finishes, its share goes back to the pool and the queue moves on.
 - A running task keeps the rate it started with (masscan cannot change it mid-scan).
@@ -141,9 +144,10 @@ Example with a budget of 1000: job `x` without a rate starts at 1000; `y` (`rate
 
 | Variable | Default | Description |
 |---|---|---|
-| `WORKER_MANAGER_WORKERS` | `masscan=masscan-worker` | `name=binary` pairs, comma-separated. A binary without `/` is looked up in `PATH`. The image sets `masscan=/usr/local/bin/masscan-worker` |
+| `WORKER_MANAGER_WORKERS` | `masscan=masscan-worker` | `name=binary` pairs, comma-separated. A binary without `/` is looked up in `PATH`. The image sets `masscan=/usr/local/bin/masscan-worker,nmap=/usr/local/bin/nmap-worker` |
 | `WORKER_MANAGER_STAGES` | `masscan,nmap` | Pipeline order of the workers; on overlapping `IP:port`s a later one waits for the earlier ones. See [Scheduling](#scheduling-what-may-run-in-parallel) |
 | `WORKER_MANAGER_MAX_RATE` | `100000` | Packets per second for all running tasks together, see [Rate budget](#rate-budget). masscan-worker still clamps to its own `MASSCAN_WORKER_MAX_RATE` |
+| `WORKER_MANAGER_WORKER_MAX_RATE` | `nmap=100` | `name=pps` pairs: the most a worker can use, so its tasks never reserve more of the budget. For nmap-worker that is `NMAP_MAX_PARALLEL × NMAP_MAX_RATE_PER_PROCESS` (2 × 50) |
 | `WORKER_MANAGER_MIN_TASK_RATE` | `1000` | A task does not start with a smaller share (unless its job's `rate` is smaller) |
 | `WORKER_MANAGER_MAX_PARALLEL` | `2` | Worker processes running at once, across all jobs (an upper bound; overlapping tasks run one after another) |
 | `WORKER_MANAGER_MAX_TASKS_PER_JOB` | `16` | Hard cap on how far one job is split |
@@ -152,7 +156,7 @@ Example with a budget of 1000: job `x` without a rate starts at 1000; `y` (`rate
 | `WORKER_MANAGER_LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error` |
 | `WORKER_MANAGER_LOG_FORMAT` | `text` | `text` or `json` (worker lines become `worker.output` events) |
 
-Workers inherit the manager's environment, so `MASSCAN_WORKER_*` variables reach every masscan-worker.
+Workers inherit the manager's environment, so `MASSCAN_WORKER_*` and `NMAP_*` variables reach every worker. Compose sets `NMAP_SCAN_TYPE=syn` and `NMAP_PRIVILEGED=1`, as for the standalone nmap-worker.
 
 ## Build and test without Docker
 

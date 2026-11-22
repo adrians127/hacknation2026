@@ -37,6 +37,25 @@
         "wait_seconds": 3,
         "max_duration_seconds": 120
       }
+    },
+    {
+      "job_id": "0193a1ad-3333-7000-8000-000000000003",
+      "scan_id": "0193a0f2-1b2c-7d3e-8f40-516273849506",
+      "lease_id": "0193a1ad-4444-7000-8000-000000000004",
+      "lease_expires_at": null,
+      "heartbeat_interval_s": 60,
+      "deadline": null,
+      "worker": "nmap",
+      "split": { "strategy": "chunk", "max_items_per_task": 64 },
+      "params": {
+        "subnet": "192.168.1.0/24",
+        "max_duration_seconds": 300,
+        "limits": { "host_timeout_ms": 60000 },
+        "targets": [
+          { "ip": "192.168.1.1", "domains": [], "tcp_ports": [22, 53, 80, 443] },
+          { "ip": "192.168.1.10", "domains": [], "tcp_ports": [22, 445, 3389] }
+        ]
+      }
     }
   ]
 }

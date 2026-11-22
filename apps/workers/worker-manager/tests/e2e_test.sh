@@ -25,6 +25,8 @@ cat > "$work/jobs.json" <<'EOF'
       "split": { "strategy": "chunk", "max_items_per_task": 2 },
       "params": { "targets": [{"ip":"10.2.0.1"},{"ip":"10.2.0.2"},{"ip":"10.2.0.3"}] } },
     { "job_id": "fail-job", "worker": "fake", "params": { "targets": ["fail-me"] } },
+    { "job_id": "far-deadline", "worker": "fake", "deadline": "2099-01-01T00:00:00Z",
+      "params": { "targets": ["10.3.0.1"] } },
     { "job_id": "nmap-job", "worker": "nmap", "params": {} },
     { "job_id": "../escape", "worker": "fake", "params": {} }
   ]
@@ -54,8 +56,9 @@ expect ranges-job/task-002.input.json '"10.1.0.192/26"'
 expect chunk-job/job.json '"taskCount": 2'
 expect chunk-job/task-002.input.json '"10.2.0.3"'
 expect fail-job/job.json '"code": "scanner-failed"'
+expect far-deadline/task-001.input.json '"max_duration_seconds": 604800'  # 7 days, what workers accept
 expect nmap-job/job.json '"code": "unsupported-worker"'
-expect invalid-job-5/job.json '"code": "invalid-job"'
+expect invalid-job-6/job.json '"code": "invalid-job"'
 [ -s "$run_dir/shard-job/task-001.log" ] || fail "empty worker log"
 grep -q '\[shard-job/1\] fake-worker: started' "$work/manager.log" || fail "worker output not forwarded"
 [ ! -e "$work/escape" ] || fail "job_id escaped the run directory"

@@ -69,6 +69,14 @@ Example `job.json`:
 }
 ```
 
+**Time window:** `deadline` (UTC, fractional seconds allowed), `max_duration_seconds` (1 to 604800, counted from when the job is read), or both, in which case the earlier one applies. One of them is required.
+
+**Rate:** an optional top-level `rate` is the packets per second for the whole job, as with masscan-worker. It is split evenly across the parallel Nmap processes (fewer processes if `rate` is smaller than `max_parallel`), and it can only lower `limits.max_rate_per_process` and `NMAP_MAX_RATE_PER_PROCESS`, never raise them. The values used are in `scan.params.maxParallel` and `maxRatePerProcess`.
+
+**Stopping:** `SIGINT`/`SIGTERM` (Ctrl+C, `docker stop`, worker-manager) stop the scan instead of killing the worker: running Nmap processes are terminated, unfinished hosts are `cancelled`, and a `partial` result with `stopReason: "stop-requested"` is still written (exit code `0`). In HTTP mode a failed heartbeat stops the scan the same way, with `stopReason: "lease-lost"`.
+
+Fields worker-manager adds (`task_id`, `task_index`, `task_count`) are ignored. See [`worker-manager`](../worker-manager/README.md#worker-contract) for running this worker from a job list.
+
 The worker validates that every target is an IPv4 address within `subnet` and that each port is in `1..65535`. Duplicate IPs are rejected; duplicate ports and domains are removed. Job limits may lower the worker's configured maxima but cannot raise them. The legacy single `domain` field is accepted; `domains` takes precedence. Nmap receives only numeric IPs and assigned TCP ports.
 
 The result follows [`docs/worker-result-format.md`](../../../docs/worker-result-format.md): `scan` and `hosts`, camelCase keys, every field present, unknowns as `null` and empty lists as `[]`. `scan.params.ports` is the union of assigned ports across the job; each Nmap invocation scans only its target's ports. `scan.params.nmapArgs` lists arguments shared by all invocations.

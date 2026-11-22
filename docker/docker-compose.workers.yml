@@ -63,14 +63,14 @@ services:
       - NET_RAW
       - NET_ADMIN
 
-  # One-shot CLI (profile `cli`): reads a job list, splits it into tasks, runs masscan-worker
-  # for each and writes everything to worker-results/<run-id>/. See its README.
+  # One-shot CLI (profile `cli`): reads a job list, splits it into tasks, runs masscan-worker and
+  # nmap-worker for them and writes everything to worker-results/<run-id>/. See its README.
   #   docker compose -f docker/docker-compose.workers.yml run --rm --build worker-manager
   #   ... run --rm worker-manager --input /jobs/other.json --output-dir /results
   worker-manager:
     profiles: ["cli"]
     build:
-      # apps/workers, not the manager's own directory: the image also builds masscan-worker.
+      # apps/workers, not the manager's own directory: the image also builds both workers.
       context: ../apps/workers
       dockerfile: worker-manager/Dockerfile
       args:
@@ -87,6 +87,8 @@ services:
       WORKER_MANAGER_STAGES: ${WORKER_MANAGER_STAGES:-masscan,nmap}
       WORKER_MANAGER_MAX_RATE: ${WORKER_MANAGER_MAX_RATE:-100000}
       WORKER_MANAGER_MIN_TASK_RATE: ${WORKER_MANAGER_MIN_TASK_RATE:-1000}
+      # NMAP_MAX_PARALLEL x NMAP_MAX_RATE_PER_PROCESS below; keep them in step.
+      WORKER_MANAGER_WORKER_MAX_RATE: ${WORKER_MANAGER_WORKER_MAX_RATE:-nmap=100}
       WORKER_MANAGER_MAX_PARALLEL: ${WORKER_MANAGER_MAX_PARALLEL:-2}
       WORKER_MANAGER_MAX_TASKS_PER_JOB: ${WORKER_MANAGER_MAX_TASKS_PER_JOB:-16}
       WORKER_MANAGER_DEADLINE_MARGIN: ${WORKER_MANAGER_DEADLINE_MARGIN:-10}
@@ -96,6 +98,11 @@ services:
       MASSCAN_WORKER_DEFAULT_RATE: ${MASSCAN_WORKER_DEFAULT_RATE:-10000}
       MASSCAN_WORKER_MAX_RATE: ${MASSCAN_WORKER_MAX_RATE:-100000}
       MASSCAN_WORKER_MAX_TARGETS: ${MASSCAN_WORKER_MAX_TARGETS:-16777216}
+      NMAP_SCAN_TYPE: ${NMAP_SCAN_TYPE:-syn}
+      NMAP_MAX_PARALLEL: ${NMAP_MAX_PARALLEL:-2}
+      NMAP_MAX_RATE_PER_PROCESS: ${NMAP_MAX_RATE_PER_PROCESS:-50}
+      # Nmap checks this even when its binary already has the required file capabilities.
+      NMAP_PRIVILEGED: "1"
     volumes:
       # Mounted, not baked in: edit example.json (or add job lists) without a rebuild.
       - ../apps/workers/worker-manager/examples:/jobs:ro

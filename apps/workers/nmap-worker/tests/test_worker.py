@@ -1,11 +1,13 @@
 import datetime
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import textwrap
+import time
 import unittest
 
 
@@ -171,6 +173,74 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(process.returncode, 0)
         self.assertFalse(process.stdout)
         self.assertEqual(json.loads(destination.read_text())["scan"]["status"], "completed")
+
+    # worker-manager compatibility: the shared envelope (max_duration_seconds, rate, task_*)
+    # and stopping on SIGTERM.
+
+    def test_max_duration_seconds_replaces_deadline(self):
+        job = self.job([{"ip": "127.0.0.1", "tcp_ports": [80]}])
+        del job["deadline"]
+        job["max_duration_seconds"] = 30
+        code, result = self.run_job(job)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["scan"]["status"], "completed")
+
+    def test_time_window_is_required(self):
+        job = self.job([{"ip": "127.0.0.1", "tcp_ports": [80]}])
+        del job["deadline"]
+        code, result = self.run_job(job)
+        self.assertEqual(code, 2)
+        self.assertEqual(result["scan"]["error"]["code"], "invalid-job")
+
+    def test_manager_envelope_is_accepted(self):
+        job = self.job([{"ip": "127.0.0.1", "tcp_ports": [80]}])
+        job["deadline"] = job["deadline"].replace("Z", ".250Z")
+        job.update({"task_id": f'{job["job_id"]}/1', "task_index": 1, "task_count": 2})
+        code, result = self.run_job(job)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["scan"]["status"], "completed")
+
+    def test_rate_is_shared_by_parallel_processes(self):
+        targets = [{"ip": "127.0.0.1", "tcp_ports": [80]}, {"ip": "127.0.0.2", "tcp_ports": [80]}]
+        job = self.job(targets)
+        job["rate"] = 60
+        code, result = self.run_job(job)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["scan"]["params"]["maxParallel"], 2)
+        self.assertEqual(result["scan"]["params"]["maxRatePerProcess"], 30)
+        self.assertIn("30", result["scan"]["params"]["nmapArgs"])
+
+        job["rate"] = 1
+        code, result = self.run_job(job)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["scan"]["params"]["maxParallel"], 1)
+        self.assertEqual(result["scan"]["params"]["maxRatePerProcess"], 1)
+
+        job["rate"] = 100000  # never above NMAP_MAX_RATE_PER_PROCESS
+        code, result = self.run_job(job)
+        self.assertEqual(result["scan"]["params"]["maxRatePerProcess"], 50)
+
+    def test_sigterm_writes_partial_result(self):
+        targets = [{"ip": "127.0.0.1", "tcp_ports": [80]}, {"ip": "127.0.0.2", "tcp_ports": [80]}]
+        path = self.directory / "job.json"
+        destination = self.directory / "result.json"
+        path.write_text(json.dumps(self.job(targets, max_parallel=1)))
+        environment = os.environ.copy()
+        environment.update({"NMAP_BINARY": str(self.fake_nmap), "FAKE_NMAP_SLEEP_MS": "5000"})
+        # Like worker-manager: the worker leads its own process group and the whole group
+        # (worker and Nmap) gets the signal.
+        process = subprocess.Popen([str(WORKER), "--input", str(path), "--output",
+                                    str(destination)], env=environment, start_new_session=True,
+                                   stderr=subprocess.PIPE, text=True)
+        time.sleep(0.5)
+        os.killpg(process.pid, signal.SIGTERM)
+        _, stderr = process.communicate(timeout=10)
+        self.assertEqual(process.returncode, 0, stderr)
+        result = json.loads(destination.read_text())
+        self.assertEqual(result["scan"]["status"], "partial")
+        self.assertEqual(result["scan"]["stopReason"], "stop-requested")
+        self.assertEqual([host["status"] for host in result["hosts"]], ["cancelled", "cancelled"])
+        self.assertIn("stopping", stderr)
 
 
 if __name__ == "__main__":

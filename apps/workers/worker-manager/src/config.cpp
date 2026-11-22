@@ -87,6 +87,29 @@ std::vector<WorkerBinary> parse_worker_binaries(std::string_view text) {
     return workers;
 }
 
+std::vector<WorkerRateCap> parse_worker_rate_caps(std::string_view text) {
+    std::vector<WorkerRateCap> caps;
+    while (!text.empty()) {
+        const auto comma = text.find(',');
+        const std::string_view item = trim(text.substr(0, comma));
+        text = comma == std::string_view::npos ? std::string_view{} : text.substr(comma + 1);
+        if (item.empty()) continue;
+        const auto equals = item.find('=');
+        const std::string_view name = trim(item.substr(0, equals));
+        const std::string_view number =
+            equals == std::string_view::npos ? std::string_view{} : trim(item.substr(equals + 1));
+        std::uint64_t rate = 0;
+        const auto [end, ec] = std::from_chars(number.data(), number.data() + number.size(), rate);
+        if (name.empty() || number.empty() || ec != std::errc{} ||
+            end != number.data() + number.size() || rate == 0) {
+            throw std::runtime_error(std::format(
+                "WORKER_MANAGER_WORKER_MAX_RATE: '{}' is not name=packets-per-second", item));
+        }
+        caps.push_back({std::string{name}, rate});
+    }
+    return caps;
+}
+
 std::vector<std::string> parse_stages(std::string_view text) {
     std::vector<std::string> stages;
     while (!text.empty()) {
@@ -106,6 +129,8 @@ Config read_config() {
     return Config{
         .workers =
             parse_worker_binaries(env_or("WORKER_MANAGER_WORKERS", "masscan=masscan-worker")),
+        .worker_rate_caps =
+            parse_worker_rate_caps(env_or("WORKER_MANAGER_WORKER_MAX_RATE", "nmap=100")),
         .stages = parse_stages(env_or("WORKER_MANAGER_STAGES", "masscan,nmap")),
         .max_parallel = env_number("WORKER_MANAGER_MAX_PARALLEL", 2, 1, 256),
         .max_rate = env_number("WORKER_MANAGER_MAX_RATE", 100'000, 1, 100'000'000),

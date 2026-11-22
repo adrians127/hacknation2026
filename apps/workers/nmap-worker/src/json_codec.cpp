@@ -22,6 +22,8 @@ namespace {
 
 using Json = nlohmann::json;
 
+constexpr std::int64_t kMaxDurationSeconds = 7 * 24 * 3600;  // same bound as masscan-worker
+
 std::expected<int, Error> decimal(std::string_view input) {
     int value = 0;
     const auto [end, error] = std::from_chars(input.data(), input.data() + input.size(), value);
@@ -32,8 +34,22 @@ std::expected<int, Error> decimal(std::string_view input) {
 }
 
 std::expected<std::chrono::system_clock::time_point, Error> parse_deadline(std::string_view input) {
-    if (input.size() != 20 || input[4] != '-' || input[7] != '-' || input[10] != 'T' ||
-        input[13] != ':' || input[16] != ':' || input[19] != 'Z') {
+    // Optional fractional seconds (worker-manager writes milliseconds); they are dropped.
+    if (input.size() > 20 && input[19] == '.' && input.back() == 'Z') {
+        const auto fraction = input.substr(20, input.size() - 21);
+        if (fraction.empty() || !std::ranges::all_of(fraction, [](char c) {
+                return std::isdigit(static_cast<unsigned char>(c)) != 0;
+            })) {
+            return std::unexpected(Error{"invalid-deadline", "Invalid fractional seconds"});
+        }
+        input = input.substr(0, 19);
+    } else if (input.size() == 20 && input[19] == 'Z') {
+        input.remove_suffix(1);
+    } else {
+        return std::unexpected(Error{"invalid-deadline", "Deadline must be YYYY-MM-DDTHH:MM:SSZ"});
+    }
+    if (input[4] != '-' || input[7] != '-' || input[10] != 'T' || input[13] != ':' ||
+        input[16] != ':') {
         return std::unexpected(Error{"invalid-deadline", "Deadline must be YYYY-MM-DDTHH:MM:SSZ"});
     }
     const auto year = decimal(input.substr(0, 4));
@@ -192,18 +208,44 @@ std::expected<ScanJob, Error> parse_scan_job(std::string_view input,
         const auto lease_id = required_string(json, "lease_id");
         const auto scan_id = required_string(json, "scan_id");
         const auto subnet = required_string(json, "subnet");
-        const auto deadline_text = required_string(json, "deadline");
         if (!job_id) return std::unexpected(job_id.error());
         if (!lease_id) return std::unexpected(lease_id.error());
         if (!scan_id) return std::unexpected(scan_id.error());
         if (!is_uuid(*job_id) || !is_uuid(*scan_id))
             return std::unexpected(Error{"invalid-job", "job_id and scan_id must be UUIDs"});
         if (!subnet) return std::unexpected(subnet.error());
-        if (!deadline_text) return std::unexpected(deadline_text.error());
-        const auto deadline = parse_deadline(*deadline_text);
         const auto network = parse_subnet(*subnet);
-        if (!deadline) return std::unexpected(deadline.error());
         if (!network) return std::unexpected(network.error());
+
+        // The time window: `deadline` (backend lease), `max_duration_seconds` (worker-manager,
+        // as for masscan-worker) or both, in which case the earlier one wins. One is required.
+        std::optional<std::chrono::system_clock::time_point> deadline;
+        if (json.contains("deadline") && !json.at("deadline").is_null()) {
+            if (!json.at("deadline").is_string())
+                return std::unexpected(Error{"invalid-deadline", "deadline must be a string"});
+            const auto parsed = parse_deadline(json.at("deadline").get<std::string>());
+            if (!parsed) return std::unexpected(parsed.error());
+            deadline = *parsed;
+        }
+        if (json.contains("max_duration_seconds") && !json.at("max_duration_seconds").is_null()) {
+            const auto seconds = positive_limit(json, "max_duration_seconds");
+            if (!seconds) return std::unexpected(seconds.error());
+            if (*seconds > kMaxDurationSeconds)
+                return std::unexpected(Error{"invalid-job", "max_duration_seconds exceeds 7 days"});
+            const auto until = std::chrono::system_clock::now() + std::chrono::seconds{*seconds};
+            deadline = deadline ? std::min(*deadline, until) : until;
+        }
+        if (!deadline)
+            return std::unexpected(
+                Error{"invalid-job", "deadline or max_duration_seconds is required"});
+
+        std::optional<std::uint32_t> rate;
+        if (json.contains("rate") && !json.at("rate").is_null()) {
+            const auto value = positive_limit(json, "rate");
+            if (!value) return std::unexpected(value.error());
+            rate = static_cast<std::uint32_t>(
+                std::min<std::int64_t>(*value, std::numeric_limits<std::uint32_t>::max()));
+        }
         if (!json.contains("targets") || !json.at("targets").is_array() ||
             json.at("targets").empty() || json.at("targets").size() > 1024)
             return std::unexpected(Error{"invalid-job", "targets must contain 1 to 1024 hosts"});
@@ -322,7 +364,7 @@ std::expected<ScanJob, Error> parse_scan_job(std::string_view input,
             targets.push_back(std::move(target));
         }
         return ScanJob{.job_id = *job_id, .lease_id = *lease_id, .scan_id = *scan_id,
-                       .subnet = *subnet, .deadline = *deadline, .limits = limits,
+                       .subnet = *subnet, .deadline = *deadline, .limits = limits, .rate = rate,
                        .probe_paths = std::move(probe_paths), .targets = std::move(targets)};
     } catch (const Json::exception& error) {
         return std::unexpected(Error{"invalid-json", error.what()});

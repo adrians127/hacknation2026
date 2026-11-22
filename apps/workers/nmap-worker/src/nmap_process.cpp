@@ -89,6 +89,34 @@ private:
     int error_ = 0;
 };
 
+class SpawnAttributes {
+public:
+    SpawnAttributes()
+        : error_(posix_spawnattr_init(&attributes_)), is_initialized_(error_ == 0) {
+        if (!is_initialized_) return;
+        sigset_t none{};
+        sigemptyset(&none);
+        error_ = posix_spawnattr_setsigmask(&attributes_, &none);
+        if (error_ == 0) {
+            error_ = posix_spawnattr_setflags(&attributes_, POSIX_SPAWN_SETSIGMASK);
+        }
+    }
+    SpawnAttributes(const SpawnAttributes&) = delete;
+    SpawnAttributes& operator=(const SpawnAttributes&) = delete;
+    ~SpawnAttributes() noexcept {
+        if (is_initialized_) posix_spawnattr_destroy(&attributes_);
+    }
+
+    [[nodiscard]] bool is_valid() const noexcept { return error_ == 0; }
+    [[nodiscard]] int error() const noexcept { return error_; }
+    [[nodiscard]] posix_spawnattr_t* get() noexcept { return &attributes_; }
+
+private:
+    posix_spawnattr_t attributes_{};
+    int error_;
+    bool is_initialized_;
+};
+
 class ChildProcess {
 public:
     explicit ChildProcess(pid_t pid) : pid_(pid) {}
@@ -187,9 +215,16 @@ std::expected<NmapOutput, Error> run_nmap(const Target& target, const ScanLimits
             "spawn-failed", std::error_code{action_error, std::generic_category()}.message()});
     }
 
+    // The worker blocks SIGINT/SIGTERM for its signal thread and the mask survives exec;
+    // Nmap must start with none blocked, or terminate() could not stop it.
+    SpawnAttributes attributes;
+    if (!attributes.is_valid()) {
+        return std::unexpected(Error{
+            "spawn-failed", std::error_code{attributes.error(), std::generic_category()}.message()});
+    }
     pid_t pid = -1;
-    const int spawn_error = posix_spawnp(&pid, config.binary.c_str(), actions.get(), nullptr,
-                                         argument_pointers.data(), environ);
+    const int spawn_error = posix_spawnp(&pid, config.binary.c_str(), actions.get(),
+                                         attributes.get(), argument_pointers.data(), environ);
     if (spawn_error != 0) {
         return std::unexpected(
             Error{"spawn-failed", std::error_code{spawn_error, std::generic_category()}.message()});

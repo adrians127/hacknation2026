@@ -28,23 +28,32 @@ std::string all_ports(const ScanJob& job) {
 }  // namespace
 
 JobResult scan_job(const ScanJob& job, const NmapProcessConfig& process_config,
-                   std::stop_token stop_token) {
+                   std::stop_token stop_token, const std::string& stop_reason) {
     const auto started = std::chrono::steady_clock::now();
     const auto remaining = job.deadline - std::chrono::system_clock::now();
     const auto deadline =
         started + std::chrono::duration_cast<std::chrono::steady_clock::duration>(remaining);
+    // A job `rate` is the total for all processes: fewer processes if it is tiny, and each one
+    // gets an equal share (never more than the configured per-process maximum).
+    ScanLimits limits = job.limits;
+    auto worker_count = std::min(limits.max_parallel, job.targets.size());
+    if (job.rate) {
+        worker_count = std::max<std::size_t>(std::min<std::size_t>(worker_count, *job.rate), 1);
+        limits.max_rate_per_process = std::min(
+            limits.max_rate_per_process,
+            std::max<std::uint32_t>(*job.rate / static_cast<std::uint32_t>(worker_count), 1));
+    }
+    limits.max_parallel = worker_count;
     JobResult result{.job_id = job.job_id, .lease_id = job.lease_id, .scan_id = job.scan_id,
                      .started_at = std::chrono::system_clock::now(),
-                     .subnet = job.subnet, .ports = all_ports(job), .limits = job.limits,
+                     .subnet = job.subnet, .ports = all_ports(job), .limits = limits,
                      .nmap_args = {"-n", "-Pn", process_config.scan_type, "-sV", "--version-light",
-                                   "--max-rate", std::to_string(job.limits.max_rate_per_process)}};
+                                   "--max-rate", std::to_string(limits.max_rate_per_process)}};
     result.hosts.reserve(job.targets.size());
     for (const auto& target : job.targets)
         result.hosts.push_back(HostResult{.ip = target.ip, .domains = target.domains});
 
     std::atomic_size_t next_target{0};
-    const auto worker_count = std::min(job.limits.max_parallel, job.targets.size());
-    result.limits.max_parallel = worker_count;
     std::vector<std::jthread> threads;
     threads.reserve(worker_count);
     for (std::size_t worker = 0; worker < worker_count; ++worker) {
@@ -58,8 +67,8 @@ JobResult scan_job(const ScanJob& job, const NmapProcessConfig& process_config,
                     HostResult host{.ip = target.ip, .domains = target.domains};
                     try {
                         const auto process_deadline = std::min(
-                            deadline, std::chrono::steady_clock::now() + job.limits.host_timeout);
-                        const auto output = run_nmap(target, job.limits, process_config,
+                            deadline, std::chrono::steady_clock::now() + limits.host_timeout);
+                        const auto output = run_nmap(target, limits, process_config,
                                                      process_deadline, stop_token);
                         if (!output) {
                             if (stop_token.stop_requested() ||
@@ -114,7 +123,7 @@ JobResult scan_job(const ScanJob& job, const NmapProcessConfig& process_config,
     });
     result.status = complete ? "completed" : "partial";
     if (!complete) {
-        if (stop_token.stop_requested()) result.stop_reason = "lease-lost";
+        if (stop_token.stop_requested()) result.stop_reason = stop_reason;
         else if (std::chrono::steady_clock::now() >= deadline) result.stop_reason = "deadline";
     }
     const bool all_spawn_failed = std::ranges::all_of(result.hosts, [](const HostResult& host) {

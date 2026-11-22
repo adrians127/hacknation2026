@@ -144,13 +144,20 @@ std::int64_t count_field(const Json& counts, const char* key) {
     return (it != counts.end() && it->is_number_integer()) ? it->get<std::int64_t>() : 0;
 }
 
-// A job's `rate` caps all its tasks together; without one it takes whatever budget is free.
-std::optional<std::uint64_t> job_rate_cap(const Json& params) {
-    const auto rate = params.find("rate");
-    if (rate == params.end() || !rate->is_number_unsigned() || rate->get<std::uint64_t>() == 0) {
-        return std::nullopt;
+// A job's `rate` caps all its tasks together, and so does its worker's cap (what it can use
+// at most); without either it takes whatever budget is free.
+std::optional<std::uint64_t> task_rate_cap(const Json& params, const std::string& worker,
+                                           std::span<const WorkerRateCap> worker_caps) {
+    std::optional<std::uint64_t> cap;
+    if (const auto rate = params.find("rate");
+        rate != params.end() && rate->is_number_unsigned() && rate->get<std::uint64_t>() > 0) {
+        cap = rate->get<std::uint64_t>();
     }
-    return rate->get<std::uint64_t>();
+    for (const WorkerRateCap& worker_cap : worker_caps) {
+        if (worker_cap.name == worker)
+            cap = std::min(cap.value_or(worker_cap.rate), worker_cap.rate);
+    }
+    return cap;
 }
 
 std::string_view job_status(const JobRun& run) {
@@ -435,7 +442,7 @@ int run(const CliOptions& options) {
         ScheduledTask entry{
             .task_id = task.task_id,
             .job = ref.run_index,
-            .rate_cap = job_rate_cap(run.job->params),
+            .rate_cap = task_rate_cap(run.job->params, run.job->worker, config.worker_rate_caps),
             .stage = stage == config.stages.end()
                          ? std::nullopt
                          : std::optional{static_cast<std::size_t>(stage - config.stages.begin())},

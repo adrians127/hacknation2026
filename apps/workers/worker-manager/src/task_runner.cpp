@@ -26,6 +26,8 @@ constexpr auto kTermToKill = std::chrono::seconds{10};
 // After SIGKILL, stop waiting for EOF: a grandchild may still hold the pipe open.
 constexpr auto kKillToGiveUp = std::chrono::seconds{5};
 constexpr int kExecFailed = 127;
+// The longest max_duration_seconds every worker accepts (masscan-worker and nmap-worker).
+constexpr auto kMaxWorkerDuration = std::chrono::seconds{7 * 24 * 3600};
 
 TaskStatus status_from_result(const Json& result) {
     const auto scan = result.find("scan");
@@ -113,9 +115,10 @@ TaskOutcome run_task_impl(const TaskContext& context, const Logger& logger) {
                                                          format_timestamp(*context.job.deadline),
                                                          context.deadline_margin));
         }
-        if (!time_limit || remaining < *time_limit) {
-            time_limit = remaining;
-            input["max_duration_seconds"] = remaining.count();
+        const auto window = std::min(remaining, kMaxWorkerDuration);
+        if (!time_limit || window < *time_limit) {
+            time_limit = window;
+            input["max_duration_seconds"] = window.count();
         }
     }
 

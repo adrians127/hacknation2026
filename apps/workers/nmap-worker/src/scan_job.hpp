@@ -33,8 +33,12 @@ struct ScanJob {
     std::string lease_id{};
     std::string scan_id{};
     std::string subnet{};
+    // The earlier of `deadline` and now + `max_duration_seconds`.
     std::chrono::system_clock::time_point deadline{};
     ScanLimits limits{};
+    // Total packets per second for the job (worker-manager's shared `rate`), split across the
+    // parallel Nmap processes; it only ever lowers `limits`.
+    std::optional<std::uint32_t> rate{};
     std::vector<std::string> probe_paths{};
     std::vector<Target> targets{};
 };
