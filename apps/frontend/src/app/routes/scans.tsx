@@ -1,4 +1,4 @@
-import { Columns2, Play } from "lucide-react";
+import { Columns2, Play, Upload } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
@@ -60,6 +60,14 @@ export function ScansRoute() {
               <Columns2 />
               {t("scans.compare.open")}
             </Button>
+            <GuardedButton
+              variant="outline"
+              permissions={["scans:create"]}
+              onClick={() => void navigate("/app/scans/import")}
+            >
+              <Upload />
+              {t("scans.import.open")}
+            </GuardedButton>
             {/* A scan runs a pipeline; the dialog also links to the target import. */}
             <GuardedButton permissions={["scans:run"]} onClick={() => setIsStarting(true)}>
               <Play />

@@ -210,12 +210,6 @@
         "hint": "Tablica adresów albo obiektów z polami target i note, opcjonalnie pod kluczem targets.",
         "sample": "Pobierz przykładowy JSON"
       },
-      "file": {
-        "label": "Plik",
-        "selected": "{{name}} ({{size}} kB)",
-        "tooLarge": "Plik jest większy niż 10 MB.",
-        "unreadable": "Nie udało się odczytać pliku."
-      },
       "preview": {
         "title": "Podgląd",
         "empty": "Wpisz cele albo wybierz plik, aby zobaczyć, co zostanie zaimportowane.",
@@ -376,6 +370,94 @@
         "jobs": "Zadania"
       }
     },
+    "export": {
+      "button": "Eksportuj {{format}}",
+      "failed": "Eksport nie powiódł się: {{message}}"
+    },
+    "import": {
+      "open": "Importuj wyniki",
+      "title": "Import wyników skanu",
+      "subtitle": "Zamień plik z wynikami w skan. Dołączy do pozostałych skanów w porównaniach, w historii hostów i na pulpicie.",
+      "hint": "JSON: plik z przycisku Eksportuj JSON na stronie skanu albo jeden lub więcej wyników workera. CSV: kolumny z Eksportuj CSV; wymagana jest tylko kolumna z adresem.",
+      "samples": {
+        "json": "Pobierz przykładowy JSON",
+        "csv": "Pobierz przykładowy CSV"
+      },
+      "empty": "Wybierz plik, aby zobaczyć, co zawiera.",
+      "reading": "Odczytywanie pliku…",
+      "formats": {
+        "subsurf-scan": "Eksport skanu (JSON)",
+        "worker-results": "Wyniki workera (JSON)",
+        "csv": "Tabela wyników (CSV)"
+      },
+      "preview": {
+        "title": "Zawartość pliku",
+        "format": "Format",
+        "ran": "Skan wykonano",
+        "ranUnknown": "Brak informacji. Skan zostanie umieszczony w chwili importu.",
+        "placement": "Skan zajmie miejsce wśród pozostałych według czasu wykonania, więc nowszy skan może być odtąd porównywany właśnie z nim.",
+        "addresses": "Adresy",
+        "up": "Aktywne hosty",
+        "down": "Nieaktywne",
+        "noAnswer": "Brak odpowiedzi",
+        "openPorts": "Otwarte porty",
+        "httpEndpoints": "Endpointy HTTP",
+        "edits": "Edycje w pliku",
+        "editsValue": "Hosty: {{hosts, number}} · Usługi: {{services, number}}",
+        "cannotImport": "Tego pliku nie można zaimportować.",
+        "warningsTitle_one": "{{count, number}} fragment pliku zostanie pominięty",
+        "warningsTitle_few": "{{count, number}} fragmenty pliku zostaną pominięte",
+        "warningsTitle_many": "{{count, number}} fragmentów pliku zostanie pominiętych",
+        "warningsTitle_other": "{{count, number}} fragmentu pliku zostanie pominięte",
+        "position": "Wiersz",
+        "problem": "Problem",
+        "more_one": "…i jeszcze {{count, number}}",
+        "more_few": "…i jeszcze {{count, number}}",
+        "more_many": "…i jeszcze {{count, number}}",
+        "more_other": "…i jeszcze {{count, number}}"
+      },
+      "issues": {
+        "not_json": "Plik nie jest poprawnym dokumentem JSON.",
+        "unknown_format": "To nie jest ani eksport skanu, ani wynik workera.",
+        "unsupported_version": "Plik zapisała nowsza wersja eksportu (wersja {{detail}}).",
+        "invalid_document": "Eksport skanu nie zgadza się ze swoim formatem: {{detail}}",
+        "invalid_result": "Wynik workera nie zgadza się z formatem wyników: {{detail}}",
+        "multiple_scans": "Wyniki należą do więcej niż jednego skanu. Zaimportuj wyniki każdego skanu osobno.",
+        "duplicate_address": "Adres {{detail}} występuje dwa razy.",
+        "nothing_to_import": "Plik nie zawiera żadnych adresów.",
+        "too_many_addresses": "Plik obejmuje {{detail}} adresów; limit to 1 048 576.",
+        "too_many_up_hosts": "Plik zawiera {{detail}} aktywnych hostów; limit to 20 000.",
+        "too_many_results": "Plik zawiera {{detail}} wyników workera; limit to 4096.",
+        "missing_ip_column": "Brak kolumny z adresem. Jedna z kolumn musi nazywać się ip.",
+        "empty_result": "Wynik workera bez hostów.",
+        "invalid_row": "Nie da się odczytać ({{detail}}).",
+        "conflicting_status": "Dwa statusy dla jednego adresu ({{detail}}). Liczy się pierwszy."
+      },
+      "name": {
+        "label": "Nazwa",
+        "hint": "Widoczna na liście skanów. Domyślnie nazwa pliku."
+      },
+      "edits": {
+        "label": "Zastosuj notatki, tagi, ocenę i korekty z pliku",
+        "hint": "Tylko tam, gdzie host lub usługa jeszcze ich nie ma. Nic, co ustawiono tutaj, nie zostanie nadpisane.",
+        "none": "Plik nie zawiera edycji."
+      },
+      "submit": "Zaimportuj jako skan",
+      "submitting": "Importowanie…",
+      "openExisting": "Otwórz ten skan",
+      "result": {
+        "title": "Skan zaimportowany",
+        "hosts": "Aktywne hosty: {{up, number}} · Nieaktywne: {{down, number}} · Brak odpowiedzi: {{noAnswer, number}} · Otwarte porty: {{ports, number}}",
+        "placed": "Umieszczony wśród skanów pod datą {{date}}.",
+        "edits": "Zastosowane edycje: {{applied, number}} · Już ustawione tutaj: {{kept, number}} · Spoza skanu: {{missing, number}}",
+        "warnings_one": "Pominięto {{count, number}} fragment pliku.",
+        "warnings_few": "Pominięto {{count, number}} fragmenty pliku.",
+        "warnings_many": "Pominięto {{count, number}} fragmentów pliku.",
+        "warnings_other": "Pominięto {{count, number}} fragmentu pliku.",
+        "open": "Otwórz skan",
+        "another": "Zaimportuj kolejny plik"
+      }
+    },
     "compare": {
       "title": "Porównanie skanów",
       "subtitle": "Dwa skany obok siebie: które hosty się pojawiły, zniknęły lub zmieniły, port po porcie. Za nowe lub zniknięte uznajemy tylko adresy, które odpowiedziały w obu skanach.",
@@ -414,7 +496,8 @@
     "triggers": {
       "import": "Import celów",
       "manual": "Uruchom teraz",
-      "schedule": "Harmonogram"
+      "schedule": "Harmonogram",
+      "results_import": "Zaimportowane wyniki"
     },
     "jobs": {
       "steps": "Kroki",
@@ -519,6 +602,12 @@
       "next": "Następna"
     }
   },
+  "file": {
+    "label": "Plik",
+    "selected": "{{name}} ({{size}} kB)",
+    "tooLarge": "Plik jest większy niż {{size}} MB.",
+    "unreadable": "Nie udało się odczytać pliku."
+  },
   "mock": {
     "badge": "Dane przykładowe",
     "tooltip": "Ta strona pokazuje przykładowe dane generowane w przeglądarce. Backend jeszcze ich nie udostępnia, więc zmiany wprowadzone tutaj nie są zapisywane."
@@ -589,6 +678,9 @@
     "DEFECTDOJO_SYNC_RUNNING": "Synchronizacja z DefectDojo już trwa.",
     "DEFECTDOJO_PUSH_RUNNING": "Wysyłka do DefectDojo już trwa.",
     "NOTHING_TO_PUSH": "Nie ma czego wysłać: brak otwartych usług w tym skanie lub zaznaczeniu.",
-    "SAME_SCAN": "Wybierz dwa różne skany do porównania."
+    "SAME_SCAN": "Wybierz dwa różne skany do porównania.",
+    "SCAN_IMPORT_INVALID": "Plik nie jest eksportem skanu, wynikiem workera ani plikiem CSV z wynikami w formacie, który ta wersja potrafi odczytać.",
+    "SCAN_ALREADY_IMPORTED": "Ten plik został już zaimportowany.",
+    "SCAN_IMPORT_RUNNING": "Trwa inny import. Spróbuj ponownie, gdy się zakończy."
   }
 }

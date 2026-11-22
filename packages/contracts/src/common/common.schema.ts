@@ -46,6 +46,9 @@ export const ErrorCodeSchema = z.enum([
   "DEFECTDOJO_PUSH_RUNNING",
   "NOTHING_TO_PUSH",
   "SAME_SCAN",
+  "SCAN_IMPORT_INVALID",
+  "SCAN_ALREADY_IMPORTED",
+  "SCAN_IMPORT_RUNNING",
 ]);
 
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;

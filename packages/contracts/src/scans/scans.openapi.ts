@@ -21,6 +21,8 @@ import {
   TagScanHostsResponseSchema,
 } from "./scan-results.schema";
 import { ScanChangesQuerySchema, ScanChangesResponseSchema } from "./scan-changes.schema";
+import { ScanExportDocumentSchema, ScanExportQuerySchema } from "./scan-export.schema";
+import { ImportScanQuerySchema, ImportScanResponseSchema } from "./scan-import.schema";
 import { ScanJobListQuerySchema, ScanJobListResponseSchema } from "./scan-jobs.schema";
 import { ScanListResponseSchema } from "./scans.schema";
 
@@ -173,6 +175,76 @@ registry.registerPath({
     401: unauthenticated,
     403: forbidden,
     404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/scans/{id}/export",
+  operationId: "exportScan",
+  summary: "Export a scan's results, with the users' edits, as JSON or CSV",
+  description: [
+    "Requires `scans:read`. Every address the scan covered as this scan saw it, sensitive fields",
+    "decrypted, plus the notes, tags, triage and service corrections of its hosts. JSON lists the",
+    "addresses that are not `down` in the worker result's host shape and names the covered blocks",
+    "in `coverage` (an address in them without an entry is `down`); `POST /scans/import` reads the",
+    "file back. CSV has one row per HTTP endpoint and leaves out headers, cookies, certificates,",
+    "banners and probes; cells that start with `=`, `+`, `-` or `@` get a leading `'`.",
+  ].join(" "),
+  tags,
+  security,
+  request: { params: IdParamsSchema, query: ScanExportQuerySchema },
+  responses: {
+    200: {
+      description: "The scan as a file",
+      content: {
+        "application/json": { schema: ScanExportDocumentSchema },
+        "text/csv": { schema: z.string() },
+      },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/scans/import",
+  operationId: "importScan",
+  summary: "Import a results file as a new scan",
+  description: [
+    "Requires `scans:read` and `scans:create`; `edits=fill` also requires `hosts:update`. The body",
+    "is the file itself: a scan export (`GET /scans/{id}/export`) as JSON or CSV, one worker result",
+    "(`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. CSV needs only an `ip`",
+    "column; rows it cannot read are skipped and reported in `warnings`. The results are ingested",
+    "the way a worker's own are. The scan takes its place among the others by when the file says",
+    "it ran, so it can become the base scan of a newer one. The same content is imported once",
+    "(`SCAN_ALREADY_IMPORTED` carries the existing scan's id in `details.scanId`).",
+    "`SCAN_IMPORT_INVALID` lists what is wrong in `details.issues`.",
+  ].join(" "),
+  tags,
+  security,
+  request: {
+    query: ImportScanQuerySchema,
+    body: {
+      required: true,
+      content: {
+        "application/json": { schema: z.unknown() },
+        "text/csv": { schema: z.string() },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: "The scan the file became",
+      content: { "application/json": { schema: ImportScanResponseSchema } },
+    },
+    400: validationFailed,
+    401: unauthenticated,
+    403: forbidden,
+    409: errorResponse("The file was imported before, or another import is running"),
   },
 });
 

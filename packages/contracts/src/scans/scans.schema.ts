@@ -3,8 +3,11 @@ import { z } from "zod";
 /** `paused`: the pipeline's time window closed with jobs left; the next run time resumes it. */
 export const ScanStatusSchema = z.enum(["queued", "running", "paused", "completed", "stopped", "failed"]);
 
-/** What queued the scan: a target import, "Run now" on a pipeline, or the pipeline's schedule. */
-export const ScanTriggerSchema = z.enum(["import", "manual", "schedule"]);
+/**
+ * What queued the scan: a target import, "Run now" on a pipeline or the pipeline's schedule.
+ * `results_import`: nothing did, the scan was read from a results file.
+ */
+export const ScanTriggerSchema = z.enum(["import", "manual", "schedule", "results_import"]);
 
 const CountSchema = z.number().int().nonnegative();
 
@@ -20,6 +23,8 @@ export const ScanHostCountsSchema = z.object({
 export const ScanSchema = z.object({
   id: z.uuid(),
   status: ScanStatusSchema,
+  /** Empty when nobody named it; an imported scan starts with its file's name. */
+  name: z.string(),
   createdAt: z.iso.datetime(),
   startedAt: z.iso.datetime().nullable(),
   finishedAt: z.iso.datetime().nullable(),

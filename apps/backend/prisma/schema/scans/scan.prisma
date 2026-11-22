@@ -2,6 +2,10 @@
 model Scan {
   id            String      @id @default(uuid(7)) @db.Uuid
   status        ScanStatus  @default(queued)
+  /// Shown in lists; an imported scan gets its file's name.
+  name          String      @default("")
+  /// SHA-256 of an imported file's content: the same file is imported once.
+  importKey     String?     @unique
   /// Null for an import's scan, or once the pipeline was deleted.
   pipelineId    String?     @db.Uuid
   trigger       ScanTrigger @default(import)
@@ -51,4 +55,6 @@ enum ScanTrigger {
   import
   manual
   schedule
+  /// Not queued at all: read from a results file (POST /scans/import).
+  results_import
 }

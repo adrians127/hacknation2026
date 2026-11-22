@@ -190,12 +190,6 @@
         "hint": "An array of addresses, or of objects with target and note fields, optionally under a targets key.",
         "sample": "Download a sample JSON"
       },
-      "file": {
-        "label": "File",
-        "selected": "{{name}} ({{size}} kB)",
-        "tooLarge": "The file is larger than 10 MB.",
-        "unreadable": "The file could not be read."
-      },
       "preview": {
         "title": "Preview",
         "empty": "Enter targets or choose a file to see what will be imported.",
@@ -342,6 +336,88 @@
         "jobs": "Jobs"
       }
     },
+    "export": {
+      "button": "Export {{format}}",
+      "failed": "The export failed: {{message}}"
+    },
+    "import": {
+      "open": "Import results",
+      "title": "Import scan results",
+      "subtitle": "Turn a results file into a scan. It joins the other scans in comparisons, in the host history and on the dashboard.",
+      "hint": "JSON: a file from Export JSON on a scan, or one or more worker results. CSV: the columns of Export CSV; only an address column is required.",
+      "samples": {
+        "json": "Download a sample JSON",
+        "csv": "Download a sample CSV"
+      },
+      "empty": "Choose a file to see what it holds.",
+      "reading": "Reading the file…",
+      "formats": {
+        "subsurf-scan": "Scan export (JSON)",
+        "worker-results": "Worker results (JSON)",
+        "csv": "Results table (CSV)"
+      },
+      "preview": {
+        "title": "What the file holds",
+        "format": "Format",
+        "ran": "Scan ran",
+        "ranUnknown": "Not recorded. The scan will be placed at the time of the import.",
+        "placement": "The scan takes its place among the others by when it ran, so a newer scan may be compared with it from now on.",
+        "addresses": "Addresses",
+        "up": "Hosts up",
+        "down": "Down",
+        "noAnswer": "No answer",
+        "openPorts": "Open ports",
+        "httpEndpoints": "HTTP endpoints",
+        "edits": "Edits in the file",
+        "editsValue": "Hosts: {{hosts, number}} · Services: {{services, number}}",
+        "cannotImport": "This file cannot be imported.",
+        "warningsTitle_one": "{{count, number}} part of the file will be skipped",
+        "warningsTitle_other": "{{count, number}} parts of the file will be skipped",
+        "position": "Line",
+        "problem": "Problem",
+        "more_one": "…and {{count, number}} more",
+        "more_other": "…and {{count, number}} more"
+      },
+      "issues": {
+        "not_json": "The file is not valid JSON.",
+        "unknown_format": "Neither a scan export nor a worker result.",
+        "unsupported_version": "Written by a newer version of the export (version {{detail}}).",
+        "invalid_document": "The scan export does not match its format: {{detail}}",
+        "invalid_result": "A worker result does not match the result format: {{detail}}",
+        "multiple_scans": "The results belong to more than one scan. Import each scan's results separately.",
+        "duplicate_address": "The address {{detail}} is listed twice.",
+        "nothing_to_import": "The file holds no addresses.",
+        "too_many_addresses": "The file covers {{detail}} addresses; the limit is 1,048,576.",
+        "too_many_up_hosts": "The file has {{detail}} hosts up; the limit is 20,000.",
+        "too_many_results": "The file has {{detail}} worker results; the limit is 4,096.",
+        "missing_ip_column": "No address column. One column must be named ip.",
+        "empty_result": "A worker result without hosts.",
+        "invalid_row": "Cannot be read ({{detail}}).",
+        "conflicting_status": "Two statuses for one address ({{detail}}). The first one counts."
+      },
+      "name": {
+        "label": "Name",
+        "hint": "Shown in the scan list. The file's name unless you change it."
+      },
+      "edits": {
+        "label": "Apply the notes, tags, triage and corrections from the file",
+        "hint": "Only where a host or service has none yet. Nothing set here is overwritten.",
+        "none": "The file carries no edits."
+      },
+      "submit": "Import as a scan",
+      "submitting": "Importing…",
+      "openExisting": "Open that scan",
+      "result": {
+        "title": "Scan imported",
+        "hosts": "Hosts up: {{up, number}} · Down: {{down, number}} · No answer: {{noAnswer, number}} · Open ports: {{ports, number}}",
+        "placed": "Placed among the scans at {{date}}.",
+        "edits": "Edits applied: {{applied, number}} · Already set here: {{kept, number}} · Not part of the scan: {{missing, number}}",
+        "warnings_one": "{{count, number}} part of the file was skipped.",
+        "warnings_other": "{{count, number}} parts of the file were skipped.",
+        "open": "Open the scan",
+        "another": "Import another file"
+      }
+    },
     "compare": {
       "title": "Compare scans",
       "subtitle": "Two scans side by side: which hosts appeared, went or changed, port by port. Only addresses both scans answered for count as new or gone.",
@@ -378,7 +454,8 @@
     "triggers": {
       "import": "Target import",
       "manual": "Run now",
-      "schedule": "Schedule"
+      "schedule": "Schedule",
+      "results_import": "Imported results"
     },
     "jobs": {
       "steps": "Steps",
@@ -481,6 +558,12 @@
       "next": "Next"
     }
   },
+  "file": {
+    "label": "File",
+    "selected": "{{name}} ({{size}} kB)",
+    "tooLarge": "The file is larger than {{size}} MB.",
+    "unreadable": "The file could not be read."
+  },
   "mock": {
     "badge": "Mock data",
     "tooltip": "This page shows sample data generated in the browser. The backend does not serve it yet, so changes made here are not saved."
@@ -547,6 +630,9 @@
     "DEFECTDOJO_SYNC_RUNNING": "A DefectDojo sync is already running.",
     "DEFECTDOJO_PUSH_RUNNING": "A push to DefectDojo is already running.",
     "NOTHING_TO_PUSH": "There is nothing to push: no open services in this scan or selection.",
-    "SAME_SCAN": "Pick two different scans to compare."
+    "SAME_SCAN": "Pick two different scans to compare.",
+    "SCAN_IMPORT_INVALID": "The file is not a scan export, a worker result or a results CSV this version can read.",
+    "SCAN_ALREADY_IMPORTED": "This file was imported before.",
+    "SCAN_IMPORT_RUNNING": "Another import is running. Try again when it finishes."
   }
 }

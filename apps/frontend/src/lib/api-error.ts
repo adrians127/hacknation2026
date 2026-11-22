@@ -4,6 +4,8 @@ export interface ApiError {
   status: number;
   message: string;
   code?: ErrorCode;
+  /** What the API attached to the error, e.g. the scan a file was already imported as. */
+  details?: unknown;
 }
 
 /** The `ErrorResponse` body that openapi-react-query throws for non-2xx responses, if it is one. */

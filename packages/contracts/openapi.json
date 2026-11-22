@@ -102,7 +102,10 @@
                   "DEFECTDOJO_SYNC_RUNNING",
                   "DEFECTDOJO_PUSH_RUNNING",
                   "NOTHING_TO_PUSH",
-                  "SAME_SCAN"
+                  "SAME_SCAN",
+                  "SCAN_IMPORT_INVALID",
+                  "SCAN_ALREADY_IMPORTED",
+                  "SCAN_IMPORT_RUNNING"
                 ]
               },
               "details": {}
@@ -179,6 +182,7 @@
                 "targets:update",
                 "targets:delete",
                 "scans:read",
+                "scans:create",
                 "scans:run",
                 "hosts:update",
                 "vulnerabilities:read",
@@ -516,7 +520,8 @@
                 "enum": [
                   "import",
                   "manual",
-                  "schedule"
+                  "schedule",
+                  "results_import"
                 ]
               },
               "createdAt": {
@@ -586,7 +591,8 @@
                 "enum": [
                   "import",
                   "manual",
-                  "schedule"
+                  "schedule",
+                  "results_import"
                 ]
               },
               "createdAt": {
@@ -921,7 +927,8 @@
                 "enum": [
                   "import",
                   "manual",
-                  "schedule"
+                  "schedule",
+                  "results_import"
                 ]
               },
               "createdAt": {
@@ -991,7 +998,8 @@
                 "enum": [
                   "import",
                   "manual",
-                  "schedule"
+                  "schedule",
+                  "results_import"
                 ]
               },
               "createdAt": {
@@ -1068,7 +1076,8 @@
                   "enum": [
                     "import",
                     "manual",
-                    "schedule"
+                    "schedule",
+                    "results_import"
                   ]
                 },
                 "createdAt": {
@@ -1177,6 +1186,7 @@
                 "targets:update",
                 "targets:delete",
                 "scans:read",
+                "scans:create",
                 "scans:run",
                 "hosts:update",
                 "vulnerabilities:read",
@@ -6516,7 +6526,8 @@
                                 "enum": [
                                   "import",
                                   "manual",
-                                  "schedule"
+                                  "schedule",
+                                  "results_import"
                                 ]
                               },
                               "createdAt": {
@@ -6586,7 +6597,8 @@
                                 "enum": [
                                   "import",
                                   "manual",
-                                  "schedule"
+                                  "schedule",
+                                  "results_import"
                                 ]
                               },
                               "createdAt": {
@@ -7753,6 +7765,9 @@
                             "failed"
                           ]
                         },
+                        "name": {
+                          "type": "string"
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
@@ -7850,7 +7865,8 @@
                           "enum": [
                             "import",
                             "manual",
-                            "schedule"
+                            "schedule",
+                            "results_import"
                           ]
                         },
                         "windowEndsAt": {
@@ -8083,6 +8099,7 @@
                       "required": [
                         "id",
                         "status",
+                        "name",
                         "createdAt",
                         "startedAt",
                         "finishedAt",
@@ -12574,6 +12591,7 @@
                                 "targets:update",
                                 "targets:delete",
                                 "scans:read",
+                                "scans:create",
                                 "scans:run",
                                 "hosts:update",
                                 "vulnerabilities:read",
@@ -12696,6 +12714,7 @@
                         "targets:update",
                         "targets:delete",
                         "scans:read",
+                        "scans:create",
                         "scans:run",
                         "hosts:update",
                         "vulnerabilities:read",
@@ -12715,7 +12734,7 @@
                         "defectdojo:export"
                       ]
                     },
-                    "maxItems": 30
+                    "maxItems": 31
                   }
                 },
                 "required": [
@@ -12857,6 +12876,7 @@
                           "targets:update",
                           "targets:delete",
                           "scans:read",
+                          "scans:create",
                           "scans:run",
                           "hosts:update",
                           "vulnerabilities:read",
@@ -13023,6 +13043,7 @@
                         "targets:update",
                         "targets:delete",
                         "scans:read",
+                        "scans:create",
                         "scans:run",
                         "hosts:update",
                         "vulnerabilities:read",
@@ -13042,7 +13063,7 @@
                         "defectdojo:export"
                       ]
                     },
-                    "maxItems": 30
+                    "maxItems": 31
                   }
                 }
               }
@@ -13232,6 +13253,9 @@
                               "failed"
                             ]
                           },
+                          "name": {
+                            "type": "string"
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time"
@@ -13329,7 +13353,8 @@
                             "enum": [
                               "import",
                               "manual",
-                              "schedule"
+                              "schedule",
+                              "results_import"
                             ]
                           },
                           "windowEndsAt": {
@@ -13343,6 +13368,7 @@
                         "required": [
                           "id",
                           "status",
+                          "name",
                           "createdAt",
                           "startedAt",
                           "finishedAt",
@@ -13445,6 +13471,9 @@
                         "failed"
                       ]
                     },
+                    "name": {
+                      "type": "string"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -13542,7 +13571,8 @@
                       "enum": [
                         "import",
                         "manual",
-                        "schedule"
+                        "schedule",
+                        "results_import"
                       ]
                     },
                     "windowEndsAt": {
@@ -13775,6 +13805,7 @@
                   "required": [
                     "id",
                     "status",
+                    "name",
                     "createdAt",
                     "startedAt",
                     "finishedAt",
@@ -17270,6 +17301,1421 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scans/{id}/export": {
+      "get": {
+        "operationId": "exportScan",
+        "summary": "Export a scan's results, with the users' edits, as JSON or CSV",
+        "description": "Requires `scans:read`. Every address the scan covered as this scan saw it, sensitive fields decrypted, plus the notes, tags, triage and service corrections of its hosts. JSON lists the addresses that are not `down` in the worker result's host shape and names the covered blocks in `coverage` (an address in them without an entry is `down`); `POST /scans/import` reads the file back. CSV has one row per HTTP endpoint and leaves out headers, cookies, certificates, banners and probes; cells that start with `=`, `+`, `-` or `@` get a leading `'`.",
+        "tags": [
+          "Scans"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            },
+            "required": false,
+            "name": "format",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The scan as a file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "format": {
+                      "type": "string",
+                      "enum": [
+                        "subsurf-scan"
+                      ]
+                    },
+                    "version": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    },
+                    "exportedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "scan": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "paused",
+                            "completed",
+                            "stopped",
+                            "failed"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "startedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "ports": {
+                          "type": "string",
+                          "pattern": "^\\d{1,5}(?:-\\d{1,5})?(?:,\\d{1,5}(?:-\\d{1,5})?)*$"
+                        },
+                        "maxRate": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "counts": {
+                          "type": "object",
+                          "properties": {
+                            "up": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "down": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "timeout": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "cancelled": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "failed": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "addresses": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "openPorts": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "up",
+                            "down",
+                            "timeout",
+                            "cancelled",
+                            "failed",
+                            "addresses",
+                            "openPorts"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "status",
+                        "createdAt",
+                        "startedAt",
+                        "finishedAt",
+                        "ports",
+                        "maxRate",
+                        "counts"
+                      ]
+                    },
+                    "coverage": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          {
+                            "type": "string",
+                            "format": "ipv4-cidr"
+                          }
+                        ]
+                      }
+                    },
+                    "hosts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ip": {
+                            "type": "string",
+                            "format": "ip"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "down",
+                              "timeout",
+                              "cancelled",
+                              "failed"
+                            ]
+                          },
+                          "reason": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "observedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "latencyMs": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "hostnames": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 253
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "enum": [
+                                    "job",
+                                    "ptr",
+                                    "tls-san"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "source"
+                              ]
+                            }
+                          },
+                          "error": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "code": {
+                                "type": "string",
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "code",
+                              "message"
+                            ]
+                          },
+                          "ports": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "port": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 65535
+                                },
+                                "protocol": {
+                                  "type": "string",
+                                  "enum": [
+                                    "tcp"
+                                  ]
+                                },
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "open"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "service": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "product": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "version": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "extraInfo": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "cpe": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "method": {
+                                      "type": "string",
+                                      "enum": [
+                                        "probed",
+                                        "table"
+                                      ]
+                                    },
+                                    "confidence": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 10
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "product",
+                                    "version",
+                                    "extraInfo",
+                                    "cpe",
+                                    "method",
+                                    "confidence"
+                                  ]
+                                },
+                                "identity": {
+                                  "type": "object",
+                                  "properties": {
+                                    "ttl": {
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ],
+                                      "minimum": 0,
+                                      "maximum": 255
+                                    },
+                                    "sshHostKeySha256": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "pattern": "^[0-9a-f]{64}$"
+                                    },
+                                    "tlsCertSha256": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "pattern": "^[0-9a-f]{64}$"
+                                    }
+                                  },
+                                  "required": [
+                                    "ttl",
+                                    "sshHostKeySha256",
+                                    "tlsCertSha256"
+                                  ]
+                                },
+                                "banner": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "scripts": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "output": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "output"
+                                    ]
+                                  }
+                                },
+                                "tls": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "vhost": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ],
+                                        "minLength": 1,
+                                        "maxLength": 253
+                                      },
+                                      "version": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "cipher": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "alpn": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "cert": {
+                                        "type": [
+                                          "object",
+                                          "null"
+                                        ],
+                                        "properties": {
+                                          "subjectCn": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "san": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "issuer": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "notBefore": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "format": "date-time"
+                                          },
+                                          "notAfter": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "format": "date-time"
+                                          },
+                                          "serial": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "sha256": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ],
+                                            "pattern": "^[0-9a-f]{64}$"
+                                          },
+                                          "selfSigned": {
+                                            "type": [
+                                              "boolean",
+                                              "null"
+                                            ]
+                                          },
+                                          "keyAlgorithm": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "keyBits": {
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ],
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "subjectCn",
+                                          "san",
+                                          "issuer",
+                                          "notBefore",
+                                          "notAfter",
+                                          "serial",
+                                          "sha256",
+                                          "selfSigned",
+                                          "keyAlgorithm",
+                                          "keyBits"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "vhost",
+                                      "version",
+                                      "cipher",
+                                      "alpn",
+                                      "cert"
+                                    ]
+                                  }
+                                },
+                                "http": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "scheme": {
+                                        "type": "string",
+                                        "enum": [
+                                          "http",
+                                          "https"
+                                        ]
+                                      },
+                                      "vhost": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ],
+                                        "minLength": 1,
+                                        "maxLength": 253
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "format": "uri"
+                                      },
+                                      "finalUrl": {
+                                        "type": "string",
+                                        "format": "uri"
+                                      },
+                                      "statusCode": {
+                                        "type": [
+                                          "integer",
+                                          "null"
+                                        ],
+                                        "minimum": 100,
+                                        "maximum": 599
+                                      },
+                                      "title": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "headers": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "name": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "value": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "name",
+                                            "value"
+                                          ]
+                                        }
+                                      },
+                                      "cookies": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "name": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "valueSha256": {
+                                              "type": "string",
+                                              "pattern": "^[0-9a-f]{64}$"
+                                            },
+                                            "secure": {
+                                              "type": "boolean"
+                                            },
+                                            "httpOnly": {
+                                              "type": "boolean"
+                                            },
+                                            "sameSite": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ],
+                                              "enum": [
+                                                "Strict",
+                                                "Lax",
+                                                "None",
+                                                null
+                                              ]
+                                            },
+                                            "domain": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "path": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "expires": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "name",
+                                            "valueSha256",
+                                            "secure",
+                                            "httpOnly",
+                                            "sameSite",
+                                            "domain",
+                                            "path",
+                                            "expires"
+                                          ]
+                                        }
+                                      },
+                                      "redirects": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "url": {
+                                              "type": "string",
+                                              "format": "uri"
+                                            },
+                                            "statusCode": {
+                                              "type": "integer",
+                                              "minimum": 300,
+                                              "maximum": 399
+                                            },
+                                            "location": {
+                                              "type": "string"
+                                            },
+                                            "followed": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "required": [
+                                            "url",
+                                            "statusCode",
+                                            "location",
+                                            "followed"
+                                          ]
+                                        }
+                                      },
+                                      "body": {
+                                        "type": [
+                                          "object",
+                                          "null"
+                                        ],
+                                        "properties": {
+                                          "sha256": {
+                                            "type": "string",
+                                            "pattern": "^[0-9a-f]{64}$"
+                                          },
+                                          "size": {
+                                            "type": "integer",
+                                            "minimum": 0
+                                          },
+                                          "contentType": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "content": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "truncated": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "sha256",
+                                          "size",
+                                          "contentType",
+                                          "content",
+                                          "truncated"
+                                        ]
+                                      },
+                                      "favicon": {
+                                        "type": [
+                                          "object",
+                                          "null"
+                                        ],
+                                        "properties": {
+                                          "url": {
+                                            "type": "string",
+                                            "format": "uri"
+                                          },
+                                          "mmh3": {
+                                            "type": "integer",
+                                            "minimum": -2147483648,
+                                            "maximum": 2147483647
+                                          },
+                                          "sha256": {
+                                            "type": "string",
+                                            "pattern": "^[0-9a-f]{64}$"
+                                          }
+                                        },
+                                        "required": [
+                                          "url",
+                                          "mmh3",
+                                          "sha256"
+                                        ]
+                                      },
+                                      "tls": {
+                                        "type": [
+                                          "object",
+                                          "null"
+                                        ],
+                                        "properties": {
+                                          "version": {
+                                            "type": "string"
+                                          },
+                                          "cipher": {
+                                            "type": "string"
+                                          },
+                                          "alpn": {
+                                            "type": [
+                                              "string",
+                                              "null"
+                                            ]
+                                          },
+                                          "cert": {
+                                            "type": "object",
+                                            "properties": {
+                                              "subjectCn": {
+                                                "type": [
+                                                  "string",
+                                                  "null"
+                                                ]
+                                              },
+                                              "san": {
+                                                "type": "array",
+                                                "items": {
+                                                  "type": "string"
+                                                }
+                                              },
+                                              "issuer": {
+                                                "type": [
+                                                  "string",
+                                                  "null"
+                                                ]
+                                              },
+                                              "notBefore": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                              },
+                                              "notAfter": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                              },
+                                              "serial": {
+                                                "type": "string"
+                                              },
+                                              "sha256": {
+                                                "type": "string",
+                                                "pattern": "^[0-9a-f]{64}$"
+                                              },
+                                              "selfSigned": {
+                                                "type": "boolean"
+                                              },
+                                              "keyAlgorithm": {
+                                                "type": "string"
+                                              },
+                                              "keyBits": {
+                                                "type": [
+                                                  "integer",
+                                                  "null"
+                                                ],
+                                                "exclusiveMinimum": 0
+                                              }
+                                            },
+                                            "required": [
+                                              "subjectCn",
+                                              "san",
+                                              "issuer",
+                                              "notBefore",
+                                              "notAfter",
+                                              "serial",
+                                              "sha256",
+                                              "selfSigned",
+                                              "keyAlgorithm",
+                                              "keyBits"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "version",
+                                          "cipher",
+                                          "alpn",
+                                          "cert"
+                                        ]
+                                      },
+                                      "probes": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "path": {
+                                              "type": "string"
+                                            },
+                                            "statusCode": {
+                                              "type": [
+                                                "integer",
+                                                "null"
+                                              ],
+                                              "minimum": 100,
+                                              "maximum": 599
+                                            },
+                                            "location": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "title": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "size": {
+                                              "type": [
+                                                "integer",
+                                                "null"
+                                              ],
+                                              "minimum": 0
+                                            },
+                                            "bodySha256": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ],
+                                              "pattern": "^[0-9a-f]{64}$"
+                                            },
+                                            "error": {
+                                              "type": [
+                                                "object",
+                                                "null"
+                                              ],
+                                              "properties": {
+                                                "code": {
+                                                  "type": "string",
+                                                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                                },
+                                                "message": {
+                                                  "type": "string"
+                                                }
+                                              },
+                                              "required": [
+                                                "code",
+                                                "message"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "path",
+                                            "statusCode",
+                                            "location",
+                                            "title",
+                                            "size",
+                                            "bodySha256",
+                                            "error"
+                                          ]
+                                        }
+                                      },
+                                      "error": {
+                                        "type": [
+                                          "object",
+                                          "null"
+                                        ],
+                                        "properties": {
+                                          "code": {
+                                            "type": "string",
+                                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                          },
+                                          "message": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "code",
+                                          "message"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "scheme",
+                                      "vhost",
+                                      "url",
+                                      "finalUrl",
+                                      "statusCode",
+                                      "title",
+                                      "headers",
+                                      "cookies",
+                                      "redirects",
+                                      "body",
+                                      "favicon",
+                                      "tls",
+                                      "probes",
+                                      "error"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "port",
+                                "protocol",
+                                "state",
+                                "reason",
+                                "service",
+                                "identity",
+                                "banner",
+                                "scripts",
+                                "tls",
+                                "http"
+                              ]
+                            },
+                            "maxItems": 65535
+                          }
+                        },
+                        "required": [
+                          "ip",
+                          "status",
+                          "reason",
+                          "observedAt",
+                          "latencyMs",
+                          "hostnames",
+                          "error",
+                          "ports"
+                        ]
+                      }
+                    },
+                    "edits": {
+                      "type": "object",
+                      "properties": {
+                        "hosts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "ip": {
+                                "type": "string",
+                                "format": "ip"
+                              },
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "unreviewed",
+                                  "reviewed",
+                                  "important",
+                                  "false_positive"
+                                ]
+                              },
+                              "tags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "note": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            },
+                            "required": [
+                              "ip",
+                              "triage",
+                              "tags",
+                              "note"
+                            ]
+                          }
+                        },
+                        "services": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "ip": {
+                                "type": "string",
+                                "format": "ip"
+                              },
+                              "triage": {
+                                "type": "string",
+                                "enum": [
+                                  "unreviewed",
+                                  "reviewed",
+                                  "important",
+                                  "false_positive"
+                                ]
+                              },
+                              "tags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 50,
+                                  "pattern": "\\S"
+                                },
+                                "maxItems": 20
+                              },
+                              "note": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "protocol": {
+                                "type": "string",
+                                "enum": [
+                                  "tcp"
+                                ]
+                              },
+                              "port": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 65535
+                              },
+                              "nameOverride": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "pattern": "\\S"
+                              },
+                              "productOverride": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "pattern": "\\S"
+                              },
+                              "versionOverride": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "pattern": "\\S"
+                              }
+                            },
+                            "required": [
+                              "ip",
+                              "triage",
+                              "tags",
+                              "note",
+                              "protocol",
+                              "port",
+                              "nameOverride",
+                              "productOverride",
+                              "versionOverride"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "hosts",
+                        "services"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "format",
+                    "version",
+                    "exportedAt",
+                    "scan",
+                    "coverage",
+                    "hosts",
+                    "edits"
+                  ]
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scans/import": {
+      "post": {
+        "operationId": "importScan",
+        "summary": "Import a results file as a new scan",
+        "description": "Requires `scans:read` and `scans:create`; `edits=fill` also requires `hosts:update`. The body is the file itself: a scan export (`GET /scans/{id}/export`) as JSON or CSV, one worker result (`{ scan, hosts }`, docs/worker-result-format.md) or a list of them. CSV needs only an `ip` column; rows it cannot read are skipped and reported in `warnings`. The results are ingested the way a worker's own are. The scan takes its place among the others by when the file says it ran, so it can become the base scan of a newer one. The same content is imported once (`SCAN_ALREADY_IMPORTED` carries the existing scan's id in `details.scanId`). `SCAN_IMPORT_INVALID` lists what is wrong in `details.issues`.",
+        "tags": [
+          "Scans"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "skip",
+                "fill"
+              ],
+              "default": "skip"
+            },
+            "required": false,
+            "name": "edits",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "name",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {}
+            },
+            "text/csv": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The scan the file became",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scanId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "placedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "inputFormat": {
+                      "type": "string",
+                      "enum": [
+                        "subsurf-scan",
+                        "worker-results",
+                        "csv"
+                      ]
+                    },
+                    "jobs": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "hosts": {
+                      "type": "object",
+                      "properties": {
+                        "up": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "down": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "timeout": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "cancelled": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "failed": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "up",
+                        "down",
+                        "timeout",
+                        "cancelled",
+                        "failed"
+                      ]
+                    },
+                    "openPorts": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "edits": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "applied": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "kept": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "missing": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "applied",
+                        "kept",
+                        "missing"
+                      ]
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "not_json",
+                              "unknown_format",
+                              "unsupported_version",
+                              "invalid_document",
+                              "invalid_result",
+                              "multiple_scans",
+                              "duplicate_address",
+                              "nothing_to_import",
+                              "too_many_addresses",
+                              "too_many_up_hosts",
+                              "too_many_results",
+                              "missing_ip_column",
+                              "empty_result",
+                              "invalid_row",
+                              "conflicting_status"
+                            ]
+                          },
+                          "position": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "detail": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "position",
+                          "detail"
+                        ]
+                      },
+                      "maxItems": 100
+                    },
+                    "warningCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "scanId",
+                    "placedAt",
+                    "inputFormat",
+                    "jobs",
+                    "hosts",
+                    "openPorts",
+                    "edits",
+                    "warnings",
+                    "warningCount"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the session expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or the user must change their password first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The file was imported before, or another import is running",
             "content": {
               "application/json": {
                 "schema": {

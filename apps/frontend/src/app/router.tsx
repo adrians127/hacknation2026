@@ -24,6 +24,7 @@ import { RootLayout } from "@/app/routes/root-layout";
 import { RouteError } from "@/app/routes/route-error";
 import { ScanCompareRoute } from "@/app/routes/scan-compare";
 import { ScanDetailRoute } from "@/app/routes/scan-detail";
+import { ScanImportRoute } from "@/app/routes/scan-import";
 import { ScansRoute } from "@/app/routes/scans";
 import { StatusRoute } from "@/app/routes/status";
 import { TargetsRoute } from "@/app/routes/targets";
@@ -71,6 +72,11 @@ export const router = createBrowserRouter([
             children: [
               { index: true, Component: ScansRoute },
               { path: "compare", Component: ScanCompareRoute },
+              {
+                path: "import",
+                element: <RequirePermission permission="scans:create" />,
+                children: [{ index: true, Component: ScanImportRoute }],
+              },
               { path: ":scanId", Component: ScanDetailRoute },
             ],
           },

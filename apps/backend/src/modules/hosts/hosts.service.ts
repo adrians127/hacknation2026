@@ -7,6 +7,8 @@ import type {
   UpdateHostBody,
   UpdateServiceBody,
 } from "@subsurf/contracts/hosts/hosts.schema";
+import type { HostEdit, ScanEdits, ServiceEdit } from "@subsurf/contracts/scans/scan-export.schema";
+import type { ImportedEdits } from "@subsurf/contracts/scans/scan-import.schema";
 import type {
   TagScanHostsBody,
   TagScanHostsResponse,
@@ -14,6 +16,7 @@ import type {
 import { ipv4ToInt } from "@subsurf/contracts/targets/ipv4";
 
 import { Prisma, type TransportProtocol } from "~backend/generated/prisma/client";
+import { chunks } from "~backend/lib/chunks";
 import { encryptText } from "~backend/lib/crypto";
 import { HttpError } from "~backend/lib/http-error";
 import { prisma } from "~backend/lib/prisma";
@@ -68,6 +71,42 @@ function userFields(body: { note?: string; tags?: string[]; triage?: TriageStatu
 
 const override = (value: string | null | undefined) =>
   value === undefined ? undefined : (value?.trim() ?? null);
+
+interface EditableAsset {
+  triage: TriageStatus;
+  tags: string[];
+  note: unknown;
+}
+
+/**
+ * What an imported edit may still set: tags are added up to the limit, the triage and the note
+ * only where nobody set one. `null` when the asset already has everything.
+ */
+function fillUserFields(asset: EditableAsset, edit: HostEdit) {
+  const tags = [...new Set([...asset.tags, ...normalizeTags(edit.tags)])].slice(0, MAX_TAGS);
+  const fields = {
+    ...(tags.length > asset.tags.length && { tags }),
+    ...(asset.triage === "unreviewed" && edit.triage !== "unreviewed" && { triage: edit.triage }),
+    ...(asset.note === null && edit.note.trim() !== "" && { note: encryptText(edit.note.trim()) ?? Prisma.DbNull }),
+  };
+  return Object.keys(fields).length > 0 ? fields : null;
+}
+
+/** The corrections of an imported edit the service does not have yet. */
+function serviceOverridesToFill(
+  service: { nameOverride: string | null; productOverride: string | null; versionOverride: string | null },
+  edit: ServiceEdit,
+) {
+  return {
+    ...(service.nameOverride === null && edit.nameOverride !== null && { nameOverride: edit.nameOverride.trim() }),
+    ...(service.productOverride === null &&
+      edit.productOverride !== null && { productOverride: edit.productOverride.trim() }),
+    ...(service.versionOverride === null &&
+      edit.versionOverride !== null && { versionOverride: edit.versionOverride.trim() }),
+  };
+}
+
+const HOST_LOOKUP_BATCH = 10_000;
 
 /**
  * Host and Service rows live across scans. Ingest only creates them and moves their seen
@@ -126,6 +165,48 @@ export const hostsService = {
     ]);
     const tagged = rows[0]?.tagged ?? 0;
     return { matched, changed, unchanged: tagged - changed, limitReached: matched - tagged };
+  },
+
+  /**
+   * Applies the edits an imported file carries without overwriting anyone's work (PDF item 14):
+   * a value is taken only where the host or service has none.
+   */
+  async mergeEdits(tx: Prisma.TransactionClient, edits: ScanEdits): Promise<ImportedEdits> {
+    const counts: ImportedEdits = { applied: 0, kept: 0, missing: 0 };
+    const ips = [...new Set([...edits.hosts, ...edits.services].map((edit) => edit.ip))];
+    const hosts = new Map<string, Prisma.HostGetPayload<{ include: { services: true } }>>();
+    for (const batch of chunks(ips, HOST_LOOKUP_BATCH)) {
+      const rows = await tx.host.findMany({ where: { ip: { in: batch } }, include: { services: true } });
+      for (const row of rows) hosts.set(row.ip, row);
+    }
+
+    for (const edit of edits.hosts) {
+      const host = hosts.get(edit.ip);
+      const fields = host && fillUserFields(host, edit);
+      if (!host) counts.missing += 1;
+      else if (!fields) counts.kept += 1;
+      else {
+        await tx.host.update({ where: { id: host.id }, data: fields });
+        counts.applied += 1;
+      }
+    }
+    for (const edit of edits.services) {
+      const service = hosts
+        .get(edit.ip)
+        ?.services.find((row) => row.protocol === edit.protocol && row.port === edit.port);
+      if (!service) {
+        counts.missing += 1;
+        continue;
+      }
+      const overrides = serviceOverridesToFill(service, edit);
+      const fields = { ...fillUserFields(service, edit), ...overrides };
+      if (Object.keys(fields).length === 0) counts.kept += 1;
+      else {
+        await tx.service.update({ where: { id: service.id }, data: fields });
+        counts.applied += 1;
+      }
+    }
+    return counts;
   },
 
   /** Records an address seen `up`; returns the Host id. */

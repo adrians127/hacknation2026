@@ -35,6 +35,7 @@ import { HostSheet } from "@/features/hosts/components/host-sheet";
 import { HostsTable } from "@/features/hosts/components/hosts-table";
 import { ServiceEditDialog } from "@/features/hosts/components/service-edit-dialog";
 import { useScan } from "@/features/scans/api/get-scan";
+import { ScanExportButtons } from "@/features/scans/components/scan-export-buttons";
 import { useStopScan } from "@/features/scans/api/stop-scan";
 import { ScanJobsPanel } from "@/features/scans/components/scan-jobs-panel";
 import { ScanSummary } from "@/features/scans/components/scan-summary";
@@ -188,7 +189,11 @@ export function ScanDetailRoute() {
             </Badge>
           </span>
         }
-        description={t("scans.detail.subtitle")}
+        description={
+          scanData.name
+            ? `${scanData.name}. ${t("scans.detail.subtitle")}`
+            : t("scans.detail.subtitle")
+        }
         actions={
           <>
             {isScanActive(scanData.status) && (
@@ -207,6 +212,7 @@ export function ScanDetailRoute() {
                 {t("scans.detail.report")}
               </Link>
             </Button>
+            <ScanExportButtons scan={scanData} />
             <GuardedButton
               variant="outline"
               permissions={["hosts:update"]}

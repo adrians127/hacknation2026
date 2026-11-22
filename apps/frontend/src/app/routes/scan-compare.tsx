@@ -27,7 +27,7 @@ import { ChangeFilterCards } from "@/features/scans/components/change-filter-car
 import { CompareHostsTable } from "@/features/scans/components/compare-hosts-table";
 import { ScanPairPicker } from "@/features/scans/components/scan-pair-picker";
 import { ScanPairStats } from "@/features/scans/components/scan-pair-stats";
-import { hasResults, orderPair, scanDate } from "@/features/scans/lib/pair";
+import { fileStamp, hasResults, orderPair } from "@/features/scans/lib/pair";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useErrorMessage } from "@/hooks/use-error-message";
 
@@ -40,10 +40,6 @@ function parsePage(raw: string | null): number {
   const page = Number(raw);
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
-
-/** `2026-11-21-01-00` */
-const fileStamp = (scan: Scan | undefined) =>
-  scan ? scanDate(scan).slice(0, 16).replaceAll(/[:T]/g, "-") : "scan";
 
 function parseChange(raw: string | null): ScanChangeFilter | undefined {
   if (raw === ALL) return undefined;

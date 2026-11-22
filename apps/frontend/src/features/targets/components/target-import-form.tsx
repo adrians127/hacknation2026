@@ -3,10 +3,15 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { TagsSchema } from "@subsurf/contracts/common/common.schema";
-import { parseTargetJson, parseTargetText } from "@subsurf/contracts/targets/target-input";
+import {
+  parseTargetJson,
+  parseTargetText,
+  TARGET_IMPORT_LIMITS,
+} from "@subsurf/contracts/targets/target-input";
 import type { ImportTargetsResponse } from "@subsurf/contracts/targets/targets.schema";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { FileInput, type LoadedFile } from "@/components/file-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,7 +22,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useImportTargets } from "@/features/targets/api/import-targets";
 import { TargetEntryComposer } from "@/features/targets/components/target-entry-composer";
 import { TargetEntryList } from "@/features/targets/components/target-entry-list";
-import { TargetFileInput, type LoadedFile } from "@/features/targets/components/target-file-input";
 import { TargetImportPreview } from "@/features/targets/components/target-import-preview";
 import { useLeaveGuard } from "@/features/targets/hooks/use-leave-guard";
 import { analyzeEntries, toImportEntries, type FormEntry } from "@/features/targets/lib/entry-list";
@@ -117,9 +121,10 @@ export function TargetImportForm({ onImported }: { onImported: (result: ImportTa
 
   const fileTab = (fileSource: FileSource) => (
     <TabsContent value={fileSource} className="grid gap-3">
-      <TargetFileInput
+      <FileInput
         id={`targets-${fileSource}-file`}
         accept={FILE_ACCEPT[fileSource]}
+        maxBytes={TARGET_IMPORT_LIMITS.maxFileBytes}
         file={files[fileSource]}
         onLoad={(file) => setFiles((prev) => ({ ...prev, [fileSource]: file }))}
       />

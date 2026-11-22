@@ -16,7 +16,13 @@ import type {
   ScanJobListResponse,
 } from "@subsurf/contracts/scans/scan-jobs.schema";
 import type { Scan, ScanHostCounts, ScanJobStatus } from "@subsurf/contracts/scans/scans.schema";
-import type { Ipv4Range } from "@subsurf/contracts/targets/ipv4";
+import {
+  formatCidr,
+  ipv4ToInt,
+  mergeRanges,
+  rangeToCidrs,
+  type Ipv4Range,
+} from "@subsurf/contracts/targets/ipv4";
 
 import {
   Prisma,
@@ -42,6 +48,7 @@ import {
   toScanHost,
   toScanHostDetail,
   type HostInScan,
+  type HostRow,
   type ScanWithPipeline,
   type ObservationRow,
 } from "~backend/modules/scans/scan-results.mapper";
@@ -51,9 +58,25 @@ import { vulnerabilitiesService } from "~backend/modules/vulnerabilities/vulnera
 
 const NO_HOSTS: ScanHostCounts = { up: 0, down: 0, timeout: 0, cancelled: 0, failed: 0 };
 
-interface ScanSummary {
+export interface ScanSummary {
   hosts: ScanHostCounts;
   openPorts: number;
+}
+
+/** One address a scan export lists, with the asset that holds its edits (none unless it was up). */
+export interface ExportedHost {
+  observation: ObservationRow;
+  host: HostRow | undefined;
+}
+
+/** One scan as its own observations describe it, for `GET /scans/{id}/export`. */
+export interface ScanExport {
+  scan: ScanRow;
+  counts: ScanSummary;
+  /** CIDR blocks holding every address the scan has an observation of. */
+  coverage: string[];
+  /** Every address that is not `down`, in address order. */
+  batches(): AsyncGenerator<ExportedHost[]>;
 }
 
 interface EffectiveRow {
@@ -556,6 +579,40 @@ export const scanResultsService = {
       hosts.push(...(await hostsInScan(scan, base, entries.slice(start, start + CHANGES_BATCH))));
     }
     return { scan, hosts };
+  },
+
+  /** The scan's effective observation of every address it covered, whatever the base scan saw. */
+  async forExport(scanId: string): Promise<ScanExport> {
+    const scan = await findScan(scanId);
+    const [rows, summaries] = await Promise.all([
+      prisma.$queryRaw<EffectiveRow[]>(effectiveSql([scan.id])),
+      scanSummaries([scan.id]),
+    ]);
+    const addresses = rows.map((row) => ({ ...row, address: ipv4ToInt(row.ip) }));
+    const listed = addresses
+      .filter((row) => row.status !== "down")
+      .toSorted((a, b) => a.address - b.address)
+      .map((row) => row.ip);
+    return {
+      scan,
+      counts: summaries.get(scan.id) ?? { hosts: { ...NO_HOSTS }, openPorts: 0 },
+      coverage: mergeRanges(addresses.map(({ address }) => ({ start: address, end: address })))
+        .flatMap(rangeToCidrs)
+        .map(formatCidr),
+      async *batches() {
+        for (let start = 0; start < listed.length; start += CHANGES_BATCH) {
+          const ips = listed.slice(start, start + CHANGES_BATCH);
+          const [observations, hosts] = await Promise.all([
+            effectiveObservations([scan.id], ips),
+            prisma.host.findMany({ where: { ip: { in: ips } }, include: { services: true } }),
+          ]);
+          const hostByIp = new Map(hosts.map((host) => [host.ip, host]));
+          yield observations
+            .toSorted((a, b) => (a.ipNumber < b.ipNumber ? -1 : a.ipNumber > b.ipNumber ? 1 : 0))
+            .map((observation) => ({ observation, host: hostByIp.get(observation.ip) }));
+        }
+      },
+    };
   },
 
   /**
