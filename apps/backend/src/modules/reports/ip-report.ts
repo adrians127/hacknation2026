@@ -12,6 +12,7 @@ import {
   toReportService,
 } from "~backend/modules/reports/report-data";
 import { technologiesOf } from "~backend/modules/reports/technologies";
+import { loadActiveSet } from "~backend/modules/signatures/signature-catalog";
 import { openPortDetails } from "~backend/modules/results/details";
 import { toServiceRemediation } from "~backend/modules/defectdojo/defectdojo.mapper";
 import { hostnames, OBSERVATION_INCLUDE } from "~backend/modules/scans/scan-results.mapper";
@@ -120,11 +121,12 @@ export const ipReportService = {
       })
       .toSorted((a, b) => Number(b.isOpen) - Number(a.isOpen) || a.port - b.port);
 
+    const { signatures } = await loadActiveSet();
     const latestServices =
       host && latestUp
         ? latestUp.ports.flatMap((port) => {
             const service = host.services.find((candidate) => candidate.id === port.serviceId);
-            return service ? [toReportService(host, service, port, null, true)] : [];
+            return service ? [toReportService(host, service, port, null, true, signatures)] : [];
           })
         : [];
     const last = observations.at(-1);

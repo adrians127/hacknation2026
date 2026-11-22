@@ -2,6 +2,7 @@
 
 #include "address.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <expected>
@@ -38,6 +39,15 @@ struct Job {
     Limits limits;
     std::chrono::steady_clock::time_point deadline;
 };
+
+/** Fetched from every endpoint for its hash; the same host, so allowed ranges and rate still hold. */
+inline constexpr std::string_view kFaviconPath = "/favicon.ico";
+
+/** Paths requested per URL: `/`, the favicon and the probe paths, each once. */
+[[nodiscard]] inline std::size_t request_paths(const Job& job) {
+    const bool probes_favicon = std::ranges::find(job.probe_paths, kFaviconPath) != job.probe_paths.end();
+    return job.probe_paths.size() + (probes_favicon ? 1 : 2);
+}
 
 [[nodiscard]] std::expected<Job, Error> parse_job(std::string_view input);
 

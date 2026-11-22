@@ -71,6 +71,8 @@
       "host-gone": "przestał odpowiadać",
       "service-gone": "zamknięty port",
       "no-answer": "brak odpowiedzi",
+      "detection": "dopasowana sygnatura detekcyjna",
+      "detection-gone": "sygnatura detekcyjna przestała pasować",
       "other": "inna zmiana"
     }
   },
@@ -637,6 +639,7 @@
     "scans": "Skany",
     "reports": "Raporty",
     "rules": "Reguły",
+    "signatures": "Sygnatury",
     "users": "Użytkownicy",
     "roles": "Role",
     "vulnerabilities": "Podatności",
@@ -749,6 +752,10 @@
     "SCAN_IMPORT_INVALID": "Plik nie jest eksportem skanu, wynikiem workera ani plikiem CSV z wynikami w formacie, który ta wersja potrafi odczytać.",
     "SCAN_ALREADY_IMPORTED": "Ten plik został już zaimportowany.",
     "SCAN_IMPORT_RUNNING": "Trwa inny import. Spróbuj ponownie, gdy się zakończy.",
-    "SCAN_RUNNING": "Nie można usunąć trwającego skanu. Najpierw go zatrzymaj."
+    "SCAN_RUNNING": "Nie można usunąć trwającego skanu. Najpierw go zatrzymaj.",
+    "SIGNATURE_BUILT_IN": "Wbudowaną sygnaturę można tylko włączyć lub wyłączyć. Aby ją zmienić, zduplikuj ją.",
+    "SIGNATURE_NAME_TAKEN": "Sygnatura o tej nazwie już istnieje.",
+    "SIGNATURE_PROBE_LIMIT": "Włączone sygnatury sprawdzałyby zbyt wiele ścieżek. Wyłącz część z nich albo użyj tych samych ścieżek.",
+    "SIGNATURE_LIMIT": "Własnych sygnatur jest zbyt wiele. Najpierw usuń część z nich."
   }
 }

@@ -21,6 +21,7 @@ const schedule: Schedule = {
 const step: PipelineStep = {
   workerId: "0193a0f2-1b2c-7d3e-8f40-516273849506",
   input: "targets",
+  targets: { tags: ["campus"], targetIds: [], ranges: ["10.40.0.0/18"] },
   ports: "22,80,443",
   rate: 1000,
   batchSize: 256,
@@ -33,8 +34,7 @@ const body: PipelineBody = {
   name: "Nightly",
   description: "",
   enabled: true,
-  targets: { tags: ["campus"], targetIds: [], ranges: ["10.40.0.0/18"] },
-  steps: [step, { ...step, input: "previous" }],
+  steps: [step, { ...step, input: "previous", targets: null }],
   schedule,
 };
 

@@ -1,5 +1,7 @@
 import type {
   ExposureReport,
+  FindingRule,
+  FindingSeverity,
   FindingsReport,
   ScanSummaryReport,
   TagReportHost,
@@ -17,7 +19,6 @@ import {
   EMPTY_SEVERITY_COUNTS,
   findingsFor,
   prioritize,
-  RULE_SEVERITY,
 } from "~backend/modules/reports/findings";
 import {
   EMPTY_TRIAGE_COUNTS,
@@ -29,6 +30,7 @@ import {
 } from "~backend/modules/reports/report-data";
 import { inventory, serviceGroups } from "~backend/modules/reports/technologies";
 import { scanResultsService } from "~backend/modules/scans/scan-results.service";
+import { loadActiveSet } from "~backend/modules/signatures/signature-catalog";
 
 const DAY_MS = 86_400_000;
 const DUE_SOON_DAYS = 14;
@@ -37,8 +39,11 @@ const SUMMARY_LIMIT = 25;
 const TOP = 10;
 
 async function load(scanId: string) {
-  const { scan, base, hosts } = await scanResultsService.hostsForReport(scanId);
-  return { scan, base, hosts: toReportHosts(hosts), now: new Date() };
+  const [{ scan, base, hosts }, set] = await Promise.all([
+    scanResultsService.hostsForReport(scanId),
+    loadActiveSet(),
+  ]);
+  return { scan, base, hosts: toReportHosts(hosts, set.signatures), now: new Date() };
 }
 
 const isUp = (host: ReportHost) => host.status === "up";
@@ -253,12 +258,16 @@ export function tagsOf(
 function findingsOf(hosts: readonly ReportHost[], now: Date): Omit<FindingsReport, "generatedAt" | "scan"> {
   const prioritized = prioritize(hosts, now);
   const findings = prioritized.flatMap((host) => host.findings);
-  const byRule = new Map<keyof typeof RULE_SEVERITY, number>();
-  for (const finding of findings) byRule.set(finding.rule, (byRule.get(finding.rule) ?? 0) + 1);
+  // A rule can carry several severities: signatures rate their own findings.
+  const byRule = new Map<string, { rule: FindingRule; severity: FindingSeverity; count: number }>();
+  for (const { rule, severity } of findings) {
+    const key = `${rule}|${severity}`;
+    const entry = byRule.get(key) ?? { rule, severity, count: 0 };
+    byRule.set(key, { ...entry, count: entry.count + 1 });
+  }
   return {
     counts: countSeverities(findings),
-    byRule: [...byRule]
-      .map(([rule, count]) => ({ rule, severity: RULE_SEVERITY[rule], count }))
+    byRule: [...byRule.values()]
       .toSorted((a, b) => {
         const order = { high: 0, medium: 1, low: 2, info: 3 } as const;
         return order[a.severity] - order[b.severity] || b.count - a.count;

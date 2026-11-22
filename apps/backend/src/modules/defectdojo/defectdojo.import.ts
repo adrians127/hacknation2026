@@ -62,6 +62,10 @@ export function findingAddresses(finding: DojoFinding): Address[] {
 const isOwnObservation = (finding: DojoFinding) =>
   /^subsurf:[\d.]+:\d+:service$/.test(finding.unique_id_from_tool ?? "");
 
+/** A pushed detection: a verdict on it judges the signature, not the service. */
+const isOwnDetection = (finding: DojoFinding) =>
+  /^subsurf:[\d.]+:\d+:detection:[\w.-]+$/.test(finding.unique_id_from_tool ?? "");
+
 const hasDecision = (finding: DojoFinding) =>
   finding.verified || finding.false_p || finding.risk_accepted || finding.out_of_scope;
 
@@ -106,7 +110,9 @@ export function mergeTags(existing: readonly string[], incoming: Iterable<string
  */
 export function triageFromFindings(all: readonly DojoFinding[]): TriageStatus | null {
   // Our pushed observations mirror SubSurf's own state; only a decision made on them counts.
-  const findings = all.filter((finding) => !isOwnObservation(finding) || hasDecision(finding));
+  const findings = all.filter(
+    (finding) => !isOwnDetection(finding) && (!isOwnObservation(finding) || hasDecision(finding)),
+  );
   if (findings.length === 0) return null;
   if (findings.some((finding) => finding.active && finding.verified)) return "important";
   if (findings.some((finding) => finding.active)) return null;

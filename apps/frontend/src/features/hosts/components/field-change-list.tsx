@@ -13,7 +13,9 @@ function Value({ change, value, side }: { change: FieldChange; value: string | n
   const shown =
     change.field === "tls.selfSigned"
       ? t(value === "true" ? "fieldChange.yes" : "fieldChange.no")
-      : HASHED.has(change.field)
+      : change.field === "detection" && value === "detected"
+        ? t("fieldChange.detected")
+        : HASHED.has(change.field)
         ? `${value.slice(0, 12)}…`
         : value;
   return (

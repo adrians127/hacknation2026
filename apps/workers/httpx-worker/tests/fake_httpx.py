@@ -27,7 +27,8 @@ for base in urls:
         status = 200 if scheme == "http" and host == "127.0.0.1" else 0
         if status and path == "/admin":
             status = 404 if domain else 302
-        body = "<title>App</title>" if status else ""
+        favicon = path == "/favicon.ico"
+        body = "<title>App</title>" if status and not favicon else ""
         row = {
             "input": base,
             "url": base.removesuffix("/") + path,
@@ -35,11 +36,14 @@ for base in urls:
             "port": port,
             "path": path,
             "status_code": status,
-            "title": "App" if status else "",
-            "content_type": "text/html" if status else "",
+            "title": "App" if status and not favicon else "",
+            "content_type": ("image/x-icon" if favicon else "text/html") if status else "",
             "content_length": len(body),
             "body": body,
             "location": "/login" if status == 302 else "",
             "raw_header": "Content-Type: text/html\r\nSet-Cookie: session=very-secret; HttpOnly; Secure; SameSite=Lax\r\n" if status else "",
         }
+        if status and "-hash" in sys.argv:
+            assert value("-hash") == "mmh3,sha256"
+            row["hash"] = {"body_mmh3": "-1137954245" if favicon else "1", "body_sha256": "f" * 64}
         print(json.dumps(row), flush=True)

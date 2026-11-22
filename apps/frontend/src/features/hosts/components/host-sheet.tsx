@@ -27,6 +27,7 @@ import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageBadge } from "@/features/hosts/components/triage-badge";
 import { RuleBadge } from "@/features/rules/components/rule-badge";
 import { compareUrl } from "@/features/scans/lib/pair";
+import { ServiceDetections } from "@/features/signatures/components/service-detections";
 import { ServiceVulnerabilities } from "@/features/vulnerabilities/components/service-vulnerabilities";
 import { VulnerabilitySummaryBadge } from "@/features/vulnerabilities/components/vulnerability-summary";
 import { useErrorMessage } from "@/hooks/use-error-message";
@@ -106,6 +107,8 @@ function ServiceSection({
           </Field>
         )}
       </dl>
+
+      <ServiceDetections detections={service.detections} />
 
       <ServiceVulnerabilities service={service} scanId={scanId} history={history} />
 

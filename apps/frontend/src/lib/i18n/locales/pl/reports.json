@@ -95,7 +95,8 @@
     "cors-wildcard": "CORS dopuszcza dowolne źródło",
     "default-page": "Domyślna strona serwera",
     "missing-security-headers": "Brak nagłówków bezpieczeństwa",
-    "version-disclosure": "Wersja oprogramowania w nagłówkach"
+    "version-disclosure": "Wersja oprogramowania w nagłówkach",
+    "signature": "Sygnatura detekcyjna"
   },
   "categories": {
     "cms": "CMS",
@@ -113,7 +114,9 @@
     "body": "treść strony",
     "cookie": "ciasteczko",
     "title": "tytuł",
-    "probe": "ścieżka"
+    "probe": "ścieżka",
+    "favicon": "favicona",
+    "banner": "baner"
   },
   "confidence": {
     "high": "Wysoka",

@@ -7,10 +7,13 @@ import {
   HostLifecycleSchema,
   ScanChangeCountsSchema,
   ScanChangeSchema,
+  ScanDetectionCountSchema,
 } from "../scans/scan-results.schema";
 
 /** How many changes the dashboard lists, most important first. */
 export const DASHBOARD_TOP_CHANGES = 20;
+/** How many detection signatures the dashboard lists. */
+export const DASHBOARD_TOP_DETECTIONS = 8;
 
 const CountSchema = z.number().int().nonnegative();
 const ScanRefSchema = z.object({ id: z.uuid(), startedAt: z.iso.datetime().nullable() });
@@ -57,6 +60,13 @@ export const DashboardResponseSchema = z.object({
   /** Changes rules muted: left out of the groups above. */
   muted: CountSchema,
   topChanges: z.array(DashboardChangeSchema).max(DASHBOARD_TOP_CHANGES),
+  /** Detection signatures with a severity that matched in the newest scan. */
+  detections: z.object({
+    /** Hosts per the most severe signature that matched them. */
+    hosts: z.object({ high: CountSchema, medium: CountSchema, low: CountSchema, info: CountSchema }),
+    /** Most severe first, then most hosts. */
+    top: z.array(ScanDetectionCountSchema).max(DASHBOARD_TOP_DETECTIONS),
+  }),
 });
 
 export type DashboardChange = z.infer<typeof DashboardChangeSchema>;

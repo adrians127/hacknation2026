@@ -9,6 +9,7 @@ import hostsEn from "@/lib/i18n/locales/en/hosts.json";
 import pipelinesEn from "@/lib/i18n/locales/en/pipelines.json";
 import reportsEn from "@/lib/i18n/locales/en/reports.json";
 import rulesEn from "@/lib/i18n/locales/en/rules.json";
+import signaturesEn from "@/lib/i18n/locales/en/signatures.json";
 import vulnerabilitiesEn from "@/lib/i18n/locales/en/vulnerabilities.json";
 import adminPl from "@/lib/i18n/locales/pl/admin.json";
 import authPl from "@/lib/i18n/locales/pl/auth.json";
@@ -17,6 +18,7 @@ import hostsPl from "@/lib/i18n/locales/pl/hosts.json";
 import pipelinesPl from "@/lib/i18n/locales/pl/pipelines.json";
 import reportsPl from "@/lib/i18n/locales/pl/reports.json";
 import rulesPl from "@/lib/i18n/locales/pl/rules.json";
+import signaturesPl from "@/lib/i18n/locales/pl/signatures.json";
 import vulnerabilitiesPl from "@/lib/i18n/locales/pl/vulnerabilities.json";
 
 export const SUPPORTED_LANGUAGES = ["en", "pl"] as const;
@@ -34,6 +36,7 @@ export const resources = {
     pipelines: pipelinesEn,
     reports: reportsEn,
     rules: rulesEn,
+    signatures: signaturesEn,
     vulnerabilities: vulnerabilitiesEn,
   },
   pl: {
@@ -44,6 +47,7 @@ export const resources = {
     pipelines: pipelinesPl,
     reports: reportsPl,
     rules: rulesPl,
+    signatures: signaturesPl,
     vulnerabilities: vulnerabilitiesPl,
   },
 } as const;

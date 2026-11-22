@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboard } from "@/features/dashboard/api/get-dashboard";
+import { DetectionsCard } from "@/features/dashboard/components/detections-card";
 import { StatTile, type TrendPoint } from "@/features/dashboard/components/stat-tile";
 import { TopChangesTable } from "@/features/dashboard/components/top-changes-table";
 import { useScans } from "@/features/scans/api/get-scans";
@@ -102,6 +103,8 @@ function Overview({ dashboard, scans }: { dashboard: DashboardResponse; scans: r
           hint={t("dashboard.stats.lifecycleHint")}
         />
       </div>
+
+      <DetectionsCard dashboard={dashboard} scanId={scan.id} />
 
       {baseScan && (
         <Card>

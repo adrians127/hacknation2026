@@ -38,6 +38,12 @@ export const SCAN_CSV_COLUMNS = [
   "title",
 ] as const;
 
+/**
+ * Written by the export after the columns above, never read by the import: what detection
+ * signatures matched the port in that scan (`WordPress 6.4 [high]; PHP`).
+ */
+export const SCAN_CSV_DERIVED_COLUMNS = ["detections"] as const;
+
 export type ScanCsvColumn = (typeof SCAN_CSV_COLUMNS)[number];
 export type ScanCsvCell = string | number | null;
 export type ScanCsvRow = Record<ScanCsvColumn, ScanCsvCell>;

@@ -1,19 +1,27 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  BUILTIN_WORKERS,
   defaultStepParams,
   validateStepParams,
   WorkerParamFieldsSchema,
+  type WorkerParamField,
 } from "./worker-catalog";
 
-const nmap = BUILTIN_WORKERS.find((worker) => worker.name === "nmap");
-const masscan = BUILTIN_WORKERS.find((worker) => worker.name === "masscan");
-if (!nmap || !masscan) throw new Error("The catalog has masscan and nmap");
+// Workers are registered from their manifests (apps/workers/*/manifest.json); these mirror two of them.
+const masscan: { paramFields: WorkerParamField[] } = {
+  paramFields: [
+    { key: "wait_seconds", label: "Wait for replies", type: "integer", min: 0, max: 60, unit: "seconds", default: 3 },
+    { key: "retries", label: "Retries", type: "integer", min: 0, max: 5, default: 0 },
+  ],
+};
+const nmap: { paramFields: WorkerParamField[] } = {
+  paramFields: [{ key: "probe_paths", label: "HTTP paths to probe", type: "paths", maxItems: 128, default: [] }],
+};
+const WORKERS = [masscan, nmap];
 
-describe("BUILTIN_WORKERS", () => {
+describe("WorkerParamFieldsSchema", () => {
   it("has valid, unique fields that never use a key the backend sets", () => {
-    for (const worker of BUILTIN_WORKERS) {
+    for (const worker of WORKERS) {
       expect(WorkerParamFieldsSchema.safeParse(worker.paramFields).success).toBe(true);
     }
     expect(
@@ -26,7 +34,7 @@ describe("BUILTIN_WORKERS", () => {
 
 describe("validateStepParams", () => {
   it("accepts the defaults", () => {
-    for (const worker of BUILTIN_WORKERS) {
+    for (const worker of WORKERS) {
       expect(validateStepParams(worker.paramFields, defaultStepParams(worker.paramFields))).toEqual([]);
     }
   });
@@ -53,10 +61,7 @@ describe("validateStepParams", () => {
 });
 
 describe("defaultStepParams", () => {
-  it("prefers the admin's defaults over the fields' own", () => {
-    expect(defaultStepParams(masscan.paramFields, { wait_seconds: 10 })).toEqual({
-      wait_seconds: 10,
-      retries: 0,
-    });
+  it("takes each field's own default", () => {
+    expect(defaultStepParams(masscan.paramFields)).toEqual({ wait_seconds: 3, retries: 0 });
   });
 });

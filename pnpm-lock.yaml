@@ -227,6 +227,9 @@ importers:
       pino-http:
         specifier: ^11.0.0
         version: 11.0.0
+      re2js:
+        specifier: 2.10.0
+        version: 2.10.0
       swagger-ui-express:
         specifier: ^5.0.1
         version: 5.0.1(express@5.3.0(supports-color@10.2.2))
@@ -4100,6 +4103,10 @@ packages:
 
   rc9@3.1.0:
     resolution: {integrity: sha512-ufjkNVzbRHKcCOmTahZkmVsyc3W+MSk3jY03m+a7tGHkIsdVMG9l10/3HvFbWkkKzY5VFp3pkRsIo/UYgmFL7Q==}
+
+  re2js@2.10.0:
+    resolution: {integrity: sha512-/P6FNnLbHjXJMRF1dPoZoVTyHvFcuVhbDpzml9DPMlbeErYlZ18GueAaG9GhYhAm/9AN7i7Y6crmDrLX0DeJ4Q==}
+    engines: {node: '>=20.0.0'}
 
   react-compiler-runtime@1.0.0:
     resolution: {integrity: sha512-rRfjYv66HlG8896yPUDONgKzG5BxZD1nV9U6rkm+7VCuvQc903C4MjcoZR4zPw53IKSOX9wMQVpA1IAbRtzQ7w==}
@@ -8369,6 +8376,8 @@ snapshots:
     dependencies:
       defu: 6.1.7
       destr: 2.0.5
+
+  re2js@2.10.0: {}
 
   react-compiler-runtime@1.0.0(react@19.3.1):
     dependencies:

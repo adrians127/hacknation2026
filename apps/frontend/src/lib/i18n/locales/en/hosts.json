@@ -246,8 +246,10 @@
       },
       "host": {
         "hostname": "Hostname"
-      }
-    }
+      },
+      "detection": "Detection signature"
+    },
+    "detected": "detected"
   },
   "compare": {
     "notScanned": "Not in scan",

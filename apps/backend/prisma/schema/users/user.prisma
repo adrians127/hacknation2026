@@ -24,6 +24,7 @@ model User {
   packageMappings          PackageMapping[]
   pipelines                Pipeline[]
   rules                    Rule[]
+  signatures               Signature[]
   defectDojoSyncs          DefectDojoSync[]
   defectDojoPushes         DefectDojoPush[]
 

@@ -1,0 +1,232 @@
+{
+  "title": "Sygnatury detekcyjne",
+  "description": "Bezpieczne odciski technologii, CMS-ów, paneli administracyjnych i środowisk testowych, sprawdzane w każdym skanie.",
+  "intro": "Sygnatura rozpoznaje coś na usłudze na podstawie tego, co skaner już pobrał: nagłówka, nazwy ciasteczka, tytułu lub HTML strony, hasha favicony, banera albo odpowiedzi ścieżki takiej jak /admin. Ścieżki są pobierane wyłącznie metodą GET, bez prób logowania. Wbudowane sygnatury można wyłączyć albo zduplikować, własne można edytować. Dopasowania widać przy hostach w każdym skanie, w raportach i na pulpicie.",
+  "empty": "Żadna sygnatura nie pasuje do filtra.",
+  "builtIn": "Wbudowana",
+  "deleteTitle": "Usuń sygnaturę",
+  "deleteDescription": "Usunąć „{{name}}”? Jej dopasowania znikną ze wszystkich skanów.",
+  "evaluation": {
+    "noScan": "Nie ma jeszcze skanu z wynikami: liczby pojawią się po pierwszym skanie.",
+    "newest": "Liczby dotyczą najnowszego skanu ({{date}}).",
+    "pending_one": "{{count}} skan jest jeszcze sprawdzany sygnaturami.",
+    "pending_few": "{{count}} skany są jeszcze sprawdzane sygnaturami.",
+    "pending_many": "{{count}} skanów jest jeszcze sprawdzanych sygnaturami.",
+    "pending_other": "{{count}} skanu jest jeszcze sprawdzane sygnaturami.",
+    "probePaths": "Ścieżki pobierane z każdej usługi HTTP: {{paths}}"
+  },
+  "filters": {
+    "search": "Szukaj sygnatur",
+    "kind": "Które sygnatury",
+    "kinds": {
+      "all": "Wszystkie sygnatury",
+      "custom": "Własne",
+      "builtIn": "Wbudowane"
+    },
+    "signature": "Sygnatura detekcyjna",
+    "anySignature": "Dowolne detekcje",
+    "anyFinding": "Dowolne znalezisko sygnatury",
+    "signatureOption": "{{name}} ({{count}})"
+  },
+  "columns": {
+    "name": "Sygnatura",
+    "severity": "Waga",
+    "conditions": "Pasuje, gdy",
+    "hits": "Najnowszy skan",
+    "enabled": "Wł.",
+    "actions": "Akcje",
+    "detections": "Detekcje"
+  },
+  "hits": {
+    "off": "Wyłączona",
+    "pending": "Sprawdzanie…",
+    "none": "Brak dopasowań",
+    "value": "hosty: {{hosts}} · usługi: {{services}}"
+  },
+  "categories": {
+    "cms": "CMS",
+    "web-server": "Serwer WWW",
+    "language": "Język",
+    "framework": "Framework",
+    "application": "Aplikacja",
+    "device": "Urządzenie / IoT",
+    "service": "Usługa",
+    "admin-panel": "Panel administracyjny",
+    "staging": "Środowisko testowe / debug",
+    "default-page": "Strona domyślna",
+    "interesting-header": "Ciekawy nagłówek",
+    "interesting-cookie": "Ciekawe ciasteczko",
+    "other": "Inne"
+  },
+  "severities": {
+    "none": "Tylko detekcja",
+    "info": "Informacyjna",
+    "low": "Niska",
+    "medium": "Średnia",
+    "high": "Wysoka"
+  },
+  "confidence": {
+    "high": "Wysoka pewność",
+    "medium": "Średnia pewność",
+    "low": "Niska pewność"
+  },
+  "targets": {
+    "header": "Nagłówek",
+    "cookie": "Nazwa ciasteczka",
+    "title": "Tytuł strony",
+    "body": "HTML strony",
+    "favicon": "Hash favicony",
+    "probe": "Ścieżka",
+    "banner": "Baner",
+    "service": "Usługa (nmap)",
+    "port": "Port"
+  },
+  "targetHints": {
+    "header": "Nagłówek odpowiedzi dowolnej strony HTTP usługi. Nazwy są porównywane małymi literami.",
+    "cookie": "Nazwa ciasteczka ustawianego przez stronę. Skaner nigdy nie zapisuje wartości ciasteczek.",
+    "title": "Tytuł strony.",
+    "body": "HTML strony (pierwsze 256 KiB), np. ścieżka skryptu albo wersja w stopce.",
+    "favicon": "MurmurHash3 favicony w zapisie Shodana (http.favicon.hash).",
+    "probe": "Odpowiedź ścieżki na zwykłe żądanie GET: kod statusu i opcjonalnie tytuł. Skaner pobiera ją od następnego skanu; nie podąża za przekierowaniami i nie loguje się.",
+    "banner": "To, co usługa inna niż HTTP wysyła na początku (SSH, FTP, SMTP).",
+    "service": "Wynik wykrywania usług przez nmapa.",
+    "port": "Ogranicza pozostałe warunki do tych portów; sam nigdy nie wystarcza."
+  },
+  "ops": {
+    "equals": "jest równe",
+    "contains": "zawiera",
+    "prefix": "zaczyna się od",
+    "regex": "pasuje do wyrażenia"
+  },
+  "fields": {
+    "name": "nazwa usługi",
+    "product": "produkt",
+    "version": "wersja",
+    "extraInfo": "dodatkowe informacje",
+    "cpe": "CPE"
+  },
+  "match": {
+    "all": "Wszystkie warunki (HTTP na tej samej stronie)",
+    "any": "Dowolny warunek"
+  },
+  "summary": {
+    "all": "i",
+    "any": "lub",
+    "header": "nagłówek {{name}}",
+    "headerValue": "nagłówek {{name}} {{op}} „{{value}}”",
+    "cookie": "ciasteczko {{op}} „{{value}}”",
+    "service": "nmap: {{field}} {{op}} „{{value}}”",
+    "favicon": "favicona {{hashes}}",
+    "probe": "GET {{path}} → {{status}}",
+    "port": "port {{ports}}",
+    "text": "{{target}} {{op}} „{{value}}”"
+  },
+  "actions": {
+    "add": "Nowa sygnatura",
+    "edit": "Edytuj {{name}}",
+    "duplicate": "Duplikuj {{name}}",
+    "delete": "Usuń {{name}}",
+    "toggle": "Sygnatura {{name}} włączona",
+    "import": "Importuj",
+    "export": "Eksportuj",
+    "builtInReadOnly": "Wbudowana: aby ją zmienić, zduplikuj ją"
+  },
+  "toast": {
+    "created": "Sygnatura utworzona i sprawdzona na najnowszym skanie",
+    "updated": "Sygnatura zapisana",
+    "deleted": "Sygnatura usunięta",
+    "exported": "Sygnatury wyeksportowane",
+    "imported": "Zaimportowano: nowe {{created}}, zastąpione {{replaced}}, pominięte {{skipped}}, wbudowane {{builtIn}}"
+  },
+  "form": {
+    "createTitle": "Nowa sygnatura",
+    "editTitle": "Edycja sygnatury",
+    "copyTitle": "Nowa sygnatura na podstawie „{{name}}”",
+    "description": "Opisz, czego szukać w tym, co skaner już pobrał. Zapisanie od razu sprawdza najnowszy skan, a starsze w tle.",
+    "name": "Nazwa",
+    "nameInvalid": "Podaj nazwę (najwyżej 100 znaków).",
+    "product": "Technologia",
+    "productHint": "Opcjonalnie: pod tą nazwą pokaże ją raport technologii.",
+    "category": "Kategoria",
+    "severity": "Waga",
+    "confidence": "Pewność",
+    "ratingHint": "Z wagą dopasowanie staje się też znaleziskiem. Pewność to minimum dla dopasowania; dopasowanie na dwóch rodzajach dowodów ją podnosi.",
+    "notes": "Opis",
+    "conditions": "Warunki",
+    "condition": "Warunek {{number}}",
+    "target": "Co sprawdzić",
+    "removeCondition": "Usuń warunek {{number}}",
+    "op": "Sposób porównania: {{field}}",
+    "caseSensitive": "Rozróżniaj wielkość liter",
+    "headerName": "Nazwa nagłówka",
+    "headerValue": "Wartość nagłówka",
+    "headerValueHint": "Zostaw puste: wystarczy, że nagłówek jest.",
+    "cookieName": "Nazwa ciasteczka",
+    "field": "Pole",
+    "value": "Tekst",
+    "mmh3": "Hashe favicony",
+    "mmh3Hint": "Liczby całkowite rozdzielone przecinkami.",
+    "path": "Ścieżka",
+    "pathHint": "Zaczyna się od /, bez ?, #, @ i ..",
+    "status": "Kody statusu",
+    "listHint": "Rozdzielone przecinkami, np. 200, 401.",
+    "probeTitle": "Tytuł odpowiedzi",
+    "optionalHint": "Opcjonalnie; puste oznacza dowolny.",
+    "ports": "Porty",
+    "portsHint": "Rozdzielone przecinkami, np. 80, 8080.",
+    "version": "Wzorzec wersji",
+    "versionHint": "Opcjonalny wzorzec RE2 z jedną grupą, np. WordPress (\\d[\\d.]*). Odczytuje wersję, nie decyduje o dopasowaniu.",
+    "invalid": "Sprawdź ten warunek.",
+    "needsCondition": "Dodaj warunek inny niż port.",
+    "addCondition": "Dodaj warunek",
+    "safety": "Sygnatury wyłącznie wykrywają. Nigdy nie wysyłają danych logowania, formularzy ani ładunków, a wyrażenia regularne działają w czasie liniowym.",
+    "save": "Zapisz",
+    "create": "Utwórz"
+  },
+  "preview": {
+    "title": "Co dopasowuje",
+    "scanLabel": "Skan do sprawdzenia",
+    "newest": "Najnowszy skan",
+    "invalid": "Uzupełnij warunki, aby zobaczyć, co dopasowują.",
+    "noScan": "Nie ma jeszcze skanu z wynikami do sprawdzenia.",
+    "counts": "Pasujące usługi: {{services}} · hosty: {{hosts}}",
+    "scan": "skan z {{date}}",
+    "unprobed": "Tego nie pobrano w tym skanie, więc jeszcze tam nie pasuje: {{paths}}. Skany po zapisaniu będą to pobierać.",
+    "version": "wersja {{version}}",
+    "patternError": "Wzorzec: {{message}}"
+  },
+  "import": {
+    "title": "Import sygnatur",
+    "description": "Plik wyeksportowany z SubSurf. Własne sygnatury zostaną dodane, a wbudowane z pliku tylko włączone lub wyłączone. Jeśli któryś wpis jest błędny, nic nie zostanie zaimportowane.",
+    "invalidFile": "To nie jest plik sygnatur SubSurf.",
+    "contents": "W pliku: własne {{custom}}, wbudowane {{builtIn}}.",
+    "conflict": "Gdy istnieje już własna sygnatura o tej nazwie",
+    "skip": "Zostaw istniejącą",
+    "replace": "Zastąp ją",
+    "submit": "Importuj"
+  },
+  "more": "+{{count}}",
+  "detections": {
+    "title_one": "Sygnatury detekcyjne ({{count}})",
+    "title_few": "Sygnatury detekcyjne ({{count}})",
+    "title_many": "Sygnatury detekcyjne ({{count}})",
+    "title_other": "Sygnatury detekcyjne ({{count}})",
+    "evidence_one": "Co pasowało ({{count}})",
+    "evidence_few": "Co pasowało ({{count}})",
+    "evidence_many": "Co pasowało ({{count}})",
+    "evidence_other": "Co pasowało ({{count}})"
+  },
+  "dashboard": {
+    "title": "Sygnatury detekcyjne",
+    "description": "Co sygnatury oznaczyły w najnowszym skanie: panele administracyjne, strony testowe i debug, aplikacje testowe oraz własne sygnatury.",
+    "hosts": "hostów",
+    "showHosts": "Pokaż te hosty",
+    "none": "W tym skanie nie dopasowała się żadna sygnatura z wagą.",
+    "hostCount": "hosty: {{hosts}} · usługi: {{services}}",
+    "newHosts_one": "{{count}} nowy od poprzedniego skanu",
+    "newHosts_few": "{{count}} nowe od poprzedniego skanu",
+    "newHosts_many": "{{count}} nowych od poprzedniego skanu",
+    "newHosts_other": "{{count}} nowego od poprzedniego skanu"
+  },
+  "probePathsHint": "Ścieżki potrzebne włączonym sygnaturom detekcyjnym są dodawane automatycznie (zob. Sygnatury)."
+}

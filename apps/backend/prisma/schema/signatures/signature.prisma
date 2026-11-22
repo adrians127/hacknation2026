@@ -1,0 +1,31 @@
+/// A detection signature (modules/signatures): conditions on what a service answered (headers,
+/// cookie names, title, page, favicon hash, probe paths, banner, service fields). Built-ins come
+/// from code (`key` set, synced at startup) and can only be switched on or off.
+model Signature {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  /// Built-ins only: the stable name in builtin-signatures.ts.
+  key         String?  @unique
+  name        String   @unique
+  /// { "$enc": "v1.…" } (src/lib/crypto.ts); null = no description.
+  description Json?
+  /// SignatureCategory from @subsurf/contracts.
+  category    String
+  /// The technology it identifies (technologies report); null = none.
+  product     String?
+  /// info | low | medium | high: a finding; null = it only identifies something.
+  severity    String?
+  /// high | medium | low: the least confidence of a match.
+  confidence  String
+  enabled     Boolean  @default(true)
+  /// SignatureDefinition from @subsurf/contracts: { match, conditions }. Plaintext like Rule.definition:
+  /// patterns users wrote, not data from the scanned network.
+  definition  Json
+  createdById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  matches   SignatureMatch[]
+
+  @@index([createdById])
+}

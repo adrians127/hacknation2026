@@ -1,4 +1,5 @@
 import type { ServiceIdentity, TriageStatus } from "@subsurf/contracts/hosts/hosts.schema";
+import type { DetectionSummary, SignatureSeverity } from "@subsurf/contracts/signatures/detection.schema";
 import type { HttpEndpoint } from "@subsurf/contracts/workers/worker-result.schema";
 
 /** A service as the push describes it: the user's corrections already applied. */
@@ -13,12 +14,14 @@ export interface ExportService {
   triage: TriageStatus;
   tags: string[];
   note: string;
+  /** What detection signatures matched the port in the pushed scan. */
+  detections: DetectionSummary[];
 }
 
 /** Only the parser's allow-list (dojo/tools/generic/json_parser.py): any other key fails the import. */
 export interface GenericFinding {
   title: string;
-  severity: "Info";
+  severity: "Info" | "Low" | "Medium" | "High";
   description: string;
   date: string;
   unique_id_from_tool: string;
@@ -131,11 +134,56 @@ export function toGenericFinding(service: ExportService, scanDate: string): Gene
   };
 }
 
+const DOJO_SEVERITY: Record<SignatureSeverity, GenericFinding["severity"]> = {
+  info: "Info",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
+
+/**
+ * A detection signature with a severity, as its own finding. The description (dedup hash) holds
+ * only what identifies it; the version goes to `component_version`, outside the hash.
+ */
+export function toDetectionFinding(
+  service: ExportService,
+  detection: DetectionSummary & { severity: SignatureSeverity },
+  scanDate: string,
+): GenericFinding {
+  const id = (detection.key ?? detection.signatureId).replaceAll(/[^A-Za-z0-9._-]/g, "-");
+  const falsePositive = service.triage === "false_positive";
+  return {
+    title: `${detection.name} on ${service.ip}:${service.port}/tcp`,
+    severity: DOJO_SEVERITY[detection.severity],
+    description: `${service.ip}:${service.port}/tcp. Detection signature "${detection.name}" (${id}, ${detection.category}).`,
+    date: scanDate,
+    unique_id_from_tool: `subsurf:${service.ip}:${service.port}:detection:${id}`,
+    endpoints: endpoints(service),
+    tags: [...new Set(["subsurf", "subsurf-detection", ...service.tags.map(dojoTag).filter(Boolean)])],
+    active: !falsePositive,
+    verified: false,
+    false_p: falsePositive,
+    dynamic_finding: true,
+    static_finding: false,
+    mitigation: MITIGATION,
+    ...(detection.product && { component_name: detection.product }),
+    ...(detection.product && detection.version && { component_version: detection.version }),
+    impact: `Matched by a SubSurf detection signature (${detection.confidence} confidence); safe detection only.`,
+  };
+}
+
 export function buildReport(services: readonly ExportService[], scanDate: string, version: string): GenericReport {
   return {
     name: "SubSurf",
     type: "SubSurf discovery",
     version,
-    findings: services.map((service) => toGenericFinding(service, scanDate)),
+    findings: services.flatMap((service) => [
+      toGenericFinding(service, scanDate),
+      ...service.detections.flatMap((detection) =>
+        detection.severity === null
+          ? []
+          : [toDetectionFinding(service, { ...detection, severity: detection.severity }, scanDate)],
+      ),
+    ]),
   };
 }

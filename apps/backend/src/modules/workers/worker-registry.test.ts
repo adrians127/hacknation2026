@@ -4,7 +4,6 @@ import { ErrorResponseSchema } from "@subsurf/contracts/common/common.schema";
 import { WorkerSchema } from "@subsurf/contracts/workers/worker-registry.schema";
 
 import { prisma } from "~backend/lib/prisma";
-import { syncWorkerCatalog } from "~backend/modules/workers/worker-catalog.sync";
 import { workersService } from "~backend/modules/workers/workers.service";
 import { signInAs } from "~backend/test/auth";
 import { startTestServer, type TestServer } from "~backend/test/http";
@@ -31,26 +30,6 @@ async function customWorker(name = "httpx") {
   });
   return prisma.worker.findUniqueOrThrow({ where: { name } });
 }
-
-describe("syncWorkerCatalog", () => {
-  it("restores the built-in definition but keeps what admins own", async () => {
-    await prisma.worker.update({
-      where: { name: "masscan" },
-      data: { enabled: false, maxRate: 500, stage: 99, defaults: { wait_seconds: 5, gone: 1 } },
-    });
-
-    await syncWorkerCatalog();
-    await syncWorkerCatalog();
-
-    expect(await prisma.worker.findUniqueOrThrow({ where: { name: "masscan" } })).toMatchObject({
-      enabled: false,
-      maxRate: 500,
-      stage: 10,
-      defaults: { wait_seconds: 5 },
-    });
-    expect(await prisma.worker.count()).toBe(2);
-  });
-});
 
 describe("PATCH /v1/workers/:id", () => {
   it("lets an admin disable a built-in worker and set its rate cap and defaults", async () => {

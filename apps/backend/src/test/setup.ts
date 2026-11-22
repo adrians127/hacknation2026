@@ -2,7 +2,7 @@ import { afterAll, beforeEach } from "vitest";
 
 import { prisma } from "~backend/lib/prisma";
 import { syncSystemRoles } from "~backend/modules/roles/system-roles";
-import { syncWorkerCatalog } from "~backend/modules/workers/worker-catalog.sync";
+import { syncBuiltInSignatures } from "~backend/modules/signatures/signatures.sync";
 
 // Every test starts from empty tables; files run one at a time (fileParallelism: false).
 beforeEach(async () => {
@@ -14,7 +14,7 @@ beforeEach(async () => {
     await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${list} CASCADE`);
   }
   await syncSystemRoles();
-  await syncWorkerCatalog();
+  await syncBuiltInSignatures();
 });
 
 afterAll(async () => {

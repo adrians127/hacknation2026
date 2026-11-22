@@ -50,7 +50,7 @@ export function servicesToPush(hosts: readonly HostInScan[], body: DefectDojoPus
     return resolveServices(entry)
       .filter(({ diff }) => diff.change !== "gone")
       .filter(({ service }) => !selection || hostIds.has(entry.host.id) || serviceIds.has(service.id))
-      .map(({ service, port }): ExportService => ({
+      .map(({ service, port, diff }): ExportService => ({
         ip: entry.host.ip,
         hostnames: names,
         port: service.port,
@@ -68,6 +68,8 @@ export function servicesToPush(hosts: readonly HostInScan[], body: DefectDojoPus
         triage: service.triage,
         tags: service.tags,
         note: decryptText(service.note),
+        detections:
+          (diff.observedIn === "base" ? entry.detections.base : entry.detections.current).get(service.id) ?? [],
       }));
   });
 }
@@ -118,7 +120,15 @@ export const defectDojoPushService = {
 
     pushInProgress = true;
     const row = await prisma.defectDojoPush.create({
-      data: { scanId: scan.id, scope, startedById: userId, findings: services.length },
+      data: {
+        scanId: scan.id,
+        scope,
+        startedById: userId,
+        findings: services.reduce(
+          (sum, service) => sum + 1 + service.detections.filter((detection) => detection.severity !== null).length,
+          0,
+        ),
+      },
     });
     try {
       const scanDate = (scan.startedAt ?? scan.createdAt).toISOString().slice(0, 10);

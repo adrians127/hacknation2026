@@ -10,6 +10,7 @@ import type {
   ServiceSnapshot,
 } from "@subsurf/contracts/scans/scan-results.schema";
 import type { ScanEdits } from "@subsurf/contracts/scans/scan-export.schema";
+import type { Detection, DetectionSummary } from "@subsurf/contracts/signatures/detection.schema";
 import type { Scan, ScanHostCounts } from "@subsurf/contracts/scans/scans.schema";
 import type {
   ServiceVulnerability,
@@ -27,6 +28,8 @@ import { comparablePort } from "~backend/modules/results/comparable";
 import { httpSummaries, openPortDetails, storedOpenPort } from "~backend/modules/results/details";
 import { serviceFacts, type ChangeRowFacts } from "~backend/modules/rules/rule-match";
 import { rateChange, type ChangeFacts } from "~backend/modules/scans/change-priority";
+import { detectionChanges, type DetectionChange } from "~backend/modules/scans/detection-changes";
+import { distinctDetections } from "~backend/modules/signatures/signature-matches.service";
 import { fieldChanges, hostnameChanges } from "~backend/modules/scans/field-changes";
 import type { HostDiff, ServiceDiff } from "~backend/modules/scans/scan-diff";
 import { EMPTY_SUMMARY } from "~backend/modules/vulnerabilities/vulnerabilities.mapper";
@@ -59,6 +62,13 @@ export interface HostInScan {
   };
   /** Rule names by id, for the triage a rule set. */
   rules: ReadonlyMap<string, string>;
+  /** Signature matches by service id, in this scan and in the base scan. */
+  detections: {
+    current: ReadonlyMap<string, DetectionSummary[]>;
+    base: ReadonlyMap<string, DetectionSummary[]>;
+    /** Both scans were evaluated with the enabled signatures: their matches can be compared. */
+    comparable: boolean;
+  };
 }
 
 function ruleRef(id: string | null, names: ReadonlyMap<string, string>): RuleRef | null {
@@ -218,6 +228,7 @@ function serviceFields(
     note: decryptText(service.note),
     vulnerabilities: entry.vulnerabilities.services.get(service.id) ?? EMPTY_SUMMARY,
     remediation: toServiceRemediation(service),
+    detections: (diff.observedIn === "base" ? entry.detections.base : entry.detections.current).get(service.id) ?? [],
   };
 }
 
@@ -239,6 +250,11 @@ function hostFields(entry: HostInScan) {
     tags: host.tags,
     note: decryptText(host.note),
     vulnerabilities: entry.vulnerabilities.host,
+    detections: distinctDetections(
+      resolveServices(entry).flatMap(({ diff, service }) =>
+        (diff.observedIn === "base" ? entry.detections.base : entry.detections.current).get(service.id) ?? [],
+      ),
+    ),
   };
 }
 
@@ -280,10 +296,20 @@ function changesOf({ diff, port, basePort }: ResolvedService) {
   );
 }
 
+/** Signatures that started or stopped matching the service since the base scan. */
+function detectionChangesOf({ diff, service }: ResolvedService, entry: HostInScan): DetectionChange[] {
+  if (!entry.detections.comparable) return [];
+  const after = entry.detections.current.get(service.id) ?? [];
+  if (diff.change === "new") return detectionChanges([], after, true);
+  if (diff.change !== "changed" && diff.change !== "unchanged") return [];
+  return detectionChanges(entry.detections.base.get(service.id) ?? [], after);
+}
+
 export function toScanHostDetail(
   entry: HostInScan,
   history: HostHistoryEntry[],
   matches: ReadonlyMap<string, ServiceVulnerability[]>,
+  detections: { current: ReadonlyMap<string, Detection[]>; base: ReadonlyMap<string, Detection[]> },
 ): ScanHostDetail {
   const upInBoth = entry.current.status === "up" && entry.base !== undefined;
   return {
@@ -298,10 +324,14 @@ export function toScanHostDetail(
         ...serviceFields(resolved, entry),
         ...observationOf(port),
         before: basePort ? observationOf(basePort) : null,
-        fieldChanges: changesOf(resolved),
+        fieldChanges: [
+          ...changesOf(resolved),
+          ...detectionChangesOf(resolved, entry).map(({ severity: _severity, ...change }) => change),
+        ],
         firstSeenAt: service.firstSeenAt.toISOString(),
         lastSeenAt: service.lastSeenAt.toISOString(),
         vulnerabilityMatches: matches.get(service.id) ?? [],
+        detections: (resolved.diff.observedIn === "base" ? detections.base : detections.current).get(service.id) ?? [],
       };
     }),
   };
@@ -351,6 +381,7 @@ export function toChangeFacts(entry: HostInScan): ChangeRowFacts[] {
             after: current.status,
           },
         ];
+  const severityOf = new Map<ChangeFacts, DetectionChange["severity"]>();
   // An unknown host's services are not known to have changed.
   const services: ChangeFacts[] =
     hostChange === "unknown"
@@ -358,6 +389,19 @@ export function toChangeFacts(entry: HostInScan): ChangeRowFacts[] {
       : resolveServices(entry).flatMap((resolved): ChangeFacts[] => {
           const { change } = resolved.diff;
           const service = { ...common, protocol: resolved.port.protocol, port: resolved.port.port };
+          const detected = detectionChangesOf(resolved, entry).map((field) => {
+            const fact: ChangeFacts = {
+              ...service,
+              change: change === "new" ? "new" : "changed",
+              field: field.field,
+              endpoint: field.endpoint,
+              key: field.key,
+              before: field.before,
+              after: field.after,
+            };
+            severityOf.set(fact, field.severity);
+            return fact;
+          });
           if (change === "new" || change === "gone") {
             return [
               {
@@ -367,17 +411,21 @@ export function toChangeFacts(entry: HostInScan): ChangeRowFacts[] {
                 before: change === "gone" ? identityText(resolved.port) : null,
                 after: change === "new" ? identityText(resolved.port) : null,
               },
+              ...detected,
             ];
           }
-          return changesOf(resolved).map((field) => ({
-            ...service,
-            change: "changed" as const,
-            field: field.field,
-            endpoint: field.endpoint,
-            key: field.key,
-            before: field.before,
-            after: field.after,
-          }));
+          return [
+            ...changesOf(resolved).map((field) => ({
+              ...service,
+              change: "changed" as const,
+              field: field.field,
+              endpoint: field.endpoint,
+              key: field.key,
+              before: field.before,
+              after: field.after,
+            })),
+            ...detected,
+          ];
         });
   const hostFacts = { ipNumber: Number(diff.ipNumber), tags: host.tags };
   const byPort = new Map(
@@ -391,7 +439,7 @@ export function toChangeFacts(entry: HostInScan): ChangeRowFacts[] {
     ]),
   );
   return [...hostLevel, ...services].map((row) => ({
-    row: rateChange(row, hostChange),
+    row: rateChange(row, hostChange, severityOf.get(row) ?? null),
     host: hostFacts,
     service: row.port === null ? null : (byPort.get(row.port) ?? null),
   }));

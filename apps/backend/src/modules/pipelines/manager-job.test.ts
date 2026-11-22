@@ -4,9 +4,25 @@ import { ManagerJobSchema } from "@subsurf/contracts/workers/workers.schema";
 
 import type { Scan, ScanJob } from "~backend/generated/prisma/client";
 import { leaseJob, utcSeconds } from "~backend/modules/pipelines/manager-job";
-import { defaultSteps } from "~backend/modules/pipelines/steps";
+import type { ScanStepSnapshot } from "~backend/modules/pipelines/steps";
 
 const NOW = new Date("2026-11-22T10:00:00.250Z");
+
+const STEP = {
+  workerId: null,
+  input: "targets",
+  ports: "22,80,443",
+  batchSize: 256,
+  maxDurationSeconds: 3600,
+  split: { strategy: "none" },
+  params: {},
+} as const;
+
+/** masscan, then nmap on its hits (the default chain). */
+const STEPS: ScanStepSnapshot[] = [
+  { ...STEP, index: 1, worker: "masscan", acceptsHosts: false, rate: 1000 },
+  { ...STEP, index: 2, worker: "nmap", acceptsHosts: true, input: "previous", rate: 100 },
+];
 
 function scanRow(overrides: Partial<Scan> = {}): Scan {
   return {
@@ -17,7 +33,7 @@ function scanRow(overrides: Partial<Scan> = {}): Scan {
     importKey: null,
     pipelineId: null,
     trigger: "manual",
-    steps: defaultSteps(),
+    steps: STEPS,
     windowEndsAt: null,
     ports: "22,80,443",
     maxRate: 100,

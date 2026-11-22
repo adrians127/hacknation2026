@@ -69,6 +69,8 @@
       "host-gone": "stopped answering",
       "service-gone": "port closed",
       "no-answer": "no answer",
+      "detection": "detection signature matched",
+      "detection-gone": "detection signature stopped matching",
       "other": "other change"
     }
   },
@@ -589,6 +591,7 @@
     "scans": "Scans",
     "reports": "Reports",
     "rules": "Rules",
+    "signatures": "Signatures",
     "users": "Users",
     "roles": "Roles",
     "vulnerabilities": "Vulnerabilities",
@@ -697,6 +700,10 @@
     "SCAN_IMPORT_INVALID": "The file is not a scan export, a worker result or a results CSV this version can read.",
     "SCAN_ALREADY_IMPORTED": "This file was imported before.",
     "SCAN_IMPORT_RUNNING": "Another import is running. Try again when it finishes.",
-    "SCAN_RUNNING": "A running scan cannot be deleted. Stop it first."
+    "SCAN_RUNNING": "A running scan cannot be deleted. Stop it first.",
+    "SIGNATURE_BUILT_IN": "Built-in signatures can only be switched on or off. Duplicate one to change it.",
+    "SIGNATURE_NAME_TAKEN": "A signature with this name already exists.",
+    "SIGNATURE_PROBE_LIMIT": "The enabled signatures would request too many probe paths. Switch some off or reuse paths.",
+    "SIGNATURE_LIMIT": "There are too many custom signatures. Delete some first."
   }
 }

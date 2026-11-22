@@ -74,10 +74,10 @@ describe("POST /v1/workers/manager/lease", () => {
 
     expect(jobs).toEqual([]);
     expect(managers).toMatchObject([{ managerId: "scan-host-1", maxParallel: 1, isOnline: true }]);
-    expect(items.map((worker) => [worker.name, worker.isBuiltin, worker.enabled, worker.onlineManagers])).toEqual([
-      ["masscan", true, true, 1],
-      ["nmap", true, true, 1],
-      ["httpx", false, false, 1],
+    expect(items.map((worker) => [worker.name, worker.onlineManagers]).toSorted()).toEqual([
+      ["httpx", 1],
+      ["masscan", 1],
+      ["nmap", 1],
     ]);
   });
 

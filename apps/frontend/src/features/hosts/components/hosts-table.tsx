@@ -15,6 +15,7 @@ import { ServicesTable, type RowSelection } from "@/features/hosts/components/se
 import { TagList } from "@/features/hosts/components/tag-list";
 import { TriageControl } from "@/features/hosts/components/triage-control";
 import { CHANGE_CLASS } from "@/features/hosts/lib/badges";
+import { DetectionBadges } from "@/features/signatures/components/detection-badges";
 import { VulnerabilitySummaryBadge } from "@/features/vulnerabilities/components/vulnerability-summary";
 import { createDataTableColumns } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,7 @@ export function HostsTable({
 }: HostsTableProps) {
   const { t } = useTranslation("hosts");
   const { t: tv } = useTranslation("vulnerabilities");
+  const { t: ts } = useTranslation("signatures");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
 
   const toggle = useCallback((id: string) => {
@@ -176,14 +178,20 @@ export function HostsTable({
         column.accessor("services", {
           header: t("columns.services"),
           enableSorting: false,
-          meta: { className: compared ? "w-[18%]" : "w-[22%]" },
+          meta: { className: compared ? "w-[15%]" : "w-[19%]" },
           cell: ({ getValue }) => <PortChips services={getValue()} />,
         }),
         column.accessor("vulnerabilities", {
           header: tv("columns.vulnerabilities"),
           enableSorting: false,
-          meta: { className: "w-[14%]" },
+          meta: { className: "w-[11%]" },
           cell: ({ getValue }) => <VulnerabilitySummaryBadge summary={getValue()} />,
+        }),
+        column.accessor("detections", {
+          header: ts("columns.detections"),
+          enableSorting: false,
+          meta: { className: "w-[14%]" },
+          cell: ({ getValue }) => <DetectionBadges detections={getValue()} max={2} />,
         }),
         column.accessor("triage", {
           header: t("columns.triage"),
@@ -225,7 +233,7 @@ export function HostsTable({
           ),
         }),
       ]),
-    [t, tv, compared, expanded, toggle, onOpen, onEditHost, selection],
+    [t, tv, ts, compared, expanded, toggle, onOpen, onEditHost, selection],
   );
 
   return (
@@ -248,6 +256,7 @@ export function HostsTable({
               <dl className="mt-3 grid min-w-0 gap-3 text-sm sm:grid-cols-2">
                 <div className="min-w-0"><dt className="text-xs text-muted-foreground">{t("columns.services")}</dt><dd className="mt-1"><PortChips services={host.services} /></dd></div>
                 <div className="min-w-0"><dt className="text-xs text-muted-foreground">{tv("columns.vulnerabilities")}</dt><dd className="mt-1"><VulnerabilitySummaryBadge summary={host.vulnerabilities} /></dd></div>
+                <div className="min-w-0"><dt className="text-xs text-muted-foreground">{ts("columns.detections")}</dt><dd className="mt-1"><DetectionBadges detections={host.detections} /></dd></div>
                 <div className="min-w-0"><dt className="text-xs text-muted-foreground">{t("columns.triage")}</dt><dd className="mt-1"><TriageControl target={{ hostId: host.id }} value={host.triage} label={t("actions.triageOf", { name: host.ip })} /></dd></div>
                 <div className="min-w-0"><dt className="text-xs text-muted-foreground">{t("columns.tags")}</dt><dd className="mt-1 wrap-anywhere"><TagList tags={host.tags} /></dd></div>
               </dl>
